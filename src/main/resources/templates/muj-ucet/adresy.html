@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Moje adresy</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <th:block layout:fragment="css">
+        <style>
+            .account-nav .nav-link { color: var(--bs-secondary-color); border-bottom: 1px solid var(--bs-border-color); border-radius: 0; padding: 0.75rem 1rem; }
+            .account-nav .nav-link.active { color: var(--bs-emphasis-color); font-weight: bold; background-color: transparent; border-left: 3px solid var(--bs-primary); padding-left: calc(1rem - 3px); }
+            .account-nav .nav-link:hover { color: var(--bs-emphasis-color); background-color: var(--bs-tertiary-bg); }
+            .address-form-section { border: 1px solid #dee2e6; padding: 1.5rem; margin-bottom: 1.5rem; border-radius: .375rem; }
+            .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; } /* Přidáno .invalid-feedback */
+        </style>
+    </th:block>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-lg-3">
+                <nav class="nav flex-column account-nav mb-4">
+                    <a class="nav-link" th:href="@{/muj-ucet/profil}">Můj profil</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a>
+                    <a class="nav-link active" th:href="@{/muj-ucet/adresy}">Moje adresy</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/zmena-hesla}">Změna hesla</a>
+                    <hr class="my-2">
+                    <form th:action="@{/odhlaseni}" method="post" class="d-inline">
+                        <button type="submit" class="nav-link text-danger w-100 text-start" style="border:none; background:none; padding: 0.75rem 1rem;">Odhlásit se</button>
+                    </form>
+                </nav>
+            </div>
+
+            <div class="col-lg-9">
+                <h2>Moje adresy</h2>
+                <hr class="mb-4">
+
+                <div th:if="${addressSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${addressSuccess}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${invoiceAddressError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${invoiceAddressError}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${deliveryAddressError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${deliveryAddressError}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${addressError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${addressError}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div class="address-form-section bg-light mb-4">
+                    <h4>Fakturační údaje</h4>
+                    <form th:if="${invoiceAddress != null}" th:action="@{/muj-ucet/adresy/fakturacni}" th:object="${invoiceAddress}" method="post" novalidate>
+                        <div th:replace="~{muj-ucet/fragments/adresy-fragment :: addressFields(type='invoice')}"></div>
+                        <button type="submit" class="btn btn-primary mt-2">Uložit fakturační adresu</button>
+                    </form>
+                    <p th:unless="${invoiceAddress != null}" class="text-danger">Nepodařilo se načíst fakturační adresu.</p>
+                </div>
+
+
+                <div class="mb-3" th:if="${customer != null}">
+                    <form th:action="@{/muj-ucet/adresy/prepnout-dodaci}" method="post" id="toggleDeliveryForm" class="form-check form-switch form-check-inline">
+                        <input class="form-check-input" type="checkbox" role="switch" id="useInvoiceAddressAsDelivery" name="useInvoiceAddress" value="true"
+                               th:checked="${customer.useInvoiceAddressAsDelivery}" onchange="this.form.submit()">
+                        <label class="form-check-label" for="useInvoiceAddressAsDelivery">
+                            Dodací adresa je stejná jako fakturační
+                        </label>
+                    </form>
+                </div>
+
+
+                <div class="address-form-section" th:if="${customer != null and !customer.useInvoiceAddressAsDelivery}">
+                    <h4>Dodací údaje</h4>
+                    <form th:if="${deliveryAddress != null}" th:action="@{/muj-ucet/adresy/dodaci}" th:object="${deliveryAddress}" method="post" novalidate>
+                        <div th:replace="~{muj-ucet/fragments/adresy-fragment :: addressFields(type='delivery')}"></div>
+                        <button type="submit" class="btn btn-primary mt-2">Uložit dodací adresu</button>
+                    </form>
+                    <p th:unless="${deliveryAddress != null}" class="text-danger">Nepodařilo se načíst dodací adresu.</p>
+                </div>
+
+            </div> </div> </div> </section>
+
+</body>
+</html>

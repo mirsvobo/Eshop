@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Naše Produkty</title>
+    <style>
+        .product-card img {
+            height: 200px;
+            object-fit: cover;
+        }
+        .pagination {
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-4 mb-5">
+        <div class="page-header text-center rounded mb-4">
+            <h1 class="display-5 fw-bold">Naše Produkty</h1>
+            <p class="lead">Vyberte si z naší nabídky standardních dřevníků nebo si navrhněte vlastní.</p>
+        </div>
+
+        <div th:if="${productPage != null and not productPage.empty}" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+            <div th:each="product : ${productPage.content}" th:if="${product != null and !product.customisable}" class="col">
+                <div class="card shadow-sm product-card h-100">
+                    <a th:href="@{${product.slug != null ? '/produkt/' + product.slug : '#'}}">
+                        <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}" class="card-img-top" th:alt="${product.name ?: 'Produkt'}">
+                    </a>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title" th:text="${product.name ?: 'Produkt bez názvu'}">Název produktu</h5>
+                        <p class="card-text flex-grow-1" th:if="${product.description != null}" th:text="${#strings.abbreviate(product.description, 100)}"></p>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <strong class="fs-5 text-primary">
+                                <span th:if="${product.basePriceCZK != null or product.basePriceEUR != null}"
+                                      th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? (product.basePriceEUR ?: 0) : (product.basePriceCZK ?: 0), 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
+                                </span>
+                                <span th:unless="${product.basePriceCZK != null or product.basePriceEUR != null}">
+                                    <span>Cena nezadána</span>
+                                </span>
+                            </strong>
+                            <a th:href="@{${product.slug != null ? '/produkt/' + product.slug : '#'}}"
+                               class="btn btn-outline-secondary btn-sm"
+                               th:classappend="${product.slug == null ? 'disabled' : ''}">Zobrazit detail</a>
+                        </div>
+                    </div>
+                </div>
+            </div> <div class="col">
+            <div class="card shadow-sm product-card h-100">
+                <a th:href="@{/produkt/na-miru}">
+                    <img src="/images/placeholder-custom.png" th:src="@{/images/placeholder-custom.png}" class="card-img-top" alt="Dřevník na míru">
+                </a>
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Dřevník na míru</h5>
+                    <p class="card-text flex-grow-1">Navrhněte si dřevník přesně podle vašich představ.</p>
+                    <div class="d-flex justify-content-between align-items-center mt-auto">
+                        <strong class="fs-5 text-primary"><span>Cena dle konfigurace</span></strong>
+                        <a th:href="@{/produkt/na-miru}" class="btn btn-primary btn-sm">Navrhnout</a>
+                    </div>
+                </div>
+            </div>
+        </div> </div> <div th:if="${productPage == null or productPage.numberOfElements == 0 or productPage.content.?[!customisable].empty}" class="alert alert-warning mt-4" role="alert">
+        Momentálně nejsou k dispozici žádné standardní produkty. Můžete si <a th:href="@{/produkt/na-miru}" class="alert-link">navrhnout dřevník na míru</a>.
+    </div>
+
+
+        <nav th:if="${productPage != null and productPage.totalPages > 1}" aria-label="Stránkování produktů" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${productPage.first ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/produkty(page=${productPage.number - 1}, size=${productPage.size}, sort=${#request.getParameter('sort')})}" aria-label="Předchozí">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, productPage.totalPages - 1)}" th:classappend="${i == productPage.number ? 'active' : ''}">
+                    <a class="page-link" th:href="@{/produkty(page=${i}, size=${productPage.size}, sort=${#request.getParameter('sort')})}" th:text="${i + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${productPage.last ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/produkty(page=${productPage.number + 1}, size=${productPage.size}, sort=${#request.getParameter('sort')})}" aria-label="Další">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+    </div> </section>
+
+</body>
+</html>

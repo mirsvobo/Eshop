@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Admin CMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  <style>
+    body {
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+    .sidebar {
+      position: fixed;
+      top: 0; /* Změněno pro navbar-expand-lg */
+      bottom: 0;
+      left: 0;
+      z-index: 100; /* Za navbarem */
+      padding: 56px 0 0; /* Odsazení shora pro navbar */
+      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+      width: 220px; /* Pevná šířka */
+      overflow-y: auto; /* Scrollbar, pokud je potřeba */
+    }
+    .main-content {
+      padding-top: 56px; /* Odsazení pro navbar */
+      padding-left: 240px; /* Odsazení pro sidebar + malá mezera */
+      padding-right: 20px;
+      padding-bottom: 20px;
+      flex: 1;
+    }
+    .navbar-brand {
+      padding-top: .75rem;
+      padding-bottom: .75rem;
+      font-size: 1rem;
+      background-color: rgba(0, 0, 0, .25); /* Mírné pozadí pro brand v navbaru */
+      box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+      width: 220px; /* Stejná šířka jako sidebar */
+    }
+    .navbar .navbar-toggler { /* Pro menší obrazovky */
+      top: .25rem;
+      right: 1rem;
+    }
+    .nav-link {
+      color: #333; /* Trochu tmavší barva pro lepší kontrast na světlém pozadí */
+    }
+    .sidebar .nav-link {
+      font-weight: 500;
+      color: #333;
+    }
+    .sidebar .nav-link .bi { /* Ikony v sidebar */
+      margin-right: 4px;
+      color: #727272;
+    }
+    .sidebar .nav-link.active {
+      color: #0d6efd; /* Barva primárního tlačítka bootstrapu */
+    }
+    .sidebar .nav-link:hover .bi,
+    .sidebar .nav-link.active .bi {
+      color: inherit;
+    }
+    .sidebar-heading { /* Pro případné nadpisy v sidebar */
+      font-size: .75rem;
+      text-transform: uppercase;
+    }
+    /* Přizpůsobení pro menší obrazovky */
+    @media (max-width: 767.98px) {
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding-top: 0;
+        box-shadow: none;
+      }
+      .main-content {
+        padding-left: 20px; /* Reset odsazení na mobilu */
+      }
+      .navbar-brand {
+        width: auto; /* Reset šířky brandu */
+        background-color: transparent;
+        box-shadow: none;
+      }
+    }
+
+  </style>
+  <th:block layout:fragment="css"></th:block>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark fixed-top flex-md-nowrap p-0 shadow">
+  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 text-white" th:href="@{/admin}">CMS Dřevníky</a>
+
+  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="navbar-nav ms-auto flex-row px-3 align-items-center">
+    <a href="/" target="_blank" class="nav-link px-2 text-white" title="Přejít na e-shop">
+      <i class="bi bi-house-door-fill"></i>
+    </a>
+    <span class="navbar-text text-white me-2 ms-2 d-none d-sm-inline">
+             <i class="bi bi-person-fill me-1"></i> Přihlášen: <strong sec:authentication="name">Admin</strong>
+         </span>
+    <form th:action="@{/odhlaseni}" method="post" class="d-inline">
+      <button type="submit" class="nav-link btn btn-link text-white px-2">Odhlásit se</button>
+    </form>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+      <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" th:classappend="${currentUri == '/admin' ? 'active' : ''}" th:href="@{/admin}">
+              <i class="bi bi-speedometer2 me-1"></i> Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/orders') ? 'active' : ''}"
+               th:href="@{/admin/orders}">
+              <i class="bi bi-list-ul me-1"></i> Objednávky
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/customers') ? 'active' : ''}"
+               th:href="@{/admin/customers}">
+              <i class="bi bi-people me-1"></i> Zákazníci
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/products') ? 'active' : ''}"
+               th:href="@{/admin/products}">
+              <i class="bi bi-box-seam me-1"></i> Produkty
+            </a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               th:classappend="${currentUri != null and (#strings.startsWith(currentUri, '/admin/designs') or #strings.startsWith(currentUri, '/admin/glazes') or #strings.startsWith(currentUri, '/admin/roof-colors')) ? 'active' : ''}"
+               href="#" id="navbarDropdownAttributes" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-palette me-1"></i> Atributy
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownAttributes">
+              <li><a class="dropdown-item" th:href="@{/admin/designs}">Designy</a></li>
+              <li><a class="dropdown-item" th:href="@{/admin/glazes}">Lazury</a></li>
+              <li><a class="dropdown-item" th:href="@{/admin/roof-colors}">Barvy střech</a></li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               th:classappend="${currentUri != null and #strings.startsWith(currentUri, '/admin/addons') ? 'active' : ''}"
+               th:href="@{/admin/addons}">
+              <i class="bi bi-puzzle me-1"></i> Doplňky
+            </a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               th:classappend="${currentUri != null and (#strings.startsWith(currentUri, '/admin/coupons') or #strings.startsWith(currentUri, '/admin/discounts')) ? 'active' : ''}"
+               href="#" id="navbarDropdownMarketing" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-tags me-1"></i> Marketing
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownMarketing">
+              <li><a class="dropdown-item" th:href="@{/admin/coupons}">Slevové kupóny</a></li>
+              <li><a class="dropdown-item" th:href="@{/admin/discounts}">Slevy</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               th:classappend="${currentUri != null and (#strings.startsWith(currentUri, '/admin/order-states') or #strings.startsWith(currentUri, '/admin/tax-rates') or #strings.startsWith(currentUri, '/admin/email-configs')) ? 'active' : ''}"
+               href="#" id="navbarDropdownSettings" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-gear me-1"></i> Nastavení
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownSettings">
+              <li><a class="dropdown-item" th:href="@{/admin/order-states}">Stavy objednávek</a></li>
+              <li><a class="dropdown-item" th:href="@{/admin/tax-rates}">Daňové sazby</a></li>
+              <li><a class="dropdown-item" th:href="@{/admin/email-configs}">Emailové šablony</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+
+      <section layout:fragment="content">
+        <p>Výchozí obsah admin layoutu.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<th:block layout:fragment="javascript"></th:block>
+</body>
+</html>

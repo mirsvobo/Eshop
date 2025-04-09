@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="addressFields(type)">
+
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label th:for="${type} + 'CompanyName'" class="form-label">Název firmy</label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{companyName}" th:id="${type} + 'CompanyName'">
+            <div th:if="${#fields.hasErrors('companyName')}" class="invalid-feedback d-block"> <span th:errors="*{companyName}">Chyba názvu firmy</span>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted text-center my-2 small">nebo</p>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'FirstName'" class="form-label">Křestní jméno</label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{firstName}" th:id="${type} + 'FirstName'">
+            <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback d-block">
+                <span th:errors="*{firstName}">Chyba křestního jména</span>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'LastName'" class="form-label">Příjmení</label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{lastName}" th:id="${type} + 'LastName'">
+            <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback d-block">
+                <span th:errors="*{lastName}">Chyba příjmení</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label th:for="${type} + 'Street'" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{street}" th:id="${type} + 'Street'" required>
+        <div th:if="${#fields.hasErrors('street')}" class="invalid-feedback d-block">
+            <span th:errors="*{street}">Chyba ulice</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'City'" class="form-label">Město <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{city}" th:id="${type} + 'City'" required>
+            <div th:if="${#fields.hasErrors('city')}" class="invalid-feedback d-block">
+                <span th:errors="*{city}">Chyba města</span>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'ZipCode'" class="form-label">PSČ <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{zipCode}" th:id="${type} + 'ZipCode'" required>
+            <div th:if="${#fields.hasErrors('zipCode')}" class="invalid-feedback d-block">
+                <span th:errors="*{zipCode}">Chyba PSČ</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label th:for="${type} + 'Country'" class="form-label">Země <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{country}" th:id="${type} + 'Country'" required>
+        <div th:if="${#fields.hasErrors('country')}" class="invalid-feedback d-block">
+            <span th:errors="*{country}">Chyba země</span>
+        </div>
+    </div>
+
+    <div class="row" th:if="${type == 'invoice'}">
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'TaxId'" class="form-label">IČO</label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{taxId}" th:id="${type} + 'TaxId'">
+            <div th:if="${#fields.hasErrors('taxId')}" class="invalid-feedback d-block">
+                <span th:errors="*{taxId}">Chyba IČO</span>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label th:for="${type} + 'VatId'" class="form-label">DIČ</label>
+            <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{vatId}" th:id="${type} + 'VatId'">
+            <div th:if="${#fields.hasErrors('vatId')}" class="invalid-feedback d-block">
+                <span th:errors="*{vatId}">Chyba DIČ</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3" th:if="${type == 'delivery'}">
+        <label th:for="${type} + 'Phone'" class="form-label">Telefon (pro dopravce)</label>
+        <input type="tel" class="form-control" th:errorclass="is-invalid" th:field="*{phone}" th:id="${type} + 'Phone'">
+        <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback d-block">
+            <span th:errors="*{phone}">Chyba telefonu</span>
+        </div>
+    </div>
+
+</div></body>
+</html>

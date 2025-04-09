@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Úvod</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+
+    <div class="page-header text-center">
+        <div class="container">
+            <h1 class="display-4">Kvalitní dřevníky pro Vaši zahradu</h1>
+            <p class="lead">Nabízíme široký sortiment dřevníků nebo Vám vyrobíme dřevník přesně na míru.</p>
+            <a th:href="@{/produkty}" class="btn btn-primary btn-lg mt-3">Prohlédnout nabídku</a>
+            <a th:href="@{/produkt/na-miru}" class="btn btn-success btn-lg mt-3">Navrhnout na míru</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="text-center mb-4">Proč si vybrat dřevník od nás?</h2>
+        <div class="row text-center mb-5">
+            <div class="col-md-4">
+                <i class="bi bi-tools display-4 text-primary mb-2"></i>
+                <h5>Kvalitní materiály</h5>
+                <p>Používáme pouze kvalitní dřevo a spojovací materiály.</p>
+            </div>
+            <div class="col-md-4">
+                <i class="bi bi-rulers display-4 text-primary mb-2"></i>
+                <h5>Výroba na míru</h5>
+                <p>Přizpůsobíme rozměry, barvu i doplňky vašim potřebám.</p>
+            </div>
+            <div class="col-md-4">
+                <i class="bi bi-truck display-4 text-primary mb-2"></i>
+                <h5>Doprava a montáž</h5>
+                <p>Zajistíme dopravu a případně i odbornou montáž.</p>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+</body>
+</html>

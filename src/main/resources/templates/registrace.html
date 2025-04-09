@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Registrace nového účtu</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <th:block layout:fragment="css">
+        <style>
+            .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+        </style>
+    </th:block>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7">
+                <h1 class="mb-4 text-center">Registrace nového účtu</h1>
+
+                <div th:if="${registrationError}" class="alert alert-danger" role="alert">
+                    <span th:text="${registrationError}">Chyba registrace.</span>
+                </div>
+
+                <form th:action="@{/registrace}" th:object="${registrationDto}" method="post" novalidate>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="firstName" th:field="*{firstName}" required>
+                            <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback">
+                                <span th:errors="*{firstName}">Chyba jména</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="lastName" th:field="*{lastName}" required>
+                            <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback">
+                                <span th:errors="*{lastName}">Chyba příjmení</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mailová adresa <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" th:errorclass="is-invalid" id="email" th:field="*{email}" required>
+                        <div th:if="${#fields.hasErrors('email')}" class="invalid-feedback">
+                            <span th:errors="*{email}">Chyba emailu</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefon (volitelné)</label>
+                        <input type="tel" class="form-control" th:errorclass="is-invalid" id="phone" th:field="*{phone}">
+                        <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback">
+                            <span th:errors="*{phone}">Chyba telefonu</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Heslo <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="password" th:field="*{password}" required>
+                        <div id="passwordHelp" class="form-text">Minimálně 6 znaků.</div>
+                        <div th:if="${#fields.hasErrors('password')}" class="invalid-feedback">
+                            <span th:errors="*{password}">Chyba hesla</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Zaregistrovat se</button>
+
+                    <div class="mt-4 text-center">
+                        Máte již účet? <a th:href="@{/prihlaseni}">Přihlaste se</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+</body>
+</html>

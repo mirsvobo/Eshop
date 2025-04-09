@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="'Detail objednávky ' + ${order.orderCode}">Detail objednávky</title>
+    <style>
+        /* ... (stávající styly) ... */
+        .action-buttons .btn, .action-buttons .form-select, .action-buttons .input-group { margin-right: 0.5rem; margin-bottom: 0.5rem; vertical-align: middle; }
+        .invoice-actions .btn-sm { margin-left: 5px; vertical-align: middle; }
+        .sf-link { font-weight: normal; margin-right: 5px; }
+        .invoice-line { display: flex; align-items: center; margin-bottom: 0.3rem; flex-wrap: wrap;}
+        .invoice-label { min-width: 60px; display: inline-block; font-weight: bold; }
+        .invoice-link-actions { display: inline-flex; align-items: center; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div th:if="${order != null}">
+        <div class="row mb-4">
+            <div class="col-md-7">
+                <h4>Základní informace</h4>
+                <p><strong>Stav objednávky:</strong>
+                </p>
+                <p><strong>Stav platby:</strong> <strong th:text="${order.paymentStatus}"></strong>
+                    <span th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" th:text="' (Požadovaná záloha: ' + ${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency} + ')'"></span>
+                </p>
+                <p><strong>Zaplacená záloha:</strong> <span th:text="${order.depositPaidDate != null ? #temporals.format(order.depositPaidDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
+                <p><strong>Zaplaceno celkem:</strong> <span th:text="${order.paymentDate != null ? #temporals.format(order.paymentDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
+                <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}"></span></p>
+            </div>
+            <div class="col-md-5">
+                <h4>Akce</h4>
+                <div class="action-buttons mb-3">
+                    <form th:action="@{/admin/orders/{id}/update-state(id=${order.id})}" method="post" class="d-inline-block">
+                        <div class="input-group input-group-sm">
+                            <select name="newStateId" class="form-select" required>
+                                <option value="" disabled>-- Změnit stav objednávky --</option>
+                                <option th:each="state : ${allOrderStates}"
+                                        th:value="${state.id}"
+                                        th:text="${state.name}"
+                                        th:selected="${order.stateOfOrder != null and order.stateOfOrder.id == state.id}">
+                                </option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Uložit stav</button>
+                        </div>
+                    </form>
+                    <br/> <form th:action="@{/admin/orders/{id}/mark-deposit-paid(id=${order.id})}" method="post" class="d-inline"
+                                th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.paymentStatus == 'AWAITING_DEPOSIT'}">
+                    <button type="submit" class="btn btn-sm btn-warning">Označit zálohu zaplacenou</button>
+                </form>
+
+                    <form th:action="@{/admin/orders/{id}/mark-fully-paid(id=${order.id})}" method="post" class="d-inline"
+                          th:if="${order.paymentStatus != 'PAID'}">
+                        <button type="submit" class="btn btn-sm btn-success">Označit jako zaplaceno</button>
+                    </form>
+                </div>
+
+                <h5 class="mt-3">Fakturace (SuperFaktura)</h5>
+                <div class="action-buttons mb-2">
+                    <form th:action="@{/admin/orders/{id}/generate-proforma(id=${order.id})}" method="post" class="d-inline"
+                          th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.sfProformaInvoiceId == null}">
+                        <button type="submit" class="btn btn-sm btn-info">Vystavit ZÁLOHOVOU</button>
+                    </form>
+                    <form th:action="@{/admin/orders/{id}/generate-tax-doc(id=${order.id})}" method="post" class="d-inline"
+                          th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.paymentStatus == 'DEPOSIT_PAID' and order.sfTaxDocumentId == null}">
+                        <button type="submit" class="btn btn-sm btn-info">Vystavit DAŇ. DOKLAD</button>
+                    </form>
+                    <form th:action="@{/admin/orders/{id}/generate-final(id=${order.id})}" method="post" class="d-inline"
+                          th:if="${!order.finalInvoiceGenerated and order.sfFinalInvoiceId == null and (order.paymentStatus == 'PAID' or order.paymentMethod == 'CASH_ON_DELIVERY' or (order.paymentStatus == 'DEPOSIT_PAID' and order.depositAmount != null)) }">
+                        <button type="submit" class="btn btn-sm btn-success">Vystavit FINÁLNÍ</button>
+                    </form>
+                </div>
+
+                <div class="mt-2 invoice-actions">
+                    <small class="text-muted d-block mb-1">Vygenerované faktury:</small>
+                    <div th:if="${order.sfProformaInvoiceId != null}" class="invoice-line">
+                        <span class="invoice-label">Zál. f.:</span>
+                        <div class="invoice-link-actions">
+                            <a th:href="|${superFakturaBaseUrl}/invoices/view/${order.sfProformaInvoiceId}|" th:text="${order.proformaInvoiceNumber ?: '#' + order.sfProformaInvoiceId}" target="_blank" class="sf-link" title="Zobrazit v SuperFaktuře"></a>
+                            <a th:if="${order.sfProformaPdfUrl != null}" th:href="${order.sfProformaPdfUrl}" target="_blank" class="btn btn-outline-danger btn-sm" title="Stáhnout PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                            <form th:action="@{/admin/orders/{id}/send-invoice-email(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfProformaInvoiceId}" />
+                                <input type="hidden" name="invoiceType" value="proforma" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
+                            </form>
+                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfProformaInvoiceId}" />
+                                <input type="hidden" name="invoiceType" value="proforma" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div th:if="${order.sfTaxDocumentId != null}" class="invoice-line">
+                        <span class="invoice-label">Daň. d.:</span>
+                        <div class="invoice-link-actions">
+                            <a th:href="|${superFakturaBaseUrl}/invoices/view/${order.sfTaxDocumentId}|" th:text="${order.taxDocumentNumber ?: '#' + order.sfTaxDocumentId}" target="_blank" class="sf-link" title="Zobrazit v SuperFaktuře"></a>
+                            <a th:if="${order.sfTaxDocumentPdfUrl != null}" th:href="${order.sfTaxDocumentPdfUrl}" target="_blank" class="btn btn-outline-danger btn-sm" title="Stáhnout PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                            <form th:action="@{/admin/orders/{id}/send-invoice-email(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfTaxDocumentId}" />
+                                <input type="hidden" name="invoiceType" value="tax_document" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
+                            </form>
+                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfTaxDocumentId}" />
+                                <input type="hidden" name="invoiceType" value="tax_document" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div th:if="${order.sfFinalInvoiceId != null}" class="invoice-line">
+                        <span class="invoice-label">Fin. f.:</span>
+                        <div class="invoice-link-actions">
+                            <a th:href="|${superFakturaBaseUrl}/invoices/view/${order.sfFinalInvoiceId}|" th:text="${order.finalInvoiceNumber ?: '#' + order.sfFinalInvoiceId}" target="_blank" class="sf-link" title="Zobrazit v SuperFaktuře"></a>
+                            <a th:if="${order.sfFinalInvoicePdfUrl != null}" th:href="${order.sfFinalInvoicePdfUrl}" target="_blank" class="btn btn-outline-danger btn-sm" title="Stáhnout PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                            <form th:action="@{/admin/orders/{id}/send-invoice-email(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfFinalInvoiceId}" />
+                                <input type="hidden" name="invoiceType" value="final_invoice" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
+                            </form>
+                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfFinalInvoiceId}" />
+                                <input type="hidden" name="invoiceType" value="final_invoice" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div th:if="${order.sfProformaInvoiceId == null and order.sfTaxDocumentId == null and order.sfFinalInvoiceId == null}">
+                        <span class="text-muted">Žádné faktury</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="row detail-section">
+            <div class="col-md-6">
+                <h4>Fakturační adresa</h4>
+                <div class="address-box">
+                    <address>
+                        <strong th:if="${order.invoiceCompanyName}" th:text="${order.invoiceCompanyName}"></strong><br th:if="${order.invoiceCompanyName}">
+                        <th:block th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></th:block><br>
+                        <th:block th:text="${order.invoiceStreet}"></th:block><br>
+                        <th:block th:text="${order.invoiceZipCode + ' ' + order.invoiceCity}"></th:block><br>
+                        <th:block th:text="${order.invoiceCountry}"></th:block><br>
+                        <th:block th:if="${order.invoiceTaxId}">IČO: <th:block th:text="${order.invoiceTaxId}"></th:block><br></th:block>
+                        <th:block th:if="${order.invoiceVatId}">DIČ: <th:block th:text="${order.invoiceVatId}"></th:block></th:block>
+                    </address>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h4>Dodací adresa</h4>
+                <div class="address-box">
+                    <address>
+                        <strong th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName}"></strong><br th:if="${order.deliveryCompanyName}">
+                        <th:block th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName}"></th:block><br>
+                        <th:block th:text="${order.deliveryStreet}"></th:block><br>
+                        <th:block th:text="${order.deliveryZipCode + ' ' + order.deliveryCity}"></th:block><br>
+                        <th:block th:text="${order.deliveryCountry}"></th:block><br>
+                        <th:block th:if="${order.deliveryPhone}">Tel.: <th:block th:text="${order.deliveryPhone}"></th:block></th:block>
+                    </address>
+                    <em th:if="${order.addressesMatchInOrder()}" class="text-muted d-block mt-2">(Stejná jako fakturační)</em>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h4>Položky objednávky</h4>
+            <div class="table-responsive">
+                <table class="table order-items-table table-sm table-striped">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Produkt</th>
+                        <th class="text-center">Množství</th>
+                        <th class="text-end">Jedn. cena (bez DPH)</th>
+                        <th class="text-end">DPH (%)</th>
+                        <th class="text-end">Celkem (bez DPH)</th>
+                        <th class="text-end">Celkem (s DPH)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${order.orderItems}">
+                        <td>
+                            <strong th:text="${item.productName}">Název produktu</strong><br>
+                            <small class="variant-details" th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''">Detail varianty</small>
+                            <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="variant-details mt-1">
+                                <strong>Doplňky:</strong>
+                                <ul style="padding-left: 15px; margin-bottom: 0; list-style-type: none;">
+                                    <li th:each="addonItem : ${item.selectedAddons}"
+                                        th:text="${addonItem.addonName + ' (' + addonItem.quantity + ' ks)'}">
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                        <td class="text-center" th:text="${item.count}">1</td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(item.unitPriceWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(item.taxRate * 100, 1, 'POINT', 0, 'COMMA')} + '%'"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(item.totalPriceWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(item.totalPriceWithTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="row justify-content-end">
+            <div class="col-md-6 col-lg-5">
+                <h4>Celkový souhrn</h4>
+                <div class="summary-box">
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between py-1"><span>Mezisoučet položek (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="d-flex justify-content-between py-1 text-success"><span>Sleva (<span th:text="${order.appliedCouponCode ?: order.appliedCoupon?.code}">KUPON</span>)</span> <span th:text="'-' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="d-flex justify-content-between py-1"><span>Doprava (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="d-flex justify-content-between py-1 border-top mt-2 pt-2"><span>Celkem bez DPH</span> <span class="fw-bold" th:text="${#numbers.formatDecimal(order.totalPriceWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="d-flex justify-content-between py-1"><span>Celkem DPH</span> <span th:text="${#numbers.formatDecimal(order.totalTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="d-flex justify-content-between py-2 border-top mt-2 fs-5"><strong>Celkem k úhradě</strong> <strong><span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></strong></li>
+                        <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="d-flex justify-content-between py-1 text-muted border-top mt-2 pt-2"><span>Požadovaná záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.depositPaidDate != null}" class="d-flex justify-content-between py-1 text-success"><span>Zaplacená záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.paymentDate != null and order.paymentStatus == 'PAID'}" class="d-flex justify-content-between py-1 text-success"><span>Zaplaceno celkem</span> <span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.paymentStatus != 'PAID' and order.paymentMethod != 'CASH_ON_DELIVERY'}" class="d-flex justify-content-between py-1 text-danger fw-bold border-top mt-2 pt-2"><span>Zbývá uhradit</span> <span th:with="remaining=${order.totalPrice - (order.depositPaidDate != null ? order.depositAmount : T(java.math.BigDecimal).ZERO)}" th:text="${#numbers.formatDecimal(remaining, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div th:if="${not #strings.isEmpty(order.note)}" class="col-md-6 detail-section">
+                <h4>Poznámka zákazníka</h4>
+                <p class="fst-italic bg-light p-3 rounded" th:text="${order.note}"></p>
+            </div>
+            <div class="col-md-6 detail-section">
+                <h4>Interní poznámky</h4>
+                <textarea class="form-control form-control-sm" rows="3" placeholder="Zde můžete přidat interní poznámky k objednávce..."></textarea>
+                <button class="btn btn-sm btn-secondary mt-2 disabled">Uložit poznámku (TODO)</button>
+            </div>
+        </div>
+
+    </div>
+    <div th:unless="${order != null}" class="alert alert-danger">
+        Objednávka nebyla nalezena.
+    </div>
+
+</section>
+
+</body>
+</html>

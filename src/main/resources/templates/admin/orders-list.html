@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa objednávek</title>
+    <style>
+        /* Pomocná třída pro formulář filtru */
+        .filter-form .row > div {
+            margin-bottom: 0.5rem; /* Menší mezera mezi řádky filtru */
+        }
+        .filter-form .form-label {
+            font-size: 0.85em; /* Menší popisky */
+            margin-bottom: 0.2rem;
+        }
+        .filter-form .form-control-sm, .filter-form .form-select-sm {
+            font-size: 0.875rem; /* Menší inputy */
+        }
+        /* Styly pro odkazy řazení */
+        .sort-link { color: inherit; text-decoration: none; }
+        .sort-link:hover { text-decoration: underline; }
+        .sort-active { font-weight: bold; } /* Aktivní řazení */
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Přehled objednávek</h1>
+    </div>
+
+    <form th:action="@{/admin/orders}" method="GET" class="filter-form bg-light p-3 rounded mb-4">
+        <div class="row gx-2 align-items-end">
+            <div class="col-md-3 col-lg-2 col-sm-6">
+                <label for="customerEmailFilter" class="form-label">Email zákazníka</label>
+                <input type="text" class="form-control form-control-sm" id="customerEmailFilter" name="customerEmail" th:value="${customerEmailFilter}">
+            </div>
+            <div class="col-md-2 col-lg-2 col-sm-6">
+                <label for="stateIdFilter" class="form-label">Stav objednávky</label>
+                <select class="form-select form-select-sm" id="stateIdFilter" name="stateId">
+                    <option value="">-- Všechny stavy --</option>
+                    <option th:each="state : ${allOrderStates}"
+                            th:value="${state.id}"
+                            th:text="${state.name}"
+                            th:selected="${selectedStateId != null and state.id == selectedStateId}">
+                        Stav X
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-2 col-lg-2 col-sm-6">
+                <label for="paymentStatusFilter" class="form-label">Stav platby</label>
+                <select class="form-select form-select-sm" id="paymentStatusFilter" name="paymentStatus">
+                    <option value="">-- Všechny --</option>
+                    <option value="PENDING" th:selected="${selectedPaymentStatus == 'PENDING'}">Pending</option>
+                    <option value="AWAITING_DEPOSIT" th:selected="${selectedPaymentStatus == 'AWAITING_DEPOSIT'}">Čeká na zálohu</option>
+                    <option value="DEPOSIT_PAID" th:selected="${selectedPaymentStatus == 'DEPOSIT_PAID'}">Záloha zaplacena</option>
+                    <option value="PENDING_PAYMENT" th:selected="${selectedPaymentStatus == 'PENDING_PAYMENT'}">Čeká na platbu</option>
+                    <option value="PAID" th:selected="${selectedPaymentStatus == 'PAID'}">Zaplaceno</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-lg-2 col-sm-6">
+                <label for="dateFromFilter" class="form-label">Datum od</label>
+                <input type="date" class="form-control form-control-sm" id="dateFromFilter" name="dateFrom" th:value="${selectedDateFrom}">
+            </div>
+            <div class="col-md-2 col-lg-2 col-sm-6">
+                <label for="dateToFilter" class="form-label">Datum do</label>
+                <input type="date" class="form-control form-control-sm" id="dateToFilter" name="dateTo" th:value="${selectedDateTo}">
+            </div>
+            <div class="col-md-1 col-lg-2 col-sm-12 text-md-end mt-2 mt-md-0">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filtrovat</button>
+            </div>
+        </div>
+        <input type="hidden" name="size" th:value="${orderPage != null ? orderPage.size : 20}"> <input type="hidden" name="sort" th:value="${currentSort}">
+    </form>
+    <div th:if="${orderPage == null or orderPage.empty}" class="alert alert-info">
+        Nebyly nalezeny žádné objednávky odpovídající zadaným kritériím.
+    </div>
+
+    <div th:unless="${orderPage == null or orderPage.empty}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>
+                    <a th:href="@{/admin/orders(size=${orderPage.size}, sort=${(currentSort != null and currentSort.startsWith('id,ASC')) ? 'id,DESC' : 'id,ASC'}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('id,')} ? 'sort-active' : ''">
+                        ID <i th:if="${currentSort != null and currentSort.startsWith('id,ASC')}" class="bi bi-sort-up"></i><i th:if="${currentSort != null and currentSort.startsWith('id,DESC')}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>Kód</th>
+                <th>
+                    <a th:href="@{/admin/orders(size=${orderPage.size}, sort=${(currentSort != null and currentSort.startsWith('customer.email,ASC')) ? 'customer.email,DESC' : 'customer.email,ASC'}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('customer.email,')} ? 'sort-active' : ''">
+                        Zákazník <i th:if="${currentSort != null and currentSort.startsWith('customer.email,ASC')}" class="bi bi-sort-up"></i><i th:if="${currentSort != null and currentSort.startsWith('customer.email,DESC')}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>
+                    <a th:href="@{/admin/orders(size=${orderPage.size}, sort=${(currentSort != null and currentSort.startsWith('orderDate,ASC')) ? 'orderDate,DESC' : 'orderDate,ASC'}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('orderDate,')} ? 'sort-active' : ''">
+                        Datum <i th:if="${currentSort != null and currentSort.startsWith('orderDate,ASC')}" class="bi bi-sort-up"></i><i th:if="${currentSort != null and currentSort.startsWith('orderDate,DESC')}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>Stav</th>
+                <th>Platba</th>
+                <th class="text-end">
+                    <a th:href="@{/admin/orders(size=${orderPage.size}, sort=${(currentSort != null and currentSort.startsWith('totalPrice,ASC')) ? 'totalPrice,DESC' : 'totalPrice,ASC'}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('totalPrice,')} ? 'sort-active' : ''">
+                        Celkem <i th:if="${currentSort != null and currentSort.startsWith('totalPrice,ASC')}" class="bi bi-sort-up"></i><i th:if="${currentSort != null and currentSort.startsWith('totalPrice,DESC')}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${orderPage.content}">
+                <td th:text="${order.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/orders/{id}(id=${order.id})}" th:text="${order.orderCode}">KÓD123</a>
+                </td>
+                <td th:text="${order.customer?.email}">email@zakaznika.cz</td>
+                <td th:text="${order.orderDate != null ? #temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm') : '---'}">Datum</td>
+                <td>
+                    <span th:if="${order.stateOfOrder != null}" class="badge" th:switch="${order.stateOfOrder.code?.toUpperCase()}">
+                         <th:block th:case="'NEW'"><span class="bg-primary" th:text="${order.stateOfOrder.name}">Nová</span></th:block>
+                         <th:block th:case="'AWAITING_PAYMENT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na platbu</span></th:block>
+                         <th:block th:case="'AWAITING_DEPOSIT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na zálohu</span></th:block>
+                         <th:block th:case="'DEPOSIT_PAID'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Záloha zaplacena</span></th:block>
+                         <th:block th:case="'PAID'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Zaplaceno</span></th:block>
+                         <th:block th:case="'PROCESSING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Zpracovává se</span></th:block>
+                         <th:block th:case="'IN_PRODUCTION'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Ve výrobě</span></th:block>
+                         <th:block th:case="'AT_ZINC_PLATING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">V zinkovně</span></th:block>
+                         <th:block th:case="'READY_TO_SHIP'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Připraveno</span></th:block>
+                         <th:block th:case="'SHIPPED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Odesláno</span></th:block>
+                         <th:block th:case="'DELIVERED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Doručeno</span></th:block>
+                         <th:block th:case="'CANCELLED'"><span class="bg-danger" th:text="${order.stateOfOrder.name}">Zrušeno</span></th:block>
+                         <th:block th:case="*"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Neznámý</span></th:block>
+                     </span>
+                    <span th:unless="${order.stateOfOrder != null}" class="badge bg-secondary">Neznámý</span>
+                </td>
+                <td>
+                     <span class="badge" th:switch="${order.paymentStatus}">
+                         <span th:case="'PENDING'" class="bg-secondary">Čeká</span>
+                         <span th:case="'AWAITING_DEPOSIT'" class="bg-warning text-dark">Čeká záloha</span>
+                         <span th:case="'DEPOSIT_PAID'" class="bg-info text-dark">Záloha OK</span>
+                         <span th:case="'PENDING_PAYMENT'" class="bg-warning text-dark">Čeká platba</span>
+                         <span th:case="'PAID'" class="bg-success">Zaplaceno</span>
+                         <span th:case="*" class="bg-light text-dark" th:text="${order.paymentStatus}">?</span>
+                     </span>
+                </td>
+                <td class="text-end" th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}">1000 Kč</td>
+                <td>
+                    <a th:href="@{/admin/orders/{id}(id=${order.id})}" class="btn btn-sm btn-outline-primary" title="Zobrazit detail">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <nav th:if="${orderPage != null and orderPage.totalPages > 1}" aria-label="Stránkování objednávek">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${orderPage.first ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/admin/orders(page=${orderPage.number - 1}, size=${orderPage.size}, sort=${currentSort}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}">Předchozí</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, orderPage.totalPages - 1)}" th:classappend="${i == orderPage.number ? 'active' : ''}">
+                    <a class="page-link" th:href="@{/admin/orders(page=${i}, size=${orderPage.size}, sort=${currentSort}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}" th:text="${i + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${orderPage.last ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/admin/orders(page=${orderPage.number + 1}, size=${orderPage.size}, sort=${currentSort}, stateId=${selectedStateId}, paymentStatus=${selectedPaymentStatus}, customerEmail=${customerEmailFilter}, dateFrom=${selectedDateFrom}, dateTo=${selectedDateTo})}">Další</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</section>
+
+</body>
+</html>

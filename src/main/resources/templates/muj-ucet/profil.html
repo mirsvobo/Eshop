@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Můj profil</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <th:block layout:fragment="css">
+        <style>
+            .account-nav .nav-link { color: var(--bs-secondary-color); border-bottom: 1px solid var(--bs-border-color); border-radius: 0; padding: 0.75rem 1rem; }
+            .account-nav .nav-link.active { color: var(--bs-emphasis-color); font-weight: bold; background-color: transparent; border-left: 3px solid var(--bs-primary); padding-left: calc(1rem - 3px); }
+            .account-nav .nav-link:hover { color: var(--bs-emphasis-color); background-color: var(--bs-tertiary-bg); }
+            .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+        </style>
+    </th:block>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-lg-3">
+                <nav class="nav flex-column account-nav mb-4">
+                    <a class="nav-link active" th:href="@{/muj-ucet/profil}">Můj profil</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/adresy}">Moje adresy</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/zmena-hesla}">Změna hesla</a>
+                    <hr class="my-2">
+                    <a class="nav-link" th:href="@{/odhlaseni}">Odhlásit se</a>
+                </nav>
+            </div>
+
+            <div class="col-lg-9">
+                <h2>Můj profil</h2>
+                <hr class="mb-4">
+
+                <div th:if="${profileSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${profileSuccess}">Profil aktualizován.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${profileError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${profileError}">Chyba aktualizace profilu.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <form th:action="@{/muj-ucet/profil}" th:object="${profile}" method="post" novalidate>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="firstName" th:field="*{firstName}" required>
+                            <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback">
+                                <span th:errors="*{firstName}">Chyba jména</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="lastName" th:field="*{lastName}" required>
+                            <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback">
+                                <span th:errors="*{lastName}">Chyba příjmení</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail (nelze změnit)</label>
+                        <input type="email" class="form-control" id="email" th:value="${customerEmail}" disabled readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefon</label>
+                        <input type="tel" class="form-control" th:errorclass="is-invalid" id="phone" th:field="*{phone}" aria-describedby="phoneHelp">
+                        <div id="phoneHelp" class="form-text">Zadejte včetně předvolby, např. +420 123 456 789.</div>
+                        <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback">
+                            <span th:errors="*{phone}">Chyba telefonu</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Uložit změny</button>
+                </form>
+
+            </div> </div> </div> </section>
+
+</body>
+</html>

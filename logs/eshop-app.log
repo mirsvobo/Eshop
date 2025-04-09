@@ -1,0 +1,695 @@
+2025-04-09T12:04:10.398+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 26364 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-09T12:04:10.409+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-09T12:04:10.411+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-09T12:04:11.148+02:00  INFO 26364 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-09T12:04:11.149+02:00  INFO 26364 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-09T12:04:15.060+02:00  INFO 26364 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-09T12:04:15.385+02:00  INFO 26364 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 296 ms. Found 14 JPA repository interfaces.
+2025-04-09T12:04:18.571+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-09T12:04:18.601+02:00  INFO 26364 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-09T12:04:18.602+02:00  INFO 26364 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-09T12:04:18.719+02:00  INFO 26364 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-09T12:04:18.720+02:00  INFO 26364 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 7567 ms
+2025-04-09T12:04:19.470+02:00  INFO 26364 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-09T12:04:19.562+02:00  INFO 26364 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-09T12:04:19.612+02:00  INFO 26364 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-04-09T12:04:20.053+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-09T12:04:20.100+02:00  INFO 26364 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-09T12:04:20.269+02:00  INFO 26364 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@789bfce7
+2025-04-09T12:04:20.273+02:00  INFO 26364 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-09T12:04:20.405+02:00  INFO 26364 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-09T12:04:23.053+02:00  INFO 26364 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-09T12:04:25.333+02:00  INFO 26364 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-09T12:04:26.749+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-09T12:04:27.107+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-09T12:04:27.108+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-09T12:04:27.136+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-09T12:04:27.498+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : No existing orders found in database.
+2025-04-09T12:04:27.499+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 205
+2025-04-09T12:04:27.978+02:00  WARN 26364 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-09T12:04:28.730+02:00  INFO 26364 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-09T12:04:28.901+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-09T12:04:29.669+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-09T12:04:30.779+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-09T12:04:30.886+02:00  INFO 26364 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-09T12:04:30.906+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 22.153 seconds (process running for 23.962)
+2025-04-09T12:04:30.918+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing test data...
+2025-04-09T12:04:31.281+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Tax Rates...
+2025-04-09T12:04:31.370+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Order States...
+2025-04-09T12:04:31.374+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='NEW', Name='Nová', ID=1
+2025-04-09T12:04:31.378+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='AWAITING_DEPOSIT', Name='Čeká na zálohu', ID=2
+2025-04-09T12:04:31.380+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='AWAITING_PAYMENT', Name='Čeká na platbu', ID=3
+2025-04-09T12:04:31.383+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='DEPOSIT_PAID', Name='Záloha zaplacena', ID=4
+2025-04-09T12:04:31.391+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='PAID', Name='Zaplaceno', ID=5
+2025-04-09T12:04:31.394+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='PROCESSING', Name='Zpracovává se', ID=6
+2025-04-09T12:04:31.397+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='IN_PRODUCTION', Name='Ve výrobě', ID=7
+2025-04-09T12:04:31.400+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='AT_ZINC_PLATING', Name='V zinkovně', ID=8
+2025-04-09T12:04:31.403+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='READY_TO_SHIP', Name='Připraveno k odeslání', ID=9
+2025-04-09T12:04:31.405+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='SHIPPED', Name='Odesláno', ID=10
+2025-04-09T12:04:31.408+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='DELIVERED', Name='Doručeno', ID=11
+2025-04-09T12:04:31.412+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Saved OrderState: Code='CANCELLED', Name='Zrušeno', ID=12
+2025-04-09T12:04:31.419+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Email Template Configs...
+2025-04-09T12:04:31.539+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Klasik
+2025-04-09T12:04:31.547+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Klasik Plus
+2025-04-09T12:04:31.554+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Modern Simple
+2025-04-09T12:04:31.565+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Modern Box
+2025-04-09T12:04:31.573+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Ořech
+2025-04-09T12:04:31.580+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Palisandr
+2025-04-09T12:04:31.588+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Bezbarvý lak
+2025-04-09T12:04:31.595+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Šedá lazura
+2025-04-09T12:04:31.602+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Antracit
+2025-04-09T12:04:31.608+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Teak
+2025-04-09T12:04:31.616+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Teak Premium
+2025-04-09T12:04:31.626+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Antracit
+2025-04-09T12:04:31.633+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Červená
+2025-04-09T12:04:31.642+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Zelená
+2025-04-09T12:04:31.648+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Stříbrná
+2025-04-09T12:04:31.656+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Stříbrná metalická
+2025-04-09T12:04:31.667+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Polička navíc
+2025-04-09T12:04:31.675+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Držák na nářadí
+2025-04-09T12:04:31.682+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Starý doplněk
+2025-04-09T12:04:31.701+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Product: Dřevník Klasik
+2025-04-09T12:04:31.739+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Product: Dřevník Modern
+2025-04-09T12:04:31.754+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Product: Dřevník na míru
+2025-04-09T12:04:31.757+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating new configurator for product ID: 3
+2025-04-09T12:04:31.758+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Updating existing configurator for product ID: 3
+2025-04-09T12:04:32.169+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin user: admin@example.com
+2025-04-09T12:04:32.181+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating test orders...
+2025-04-09T12:04:32.182+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Attempting to create test order for customer test@example.com with 1 items in CZK
+2025-04-09T12:04:32.183+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 1 with explicit currency: CZK
+2025-04-09T12:04:32.183+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: CZK
+2025-04-09T12:04:32.200+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: CZK
+2025-04-09T12:04:32.200+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order processing with currency: CZK
+2025-04-09T12:04:32.200+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: CZK
+2025-04-09T12:04:32.200+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processing item with Product ID: 1
+2025-04-09T12:04:32.200+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 1
+2025-04-09T12:04:32.206+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Surcharge calculated: 0
+2025-04-09T12:04:32.207+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Base Unit Price (No Tax, Raw): 5990.00
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price After Discount: 5990.00
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total Fixed Addons Price: 0
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final Unit Price (No Tax): 5990.00
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Tax Amount: 1257.90
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price With Tax: 7247.90
+2025-04-09T12:04:32.218+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Calculated Totals: TotalPriceWithoutTax=5990.00, TotalTaxAmount=1257.90, TotalPriceWithTax=7247.90
+2025-04-09T12:04:32.219+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final OrderItem state before return: PriceNoTax=5990.00, TaxAmount=1257.90
+2025-04-09T12:04:32.219+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processed item successfully. Subtotal: 5990.00, Tax: 1257.90
+2025-04-09T12:04:32.219+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Finished items. Subtotal: 5990.00, Item Tax: 1257.90
+2025-04-09T12:04:32.219+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost currency: CZK
+2025-04-09T12:04:32.219+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-09T12:04:32.219+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Testovací 123, Testov, 12345, Česká republika'
+2025-04-09T12:04:32.905+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 1008.01 CZK (Distance: 33.9 km)
+2025-04-09T12:04:32.906+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Shipping calculated. CostNoTax: 1008.01, Tax: 211.68
+2025-04-09T12:04:32.906+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals currency: CZK
+2025-04-09T12:04:32.907+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final totals calculated. TotalNoTax: 6998.01, TotalTax: 1469.58, TotalWithTax: 8467.59
+2025-04-09T12:04:32.907+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit currency: CZK
+2025-04-09T12:04:32.908+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Payment status: PENDING_PAYMENT, Deposit: null
+2025-04-09T12:04:32.909+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 206
+2025-04-09T12:04:32.909+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Generated Order Code: 206
+2025-04-09T12:04:32.909+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-09T12:04:32.933+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order 206 created successfully. Total: 8467.59 CZK
+2025-04-09T12:04:32.934+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email...
+2025-04-09T12:04:32.938+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Successfully created test order: 206 (Total: 8467.59 CZK)
+2025-04-09T12:04:32.939+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Attempting to create test order for customer test@example.com with 1 items in EUR
+2025-04-09T12:04:32.941+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 1 with explicit currency: EUR
+2025-04-09T12:04:32.941+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: EUR
+2025-04-09T12:04:32.949+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: EUR
+2025-04-09T12:04:32.950+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order processing with currency: EUR
+2025-04-09T12:04:32.950+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: EUR
+2025-04-09T12:04:32.950+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processing item with Product ID: 3
+2025-04-09T12:04:32.950+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 3
+2025-04-09T12:04:32.952+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Surcharge calculated: 0
+2025-04-09T12:04:32.957+02:00  INFO 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice. Product ID: 3, Currency: EUR
+2025-04-09T12:04:32.957+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price from dimensions (EUR): 1623.60
+2025-04-09T12:04:32.958+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for design 'Moderní s přesahem' (EUR): 0.00
+2025-04-09T12:04:32.958+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for divider (EUR): 62.40
+2025-04-09T12:04:32.958+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for gutter (EUR, fixed): 0.00
+2025-04-09T12:04:32.959+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for garden shed (EUR, fixed): 0.00
+2025-04-09T12:04:32.960+02:00  INFO 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice. Product ID: 3, Currency: EUR. Vypočtená cena: 1686.00
+2025-04-09T12:04:32.961+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Base Unit Price (No Tax, Raw): 1686.00
+2025-04-09T12:04:32.970+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price After Discount: 1686.00
+2025-04-09T12:04:33.010+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total addons price calculated: 50.00
+2025-04-09T12:04:33.010+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total Fixed Addons Price: 50.00
+2025-04-09T12:04:33.010+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final Unit Price (No Tax): 1736.00
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Tax Amount: 364.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price With Tax: 2100.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Calculated Totals: TotalPriceWithoutTax=1736.00, TotalTaxAmount=364.56, TotalPriceWithTax=2100.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final OrderItem state before return: PriceNoTax=1736.00, TaxAmount=364.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processed item successfully. Subtotal: 1736.00, Tax: 364.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Finished items. Subtotal: 1736.00, Item Tax: 364.56
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost currency: EUR
+2025-04-09T12:04:33.011+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency EUR
+2025-04-09T12:04:33.011+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Testovací 123, Testov, 12345, Česká republika'
+2025-04-09T12:04:33.088+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 40.32 EUR (Distance: 33.9 km)
+2025-04-09T12:04:33.090+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Shipping calculated. CostNoTax: 40.32, Tax: 8.47
+2025-04-09T12:04:33.092+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals currency: EUR
+2025-04-09T12:04:33.092+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final totals calculated. TotalNoTax: 1776.32, TotalTax: 373.03, TotalWithTax: 2149.35
+2025-04-09T12:04:33.092+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit currency: EUR
+2025-04-09T12:04:33.092+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Deposit amount 1074.68 EUR calculated.
+2025-04-09T12:04:33.092+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Payment status: AWAITING_DEPOSIT, Deposit: 1074.68
+2025-04-09T12:04:33.093+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 207
+2025-04-09T12:04:33.093+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Generated Order Code: 207
+2025-04-09T12:04:33.094+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-09T12:04:33.122+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order 207 created successfully. Total: 2149.35 EUR
+2025-04-09T12:04:33.124+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email...
+2025-04-09T12:04:33.124+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 11] Triggering proforma invoice gen. Currency: EUR
+2025-04-09T12:04:33.149+02:00 ERROR 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Non-critical error generating proforma invoice for order 207: Order not found: 2. Cont.
+
+jakarta.persistence.EntityNotFoundException: Order not found: 2
+	at org.example.eshop.service.SuperFakturaInvoiceService.lambda$reloadOrder$2(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[na:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.reloadOrder(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(SuperFakturaInvoiceService.java:69) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$1.generateProformaInvoice(<generated>) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:723) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$0.generateProformaInvoice(<generated>) ~[classes/:na]
+	at org.example.eshop.service.OrderService.createOrder(OrderService.java:276) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.OrderService$$SpringCGLIB$$0.createOrder(<generated>) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.createTestOrder(DataInitializer.java:315) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.createSampleOrders(DataInitializer.java:235) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.run(DataInitializer.java:177) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.init.DataInitializer$$SpringCGLIB$$0.run(<generated>) ~[classes/:na]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.example.eshop.EshopApplication.main(EshopApplication.java:12) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.4.jar:3.4.4]
+
+2025-04-09T12:04:33.168+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Successfully created test order: 207 (Total: 2149.35 EUR)
+2025-04-09T12:04:33.170+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Attempting to create test order for customer admin@example.com with 1 items in CZK
+2025-04-09T12:04:33.170+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 2 with explicit currency: CZK
+2025-04-09T12:04:33.170+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: CZK
+2025-04-09T12:04:33.182+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: CZK
+2025-04-09T12:04:33.182+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order processing with currency: CZK
+2025-04-09T12:04:33.182+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: CZK
+2025-04-09T12:04:33.182+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processing item with Product ID: 2
+2025-04-09T12:04:33.183+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 2
+2025-04-09T12:04:33.187+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Surcharge calculated: 500.00
+2025-04-09T12:04:33.187+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Base Unit Price (No Tax, Raw): 7490.00
+2025-04-09T12:04:33.197+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price After Discount: 7490.00
+2025-04-09T12:04:33.197+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total Fixed Addons Price: 0
+2025-04-09T12:04:33.198+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final Unit Price (No Tax): 7990.00
+2025-04-09T12:04:33.198+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Tax Amount: 1677.90
+2025-04-09T12:04:33.198+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price With Tax: 9667.90
+2025-04-09T12:04:33.198+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Calculated Totals: TotalPriceWithoutTax=15980.00, TotalTaxAmount=3355.80, TotalPriceWithTax=19335.80
+2025-04-09T12:04:33.198+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final OrderItem state before return: PriceNoTax=15980.00, TaxAmount=3355.80
+2025-04-09T12:04:33.199+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processed item successfully. Subtotal: 15980.00, Tax: 3355.80
+2025-04-09T12:04:33.199+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Finished items. Subtotal: 15980.00, Item Tax: 3355.80
+2025-04-09T12:04:33.199+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost currency: CZK
+2025-04-09T12:04:33.199+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-09T12:04:33.199+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Adminova 1, Hlavní Město, 11000, Česká republika'
+2025-04-09T12:04:33.321+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 1008.01 CZK (Distance: 33.9 km)
+2025-04-09T12:04:33.322+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Shipping calculated. CostNoTax: 1008.01, Tax: 211.68
+2025-04-09T12:04:33.322+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals currency: CZK
+2025-04-09T12:04:33.322+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final totals calculated. TotalNoTax: 16988.01, TotalTax: 3567.48, TotalWithTax: 20555.49
+2025-04-09T12:04:33.322+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit currency: CZK
+2025-04-09T12:04:33.322+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Payment status: PENDING_PAYMENT, Deposit: null
+2025-04-09T12:04:33.323+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 208
+2025-04-09T12:04:33.323+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Generated Order Code: 208
+2025-04-09T12:04:33.323+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-09T12:04:33.332+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order 208 created successfully. Total: 20555.49 CZK
+2025-04-09T12:04:33.332+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email...
+2025-04-09T12:04:33.333+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Successfully created test order: 208 (Total: 20555.49 CZK)
+2025-04-09T12:04:33.335+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Marking order 208 fully paid on 2025-04-07
+2025-04-09T12:04:33.345+02:00  WARN 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Cannot mark payment in SF order 208: Final SF ID missing.
+2025-04-09T12:04:33.351+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Updating order 208 state from 'Nová' to 'Zpracovává se'
+2025-04-09T12:04:33.355+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Manually updated order 208 to PAID and state PROCESSING
+2025-04-09T12:04:33.356+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Attempting to create test order for customer test@example.com with 1 items in CZK
+2025-04-09T12:04:33.357+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 1 with explicit currency: CZK
+2025-04-09T12:04:33.357+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: CZK
+2025-04-09T12:04:33.360+02:00 DEBUG 26364 --- [Eshop] [task-4] org.example.eshop.service.EmailService   : Loading email config for state 'PROCESSING' from database.
+2025-04-09T12:04:33.373+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: CZK
+2025-04-09T12:04:33.373+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order processing with currency: CZK
+2025-04-09T12:04:33.374+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: CZK
+2025-04-09T12:04:33.374+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processing item with Product ID: 3
+2025-04-09T12:04:33.374+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 3
+2025-04-09T12:04:33.375+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Surcharge calculated: 0
+2025-04-09T12:04:33.375+02:00  INFO 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice. Product ID: 3, Currency: CZK
+2025-04-09T12:04:33.377+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price from dimensions (CZK): 32700.00
+2025-04-09T12:04:33.377+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for design 'Klasik Mini' (CZK): 0.00
+2025-04-09T12:04:33.377+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for divider (CZK): 0.00
+2025-04-09T12:04:33.377+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for gutter (CZK, fixed): 1000.00
+2025-04-09T12:04:33.377+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : [ProductService] Price for garden shed (CZK, fixed): 0.00
+2025-04-09T12:04:33.377+02:00  INFO 26364 --- [Eshop] [restartedMain] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice. Product ID: 3, Currency: CZK. Vypočtená cena: 33700.00
+2025-04-09T12:04:33.378+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Base Unit Price (No Tax, Raw): 33700.00
+2025-04-09T12:04:33.386+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price After Discount: 33700.00
+2025-04-09T12:04:33.399+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total addons price calculated: 350.00
+2025-04-09T12:04:33.399+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Total Fixed Addons Price: 350.00
+2025-04-09T12:04:33.400+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final Unit Price (No Tax): 34050.00
+2025-04-09T12:04:33.400+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Tax Amount: 7150.50
+2025-04-09T12:04:33.400+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Unit Price With Tax: 41200.50
+2025-04-09T12:04:33.400+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Calculated Totals: TotalPriceWithoutTax=34050.00, TotalTaxAmount=7150.50, TotalPriceWithTax=41200.50
+2025-04-09T12:04:33.401+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final OrderItem state before return: PriceNoTax=34050.00, TaxAmount=7150.50
+2025-04-09T12:04:33.401+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Processed item successfully. Subtotal: 34050.00, Tax: 7150.50
+2025-04-09T12:04:33.401+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Finished items. Subtotal: 34050.00, Item Tax: 7150.50
+2025-04-09T12:04:33.401+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost currency: CZK
+2025-04-09T12:04:33.401+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-09T12:04:33.401+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Testovací 123, Testov, 12345, Česká republika'
+2025-04-09T12:04:33.499+02:00  INFO 26364 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 1008.01 CZK (Distance: 33.9 km)
+2025-04-09T12:04:33.499+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Shipping calculated. CostNoTax: 1008.01, Tax: 211.68
+2025-04-09T12:04:33.500+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals currency: CZK
+2025-04-09T12:04:33.500+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Final totals calculated. TotalNoTax: 35058.01, TotalTax: 7362.18, TotalWithTax: 42420.19
+2025-04-09T12:04:33.500+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit currency: CZK
+2025-04-09T12:04:33.500+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Deposit amount 21210.10 CZK calculated.
+2025-04-09T12:04:33.500+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Payment status: AWAITING_DEPOSIT, Deposit: 21210.10
+2025-04-09T12:04:33.501+02:00 DEBUG 26364 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 209
+2025-04-09T12:04:33.501+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Generated Order Code: 209
+2025-04-09T12:04:33.501+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-09T12:04:33.518+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Order 209 created successfully. Total: 42420.19 CZK
+2025-04-09T12:04:33.519+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email...
+2025-04-09T12:04:33.520+02:00 DEBUG 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : [Order Creation - Step 11] Triggering proforma invoice gen. Currency: CZK
+2025-04-09T12:04:33.529+02:00 ERROR 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Non-critical error generating proforma invoice for order 209: Order not found: 4. Cont.
+
+jakarta.persistence.EntityNotFoundException: Order not found: 4
+	at org.example.eshop.service.SuperFakturaInvoiceService.lambda$reloadOrder$2(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[na:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.reloadOrder(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(SuperFakturaInvoiceService.java:69) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$1.generateProformaInvoice(<generated>) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:723) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$0.generateProformaInvoice(<generated>) ~[classes/:na]
+	at org.example.eshop.service.OrderService.createOrder(OrderService.java:276) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.OrderService$$SpringCGLIB$$0.createOrder(<generated>) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.createTestOrder(DataInitializer.java:315) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.createSampleOrders(DataInitializer.java:274) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.run(DataInitializer.java:177) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.init.DataInitializer$$SpringCGLIB$$0.run(<generated>) ~[classes/:na]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.example.eshop.EshopApplication.main(EshopApplication.java:12) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.4.jar:3.4.4]
+
+2025-04-09T12:04:33.535+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Successfully created test order: 209 (Total: 42420.19 CZK)
+2025-04-09T12:04:33.538+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Marking deposit paid for order 209 on 2025-04-06
+2025-04-09T12:04:33.541+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Triggering tax doc gen for order 209 currency CZK
+2025-04-09T12:04:33.541+02:00  WARN 26364 --- [Eshop] [task-4] org.example.eshop.service.EmailService   : No specific email template config found in DB for order state code 'PROCESSING'. Using default (sending disabled).
+2025-04-09T12:04:33.542+02:00 DEBUG 26364 --- [Eshop] [task-4] org.example.eshop.service.EmailService   : Loaded and cached email config for state 'PROCESSING'. SendEmail: false
+2025-04-09T12:04:33.542+02:00  INFO 26364 --- [Eshop] [task-4] org.example.eshop.service.EmailService   : Email notification is disabled for order state 'PROCESSING'. No email sent for order 208.
+2025-04-09T12:04:33.549+02:00 ERROR 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Non-critical error tax doc gen order 209: Order not found: 4. Cont.
+
+jakarta.persistence.EntityNotFoundException: Order not found: 4
+	at org.example.eshop.service.SuperFakturaInvoiceService.lambda$reloadOrder$2(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[na:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.reloadOrder(SuperFakturaInvoiceService.java:202) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateTaxDocumentForDeposit(SuperFakturaInvoiceService.java:90) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$1.generateTaxDocumentForDeposit(<generated>) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:723) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.SuperFakturaInvoiceService$$SpringCGLIB$$0.generateTaxDocumentForDeposit(<generated>) ~[classes/:na]
+	at org.example.eshop.service.OrderService.markDepositAsPaid(OrderService.java:735) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.service.OrderService$$SpringCGLIB$$0.markDepositAsPaid(<generated>) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.createSampleOrders(DataInitializer.java:278) ~[classes/:na]
+	at org.example.eshop.init.DataInitializer.run(DataInitializer.java:177) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:727) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.example.eshop.init.DataInitializer$$SpringCGLIB$$0.run(<generated>) ~[classes/:na]
+	at org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86) ~[spring-core-6.2.5.jar:6.2.5]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350) ~[spring-boot-3.4.4.jar:3.4.4]
+	at org.example.eshop.EshopApplication.main(EshopApplication.java:12) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.4.4.jar:3.4.4]
+
+2025-04-09T12:04:33.555+02:00  WARN 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Cannot mark deposit paid in SF order 209: Proforma SF ID missing.
+2025-04-09T12:04:33.557+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.service.OrderService   : Updating order 209 state from 'Nová' to 'Ve výrobě'
+2025-04-09T12:04:33.560+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Manually updated order 209 to DEPOSIT_PAID and state IN_PRODUCTION
+2025-04-09T12:04:33.561+02:00  INFO 26364 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Test data initialization finished successfully.
+2025-04-09T12:04:33.561+02:00 DEBUG 26364 --- [Eshop] [task-6] org.example.eshop.service.EmailService   : Loading email config for state 'IN_PRODUCTION' from database.
+2025-04-09T12:04:33.568+02:00  WARN 26364 --- [Eshop] [task-6] org.example.eshop.service.EmailService   : No specific email template config found in DB for order state code 'IN_PRODUCTION'. Using default (sending disabled).
+2025-04-09T12:04:33.569+02:00 DEBUG 26364 --- [Eshop] [task-6] org.example.eshop.service.EmailService   : Loaded and cached email config for state 'IN_PRODUCTION'. SendEmail: false
+2025-04-09T12:04:33.569+02:00  INFO 26364 --- [Eshop] [task-6] org.example.eshop.service.EmailService   : Email notification is disabled for order state 'IN_PRODUCTION'. No email sent for order 209.
+2025-04-09T12:04:33.818+02:00 ERROR 26364 --- [Eshop] [task-5] org.thymeleaf.TemplateEngine             : [THYMELEAF][task-5] Exception processing template "order-confirmation": Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.818+02:00 ERROR 26364 --- [Eshop] [task-3] org.thymeleaf.TemplateEngine             : [THYMELEAF][task-3] Exception processing template "order-confirmation": Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.819+02:00 ERROR 26364 --- [Eshop] [task-2] org.thymeleaf.TemplateEngine             : [THYMELEAF][task-2] Exception processing template "order-confirmation": Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.828+02:00 ERROR 26364 --- [Eshop] [task-5] org.example.eshop.service.EmailService   : Failed to process Thymeleaf template 'order-confirmation' for order confirmation 209: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.818+02:00 ERROR 26364 --- [Eshop] [task-1] org.thymeleaf.TemplateEngine             : [THYMELEAF][task-1] Exception processing template "order-confirmation": Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.831+02:00 ERROR 26364 --- [Eshop] [task-2] org.example.eshop.service.EmailService   : Failed to process Thymeleaf template 'order-confirmation' for order confirmation 207: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.830+02:00 ERROR 26364 --- [Eshop] [task-3] org.example.eshop.service.EmailService   : Failed to process Thymeleaf template 'order-confirmation' for order confirmation 208: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:33.840+02:00 ERROR 26364 --- [Eshop] [task-1] org.example.eshop.service.EmailService   : Failed to process Thymeleaf template 'order-confirmation' for order confirmation 206: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:72) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-09T12:04:34.778+02:00  INFO 26364 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-09T12:04:34.779+02:00  INFO 26364 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-09T12:04:34.784+02:00  INFO 26364 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2025-04-09T12:16:32.533+02:00  INFO 26364 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-09T12:16:32.542+02:00  INFO 26364 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-09T12:16:32.550+02:00  INFO 26364 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-09T12:16:32.554+02:00  INFO 26364 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-09T12:16:32.559+02:00  INFO 26364 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-09T12:16:32.563+02:00  INFO 26364 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-04-09T12:27:55.633+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 33912 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-09T12:27:55.637+02:00 DEBUG 33912 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-09T12:27:55.638+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-09T12:27:56.395+02:00  INFO 33912 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-09T12:27:56.399+02:00  INFO 33912 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-09T12:27:58.828+02:00  INFO 33912 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-09T12:27:58.984+02:00  INFO 33912 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 141 ms. Found 14 JPA repository interfaces.
+2025-04-09T12:28:01.050+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-09T12:28:01.084+02:00  INFO 33912 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-09T12:28:01.084+02:00  INFO 33912 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-09T12:28:01.220+02:00  INFO 33912 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-09T12:28:01.221+02:00  INFO 33912 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4820 ms
+2025-04-09T12:28:02.082+02:00  INFO 33912 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-09T12:28:02.214+02:00  INFO 33912 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-09T12:28:02.296+02:00  INFO 33912 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-04-09T12:28:02.828+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-09T12:28:02.883+02:00  INFO 33912 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-09T12:28:03.025+02:00  INFO 33912 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@37fb0f6
+2025-04-09T12:28:03.029+02:00  INFO 33912 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-09T12:28:03.158+02:00  INFO 33912 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-09T12:28:05.985+02:00  INFO 33912 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-09T12:28:06.183+02:00  INFO 33912 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-09T12:28:07.649+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-09T12:28:07.996+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-09T12:28:07.996+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-09T12:28:08.019+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-09T12:28:08.339+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Found maximum existing order ID: 4
+2025-04-09T12:28:08.340+02:00  INFO 33912 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 205
+2025-04-09T12:28:08.831+02:00  WARN 33912 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-09T12:28:09.546+02:00  INFO 33912 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-09T12:28:09.704+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-09T12:28:10.456+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-09T12:28:11.724+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-09T12:28:11.833+02:00  INFO 33912 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-09T12:28:11.853+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 17.643 seconds (process running for 20.172)
+2025-04-09T12:28:11.865+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing test data...
+2025-04-09T12:28:12.392+02:00  WARN 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Product with slug 'klasik' already exists. Returning existing.
+2025-04-09T12:28:12.446+02:00  WARN 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Product with slug 'modern' already exists. Returning existing.
+2025-04-09T12:28:12.455+02:00  WARN 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Product with slug 'na-miru' already exists. Returning existing.
+2025-04-09T12:28:12.457+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Updating existing configurator for product ID: 3
+2025-04-09T12:28:12.489+02:00  WARN 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user admin@example.com already exists.
+2025-04-09T12:28:12.504+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Orders already exist (4), skipping test order creation.
+2025-04-09T12:28:12.506+02:00  INFO 33912 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Test data initialization finished successfully.
+2025-04-09T12:28:13.120+02:00  INFO 33912 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-09T12:28:13.121+02:00  INFO 33912 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-09T12:28:13.126+02:00  INFO 33912 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
+2025-04-09T12:31:01.690+02:00  INFO 33912 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-09T12:31:01.710+02:00  INFO 33912 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-09T12:31:01.730+02:00  INFO 33912 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-09T12:31:01.738+02:00  INFO 33912 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-09T12:31:01.750+02:00  INFO 33912 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-09T12:31:01.761+02:00  INFO 33912 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

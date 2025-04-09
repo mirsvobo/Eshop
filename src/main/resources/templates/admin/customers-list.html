@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa zákazníků</title>
+    <style>
+        /* Styly pro filtrovací formulář (můžeš je přesunout do admin-styles.css) */
+        .filter-form .row > div { margin-bottom: 0.5rem; }
+        .filter-form .form-label { font-size: 0.85em; margin-bottom: 0.2rem; }
+        .filter-form .form-control-sm, .filter-form .form-select-sm { font-size: 0.875rem; }
+        .sort-link { color: inherit; text-decoration: none; }
+        .sort-link:hover { text-decoration: underline; }
+        .sort-active { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Přehled zákazníků</h1>
+    </div>
+
+    <form th:action="@{/admin/customers}" method="GET" class="filter-form bg-light p-3 rounded mb-4">
+        <div class="row gx-2 align-items-end">
+            <div class="col-md-3">
+                <label for="emailFilter" class="form-label">Email</label>
+                <input type="text" class="form-control form-control-sm" id="emailFilter" name="email" th:value="${emailFilter}">
+            </div>
+            <div class="col-md-3">
+                <label for="nameFilter" class="form-label">Jméno/Příjmení</label>
+                <input type="text" class="form-control form-control-sm" id="nameFilter" name="name" th:value="${nameFilter}">
+            </div>
+            <div class="col-md-3">
+                <label for="enabledFilter" class="form-label">Stav účtu</label>
+                <select class="form-select form-select-sm" id="enabledFilter" name="enabled">
+                    <option value="">-- Všechny --</option>
+                    <option value="true" th:selected="${enabledFilter != null and enabledFilter}">Aktivní</option>
+                    <option value="false" th:selected="${enabledFilter != null and !enabledFilter}">Neaktivní</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end mt-2 mt-md-0">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filtrovat</button>
+            </div>
+        </div>
+        <input type="hidden" name="size" th:value="${customerPage.size}">
+        <input type="hidden" name="sort" th:value="${currentSort}">
+    </form>
+
+    <div th:if="${customerPage == null or customerPage.empty}" class="alert alert-info">
+        Nebyly nalezeni žádní zákazníci odpovídající zadaným kritériím.
+    </div>
+
+    <div th:unless="${customerPage == null or customerPage.empty}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>
+                    <a th:href="@{/admin/customers(size=${customerPage.size}, sort=${(currentSort == 'id,ASC') ? 'id,DESC' : 'id,ASC'}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('id,')} ? 'sort-active' : ''">
+                        ID <i th:if="${currentSort == 'id,ASC'}" class="bi bi-sort-up"></i><i th:if="${currentSort == 'id,DESC'}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>
+                    <a th:href="@{/admin/customers(size=${customerPage.size}, sort=${(currentSort == 'lastName,ASC') ? 'lastName,DESC' : 'lastName,ASC'}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('lastName,')} ? 'sort-active' : ''">
+                        Jméno <i th:if="${currentSort == 'lastName,ASC'}" class="bi bi-sort-up"></i><i th:if="${currentSort == 'lastName,DESC'}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>
+                    <a th:href="@{/admin/customers(size=${customerPage.size}, sort=${(currentSort == 'email,ASC') ? 'email,DESC' : 'email,ASC'}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}"
+                       class="sort-link" th:classappend="${currentSort != null and currentSort.startsWith('email,')} ? 'sort-active' : ''">
+                        Email <i th:if="${currentSort == 'email,ASC'}" class="bi bi-sort-up"></i><i th:if="${currentSort == 'email,DESC'}" class="bi bi-sort-down"></i>
+                    </a>
+                </th>
+                <th>Telefon</th>
+                <th>Stav</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="customer : ${customerPage.content}">
+                <td th:text="${customer.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/customers/{id}(id=${customer.id})}" th:text="${customer.firstName + ' ' + customer.lastName}">Jméno Příjmení</a>
+                    <span th:if="${customer.guest}" class="badge bg-secondary ms-1">Host</span>
+                </td>
+                <td th:text="${customer.email}">email@example.com</td>
+                <td th:text="${customer.phone ?: '-'}">123456789</td>
+                <td>
+                    <span th:if="${customer.enabled}" class="badge bg-success">Aktivní</span>
+                    <span th:unless="${customer.enabled}" class="badge bg-danger">Neaktivní</span>
+                </td>
+                <td>
+                    <a th:href="@{/admin/customers/{id}(id=${customer.id})}" class="btn btn-sm btn-outline-primary" title="Zobrazit detail">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <nav th:if="${customerPage.totalPages > 1}" aria-label="Stránkování zákazníků">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${customerPage.first ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/admin/customers(page=${customerPage.number - 1}, size=${customerPage.size}, sort=${currentSort}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}">Předchozí</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, customerPage.totalPages - 1)}" th:classappend="${i == customerPage.number ? 'active' : ''}">
+                    <a class="page-link" th:href="@{/admin/customers(page=${i}, size=${customerPage.size}, sort=${currentSort}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}" th:text="${i + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${customerPage.last ? 'disabled' : ''}">
+                    <a class="page-link" th:href="@{/admin/customers(page=${customerPage.number + 1}, size=${customerPage.size}, sort=${currentSort}, email=${emailFilter}, name=${nameFilter}, enabled=${enabledFilter})}">Další</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</section>
+
+</body>
+</html>

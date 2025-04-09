@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Nákupní košík</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-4 mb-5">
+        <h1>Nákupní košík</h1>
+
+        <div th:if="${cart == null or not cart.hasItems()}" class="alert alert-info mt-4" role="alert">
+            Váš košík je prázdný. Prohlédněte si naši <a th:href="@{/produkty}" class="alert-link">nabídku produktů</a>.
+        </div>
+
+        <div th:unless="${cart == null or not cart.hasItems()}">
+
+            <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${cartSuccess}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${cartError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <span th:text="${cartError}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${couponMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">
+                <span th:text="${couponMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <div class="table-responsive mb-4">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 10%;">Produkt</th>
+                        <th scope="col" style="width: 40%;">Popis</th>
+                        <th scope="col" class="text-end" style="width: 15%;">Cena/ks (bez DPH)</th>
+                        <th scope="col" class="text-center" style="width: 10%;">Množství</th>
+                        <th scope="col" class="text-end" style="width: 15%;">Celkem (bez DPH)</th>
+                        <th scope="col" class="text-center" style="width: 10%;">Akce</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${cart.itemsList}">
+                        <td>
+                            <a th:href="@{'/produkt/' + ${item.productSlug}}">
+                                <img th:src="${item.imageUrl != null ? item.imageUrl : '/images/placeholder.png'}" th:alt="${item.productName}" class="img-fluid rounded" style="max-width: 70px; max-height: 70px; object-fit: contain;">
+                            </a>
+                        </td>
+                        <td>
+                            <a th:href="@{'/produkt/' + ${item.productSlug}}" class="fw-bold text-decoration-none text-dark" th:text="${item.productName}">Název Produktu</a>
+                            <small class="text-muted d-block" style="font-size: 0.85em;">
+                                <th:block th:if="${item.custom}">
+                                    Konfigurace: Na míru
+                                </th:block>
+                                <th:block th:unless="${item.custom}">
+                                    <span th:if="${item.selectedDesignName}" th:text="'Design: '+${item.selectedDesignName}+' '"></span>
+                                    <span th:if="${item.selectedGlazeName}" th:text="'Lazura: '+${item.selectedGlazeName}+' '"></span>
+                                    <span th:if="${item.selectedRoofColorName}" th:text="'Střecha: '+${item.selectedRoofColorName}"></span>
+                                </th:block>
+                                <th:block th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}">
+                                    <br/>Doplňky: <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + ' (' + ${addon.quantity} + 'ks)' + (${!iter.last} ? ', ' : '')"></span>
+                                </th:block>
+                            </small>
+                        </td>
+                        <td class="text-end">
+                            <span th:if="${item.unitPriceCZK != null or item.unitPriceEUR != null}"
+                                  th:text="${#numbers.formatDecimal(currentCurrency == 'EUR' ? item.unitPriceEUR : item.unitPriceCZK, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
+                            </span>
+                            <span th:unless="${item.unitPriceCZK != null or item.unitPriceEUR != null}">---</span>
+                        </td>
+                        <td class="text-center">
+                            <form th:action="@{/kosik/aktualizovat}" method="post" class="d-inline-flex align-items-center justify-content-center">
+                                <input type="hidden" name="cartItemId" th:value="${item.cartItemId}" />
+                                <input type="number" name="quantity" th:value="${item.quantity}" min="1" max="99" class="form-control form-control-sm text-center" style="width: 65px;" onchange="this.form.submit()">
+                            </form>
+                        </td>
+                        <td class="text-end fw-bold">
+                            <span th:if="${item.unitPriceCZK != null or item.unitPriceEUR != null}"
+                                  th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithoutTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
+                             </span>
+                            <span th:unless="${item.unitPriceCZK != null or item.unitPriceEUR != null}">---</span>
+                        </td>
+                        <td class="text-center">
+                            <form th:action="@{/kosik/odebrat}" method="post" class="d-inline">
+                                <input type="hidden" name="cartItemId" th:value="${item.cartItemId}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Odebrat položku">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row mt-4 justify-content-end">
+                <div class="col-md-6 col-lg-5 mb-3">
+                    <form th:action="@{/kosik/pouzit-kupon}" method="post">
+                        <label for="couponCode" class="form-label fw-medium">Slevový kupón:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="couponCode" name="couponCode" placeholder="Zadejte kód" th:value="${cart.appliedCouponCode}">
+                            <button class="btn btn-outline-secondary" type="submit">Použít</button>
+                            <form th:if="${cart.appliedCouponCode != null}" th:action="@{/kosik/odebrat-kupon}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-danger" title="Odebrat kupón"><i class="bi bi-x-lg"></i></button>
+                            </form>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="card shadow-sm border-light">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4">Souhrn košíku</h5>
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Položky celkem (bez DPH):</span>
+                                <span class="fw-medium" th:text="${#numbers.formatDecimal(subtotal, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                            </div>
+
+                            <div th:if="${couponDiscountAmount != null && couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="d-flex justify-content-between mb-2 text-success">
+                                <span>
+                                    Sleva
+                                    <span class="fw-medium" th:if="${cart.appliedCoupon != null}" th:text="'(' + ${cart.appliedCoupon.code} + ')'"></span>:
+                                </span>
+                                <span class="fw-medium" th:text="'- ' + ${#numbers.formatDecimal(couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-3 pt-2 border-top">
+                                <span>Mezisoučet po slevě (bez DPH):</span>
+                                <span class="fw-medium" th:text="${#numbers.formatDecimal(totalPriceWithoutTaxAfterDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                            </div>
+
+                            <div class="mb-3 pt-2 border-top">
+                                <span class="fw-medium d-block mb-1">Rozpis DPH:</span>
+                                <th:block th:if="${vatBreakdown != null and not vatBreakdown.isEmpty()}">
+                                    <div th:each="entry : ${vatBreakdown}" class="d-flex justify-content-between text-muted ps-2" style="font-size: 0.9em;">
+                                        <span th:text="'DPH ' + ${#numbers.formatDecimal(entry.key.multiply(new java.math.BigDecimal('100')), 1, 'DEFAULT', 0, 'POINT')} + '%'"></span>
+                                        <span th:text="${#numbers.formatDecimal(entry.value, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                    </div>
+                                </th:block>
+                                <div th:unless="${vatBreakdown != null and not vatBreakdown.isEmpty()}" class="text-muted ps-2" style="font-size: 0.9em;">
+                                    (DPH 0 Kč)
+                                </div>
+                                <div class="d-flex justify-content-between fw-medium mt-1">
+                                    <span>Celkem DPH:</span>
+                                    <span th:text="${#numbers.formatDecimal(totalVat, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between fw-bold fs-5 pt-3 border-top">
+                                <span>Celkem (bez dopravy):</span>
+                                <span th:text="${#numbers.formatDecimal(totalPriceBeforeShipping, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <a th:href="@{/pokladna}" class="btn btn-primary btn-lg">Pokračovat do pokladny</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> </div> </div>
+</section>
+
+</body>
+</html>

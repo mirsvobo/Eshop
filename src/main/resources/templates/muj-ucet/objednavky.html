@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Moje objednávky</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <th:block layout:fragment="css">
+        <style>
+            .account-nav .nav-link {
+                color: var(--bs-secondary-color);
+                border-bottom: 1px solid var(--bs-border-color);
+                border-radius: 0;
+                padding: 0.75rem 1rem;
+            }
+            .account-nav .nav-link.active {
+                color: var(--bs-emphasis-color);
+                font-weight: bold;
+                background-color: transparent;
+                border-left: 3px solid var(--bs-primary);
+                padding-left: calc(1rem - 3px);
+            }
+            .account-nav .nav-link:hover {
+                color: var(--bs-emphasis-color);
+                background-color: var(--bs-tertiary-bg);
+            }
+            .order-table th, .order-table td {
+                vertical-align: middle;
+            }
+            .order-table .badge { /* Větší badge pro lepší čitelnost */
+                padding: 0.4em 0.65em;
+                font-size: 0.8em;
+            }
+        </style>
+    </th:block>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-lg-3">
+                <nav class="nav flex-column account-nav mb-4">
+                    <a class="nav-link" th:href="@{/muj-ucet/profil}">Můj profil</a>
+                    <a class="nav-link active" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/adresy}">Moje adresy</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/zmena-hesla}">Změna hesla</a>
+                    <hr class="my-2">
+                    <a class="nav-link" th:href="@{/odhlaseni}">Odhlásit se</a>
+                </nav>
+            </div>
+
+            <div class="col-lg-9">
+                <h2>Moje objednávky</h2>
+                <hr class="mb-4">
+
+                <div th:if="${orderSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${orderSuccess}">Objednávka úspěšně vytvořena.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <div th:if="${orders == null or #lists.isEmpty(orders)}" class="alert alert-info">
+                    Zatím jste neprovedli žádnou objednávku.
+                </div>
+
+                <div th:unless="${orders == null or #lists.isEmpty(orders)}" class="table-responsive">
+                    <table class="table table-hover order-table">
+                        <thead class="table-light">
+                        <tr>
+                            <th scope="col">Číslo</th>
+                            <th scope="col">Datum</th>
+                            <th scope="col">Stav</th>
+                            <th scope="col" class="text-end">Celkem</th>
+                            <th scope="col">Akce</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="order : ${orders}">
+                            <td>
+                                <a th:href="@{'/muj-ucet/objednavky/' + ${order.orderCode}}" th:text="${order.orderCode}">#12345</a>
+                            </td>
+                            <td th:text="${order.orderDate != null ? #temporals.format(order.orderDate, 'dd.MM.yyyy') : '---'}">01.01.2024</td>
+                            <td>
+                                     <span th:if="${order.stateOfOrder != null}" class="badge" th:switch="${order.stateOfOrder.code?.toUpperCase()}">
+                                         <th:block th:case="'NEW'"><span class="bg-primary" th:text="${order.stateOfOrder.name}">Nová</span></th:block>
+                                         <th:block th:case="'AWAITING_PAYMENT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na platbu</span></th:block>
+                                         <th:block th:case="'AWAITING_DEPOSIT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na zálohu</span></th:block>
+                                         <th:block th:case="'PROCESSING'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Zpracovává se</span></th:block>
+                                         <th:block th:case="'IN_PRODUCTION'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Ve výrobě</span></th:block>
+                                         <th:block th:case="'AT_ZINC_PLATING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">V zinkovně</span></th:block>
+                                         <th:block th:case="'SHIPPED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Odesláno</span></th:block>
+                                         <th:block th:case="'DELIVERED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Doručeno</span></th:block>
+                                         <th:block th:case="'CANCELLED'"><span class="bg-danger" th:text="${order.stateOfOrder.name}">Zrušeno</span></th:block>
+                                         <th:block th:case="*"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Neznámý</span></th:block>
+                                     </span>
+                                <span th:unless="${order.stateOfOrder != null}" class="badge bg-secondary">Neznámý</span>
+                            </td>
+                            <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}">
+                                5 990,00 Kč
+                            </td>
+                            <td>
+                                <a th:href="@{'/muj-ucet/objednavky/' + ${order.orderCode}}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Detail
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div> </div> </div> </section>
+
+</body>
+</html>

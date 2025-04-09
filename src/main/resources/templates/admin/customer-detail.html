@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="'Detail zákazníka - ' + ${customer.firstName} + ' ' + ${customer.lastName}">Detail zákazníka</title>
+    <style>
+        .address-box, .detail-box { background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem; margin-bottom: 1rem; }
+        .address-box h5, .detail-box h5 { margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #dee2e6;}
+        .order-history-link { margin-top: 1rem; }
+        /* Přidáno pro chyby z DTO */
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div th:if="${customer != null}">
+        <div th:if="${invoiceAddressError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${invoiceAddressError}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${deliveryAddressError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${deliveryAddressError}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${#fields.hasErrors('invoiceAddressDto.*')}" class="alert alert-danger" role="alert">
+            Formulář fakturační adresy obsahuje chyby. Zkontrolujte prosím zadané údaje.
+        </div>
+        <div th:if="${#fields.hasErrors('deliveryAddressDto.*')}" class="alert alert-danger" role="alert">
+            Formulář dodací adresy obsahuje chyby. Zkontrolujte prosím zadané údaje.
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="detail-box">
+                    <h5>Základní údaje</h5>
+                    <p><strong>ID:</strong> <span th:text="${customer.id}"></span></p>
+                    <p><strong>Email:</strong> <span th:text="${customer.email}"></span></p>
+                    <p><strong>Host:</strong> <span th:text="${customer.guest ? 'Ano' : 'Ne'}"></span></p>
+                    <p><strong>Stav:</strong>
+                        <span th:if="${customer.enabled}" class="badge bg-success">Aktivní</span>
+                        <span th:unless="${customer.enabled}" class="badge bg-danger">Neaktivní</span>
+                    </p>
+                    <p><strong>Datum registrace:</strong> <span th:text="${customer.createdAt != null ? #temporals.format(customer.createdAt, 'dd.MM.yyyy HH:mm') : '-'}"></span></p>
+                    <hr>
+                    <h6>Upravit základní údaje</h6>
+                    <form th:action="@{/admin/customers/{id}/update-basic(id=${customer.id})}" th:object="${profileUpdateDto}" method="post" novalidate>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="firstName" class="form-label">Jméno</label>
+                                <input type="text" class="form-control form-control-sm" th:errorclass="is-invalid" id="firstName" th:field="*{firstName}" required>
+                                <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback">
+                                    <span th:errors="*{firstName}"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="lastName" class="form-label">Příjmení</label>
+                                <input type="text" class="form-control form-control-sm" th:errorclass="is-invalid" id="lastName" th:field="*{lastName}" required>
+                                <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback">
+                                    <span th:errors="*{lastName}"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Telefon</label>
+                            <input type="tel" class="form-control form-control-sm" th:errorclass="is-invalid" id="phone" th:field="*{phone}">
+                            <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback">
+                                <span th:errors="*{phone}"></span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary">Uložit změny údajů</button>
+                    </form>
+                </div>
+
+                <div class="order-history-link mt-4">
+                    <a th:href="@{/admin/orders(customerEmail=${customer.email})}" class="btn btn-outline-info">
+                        <i class="bi bi-list-ul"></i> Zobrazit historii objednávek
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="col-lg-6">
+                <div class="address-box">
+                    <h5>Fakturační adresa</h5>
+                    <form th:if="${invoiceAddressDto != null}"
+                          th:action="@{/admin/customers/{id}/update-invoice-address(id=${customer.id})}"
+                          th:object="${invoiceAddressDto}" method="post" novalidate>
+                        <div th:replace="~{muj-ucet/fragments/adresy-fragment :: addressFields(type='invoice')}"></div>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2">Uložit fakturační adresu</button>
+                    </form>
+                    <p th:unless="${invoiceAddressDto != null}" class="text-danger">Nepodařilo se načíst data fakturační adresy.</p>
+                </div>
+
+                <form th:action="@{/admin/customers/{id}/toggle-delivery-address(id=${customer.id})}" method="post" class="mb-3 mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="useInvoiceAddressToggle"
+                               name="useInvoiceAddress" value="true"
+                               th:checked="${customer.useInvoiceAddressAsDelivery}" onchange="this.form.submit()">
+                        <label class="form-check-label" for="useInvoiceAddressToggle">Dodací adresa je stejná jako fakturační</label>
+                    </div>
+                    <noscript><button type="submit" class="btn btn-sm btn-secondary mt-1">Uložit nastavení dodací adresy</button></noscript>
+                </form>
+
+                <div class="address-box" th:if="${!customer.useInvoiceAddressAsDelivery}">
+                    <h5>Dodací adresa</h5>
+                    <form th:if="${deliveryAddressDto != null}"
+                          th:action="@{/admin/customers/{id}/update-delivery-address(id=${customer.id})}"
+                          th:object="${deliveryAddressDto}" method="post" novalidate>
+                        <div th:replace="~{muj-ucet/fragments/adresy-fragment :: addressFields(type='delivery')}"></div>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2">Uložit dodací adresu</button>
+                    </form>
+                    <p th:unless="${deliveryAddressDto != null}" class="text-danger">Nepodařilo se načíst data dodací adresy.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div th:unless="${customer != null}" class="alert alert-danger">
+        Zákazník nebyl nalezen.
+    </div>
+</section>
+
+</body>
+</html>

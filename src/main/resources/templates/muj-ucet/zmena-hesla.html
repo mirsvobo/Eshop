@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Změna hesla</title>
+    <meta name="robots" content="noindex, nofollow" /> <th:block layout:fragment="css">
+    <style>
+        .account-nav .nav-link { color: var(--bs-secondary-color); border-bottom: 1px solid var(--bs-border-color); border-radius: 0; padding: 0.75rem 1rem; }
+        .account-nav .nav-link.active { color: var(--bs-emphasis-color); font-weight: bold; background-color: transparent; border-left: 3px solid var(--bs-primary); padding-left: calc(1rem - 3px); }
+        .account-nav .nav-link:hover { color: var(--bs-emphasis-color); background-color: var(--bs-tertiary-bg); }
+        /* Styl pro obecné chyby formuláře, pokud je potřeba */
+        .form-error-message { color: var(--bs-danger); margin-bottom: 1rem; }
+    </style>
+</th:block>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-lg-3">
+                <nav class="nav flex-column account-nav mb-4">
+                    <a class="nav-link" th:href="@{/muj-ucet/profil}">Můj profil</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a>
+                    <a class="nav-link" th:href="@{/muj-ucet/adresy}">Moje adresy</a>
+                    <a class="nav-link active" th:href="@{/muj-ucet/zmena-hesla}">Změna hesla</a>
+                    <hr class="my-2">
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit" class="nav-link text-danger" style="border:none; background:none; width:100%; text-align: left;">Odhlásit se</button>
+                    </form>
+                </nav>
+            </div>
+
+            <div class="col-lg-9">
+                <h2>Změna hesla</h2>
+                <hr class="mb-4">
+
+                <div th:if="${passwordSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${passwordSuccess}">Heslo úspěšně změněno.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${successMessage}">Akce proběhla úspěšně.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${errorMessage}">Při zpracování nastala chyba.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${passwordError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${passwordError}">Chyba při změně hesla.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+
+                <form th:action="@{/muj-ucet/zmena-hesla}" th:object="${passwordChange}" method="post" novalidate>
+
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Současné heslo <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="currentPassword" th:field="*{currentPassword}" required>
+                        <div th:if="${#fields.hasErrors('currentPassword')}" class="invalid-feedback">
+                            <span th:errors="*{currentPassword}">Chyba aktuálního hesla</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Nové heslo <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="newPassword" th:field="*{newPassword}" required aria-describedby="newPasswordHelp">
+                        <div id="newPasswordHelp" class="form-text">Heslo musí mít alespoň 8 znaků.</div>
+                        <div th:if="${#fields.hasErrors('newPassword')}" class="invalid-feedback">
+                            <span th:errors="*{newPassword}">Chyba nového hesla</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmNewPassword" class="form-label">Potvrzení nového hesla <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="confirmNewPassword" th:field="*{confirmNewPassword}" required>
+                        <div th:if="${#fields.hasErrors('confirmNewPassword')}" class="invalid-feedback">
+                            <span th:errors="*{confirmNewPassword}">Chyba potvrzení hesla</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Změnit heslo</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+</body>
+</html>

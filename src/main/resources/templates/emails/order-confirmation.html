@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Potvrzení objednávky</title>
+</head>
+<body>
+<h1>Potvrzení objednávky <span th:text="${order.orderCode}">[Kód objednávky]</span></h1>
+<p>Dobrý den <span th:text="${order.customer?.firstName}">[Jméno]</span>,</p>
+<p>
+  děkujeme za Vaši objednávku č. <strong th:text="${order.orderCode}">[Kód objednávky]</strong>
+  v našem obchodě <strong th:text="${shopName}">[Název obchodu]</strong>.
+</p>
+<p>
+  Jakmile bude objednávka zpracována, budeme Vás informovat.
+</p>
+<p>
+  Stav objednávky můžete sledovat zde: <a th:href="${trackingUrl}" th:text="${trackingUrl}">[Odkaz]</a>
+</p>
+<p>S pozdravem,<br/>Tým <span th:text="${shopName}">[Název obchodu]</span></p>
+</body>
+</html>
