@@ -184,9 +184,7 @@ class CustomerServiceTest {
     void registerCustomer_ThrowsForExistingEmail() {
         when(customerRepository.existsByEmailIgnoreCase(registrationDto.getEmail())).thenReturn(true);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            customerService.registerCustomer(registrationDto);
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customerService.registerCustomer(registrationDto));
 
         assertTrue(exception.getMessage().contains("již existuje"));
         verify(customerRepository).existsByEmailIgnoreCase(registrationDto.getEmail());
@@ -223,9 +221,7 @@ class CustomerServiceTest {
         String nonExistentEmail = "nobody@example.com";
         when(customerRepository.findByEmailIgnoreCase(nonExistentEmail)).thenReturn(Optional.empty());
 
-        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-            customerService.updateProfile(nonExistentEmail, profileUpdateDto);
-        });
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> customerService.updateProfile(nonExistentEmail, profileUpdateDto));
         assertTrue(exception.getMessage().contains("Customer not found"));
         verify(customerRepository, never()).save(any());
     }
@@ -236,9 +232,7 @@ class CustomerServiceTest {
         String guestEmail = guestCustomer.getEmail();
         when(customerRepository.findByEmailIgnoreCase(guestEmail)).thenReturn(Optional.of(guestCustomer));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            customerService.updateProfile(guestEmail, profileUpdateDto);
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customerService.updateProfile(guestEmail, profileUpdateDto));
         assertTrue(exception.getMessage().contains("Profil hosta nelze měnit"));
         verify(customerRepository, never()).save(any());
     }
@@ -273,9 +267,7 @@ class CustomerServiceTest {
         // Mockujeme, že hesla nesouhlasí
         when(passwordEncoder.matches(changePasswordDto.getCurrentPassword(), existingCustomer.getPassword())).thenReturn(false);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            customerService.changePassword(customerId, changePasswordDto);
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customerService.changePassword(customerId, changePasswordDto));
         assertTrue(exception.getMessage().contains("Nesprávné staré heslo"));
         verify(customerRepository).findById(customerId);
         verify(passwordEncoder).matches(changePasswordDto.getCurrentPassword(), "$2a$10$encodedStareHeslo");
@@ -289,9 +281,7 @@ class CustomerServiceTest {
         Long guestId = guestCustomer.getId();
         when(customerRepository.findById(guestId)).thenReturn(Optional.of(guestCustomer));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            customerService.changePassword(guestId, changePasswordDto);
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customerService.changePassword(guestId, changePasswordDto));
         assertTrue(exception.getMessage().contains("Host účty nemají heslo"));
         verify(customerRepository, never()).save(any());
     }
@@ -345,9 +335,7 @@ class CustomerServiceTest {
 
         when(customerRepository.findById(customerId)).thenReturn(Optional.of(existingCustomer));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            customerService.updateAddress(customerId, CustomerService.AddressType.INVOICE, invalidDto);
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> customerService.updateAddress(customerId, CustomerService.AddressType.INVOICE, invalidDto));
         assertTrue(exception.getMessage().contains("Musí být vyplněn název firmy nebo jméno a příjmení"));
         verify(customerRepository, never()).save(any());
     }
@@ -437,9 +425,7 @@ class CustomerServiceTest {
         dtoWithRegisteredEmail.setEmail(registeredEmail);
         // ... (ostatní data nejsou podstatná)
 
-        CustomerService.EmailRegisteredException exception = assertThrows(CustomerService.EmailRegisteredException.class, () -> {
-            customerService.getOrCreateGuestFromCheckoutData(dtoWithRegisteredEmail);
-        });
+        CustomerService.EmailRegisteredException exception = assertThrows(CustomerService.EmailRegisteredException.class, () -> customerService.getOrCreateGuestFromCheckoutData(dtoWithRegisteredEmail));
 
         assertTrue(exception.getMessage().contains("Tento email je již zaregistrován"));
         verify(customerRepository).findByEmailIgnoreCase(registeredEmail);

@@ -1,3 +1,5 @@
+// src/main/java/org/example/eshop/admin/controller/AdminProductController.java
+
 package org.example.eshop.admin.controller;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -19,19 +21,19 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // <-- Přidat pro updateProduct
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.CollectionUtils; // <-- Přidat
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections; // <-- Přidat
-import java.util.HashSet; // <-- Přidat
+import java.util.Collections;
+import java.util.HashSet; // <-- Zajištěn import
 import java.util.List;
 import java.util.Optional;
-import java.util.Set; // <-- Přidat
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -43,7 +45,6 @@ public class AdminProductController {
 
     private final ProductService productService;
     private final TaxRateService taxRateService;
-    // --- Přidané závislosti ---
     private final DesignRepository designRepository;
     private final GlazeRepository glazeRepository;
     private final RoofColorRepository roofColorRepository;
@@ -75,7 +76,7 @@ public class AdminProductController {
         model.addAttribute("allTaxRates", taxRates);
     }
 
-    // --- NOVÁ Pomocná metoda pro načtení asociací ---
+    // Pomocná metoda pro načtení všech dostupných asociací
     private void addAssociationAttributesToModel(Model model) {
         model.addAttribute("allDesigns", designRepository.findAll(Sort.by("name")));
         model.addAttribute("allGlazes", glazeRepository.findAll(Sort.by("name")));
@@ -83,24 +84,21 @@ public class AdminProductController {
         model.addAttribute("allAddons", addonsRepository.findAll(Sort.by("name"))); // Pro custom produkty
     }
 
-    // --- Seznam produktů (beze změny) ---
     @GetMapping
     public String listProducts(Model model,
                                @PageableDefault(size = 15, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
                                @RequestParam Optional<String> name,
                                @RequestParam Optional<Boolean> active) {
-        // ... (kód metody listProducts zůstává stejný) ...
         String nameFilter = name.filter(StringUtils::hasText).orElse(null);
         Boolean activeFilter = active.orElse(null);
         log.info("Requesting admin product list view. Filters: name={}, active={}. Pageable: {}", nameFilter, activeFilter, pageable);
         try {
             Page<Product> productPage;
             // TODO: Implementovat lepší filtrování v service/repo
-            if (nameFilter != null || activeFilter != null) { // Zjednodušená podmínka
+            if (nameFilter != null || activeFilter != null) {
                 log.warn("Product filtering not fully implemented yet. Showing basic list.");
                 productPage = productService.getAllProducts(pageable);
-            }
-            else {
+            } else {
                 productPage = productService.getAllProducts(pageable);
             }
             model.addAttribute("productPage", productPage);
@@ -124,9 +122,16 @@ public class AdminProductController {
     @GetMapping("/new")
     public String showCreateProductForm(Model model) {
         log.info("Requesting new product form.");
-        model.addAttribute("product", new Product());
+        Product product = new Product();
+        // Inicializace kolekcí, aby nebyly null v šabloně
+        product.setAvailableDesigns(new HashSet<>());
+        product.setAvailableGlazes(new HashSet<>());
+        product.setAvailableRoofColors(new HashSet<>());
+        product.setAvailableAddons(new HashSet<>());
+
+        model.addAttribute("product", product);
         addCommonFormAttributes(model);
-        addAssociationAttributesToModel(model); // << Přidat asociace
+        addAssociationAttributesToModel(model);
         model.addAttribute("pageTitle", "Vytvořit nový produkt");
         return "admin/product-form";
     }
@@ -135,23 +140,25 @@ public class AdminProductController {
      * Zobrazí formulář pro úpravu existujícího produktu.
      */
     @GetMapping("/{id}/edit")
-    @Transactional(readOnly = true) // Pro lazy loading asociací produktu
+    @Transactional(readOnly = true)
     public String showEditProductForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting edit form for product ID: {}", id);
         try {
             Product product = productService.getProductById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
-            // Explicitní inicializace pro formulář (není nutně potřeba s @Transactional, ale jistota)
+            // Explicitní inicializace pro formulář (pro jistotu, i když @Transactional pomáhá)
             Hibernate.initialize(product.getAvailableDesigns());
             Hibernate.initialize(product.getAvailableGlazes());
             Hibernate.initialize(product.getAvailableRoofColors());
             Hibernate.initialize(product.getAvailableAddons());
-            Hibernate.initialize(product.getConfigurator()); // Pokud editujeme i konfigurátor
+            if (product.getConfigurator() != null) {
+                Hibernate.initialize(product.getConfigurator());
+            }
 
             model.addAttribute("product", product);
             addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model); // << Přidat všechny dostupné asociace
+            addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Upravit produkt: " + product.getName());
             return "admin/product-form";
         } catch (EntityNotFoundException e) {
@@ -170,9 +177,7 @@ public class AdminProductController {
      * Zpracuje vytvoření nového produktu (včetně asociací).
      */
     @PostMapping
-    // Potřeba pro práci s asociacemi
     public String createProduct(@Valid @ModelAttribute("product") Product product,
-                                // Parametry pro asociace
                                 @RequestParam(required = false) List<Long> designIds,
                                 @RequestParam(required = false) List<Long> glazeIds,
                                 @RequestParam(required = false) List<Long> roofColorIds,
@@ -181,37 +186,45 @@ public class AdminProductController {
                                 RedirectAttributes redirectAttributes,
                                 Model model) {
         log.info("Attempting to create new product: {}", product.getName());
-        updateAssociationsFromIds(product, designIds, glazeIds, roofColorIds, addonIds); // Aktualizujeme sety v objektu product
+        // Nastavení asociací podle ID z requestu
+        updateAssociationsFromIds(product, designIds, glazeIds, roofColorIds, addonIds);
 
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors creating product: {}", bindingResult.getAllErrors());
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(product);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model); // Znovu přidat data pro selecty/checkboxy
+            addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Vytvořit nový produkt");
-            return "admin/product-form"; // Zobrazit formulář znovu s chybami
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
         try {
-            // ProductService by měl být schopný uložit produkt i s aktualizovanými asociacemi
             Product savedProduct = productService.createProduct(product);
             redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + savedProduct.getName() + "' byl úspěšně vytvořen.");
             log.info("Product '{}' created successfully with ID: {}", savedProduct.getName(), savedProduct.getId());
             return "redirect:/admin/products";
         } catch (IllegalArgumentException e) {
             log.warn("Error creating product '{}': {}", product.getName(), e.getMessage());
-            // Chybovou hlášku pro duplicitní slug by měl ideálně vracet ProductService
-            bindingResult.reject("error.product", e.getMessage()); // Přidání globální chyby
+            bindingResult.reject("error.product", e.getMessage());
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(product);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Vytvořit nový produkt");
-            return "admin/product-form";
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
         catch (Exception e) {
             log.error("Unexpected error creating product '{}': {}", product.getName(), e.getMessage(), e);
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(product);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);
             model.addAttribute("errorMessage", "Při vytváření produktu nastala neočekávaná chyba: " + e.getMessage());
             model.addAttribute("pageTitle", "Vytvořit nový produkt");
-            return "admin/product-form";
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
     }
 
@@ -220,11 +233,9 @@ public class AdminProductController {
      * Zpracuje úpravu existujícího produktu (včetně asociací).
      */
     @PostMapping("/{id}")
-    // Potřeba pro načtení a aktualizaci asociací
     public String updateProduct(@PathVariable Long id,
                                 @Valid @ModelAttribute("product") Product productData,
                                 BindingResult bindingResult,
-                                // Parametry pro asociace
                                 @RequestParam(required = false) List<Long> designIds,
                                 @RequestParam(required = false) List<Long> glazeIds,
                                 @RequestParam(required = false) List<Long> roofColorIds,
@@ -232,85 +243,93 @@ public class AdminProductController {
                                 RedirectAttributes redirectAttributes,
                                 Model model) {
         log.info("Attempting to update product ID: {}", id);
-        productData.setId(id); // Pro případ zobrazení chyb
+        productData.setId(id); // Nastavíme ID pro případné zobrazení chyb
 
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors updating product {}: {}", id, bindingResult.getAllErrors());
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(productData);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model); // Přidáme data pro selecty/checkboxy
+            addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            // Musíme vrátit formulář, bindingResult obsahuje chyby
-            return "admin/product-form";
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
 
         try {
-            // Načteme existující produkt v rámci transakce
+            // Načteme existující produkt jen pro nastavení asociací PŘED voláním service
             Product existingProduct = productService.getProductById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen pro aktualizaci."));
 
-            // Aktualizujeme asociace na existujícím produktu
+            // Aktualizujeme asociace na načteném existujícím produktu
             updateAssociationsFromIds(existingProduct, designIds, glazeIds, roofColorIds, addonIds);
 
-            // ProductService aktualizuje ostatní pole a uloží včetně asociací
-            Product updatedProduct = productService.updateProduct(id, productData, existingProduct) // Přeposíláme i existující s upravenými asociacemi
+            // Voláme service s daty z formuláře a s načtenou/upravenou entitou
+            Product updatedProduct = productService.updateProduct(id, productData, existingProduct)
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen pro aktualizaci (po pokusu o update)."));
-
 
             redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + updatedProduct.getName() + "' byl úspěšně aktualizován.");
             log.info("Product ID {} updated successfully.", id);
-            return "redirect:/admin/products"; // Nebo zpět na editaci: "redirect:/admin/products/" + id + "/edit";
+            return "redirect:/admin/products";
 
         } catch (EntityNotFoundException e) {
             log.warn("Cannot update product. Product not found: ID={}", id, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/admin/products";
-        } catch (IllegalArgumentException e) { // Např. pro duplicitní slug
+        } catch (IllegalArgumentException e) {
             log.warn("Error updating product ID {}: {}", id, e.getMessage());
-            // Jelikož používáme @ModelAttribute, chyby by se měly navázat na něj
-            // bindingResult.rejectValue("slug", "duplicate.slug", e.getMessage()); // Můžeme přidat globální
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(productData);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            model.addAttribute("errorMessage", e.getMessage()); // Zobrazíme obecnou chybu
-            return "admin/product-form"; // Zobrazit formulář znovu
+            model.addAttribute("errorMessage", e.getMessage());
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
         catch (Exception e) {
             log.error("Unexpected error updating product ID {}: {}", id, e.getMessage(), e);
+            // --- OPRAVA: Volání metody ---
+            ensureCollectionsInitialized(productData);
+            // --- KONEC OPRAVY ---
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);
             model.addAttribute("errorMessage", "Při aktualizaci produktu nastala neočekávaná chyba: " + e.getMessage());
             model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            return "admin/product-form";
+            return "admin/product-form"; // VRACÍ VIEW SE STATUSEM 200 OK
         }
     }
 
     // Pomocná metoda pro aktualizaci asociací na Product entitě
     private void updateAssociationsFromIds(Product product, List<Long> designIds, List<Long> glazeIds, List<Long> roofColorIds, List<Long> addonIds) {
-        // Použijeme Set pro efektivní práci
         Set<Design> designs = CollectionUtils.isEmpty(designIds) ? Collections.emptySet() : new HashSet<>(designRepository.findAllById(designIds));
         Set<Glaze> glazes = CollectionUtils.isEmpty(glazeIds) ? Collections.emptySet() : new HashSet<>(glazeRepository.findAllById(glazeIds));
         Set<RoofColor> roofColors = CollectionUtils.isEmpty(roofColorIds) ? Collections.emptySet() : new HashSet<>(roofColorRepository.findAllById(roofColorIds));
         Set<Addon> addons = CollectionUtils.isEmpty(addonIds) ? Collections.emptySet() : new HashSet<>(addonsRepository.findAllById(addonIds));
 
-        // Aktualizace kolekcí v Product entitě
-        // Pokud ManyToMany nemá cascade persist/merge, stačí jen nastavit novou kolekci
-        // Pokud má cascade, je bezpečnější spravovat kolekci explicitně (clear + addAll),
-        // nebo spoléhat na JPA merge (což děláme v ProductService.updateProduct)
         product.setAvailableDesigns(designs);
         product.setAvailableGlazes(glazes);
         product.setAvailableRoofColors(roofColors);
         product.setAvailableAddons(addons);
-        log.debug("Updated associations for product: designs={}, glazes={}, roofColors={}, addons={}",
-                designIds, glazeIds, roofColorIds, addonIds);
+        log.debug("Updated associations for product {}: designs={}, glazes={}, roofColors={}, addons={}",
+                product.getId(), designIds, glazeIds, roofColorIds, addonIds);
     }
 
+    // --- OPRAVA: Nová pomocná metoda ---
+    private void ensureCollectionsInitialized(Product product) {
+        if (product == null) return;
+        if (product.getAvailableDesigns() == null) product.setAvailableDesigns(new HashSet<>());
+        if (product.getAvailableGlazes() == null) product.setAvailableGlazes(new HashSet<>());
+        if (product.getAvailableRoofColors() == null) product.setAvailableRoofColors(new HashSet<>());
+        if (product.getAvailableAddons() == null) product.setAvailableAddons(new HashSet<>());
+    }
+    // --- KONEC OPRAVY ---
 
-    // --- Metoda deleteProduct zůstává stejná ---
     @PostMapping("/{id}/delete")
     public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         log.warn("Attempting to SOFT DELETE product ID: {}", id);
         try {
-            productService.deleteProduct(id); // ProductService provede soft delete
+            productService.deleteProduct(id);
             redirectAttributes.addFlashAttribute("successMessage", "Produkt byl úspěšně deaktivován.");
             log.info("Product ID {} successfully deactivated (soft deleted).", id);
         } catch (EntityNotFoundException e) {
@@ -322,6 +341,4 @@ public class AdminProductController {
         }
         return "redirect:/admin/products";
     }
-
-
 }

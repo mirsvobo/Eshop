@@ -49,9 +49,7 @@ public class AdminCustomerController {
         return request.getRequestURI();
     }
 
-    // --- Metody GET a POST zůstávají stejné jako v předchozí verzi ---
-    // (listCustomers, viewCustomerDetail, updateCustomerBasicInfo, toggleCustomerEnabled)
-    // ... (zkopíruj sem metody z předchozí odpovědi) ...
+
 
     @GetMapping
     public String listCustomers(Model model,
@@ -242,7 +240,9 @@ public class AdminCustomerController {
      */
     @PostMapping("/{id}/toggle-delivery-address")
     public String toggleDeliveryAddressUsage(@PathVariable Long id,
-                                             @RequestParam(defaultValue = "false") boolean useInvoiceAddress,
+                                             // Pokud checkbox není zaškrtnutý, hodnota 'true' nepřijde.
+                                             // defaultValue="false" zajistí, že 'useInvoiceAddress' bude false, když parametr chybí.
+                                             @RequestParam(name = "useInvoiceAddress", required = false, defaultValue = "false") boolean useInvoiceAddress,
                                              RedirectAttributes redirectAttributes) {
         log.info("Attempting to set useInvoiceAddressAsDelivery to {} for customer ID: {}", useInvoiceAddress, id);
         try {
@@ -257,7 +257,7 @@ public class AdminCustomerController {
             log.error("Error toggling delivery address usage for customer ID {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při změně nastavení dodací adresy nastala chyba: " + e.getMessage());
         }
-        return "redirect:/admin/customers/" + id;
+        return "redirect:/admin/customers/" + id; // Vždy přesměruj na detail
     }
 
     // --- Pomocná metoda pro naplnění DTO z Customer entity (pro GET request) ---
@@ -332,4 +332,5 @@ public class AdminCustomerController {
         }
         return "admin/customer-detail";
     }
+
 }

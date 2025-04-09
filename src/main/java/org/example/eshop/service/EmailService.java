@@ -55,7 +55,7 @@ public class EmailService {
             log.error("Cannot send confirmation email. Order or customer email is invalid. Order ID: {}", order != null ? order.getId() : "N/A");
             return;
         }
-        if (!isMailConfigured()) return;
+        if (isMailConfigured()) return;
 
         String to = order.getCustomer().getEmail();
         String subject = shopName + " - Potvrzení objednávky č. " + order.getOrderCode();
@@ -86,7 +86,7 @@ public class EmailService {
             log.error("Cannot send status update email. Order, customer email or new state is invalid. Order ID: {}", order != null ? order.getId() : "N/A");
             return;
         }
-        if (!isMailConfigured()) return;
+        if (isMailConfigured()) return;
 
         EmailTemplateConfig config = loadEmailConfigForState(newState.getCode());
 
@@ -149,9 +149,9 @@ public class EmailService {
     private boolean isMailConfigured() {
         if (!StringUtils.hasText(mailFrom)) {
             log.error("Cannot send email. Sender email address (spring.mail.username) is not configured.");
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
 

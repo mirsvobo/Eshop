@@ -7,6 +7,7 @@ import org.example.eshop.dto.AddonDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode; // Import RoundingMode
@@ -16,6 +17,7 @@ import java.util.*;
 @Setter
 public class CartItem implements Serializable, PriceConstants { // Implement PriceConstants if needed for scale/rounding
 
+    @Serial
     private static final long serialVersionUID = 1L;
     private static final Logger log = LoggerFactory.getLogger(CartItem.class);
 
@@ -124,7 +126,7 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
                                             String customRoofOverstep, String customDesignAttr,
                                             boolean customHasDivider, boolean customHasGutter,
                                             boolean customHasGardenShed, List<AddonDto> selectedAddons) {
-        // ... (implementace metody zůstává stejná) ...
+
         StringBuilder sb = new StringBuilder("P").append(productId);
         if (isCustom) {
             sb.append("-C");

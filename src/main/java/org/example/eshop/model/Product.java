@@ -1,6 +1,7 @@
 package org.example.eshop.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
@@ -15,7 +16,9 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false) private String name;
+    @NotBlank(message = "Název produktu nesmí být prázdný.")
+    @Column(nullable = false)
+    private String name;
     @Column(nullable = false, unique = true, length = 150) private String slug;
     @Lob @Column(columnDefinition = "TEXT") private String description;
 
