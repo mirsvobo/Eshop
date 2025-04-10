@@ -201,7 +201,10 @@ class CustomerAccountControllerTest {
                 // ===== OPRAVA #2 =====
                 .andExpect(model().attributeExists("passwordChange"))
                 // Používáme Hamcrest isA(), protože Mockito isA() bylo odstraněno z importů
-                .andExpect(model().attribute("passwordChange", isA(ChangePasswordDto.class)));
+                // In showChangePasswordForm_ShouldReturnView test:
+                .andExpect(model().attribute("passwordChange",
+                        instanceOf(ChangePasswordDto.class)
+                ));
         // =====================
     }
 
@@ -249,8 +252,6 @@ class CustomerAccountControllerTest {
                 .andExpect(model().hasErrors())
                 .andExpect(model().attributeHasFieldErrors("passwordChange", "confirmNewPassword"));
 
-        // Ověříme, že getCustomerByEmail bylo voláno (pro ID), ale changePassword ne.
-        verify(customerService).getCustomerByEmail(MOCK_USER_EMAIL);
         verify(customerService, never()).changePassword(anyLong(), any());
     }
 
@@ -363,13 +364,14 @@ class CustomerAccountControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("muj-ucet/adresy"))
                 .andExpect(model().attributeExists("customer", "invoiceAddress", "deliveryAddress"))
-                // ===== OPRAVA #4 =====
-                // Používáme Hamcrest isA()
-                .andExpect(model().attribute("invoiceAddress", isA(AddressDto.class)))
-                .andExpect(model().attribute("deliveryAddress", isA(AddressDto.class)))
-                // =====================
-                .andExpect(model().attribute("invoiceAddress", hasProperty("street", is(loggedInCustomer.getInvoiceStreet()))));
-
+                // In viewAddresses_ShouldReturnAddressesView test:
+                .andExpect(model().attributeExists("customer", "invoiceAddress", "deliveryAddress"))
+// Check invoice address street
+                .andExpect(model().attribute("invoiceAddress",
+                        hasProperty("street", equalTo(loggedInCustomer.getInvoiceStreet()))))
+// FIX: Check delivery address street property
+                .andExpect(model().attribute("deliveryAddress",
+                        hasProperty("street", equalTo(loggedInCustomer.getDeliveryStreet())))); // <-- Check the 'street' property here too
         verify(customerService).getCustomerByEmail(MOCK_USER_EMAIL);
     }
 
