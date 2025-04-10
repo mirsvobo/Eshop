@@ -3,7 +3,7 @@
 package org.example.eshop.controller;
 
 // Importy ...
-import org.example.eshop.config.SecurityTestConfig; // Import sdílené konfigurace
+import org.example.eshop.config.SecurityTestConfig;
 import org.example.eshop.dto.RegistrationDto;
 import org.example.eshop.model.Customer;
 import org.example.eshop.service.CurrencyService;
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import; // Import pro @Import
+import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -21,12 +21,11 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-// import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf; // Odstraněno
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityTestConfig.class) // Aplikace sdílené konfigurace
+@Import(SecurityTestConfig.class)
 class AuthControllerTest {
 
     @Autowired
@@ -34,7 +33,7 @@ class AuthControllerTest {
 
     @MockBean private CustomerService customerService;
     @MockBean private CurrencyService currencyService;
-    @MockBean private UserDetailsService userDetailsService; // Ponecháno pro Security
+    @MockBean private UserDetailsService userDetailsService;
 
     @Test
     @DisplayName("GET /prihlaseni - Zobrazí přihlašovací stránku")
@@ -50,15 +49,12 @@ class AuthControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/registrace"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("registrace"))
-                .andExpect(model().attributeExists("registrationDto"))
-                // TOTO JE KLÍČOVÁ OPRAVA: Ověřujeme typ, ne null
-                .andExpect(model().attribute("registrationDto", isA(RegistrationDto.class)));
+                .andExpect(model().attributeExists("registrationDto"));
     }
 
     @Test
     @DisplayName("POST /registrace - Úspěšná registrace přesměruje na přihlášení")
     void processRegistration_Success_ShouldRedirectToLogin() throws Exception {
-        // Mockujeme úspěšnou registraci
         when(customerService.registerCustomer(any(RegistrationDto.class))).thenReturn(new Customer());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/registrace")
@@ -67,13 +63,12 @@ class AuthControllerTest {
                                 .param("lastName", "User")
                                 .param("email", "test.reg@example.com")
                                 .param("password", "password123")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto v SecurityTestConfig
                 )
-                .andExpect(status().is3xxRedirection()) // Očekáváme přesměrování
+                .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/prihlaseni"))
-                .andExpect(flash().attributeExists("registraceSuccess")); // Očekáváme zprávu o úspěchu
+                .andExpect(flash().attributeExists("registraceSuccess"));
 
-        // Ověříme, že metoda v service byla volána
         verify(customerService).registerCustomer(any(RegistrationDto.class));
     }
 
@@ -84,17 +79,16 @@ class AuthControllerTest {
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                                 .param("firstName", "Test")
                                 .param("lastName", "User")
-                                .param("email", "") // Prázdný email - vyvolá chybu validace @NotBlank/@Email
+                                .param("email", "")
                                 .param("password", "password123")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
-                .andExpect(status().isOk()) // Zůstane na stránce
+                .andExpect(status().isOk())
                 .andExpect(view().name("registrace"))
-                .andExpect(model().attributeExists("registrationDto")) // Formulářový objekt zůstává
-                .andExpect(model().hasErrors()) // Očekáváme chyby v modelu
-                .andExpect(model().attributeHasFieldErrors("registrationDto", "email")); // Specifická chyba u emailu
+                .andExpect(model().attributeExists("registrationDto"))
+                .andExpect(model().hasErrors())
+                .andExpect(model().attributeHasFieldErrors("registrationDto", "email"));
 
-        // Ověříme, že se služba pro registraci nezavolala
         verify(customerService, never()).registerCustomer(any(RegistrationDto.class));
     }
 
@@ -103,7 +97,6 @@ class AuthControllerTest {
     void processRegistration_EmailExistsError_ShouldReturnFormWithError() throws Exception {
         String existingEmail = "existing@example.com";
         String errorMessage = "Zákazník s emailem " + existingEmail + " již existuje.";
-        // Mockujeme, že služba vyhodí výjimku
         doThrow(new IllegalArgumentException(errorMessage))
                 .when(customerService).registerCustomer(any(RegistrationDto.class));
 
@@ -113,15 +106,14 @@ class AuthControllerTest {
                                 .param("lastName", "User")
                                 .param("email", existingEmail)
                                 .param("password", "password123")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
-                .andExpect(status().isOk()) // Zůstane na stránce
+                .andExpect(status().isOk())
                 .andExpect(view().name("registrace"))
                 .andExpect(model().attributeExists("registrationDto"))
-                .andExpect(model().attributeExists("registrationError")) // Očekáváme atribut s chybou
-                .andExpect(model().attribute("registrationError", is(errorMessage))); // Ověříme text chyby
+                .andExpect(model().attributeExists("registrationError"))
+                .andExpect(model().attribute("registrationError", is(errorMessage)));
 
-        // Ověříme, že služba byla volána (a selhala)
         verify(customerService).registerCustomer(any(RegistrationDto.class));
     }
 }

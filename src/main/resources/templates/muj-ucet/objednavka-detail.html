@@ -153,14 +153,14 @@
                         <h4>Celkový souhrn</h4>
                         <ul class="order-totals">
                             <li><span>Mezisoučet (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                            <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(BigDecimal.ZERO) > 0}" class="text-success">
+                            <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="text-success">
                                 <span>Sleva (<span th:text="${order.appliedCouponCode}">KUPON</span>)</span>
                                 <span th:text="'-' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
                             </li>
                             <li><span>Doprava (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
                             <li><span>Celkem DPH</span> <span th:text="${#numbers.formatDecimal(order.totalTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
                             <li class="border-top pt-2"><strong>Celkem k úhradě</strong> <strong><span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></strong></li>
-                            <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(BigDecimal.ZERO) > 0}">
+                            <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                                 <span>Požadovaná záloha</span>
                                 <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
                             </li>
@@ -168,9 +168,9 @@
                     </div>
                 </div>
 
-                <div th:if="${#strings.hasText(order.note)}" class="detail-section mt-4">
+                <div th:if="${order != null && order.note !=null}" class="detail-section mt-4">
                     <h4>Poznámka k objednávce</h4>
-                    <p class="fst-italic bg-light p-3 rounded" th:text="${order.note}"></p>
+                    <p th:text="${order.note}">...</p>
                 </div>
 
             </div> </div> </div> </section>

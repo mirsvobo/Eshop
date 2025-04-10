@@ -1,22 +1,22 @@
 // Soubor: src/test/java/org/example/eshop/controller/ProductControllerTest.java
-
 package org.example.eshop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.eshop.config.SecurityTestConfig; // Import sdílené konfigurace
+import org.example.eshop.config.SecurityTestConfig;
 import org.example.eshop.dto.CustomPriceRequestDto;
 import org.example.eshop.dto.CustomPriceResponseDto;
 import org.example.eshop.model.*;
 import org.example.eshop.service.AddonsService;
 import org.example.eshop.service.CurrencyService;
 import org.example.eshop.service.ProductService;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import; // Import pro @Import
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -30,30 +30,27 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.*;
 
-// Import specific Hamcrest matchers
 import static org.hamcrest.Matchers.*;
-// Import specific Mockito methods and ArgumentMatchers
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-// import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf; // Odstraněno
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProductController.class)
-@Import(SecurityTestConfig.class) // Aplikace sdílené konfigurace
+@Import(SecurityTestConfig.class)
 class ProductControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean private ProductService productService;
-    @MockBean private AddonsService addonsService; // Ponecháno pro případné rozšíření testů
+    @MockBean private AddonsService addonsService;
     @Autowired private ObjectMapper objectMapper;
-    @MockBean private CurrencyService currencyService; // Ponecháno pro @ControllerAdvice
+    @MockBean private CurrencyService currencyService;
 
     private Product standardProduct;
     private Product customProduct;
@@ -62,6 +59,7 @@ class ProductControllerTest {
 
     @BeforeEach
     void setUp() {
+        // ... (setUp zůstává stejný) ...
         standardTaxRate = new TaxRate(1L, "Standard 21%", new BigDecimal("0.21"), false, null);
 
         standardProduct = new Product();
@@ -73,7 +71,6 @@ class ProductControllerTest {
         standardProduct.setTaxRate(standardTaxRate);
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00"));
         standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
-        // Mockování základních kolekcí pro standardní produkt
         standardProduct.setImages(List.of(new Image()));
         standardProduct.setAvailableDesigns(Set.of(new Design()));
         standardProduct.setAvailableGlazes(Set.of(new Glaze()));
@@ -86,27 +83,9 @@ class ProductControllerTest {
         customProduct.setActive(true);
         customProduct.setCustomisable(true);
         customProduct.setTaxRate(standardTaxRate);
-        ProductConfigurator configurator = new ProductConfigurator();
-        configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500"));
-        configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200"));
-        configurator.setMinHeight(new BigDecimal("150")); configurator.setMaxHeight(new BigDecimal("300"));
-        // Přidání mock cen do konfigurátoru, pokud jsou potřeba pro testy
-        configurator.setPricePerCmHeightCZK(BigDecimal.TEN); // Příklad
-        configurator.setPricePerCmLengthCZK(BigDecimal.ONE); // Příklad
-        configurator.setPricePerCmDepthCZK(BigDecimal.ONE); // Příklad
-        configurator.setPricePerCmHeightEUR(BigDecimal.ONE); // Příklad
-        configurator.setPricePerCmLengthEUR(BigDecimal.ONE); // Příklad
-        configurator.setPricePerCmDepthEUR(BigDecimal.ONE); // Příklad
-        configurator.setDesignPriceCZK(BigDecimal.ZERO);
-        configurator.setDesignPriceEUR(BigDecimal.ZERO);
-        configurator.setDividerPricePerCmDepthCZK(BigDecimal.ZERO);
-        configurator.setDividerPricePerCmDepthEUR(BigDecimal.ZERO);
-        configurator.setGutterPriceCZK(BigDecimal.ZERO);
-        configurator.setGutterPriceEUR(BigDecimal.ZERO);
-        configurator.setShedPriceCZK(BigDecimal.ZERO);
-        configurator.setShedPriceEUR(BigDecimal.ZERO);
+        ProductConfigurator configurator = getProductConfigurator();
         customProduct.setConfigurator(configurator);
-        customProduct.setAvailableAddons(Set.of(new Addon())); // Mockování doplňků
+        customProduct.setAvailableAddons(Set.of(new Addon()));
 
         inactiveProduct = new Product();
         inactiveProduct.setId(3L);
@@ -115,10 +94,36 @@ class ProductControllerTest {
         inactiveProduct.setActive(false);
         inactiveProduct.setTaxRate(standardTaxRate);
 
-        // Mockování globální měny
         lenient().when(currencyService.getSelectedCurrency()).thenReturn("CZK");
     }
 
+    @NotNull
+    private static ProductConfigurator getProductConfigurator() {
+        ProductConfigurator configurator = new ProductConfigurator();
+        configurator.setMinLength(new BigDecimal("100"));
+        configurator.setMaxLength(new BigDecimal("500"));
+        configurator.setMinWidth(new BigDecimal("50"));
+        configurator.setMaxWidth(new BigDecimal("200"));
+        configurator.setMinHeight(new BigDecimal("150"));
+        configurator.setMaxHeight(new BigDecimal("300"));
+        configurator.setPricePerCmHeightCZK(BigDecimal.TEN);
+        configurator.setPricePerCmLengthCZK(BigDecimal.ONE);
+        configurator.setPricePerCmDepthCZK(BigDecimal.ONE);
+        configurator.setPricePerCmHeightEUR(BigDecimal.ONE);
+        configurator.setPricePerCmLengthEUR(BigDecimal.ONE);
+        configurator.setPricePerCmDepthEUR(BigDecimal.ONE);
+        configurator.setDesignPriceCZK(BigDecimal.ZERO);
+        configurator.setDesignPriceEUR(BigDecimal.ZERO);
+        configurator.setDividerPricePerCmDepthCZK(BigDecimal.ZERO);
+        configurator.setDividerPricePerCmDepthEUR(BigDecimal.ZERO);
+        configurator.setGutterPriceCZK(BigDecimal.ZERO);
+        configurator.setGutterPriceEUR(BigDecimal.ZERO);
+        configurator.setShedPriceCZK(BigDecimal.ZERO);
+        configurator.setShedPriceEUR(BigDecimal.ZERO);
+        return configurator;
+    }
+
+    // ... ostatní testy (listProducts, productDetail) ...
     @Test
     @DisplayName("GET /produkty - Zobrazí stránku se seznamem aktivních produktů")
     void listProducts_ShouldReturnProductsView() throws Exception {
@@ -174,7 +179,6 @@ class ProductControllerTest {
     void productDetail_CustomProduct_ShouldReturnCustomDetailView() throws Exception {
         String slug = "drevnik-na-miru";
         when(productService.getActiveProductBySlug(slug)).thenReturn(Optional.of(customProduct));
-        // Mockování výchozí ceny (pro min rozměry)
         when(productService.calculateDynamicProductPrice(eq(customProduct), anyMap(), isNull(), eq(false), eq(false), eq(false), eq("CZK")))
                 .thenReturn(new BigDecimal("5000.00"));
         when(productService.calculateDynamicProductPrice(eq(customProduct), anyMap(), isNull(), eq(false), eq(false), eq(false), eq("EUR")))
@@ -191,7 +195,6 @@ class ProductControllerTest {
                 .andExpect(model().attribute("initialCustomPriceCZK", is(new BigDecimal("5000.00"))));
 
         verify(productService).getActiveProductBySlug(slug);
-        // Ověření volání pro výpočet výchozí ceny
         verify(productService).calculateDynamicProductPrice(eq(customProduct), anyMap(), isNull(), eq(false), eq(false), eq(false), eq("CZK"));
         verify(productService).calculateDynamicProductPrice(eq(customProduct), anyMap(), isNull(), eq(false), eq(false), eq(false), eq("EUR"));
     }
@@ -203,7 +206,7 @@ class ProductControllerTest {
         when(productService.getActiveProductBySlug(slug)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.get("/produkt/{slug}", slug))
-                .andExpect(status().isNotFound()); // Očekáváme přímo 404
+                .andExpect(status().isNotFound());
 
         verify(productService).getActiveProductBySlug(slug);
     }
@@ -212,11 +215,10 @@ class ProductControllerTest {
     @DisplayName("GET /produkt/{slug} - Neaktivní produkt (404)")
     void productDetail_Inactive_ShouldReturn404() throws Exception {
         String slug = inactiveProduct.getSlug();
-        // getActiveProductBySlug by neměl vrátit neaktivní produkt
         when(productService.getActiveProductBySlug(slug)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.get("/produkt/{slug}", slug))
-                .andExpect(status().isNotFound()); // Očekáváme 404
+                .andExpect(status().isNotFound());
 
         verify(productService).getActiveProductBySlug(slug);
     }
@@ -241,9 +243,9 @@ class ProductControllerTest {
                 .thenReturn(calculatedEUR);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/product/calculate-price")
-                                .contentType(MediaType.APPLICATION_JSON) // Zajištěno, že je zde
+                                .contentType(MediaType.APPLICATION_JSON) // Zajištěno
                                 .content(objectMapper.writeValueAsString(requestDto))
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -264,15 +266,14 @@ class ProductControllerTest {
         requestDto.setProductId(nonExistentId);
         requestDto.setCustomDimensions(Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180")));
 
-        // Simulace nenalezení produktu
         when(productService.getProductById(nonExistentId)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/product/calculate-price")
-                                .contentType(MediaType.APPLICATION_JSON) // <-- Přidáno
+                                .contentType(MediaType.APPLICATION_JSON) // Zajištěno
                                 .content(objectMapper.writeValueAsString(requestDto))
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
-                .andExpect(status().isNotFound()) // Očekáváme 404
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.errorMessage", containsString("Produkt nenalezen")));
 
@@ -282,30 +283,31 @@ class ProductControllerTest {
 
     @Test
     @DisplayName("POST /api/product/calculate-price - Neplatná data (chybějící rozměry - 400 Bad Request)")
-    void calculateCustomPrice_InvalidData() throws Exception { // Původní chybový log ukazoval na tento test
+    void calculateCustomPrice_InvalidData() throws Exception {
         Long productId = customProduct.getId();
         CustomPriceRequestDto requestDto = new CustomPriceRequestDto();
         requestDto.setProductId(productId);
-        requestDto.setCustomDimensions(null); // <-- Schválně null pro vyvolání chyby
+        requestDto.setCustomDimensions(null); // <-- Schválně null
 
-        // Mockování pro nalezení produktu (volá se před výpočtem)
         when(productService.getProductById(productId)).thenReturn(Optional.of(customProduct));
-        // Mockování, že výpočet hodí chybu kvůli chybějícím rozměrům
-        when(productService.calculateDynamicProductPrice(any(), isNull(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyString()))
+        // Simulace výjimky ze service, když chybí rozměry
+        when(productService.calculateDynamicProductPrice(any(Product.class), isNull(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyString()))
                 .thenThrow(new IllegalArgumentException("Missing dimensions for custom product calculation."));
 
+
         mockMvc.perform(MockMvcRequestBuilders.post("/api/product/calculate-price")
-                                .contentType(MediaType.APPLICATION_JSON) // <-- ZAJIŠTĚNO
-                                .content(objectMapper.writeValueAsString(requestDto)) // Pošleme DTO s null dimensions
-                        // .with(csrf()) // Odstraněno
+                                // ===== OPRAVA #5 =====
+                                .contentType(MediaType.APPLICATION_JSON) // Zajištění nastavení Content-Type
+                                // =====================
+                                .content(objectMapper.writeValueAsString(requestDto))
+                        // CSRF vypnuto
                 )
-                .andExpect(status().isBadRequest()) // Očekáváme 400 Bad Request
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON)) // Ověříme content type odpovědi
-                .andExpect(jsonPath("$.errorMessage", containsString("Missing dimensions"))); // Ověříme chybovou hlášku z exception
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.errorMessage", containsString("Missing dimensions")));
 
         verify(productService).getProductById(productId);
-        // Ověříme, že se metoda výpočtu volala (a hodila chybu)
-        verify(productService).calculateDynamicProductPrice(any(), isNull(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyString());
+        verify(productService).calculateDynamicProductPrice(any(Product.class), isNull(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyString());
     }
 
 
@@ -318,14 +320,13 @@ class ProductControllerTest {
         requestDto.setCustomDimensions(Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180")));
 
         when(productService.getProductById(productId)).thenReturn(Optional.of(customProduct));
-        // Simulace chyby při výpočtu
         when(productService.calculateDynamicProductPrice(any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyString()))
                 .thenThrow(new RuntimeException("Unexpected database error"));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/product/calculate-price")
-                                .contentType(MediaType.APPLICATION_JSON) // <-- Přidáno
+                                .contentType(MediaType.APPLICATION_JSON) // Zajištěno
                                 .content(objectMapper.writeValueAsString(requestDto))
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))

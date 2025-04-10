@@ -1,4 +1,4 @@
-// Soubor: src/test/java/org/example/eshop/admin/controller/AdminCustomerControllerTest.java
+// Soubor: src/test/java/org/example/eshop/controller/AdminCustomerControllerTest.java
 
 package org.example.eshop.controller; // Balíček možná potřeba upravit na org.example.eshop.admin.controller
 
@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-// import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf; // Odstraněno
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminCustomerController.class)
@@ -48,8 +47,8 @@ class AdminCustomerControllerTest {
     private MockMvc mockMvc;
 
     @MockBean private CustomerService customerService;
-    @MockBean private OrderService orderService; // Ponecháno, může být potřeba pro rozšíření
-    @MockBean private CurrencyService currencyService; // Ponecháno pro @ControllerAdvice
+    @MockBean private OrderService orderService;
+    @MockBean private CurrencyService currencyService;
 
     private Customer testCustomer;
     private AddressDto testInvoiceAddressDto;
@@ -149,7 +148,6 @@ class AdminCustomerControllerTest {
     @DisplayName("POST /admin/customers/{id}/update-basic - Úspěšná aktualizace")
     void updateCustomerBasicInfo_Success() throws Exception {
         when(customerService.getCustomerById(1L)).thenReturn(Optional.of(testCustomer));
-        // Mock saveCustomer, která je volána controllerem
         when(customerService.saveCustomer(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/update-basic")
@@ -157,14 +155,13 @@ class AdminCustomerControllerTest {
                                 .param("firstName", testProfileUpdateDto.getFirstName())
                                 .param("lastName", testProfileUpdateDto.getLastName())
                                 .param("phone", testProfileUpdateDto.getPhone())
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
                 .andExpect(flash().attributeExists("successMessage"));
 
         verify(customerService).getCustomerById(1L);
-        // Ověříme, že se save volalo a že předaný objekt má správné hodnoty
         ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
         verify(customerService).saveCustomer(customerCaptor.capture());
         assertEquals(testProfileUpdateDto.getFirstName(), customerCaptor.getValue().getFirstName());
@@ -175,12 +172,6 @@ class AdminCustomerControllerTest {
     @Test
     @DisplayName("POST /admin/customers/{id}/update-basic - Chyba validace")
     void updateCustomerBasicInfo_ValidationError() throws Exception {
-        // POZNÁMKA: Tento test může selhávat kvůli TemplateProcessingException,
-        // pokud controller AdminCustomerController v chybové cestě metody updateCustomerBasicInfo()
-        // nepřidá do modelu všechny potřebné atributy (customer, profileUpdateDto, invoiceAddressDto, deliveryAddressDto).
-        // Kód testu předpokládá, že controller byl opraven.
-
-        // Mock pro načtení zákazníka (controller ho potřebuje pro zobrazení detailu při chybě)
         when(customerService.getCustomerById(1L)).thenReturn(Optional.of(testCustomer));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/update-basic")
@@ -188,54 +179,52 @@ class AdminCustomerControllerTest {
                                 .param("firstName", "") // Prázdné jméno -> chyba validace
                                 .param("lastName", testProfileUpdateDto.getLastName())
                                 .param("phone", testProfileUpdateDto.getPhone())
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/customer-detail"))
-                // Ověříme, že model obsahuje všechny potřebné DTO pro zobrazení formulářů
+                // --- OPRAVA: Ověření, že všechny potřebné atributy jsou v modelu ---
                 .andExpect(model().attributeExists("customer", "profileUpdateDto", "invoiceAddressDto", "deliveryAddressDto"))
+                // --- KONEC OPRAVY ---
                 .andExpect(model().hasErrors()) // BindingResult pro profileUpdateDto má chyby
                 .andExpect(model().attributeHasFieldErrors("profileUpdateDto", "firstName")) // Specifická chyba
                 .andExpect(model().attributeExists("errorMessage")); // Obecná chybová zpráva
 
         verify(customerService, never()).saveCustomer(any()); // Save se nesmí volat
-        // Ověříme, že se načetl zákazník pro zobrazení detailu
+        // --- OPRAVA: Ověření volání getCustomerById v error path ---
         verify(customerService).getCustomerById(1L);
+        // --- KONEC OPRAVY ---
     }
 
 
     @Test
     @DisplayName("POST /admin/customers/{id}/update-invoice-address - Úspěch")
     void updateInvoiceAddress_Success() throws Exception {
-        // Mock service metody, která je volána controllerem
         when(customerService.updateAddress(eq(1L), eq(CustomerService.AddressType.INVOICE), any(AddressDto.class)))
-                .thenReturn(testCustomer); // Vracíme (potenciálně upraveného) zákazníka
+                .thenReturn(testCustomer);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/update-invoice-address")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .param("firstName", "InvoiceFName") // Povinné pro validaci DTO
-                                .param("lastName", "InvoiceLName") // Povinné pro validaci DTO
+                                .param("firstName", "InvoiceFName")
+                                .param("lastName", "InvoiceLName")
                                 .param("street", "Updated Invoice St 10")
                                 .param("city", "Updated Invoice City")
                                 .param("zipCode", "11199")
                                 .param("country", "Česká republika")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
                 .andExpect(flash().attributeExists("successMessage"));
 
-        // Ověříme volání service metody
         ArgumentCaptor<AddressDto> addressCaptor = ArgumentCaptor.forClass(AddressDto.class);
         verify(customerService).updateAddress(eq(1L), eq(CustomerService.AddressType.INVOICE), addressCaptor.capture());
-        // Ověříme, že DTO předané do service má správné hodnoty
         assertEquals("Updated Invoice St 10", addressCaptor.getValue().getStreet());
     }
 
     @Test
     @DisplayName("POST /admin/customers/{id}/update-delivery-address - Úspěch")
     void updateDeliveryAddress_Success() throws Exception {
-        // Mock service metody
         when(customerService.updateAddress(eq(1L), eq(CustomerService.AddressType.DELIVERY), any(AddressDto.class)))
                 .thenReturn(testCustomer);
 
@@ -248,7 +237,7 @@ class AdminCustomerControllerTest {
                                 .param("zipCode", "22299")
                                 .param("country", "Česká republika")
                                 .param("phone", "444555666")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
@@ -262,13 +251,12 @@ class AdminCustomerControllerTest {
     @Test
     @DisplayName("POST /admin/customers/{id}/toggle-delivery-address - Nastaví na true")
     void toggleDeliveryAddressUsage_SetTrue() throws Exception {
-        // Mock service metody
         when(customerService.setUseInvoiceAddressAsDelivery(eq(1L), eq(true)))
-                .thenReturn(testCustomer); // Vrací aktualizovaného zákazníka
+                .thenReturn(testCustomer);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/toggle-delivery-address")
-                                .param("useInvoiceAddress", "true") // Parametr je poslán
-                        // .with(csrf()) // Odstraněno
+                                .param("useInvoiceAddress", "true")
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
@@ -280,19 +268,17 @@ class AdminCustomerControllerTest {
     @Test
     @DisplayName("POST /admin/customers/{id}/toggle-delivery-address - Nastaví na false")
     void toggleDeliveryAddressUsage_SetFalse() throws Exception {
-        // Mock service metody
         when(customerService.setUseInvoiceAddressAsDelivery(eq(1L), eq(false)))
                 .thenReturn(testCustomer);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/toggle-delivery-address")
-                        // Parametr useInvoiceAddress není poslán (checkbox odškrtnut)
-                        // .with(csrf()) // Odstraněno
+                        // Parametr není poslán
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
                 .andExpect(flash().attributeExists("successMessage"));
 
-        // Ověříme, že service se volá s 'false' kvůli defaultValue="false" v @RequestParam
         verify(customerService).setUseInvoiceAddressAsDelivery(1L, false);
     }
 
@@ -304,7 +290,7 @@ class AdminCustomerControllerTest {
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/toggle-enabled")
                                 .param("enable", "false")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))
@@ -323,7 +309,7 @@ class AdminCustomerControllerTest {
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/customers/1/toggle-enabled")
                                 .param("enable", "true")
-                        // .with(csrf()) // Odstraněno
+                        // CSRF vypnuto
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/customers/1"))

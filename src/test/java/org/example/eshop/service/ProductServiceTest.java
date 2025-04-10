@@ -29,15 +29,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class) // Povolí použití Mockito anotací
 class ProductServiceTest {
 
-    @Mock // Mockujeme závislosti ProductService
-    private ProductRepository productRepository;
-    @Mock
-    private ImageRepository imageRepository;
-    @Mock
-    private TaxRateRepository taxRateRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private ImageRepository imageRepository;
+    @Mock private TaxRateRepository taxRateRepository;
 
-    @InjectMocks // Vytvoří instanci ProductService a injektuje mocky
-    private ProductService productService;
+    @InjectMocks private ProductService productService;
 
     private Product standardProduct;
     private Product customProduct;
@@ -70,9 +66,8 @@ class ProductServiceTest {
         customProduct.setTaxRate(standardTaxRate);
 
         configurator = new ProductConfigurator();
-        configurator.setId(customProduct.getId()); // ID configuratoru = ID produktu
-        configurator.setProduct(customProduct); // Propojení s produktem
-        // Nastavení cen a limitů pro testy
+        configurator.setId(customProduct.getId());
+        configurator.setProduct(customProduct);
         configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500"));
         configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200"));
         configurator.setMinHeight(new BigDecimal("150")); configurator.setMaxHeight(new BigDecimal("300"));
@@ -80,13 +75,11 @@ class ProductServiceTest {
         configurator.setDividerPricePerCmDepthCZK(new BigDecimal("3.00"));
         configurator.setGutterPriceCZK(new BigDecimal("500.00"));
         configurator.setShedPriceCZK(new BigDecimal("2000.00"));
-        configurator.setDesignPriceCZK(new BigDecimal("100.00")); // Cena za "custom design"
-        // EUR ceny
+        configurator.setDesignPriceCZK(new BigDecimal("100.00"));
         configurator.setPricePerCmLengthEUR(new BigDecimal("0.40")); configurator.setPricePerCmDepthEUR(new BigDecimal("0.20")); configurator.setPricePerCmHeightEUR(new BigDecimal("0.32"));
         configurator.setDividerPricePerCmDepthEUR(new BigDecimal("0.12")); configurator.setGutterPriceEUR(new BigDecimal("20.00")); configurator.setShedPriceEUR(new BigDecimal("80.00"));
         configurator.setDesignPriceEUR(new BigDecimal("4.00"));
-
-        customProduct.setConfigurator(configurator); // Přiřazení konfigurátoru k produktu
+        customProduct.setConfigurator(configurator);
 
 
         inactiveProduct = new Product();
@@ -156,8 +149,6 @@ class ProductServiceTest {
                 "width", new BigDecimal("100"),
                 "height", new BigDecimal("180")
         );
-        // Výpočet: (180*8) + (200*10) + (100*5) + 100(design) + (100*3)(příčka) + 500(okap) + 2000(domek)
-        // = 1440 + 2000 + 500 + 100 + 300 + 500 + 2000 = 6840
         BigDecimal expectedPrice = new BigDecimal("6840.00");
         BigDecimal calculatedPrice = productService.calculateDynamicProductPrice(
                 customProduct, dimensions, "Nějaký Design", true, true, true, "CZK"
@@ -170,7 +161,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vrátí 0 pro záporný výsledek (CZK)")
     void calculateDynamicProductPrice_NegativeResultBecomesZero_CZK() {
-        customProduct.getConfigurator().setPricePerCmLengthCZK(new BigDecimal("-100")); // Záporná cena
+        customProduct.getConfigurator().setPricePerCmLengthCZK(new BigDecimal("-100"));
         Map<String, BigDecimal> dimensions = Map.of(
                 "length", new BigDecimal("200"),
                 "width", new BigDecimal("100"),
@@ -200,8 +191,8 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro produkt bez konfigurátoru")
     void calculateDynamicProductPrice_ThrowsForMissingConfigurator() {
-        standardProduct.setCustomisable(true); // Simulace špatného stavu
-        standardProduct.setConfigurator(null); // Zajistíme, že konfigurátor chybí
+        standardProduct.setCustomisable(true);
+        standardProduct.setConfigurator(null);
         Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180"));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -213,7 +204,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro chybějící rozměry")
     void calculateDynamicProductPrice_ThrowsForMissingDimensions() {
-        Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100")); // Chybí height
+        Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             productService.calculateDynamicProductPrice(customProduct, dimensions, null, false, false, false, "CZK");
@@ -225,7 +216,7 @@ class ProductServiceTest {
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro rozměry mimo limity")
     void calculateDynamicProductPrice_ThrowsForDimensionOutOfBounds() {
         Map<String, BigDecimal> dimensions = Map.of(
-                "length", new BigDecimal("600"), // Mimo limit (max 500)
+                "length", new BigDecimal("600"),
                 "width", new BigDecimal("100"),
                 "height", new BigDecimal("180")
         );
@@ -239,7 +230,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro chybějící cenu v konfigurátoru")
     void calculateDynamicProductPrice_ThrowsForMissingConfigPrice() {
-        customProduct.getConfigurator().setPricePerCmLengthCZK(null); // Simulace chybějící ceny
+        customProduct.getConfigurator().setPricePerCmLengthCZK(null);
         Map<String, BigDecimal> dimensions = Map.of( "length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180") );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
@@ -368,7 +359,6 @@ class ProductServiceTest {
         existingProduct.setTaxRate(standardTaxRate);
 
         when(taxRateRepository.findById(2L)).thenReturn(Optional.of(reducedTaxRate));
-        // Předpokládáme, že controller už ověřil slug (nebo testujeme service přímo)
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Optional<Product> resultOpt = productService.updateProduct(productId, updatedData, existingProduct);
@@ -387,7 +377,7 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("updateProduct vrátí empty Optional pro neexistující ID (při volání přetížené metody)")
+    @DisplayName("updateProduct vrátí empty Optional pro neexistující ID")
     void updateProduct_NotFound() {
         long nonExistentId = 999L;
         Product updatedData = new Product();
@@ -395,22 +385,23 @@ class ProductServiceTest {
         TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
         updatedData.setTaxRate(rateRef);
 
-        // Mock findById v controlleru - vrátí empty
-        when(productRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+        // --- OPRAVA: Odebrání zbytečného when(...) ---
+        // Toto mockování bylo označeno jako zbytečné, protože findById selže dříve
+        // when(productRepository.findById(nonExistentId)).thenReturn(Optional.empty());
+        // --- KONEC OPRAVY ---
 
-        // TENTO TEST OVĚŘUJE CHOVÁNÍ CONTROLLERU NEPŘÍMO
-        // Volání samotné service metody updateProduct(id, data, null) by mělo selhat nebo být ošetřeno
-        // Zde testujeme, že se save nevolá, pokud findById selže předtím
+        // TENTO TEST NEPŘÍMO OVĚŘUJE LOGIKU CONTROLLERU, KTERÁ BY MĚLA ZABRÁNIT
+        // VOLÁNÍ updateProduct, POKUD PRODUKT NEEXISTUJE.
+        // Samotná metoda updateProduct(id, data, existing) by očekávala non-null existing.
+        // Zde pouze ověříme, že se nic neuloží, pokud by logika selhala.
 
-        // Simulace logiky, která by nastala, pokud by controller vrátil chybu
-        // assertThrows(EntityNotFoundException.class, () -> {
-        //     // Pokud by controller volal service i přes nenalezení produktu
+        // Pokud by hypoteticky došlo k volání s null 'existingProduct':
+        // assertThrows(NullPointerException.class, () -> { // Nebo jiná vhodná exception
         //     productService.updateProduct(nonExistentId, updatedData, null);
         // });
 
-        // Ověříme, že se save nevolalo
+        // Ověříme, že se nic neuložilo a ani se nehledala sazba
         verify(productRepository, never()).save(any());
-        // Ověříme, že se ani nehledala sazba
         verify(taxRateRepository, never()).findById(anyLong());
     }
 
@@ -420,7 +411,7 @@ class ProductServiceTest {
         long productId = 1L;
         Product updatedData = new Product();
         updatedData.setName("Produkt s novým slugem");
-        updatedData.setSlug("existujici-slug"); // Nový, konfliktní slug
+        updatedData.setSlug("existujici-slug");
         TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
         updatedData.setTaxRate(rateRef);
 
@@ -431,11 +422,10 @@ class ProductServiceTest {
         existingProduct.setTaxRate(standardTaxRate);
 
         Product conflictingProduct = new Product();
-        conflictingProduct.setId(50L); // Jiné ID!
+        conflictingProduct.setId(50L);
         conflictingProduct.setSlug("existujici-slug");
 
         when(productRepository.findBySlugIgnoreCase("existujici-slug")).thenReturn(Optional.of(conflictingProduct));
-        // Není potřeba mockovat taxRateRepository.findById, protože kód selže dříve
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             productService.updateProduct(productId, updatedData, existingProduct);
@@ -454,7 +444,7 @@ class ProductServiceTest {
         Product updatedData = new Product();
         updatedData.setName("Název");
         updatedData.setSlug("standard-drevnik");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(999L); // Neplatné ID
+        TaxRate rateRef = new TaxRate(); rateRef.setId(999L);
         updatedData.setTaxRate(rateRef);
 
         Product existingProduct = new Product();
@@ -463,7 +453,7 @@ class ProductServiceTest {
         existingProduct.setSlug("standard-drevnik");
         existingProduct.setTaxRate(standardTaxRate);
 
-        when(taxRateRepository.findById(999L)).thenReturn(Optional.empty()); // Sazba nenalezena
+        when(taxRateRepository.findById(999L)).thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
             productService.updateProduct(productId, updatedData, existingProduct);

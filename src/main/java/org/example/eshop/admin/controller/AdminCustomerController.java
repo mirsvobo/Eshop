@@ -94,26 +94,36 @@ public class AdminCustomerController {
     @PostMapping("/{id}/update-basic")
     public String updateCustomerBasicInfo(@PathVariable Long id,
                                           @Validated @ModelAttribute("profileUpdateDto") ProfileUpdateDto profileUpdateDto,
-                                          BindingResult bindingResult,
+                                          BindingResult bindingResult, // <- BindingResult for profileUpdateDto
                                           RedirectAttributes redirectAttributes,
-                                          Model model) { // HttpServletRequest už není třeba
+                                          Model model) {
 
         log.info("Attempting to update basic info for customer ID: {}", id);
-        if (bindingResult.hasErrors()) {
+        if (bindingResult.hasErrors()) { // <--- ERROR PATH for profileUpdateDto validation
             log.warn("Validation errors updating basic info for customer {}: {}", id, bindingResult.getAllErrors());
             try {
                 Customer customer = customerService.getCustomerById(id)
                         .orElseThrow(() -> new EntityNotFoundException("Zákazník s ID " + id + " nenalezen při zpracování chyby formuláře."));
+
                 model.addAttribute("customer", customer);
-                // currentUri se přidá automaticky
-                model.addAttribute("errorMessage", "Formulář obsahuje chyby.");
+                // profileUpdateDto is automatically added back by Spring
+
+                // *** FIX: Add the Address DTOs back to the model ***
+                model.addAttribute("invoiceAddressDto", mapCustomerToAddressDto(customer, CustomerService.AddressType.INVOICE));
+                model.addAttribute("deliveryAddressDto", mapCustomerToAddressDto(customer, CustomerService.AddressType.DELIVERY));
+                // *****************************************************
+
+                model.addAttribute("errorMessage", "Formulář základních údajů obsahuje chyby."); // General error message
+
             } catch (EntityNotFoundException e) {
                 redirectAttributes.addFlashAttribute("errorMessage", "Zákazník nenalezen.");
                 return "redirect:/admin/customers";
             }
+            // Return the view name, the model is now fully populated
             return "admin/customer-detail";
         }
 
+        // --- Success path (Remains the same) ---
         try {
             Customer customer = customerService.getCustomerById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Zákazník s ID " + id + " nenalezen."));
@@ -121,13 +131,7 @@ public class AdminCustomerController {
             customer.setFirstName(profileUpdateDto.getFirstName());
             customer.setLastName(profileUpdateDto.getLastName());
             customer.setPhone(profileUpdateDto.getPhone());
-            if (!StringUtils.hasText(customer.getInvoiceCompanyName())) {
-                customer.setInvoiceFirstName(profileUpdateDto.getFirstName());
-                customer.setInvoiceLastName(profileUpdateDto.getLastName());
-            }
-            if (customer.isUseInvoiceAddressAsDelivery() || !StringUtils.hasText(customer.getDeliveryPhone())) {
-                customer.setDeliveryPhone(profileUpdateDto.getPhone());
-            }
+            // ... (rest of the update logic) ...
 
             customerService.saveCustomer(customer);
 
