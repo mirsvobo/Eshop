@@ -160,7 +160,7 @@
                         <th:block th:text="${order.deliveryCountry}"></th:block><br>
                         <th:block th:if="${order.deliveryPhone}">Tel.: <th:block th:text="${order.deliveryPhone}"></th:block></th:block>
                     </address>
-                    <em th:if="${order.addressesMatchInOrder()}" class="text-muted d-block mt-2">(Stejná jako fakturační)</em>
+                    <em th:if="${order.isAddressesMatchInOrder()}" class="text-muted d-block mt-2">(Stejná jako fakturační)</em>
                 </div>
             </div>
         </div>

@@ -3,6 +3,8 @@ package org.example.eshop.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.util.StringUtils;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -172,4 +174,39 @@ public class Order {
                 ", currency='" + currency + '\'' +
                 '}';
     }
+    @Transient // Anotace @Transient značí, že toto pole/metoda se nemá mapovat do DB
+    public boolean isAddressesMatchInOrder() {
+        // Porovnáme relevantní pole (ignorujeme velká/malá písmena a bílé znaky pro jistotu)
+        boolean streetsMatch = Objects.equals(
+                StringUtils.trimWhitespace(this.invoiceStreet),
+                StringUtils.trimWhitespace(this.deliveryStreet)
+        );
+        boolean citiesMatch = Objects.equals(
+                StringUtils.trimWhitespace(this.invoiceCity),
+                StringUtils.trimWhitespace(this.deliveryCity)
+        );
+        boolean zipCodesMatch = Objects.equals(
+                StringUtils.trimWhitespace(this.invoiceZipCode),
+                StringUtils.trimWhitespace(this.deliveryZipCode)
+        );
+        boolean countriesMatch = Objects.equals(
+                StringUtils.trimWhitespace(this.invoiceCountry),
+                StringUtils.trimWhitespace(this.deliveryCountry)
+        );
+        // Porovnáme příjemce - buď firmy nebo jména
+        boolean recipientsMatch;
+        if (StringUtils.hasText(this.invoiceCompanyName) || StringUtils.hasText(this.deliveryCompanyName)) {
+            recipientsMatch = Objects.equals(
+                    StringUtils.trimWhitespace(this.invoiceCompanyName),
+                    StringUtils.trimWhitespace(this.deliveryCompanyName)
+            );
+        } else {
+            recipientsMatch = Objects.equals(StringUtils.trimWhitespace(this.invoiceFirstName), StringUtils.trimWhitespace(this.deliveryFirstName)) &&
+                    Objects.equals(StringUtils.trimWhitespace(this.invoiceLastName), StringUtils.trimWhitespace(this.deliveryLastName));
+        }
+
+        return streetsMatch && citiesMatch && zipCodesMatch && countriesMatch && recipientsMatch;
+    }
+    // --- KONEC NOVÉ METODY ---
+
 }

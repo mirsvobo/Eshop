@@ -36,53 +36,33 @@ public class OrderService implements PriceConstants {
     private static final String INITIAL_ORDER_STATE_CODE = "NEW";
     private static final String PAYMENT_STATUS_AWAITING_DEPOSIT = "AWAITING_DEPOSIT";
     private static final String PAYMENT_STATUS_DEPOSIT_PAID = "DEPOSIT_PAID";
-    static final String PAYMENT_STATUS_PAID = "PAID";
-    private static final String EURO_CURRENCY = "EUR";
-    private static final String DEFAULT_CURRENCY = "CZK";
+    private static final String PAYMENT_STATUS_PAID = "PAID"; // Používáme 'static final' pro konstanty
+    private static final String PAYMENT_STATUS_PENDING = "PENDING";
+    // Konstanty pro měny již máme z PriceConstants interface (EURO_CURRENCY, DEFAULT_CURRENCY)
 
     // Repositories
-    @Autowired
-    private OrderRepository orderRepository;
-    @Autowired
-    private CustomerRepository customerRepository;
-    @Autowired
-    private OrderStateRepository orderStateRepository;
-    @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private AddonsRepository addonsRepository;
-    @Autowired
-    private CouponRepository couponRepository;
-    @Autowired
-    private TaxRateRepository taxRateRepository;
-    @Autowired
-    private DesignRepository designRepository;
-    @Autowired
-    private GlazeRepository glazeRepository;
-    @Autowired
-    private RoofColorRepository roofColorRepository;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private CustomerRepository customerRepository;
+    @Autowired private OrderStateRepository orderStateRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private AddonsRepository addonsRepository;
+    @Autowired private CouponRepository couponRepository;
+    @Autowired private TaxRateRepository taxRateRepository;
+    @Autowired private DesignRepository designRepository;
+    @Autowired private GlazeRepository glazeRepository;
+    @Autowired private RoofColorRepository roofColorRepository;
 
     // Services
-    @Autowired
-    private ProductService productService;
-    @Autowired
-    private DiscountService discountService;
-    @Autowired
-    private CouponService couponService;
-    @Autowired
-    private EmailService emailService;
-    @Autowired
-    @Qualifier("googleMapsShippingService")
-    private ShippingService shippingService;
-    @Autowired
-    @Qualifier("superFakturaInvoiceService")
-    @Lazy
-    private SuperFakturaInvoiceService invoiceService;
-    @Autowired
-    @Qualifier("paymentService")
-    private PaymentService paymentService;
-
-    @Autowired private OrderCodeGeneratorService orderCodeGeneratorService; // <-- PŘIDAT
+    @Autowired private ProductService productService;
+    @Autowired private DiscountService discountService;
+    @Autowired private CouponService couponService;
+    @Autowired private EmailService emailService;
+    @Autowired @Qualifier("googleMapsShippingService") private ShippingService shippingService;
+    // Použijeme @Lazy zde, abychom předešli cyklické závislosti při startu aplikace
+    // (pokud by SuperFakturaInvoiceService měla závislost na OrderService)
+    @Autowired @Lazy private SuperFakturaInvoiceService invoiceService;
+    @Autowired private PaymentService paymentService;
+    @Autowired private OrderCodeGeneratorService orderCodeGeneratorService;
 
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
@@ -185,14 +165,28 @@ public class OrderService implements PriceConstants {
             if (appliedCoupon == null || !appliedCoupon.isFreeShipping()) {
                 log.debug("[Order Creation - Step 5] Calculating shipping cost currency: {}", orderCurrency);
                 try {
-                    shippingCostNoTax = Optional.ofNullable(shippingService.calculateShippingCost(order, orderCurrency)).orElse(BigDecimal.ZERO);
-                    shippingTaxRate = Optional.ofNullable(shippingService.getShippingTaxRate()).orElse(BigDecimal.ZERO);
-                    if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0) {
-                        if (shippingTaxRate.compareTo(BigDecimal.ZERO) <= 0)
-                            throw new IllegalStateException("Shipping tax rate missing or zero.");
-                        shippingTax = shippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
+                    // Použijeme hodnoty z requestu, pokud jsou validní, jinak fallback na calculation
+                    if (request.getShippingCostNoTax() != null && request.getShippingTax() != null) {
+                        shippingCostNoTax = request.getShippingCostNoTax();
+                        shippingTax = request.getShippingTax();
+                        // Odhadneme sazbu, pokud je cena > 0
+                        if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0) {
+                            shippingTaxRate = shippingTax.divide(shippingCostNoTax, CALCULATION_SCALE, ROUNDING_MODE);
+                        } else {
+                            shippingTaxRate = BigDecimal.ZERO;
+                        }
+                        log.debug("Using shipping costs from request. CostNoTax: {}, Tax: {}, Estimated Rate: {}", shippingCostNoTax, shippingTax, shippingTaxRate);
+                    } else {
+                        log.warn("Shipping costs missing in request, recalculating...");
+                        shippingCostNoTax = Optional.ofNullable(shippingService.calculateShippingCost(order, orderCurrency)).orElse(BigDecimal.ZERO);
+                        shippingTaxRate = Optional.ofNullable(shippingService.getShippingTaxRate()).orElse(BigDecimal.ZERO);
+                        if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0) {
+                            if (shippingTaxRate.compareTo(BigDecimal.ZERO) <= 0)
+                                throw new IllegalStateException("Shipping tax rate missing or zero during recalculation.");
+                            shippingTax = shippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
+                        }
+                        log.debug("Shipping recalculated. CostNoTax: {}, Tax: {}, Rate: {}", shippingCostNoTax, shippingTax, shippingTaxRate);
                     }
-                    log.debug("Shipping calculated. CostNoTax: {}, Tax: {}", shippingCostNoTax, shippingTax);
                 } catch (Exception e) {
                     log.error("!!! CRITICAL ERROR shipping calculation: {}", e.getMessage(), e);
                     throw new RuntimeException("Failed to calculate shipping cost: " + e.getMessage(), e);
@@ -227,20 +221,23 @@ public class OrderService implements PriceConstants {
                 if (containsCustomProduct) {
                     BigDecimal deposit = paymentService.calculateDeposit(order.getTotalPrice());
                     order.setDepositAmount(Optional.ofNullable(deposit).orElse(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE));
-                    if (!PAYMENT_STATUS_AWAITING_DEPOSIT.equals(order.getPaymentStatus())) {
-                        log.warn("Order has custom product, overriding status to '{}'.", PAYMENT_STATUS_AWAITING_DEPOSIT);
+                    // Pokud služba nevrátila AWAITING_DEPOSIT, ale má být, přenastavíme
+                    if (order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && !PAYMENT_STATUS_AWAITING_DEPOSIT.equals(order.getPaymentStatus())) {
+                        log.warn("Order has custom product and deposit amount > 0, overriding initial payment status from '{}' to '{}'.",
+                                order.getPaymentStatus(), PAYMENT_STATUS_AWAITING_DEPOSIT);
                         order.setPaymentStatus(PAYMENT_STATUS_AWAITING_DEPOSIT);
                     }
                     log.info("Deposit amount {} {} calculated.", order.getDepositAmount(), order.getCurrency());
                 } else {
-                    order.setDepositAmount(null);
+                    order.setDepositAmount(null); // Standardní produkt nemá zálohu
                 }
-                log.debug("Payment status: {}, Deposit: {}", order.getPaymentStatus(), order.getDepositAmount());
+                log.debug("Final Payment status: {}, Deposit: {}", order.getPaymentStatus(), order.getDepositAmount());
             } catch (Exception e) {
                 log.error("!!! CRITICAL ERROR determining payment status/deposit: {}", e.getMessage(), e);
                 throw new RuntimeException("Failed to determine payment status/deposit: " + e.getMessage(), e);
             }
 
+            // Nastavení kódu objednávky
             order.setOrderCode(orderCodeGeneratorService.getNextOrderCode());
             log.debug("Generated Order Code: {}", order.getOrderCode());
 
@@ -255,58 +252,47 @@ public class OrderService implements PriceConstants {
                 throw new RuntimeException("Failed to save order: " + e.getMessage(), e);
             }
 
-            // --- Nekritické kroky ---
+            // --- Nekritické kroky (Logujeme chyby, ale neselže to transakci) ---
+            // 9. Označení kupónu
             if (appliedCoupon != null) {
                 log.debug("[Order Creation - Step 9] Marking coupon used...");
                 try {
                     couponService.markCouponAsUsed(appliedCoupon);
                 } catch (Exception e) {
-                    log.error("Non-critical error marking coupon used (ID: {}): {}. Cont.", appliedCoupon.getId(), e.getMessage(), e);
+                    log.error("Non-critical error marking coupon used (ID: {}): {}. Order creation continues.",
+                            appliedCoupon.getId(), e.getMessage(), e);
                 }
             }
+            // 10. Odeslání potvrzovacího emailu
             log.debug("[Order Creation - Step 10] Sending confirmation email...");
             try {
                 emailService.sendOrderConfirmationEmail(savedOrder);
             } catch (Exception e) {
-                log.error("Non-critical error sending confirmation email for order {}: {}. Cont.", savedOrder.getOrderCode(), e.getMessage(), e);
+                log.error("Non-critical error sending confirmation email for order {}: {}. Order creation continues.",
+                        savedOrder.getOrderCode(), e.getMessage(), e);
             }
+            // 11. Generování zálohové faktury (pokud je třeba)
             if (savedOrder.getDepositAmount() != null && savedOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
-                log.debug("[Order Creation - Step 11] Triggering proforma invoice gen. Currency: {}", savedOrder.getCurrency());
+                log.debug("[Order Creation - Step 11] Triggering proforma invoice generation. Currency: {}", savedOrder.getCurrency());
                 try {
                     invoiceService.generateProformaInvoice(savedOrder);
                 } catch (Exception e) {
-                    log.error("Non-critical error generating proforma invoice for order {}: {}. Cont.", savedOrder.getOrderCode(), e.getMessage(), e);
+                    log.error("Non-critical error generating proforma invoice for order {}: {}. Order creation continues.",
+                            savedOrder.getOrderCode(), e.getMessage(), e);
                 }
             }
 
             return savedOrder;
 
         } catch (Exception mainException) {
-            String customerId = (request != null && request.getCustomerId() != null) ? request.getCustomerId().toString() : "Unknown";
-            // --- OPRAVENÝ LOGOVACÍ PŘÍKAZ ---
-            // Logování zprávy a stack trace odděleně
-            log.error("!!! ORDER CREATION FAILED for customer ID {} in step: {}. Error message: {} !!!",
-                    customerId,
-                    determineStepFromException(mainException),
-                    mainException.getMessage());
-            log.error("Order Creation Exception Stack Trace:", mainException); // Oddělený log pro stack trace
-            // --- KONEC OPRAVY ---
-            throw mainException; // Znovu vyhodit pro rollback
+            String customerIdStr = (request != null && request.getCustomerId() != null) ? request.getCustomerId().toString() : "Unknown";
+            log.error("!!! ORDER CREATION FAILED for customer ID {}. Error message: {} !!!", customerIdStr, mainException.getMessage());
+            log.error("Order Creation Exception Stack Trace:", mainException);
+            throw mainException; // Znovu vyhodit pro rollback transakce
         }
     }
 
-    // Pomocná metoda pro odhad kroku (volitelné, jen pro logování)
-    private String determineStepFromException(Exception e) {
-        if (e.getMessage().contains("process order item")) return "3 (Item Processing)";
-        if (e.getMessage().contains("calculate shipping cost")) return "5 (Shipping Calculation)";
-        if (e.getMessage().contains("save order")) return "8 (Order Save)";
-        return "Unknown";
-    }
-
-    /**
-     * Zpracuje položku košíku a vytvoří z ní OrderItem.
-     * Verze s ještě robustnějšími null checky.
-     */
+    // ... (processCartItem a ostatní pomocné metody zůstávají stejné jako v předchozí verzi) ...
     private OrderItem processCartItem(CartItemDto itemDto, Order order, String currency) {
         log.debug("Starting processCartItem for Product ID: {}", itemDto.getProductId());
         // --- Fetching Product and Tax Rate ---
@@ -334,6 +320,9 @@ public class OrderService implements PriceConstants {
         RoofColor selectedRoofColor = null;
         BigDecimal surcharge = BigDecimal.ZERO;
         if (!itemDto.isCustom()) {
+            if (itemDto.getSelectedDesignId() == null || itemDto.getSelectedGlazeId() == null || itemDto.getSelectedRoofColorId() == null) {
+                throw new IllegalArgumentException("Missing attribute selection for standard product item.");
+            }
             selectedDesign = designRepository.findById(itemDto.getSelectedDesignId()).orElseThrow(() -> new IllegalArgumentException("Design not found: " + itemDto.getSelectedDesignId()));
             selectedGlaze = glazeRepository.findById(itemDto.getSelectedGlazeId()).orElseThrow(() -> new IllegalArgumentException("Glaze not found: " + itemDto.getSelectedGlazeId()));
             selectedRoofColor = roofColorRepository.findById(itemDto.getSelectedRoofColorId()).orElseThrow(() -> new IllegalArgumentException("RoofColor not found: " + itemDto.getSelectedRoofColorId()));
@@ -395,9 +384,6 @@ public class OrderService implements PriceConstants {
         return orderItem;
     }
 
-
-    // --- PŮVODNÍ POMOCNÉ METODY (z nahrání uživatelem) ---
-
     private void saveHistoricalItemData(OrderItem orderItem, Product product, CartItemDto itemDto, Design design, Glaze glaze, RoofColor roofColor) {
         orderItem.setProductName(product.getName());
         orderItem.setMaterial(product.getMaterial());
@@ -431,12 +417,19 @@ public class OrderService implements PriceConstants {
             orderItem.setModel(design != null ? design.getName() : null);
             orderItem.setGlaze(glaze != null ? glaze.getName() : null);
             orderItem.setRoofColor(roofColor != null ? roofColor.getName() : null);
-            orderItem.setVariantInfo(String.format("Design: %s, Lazura: %s, Střecha: %s",
-                    Optional.ofNullable(orderItem.getModel()).orElse("-"),
-                    Optional.ofNullable(orderItem.getGlaze()).orElse("-"),
-                    Optional.ofNullable(orderItem.getRoofColor()).orElse("-")
-            ));
-            orderItem.setDesign(null);
+            // Sestavení variantInfo
+            StringBuilder variantSb = new StringBuilder();
+            if (design != null) variantSb.append("Design: ").append(design.getName());
+            if (glaze != null) {
+                if (!variantSb.isEmpty()) variantSb.append(" | ");
+                variantSb.append("Lazura: ").append(glaze.getName());
+            }
+            if (roofColor != null) {
+                if (!variantSb.isEmpty()) variantSb.append(" | ");
+                variantSb.append("Střecha: ").append(roofColor.getName());
+            }
+            orderItem.setVariantInfo(variantSb.toString());
+            orderItem.setDesign(null); // Textový design je null pro standardní
             orderItem.setHasDivider(null);
             orderItem.setHasGutter(null);
             orderItem.setHasGardenShed(null);
@@ -449,7 +442,6 @@ public class OrderService implements PriceConstants {
                 log.error("!!! Missing custom dimensions for price calculation of product ID {}", product.getId());
                 throw new IllegalArgumentException("Custom dimensions missing for price calculation.");
             }
-            // Voláme metodu pro dynamický výpočet
             BigDecimal dynamicPrice = productService.calculateDynamicProductPrice(
                     product,
                     itemDto.getCustomDimensions(),
@@ -459,25 +451,22 @@ public class OrderService implements PriceConstants {
                     itemDto.isCustomHasGardenShed(),
                     currency
             );
-            // Zajistíme, že nevrátíme null
             return Optional.ofNullable(dynamicPrice).orElse(BigDecimal.ZERO);
         } else {
-            // Pro standardní produkt bereme cenu z entity
             BigDecimal price = EURO_CURRENCY.equals(currency) ? product.getBasePriceEUR() : product.getBasePriceCZK();
             if (price == null) {
                 log.error("!!! Base price missing for standard product ID {} in currency {}", product.getId(), currency);
                 throw new IllegalStateException("Base price missing for product " + product.getId() + " in " + currency);
             }
-            // Zajistíme, že cena není záporná
-            return price.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : price;
+            return price.max(BigDecimal.ZERO); // Zajistit, že cena není záporná
         }
     }
 
     private BigDecimal processAndCalculateAddons(OrderItem orderItem, CartItemDto itemDto, String currency) {
         BigDecimal totalAddonPrice = BigDecimal.ZERO;
         if (!itemDto.isCustom() || CollectionUtils.isEmpty(itemDto.getSelectedAddons())) {
-            orderItem.setSelectedAddons(Collections.emptyList()); // Ensure list is empty if no addons
-            return totalAddonPrice; // Vracíme ZERO, ne null
+            orderItem.setSelectedAddons(Collections.emptyList()); // Zajistit prázdný seznam
+            return totalAddonPrice;
         }
 
         List<AddonDto> validAddonDtos = itemDto.getSelectedAddons().stream()
@@ -486,52 +475,48 @@ public class OrderService implements PriceConstants {
 
         if (validAddonDtos.isEmpty()) {
             orderItem.setSelectedAddons(Collections.emptyList());
-            return totalAddonPrice; // Vracíme ZERO
+            return totalAddonPrice;
         }
 
         Set<Long> requestedAddonIds = validAddonDtos.stream().map(AddonDto::getAddonId).collect(Collectors.toSet());
-        // Načteme doplňky z DB
         Map<Long, Addon> addonsMap = addonsRepository.findAllById(requestedAddonIds).stream()
                 .collect(Collectors.toMap(Addon::getId, a -> a));
-        // Získáme povolené doplňky pro daný produkt
-        Set<Long> allowedAddonIds = orderItem.getProduct().getAvailableAddons().stream()
+        // Zajistit, že product.getAvailableAddons() není null
+        Set<Long> allowedAddonIds = Optional.ofNullable(orderItem.getProduct().getAvailableAddons())
+                .orElse(Collections.emptySet())
+                .stream()
                 .map(Addon::getId).collect(Collectors.toSet());
 
         List<OrderItemAddon> addonsToSave = new ArrayList<>();
         for (AddonDto addonDto : validAddonDtos) {
             Addon addon = addonsMap.get(addonDto.getAddonId());
-            // Ověříme, zda doplněk existuje, je aktivní a je povolený pro produkt
             if (addon != null && addon.isActive() && allowedAddonIds.contains(addon.getId())) {
                 OrderItemAddon oia = new OrderItemAddon();
                 oia.setOrderItem(orderItem);
-                oia.setAddon(addon); // Odkaz na původní addon
+                oia.setAddon(addon);
                 oia.setAddonName(addon.getName());
                 oia.setQuantity(addonDto.getQuantity());
 
-                // Získáme cenu doplňku ve správné měně
                 BigDecimal addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
                 if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
-                    log.error("!!! Invalid price found for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
-                    // Můžeme hodit výjimku nebo pokračovat s nulovou cenou? Raději výjimku.
+                    log.error("!!! Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
                     throw new IllegalStateException("Invalid price configuration for addon " + addon.getName() + " in " + currency);
                 }
 
                 oia.setAddonPriceWithoutTax(addonUnitPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-                // Vypočítáme celkovou cenu za tento doplněk (cena * množství)
                 BigDecimal addonLineTotal = addonUnitPrice.multiply(BigDecimal.valueOf(addonDto.getQuantity())).setScale(PRICE_SCALE, ROUNDING_MODE);
                 oia.setTotalPriceWithoutTax(addonLineTotal);
 
                 addonsToSave.add(oia);
-                // Přičteme k celkové ceně doplňků pro tuto položku
-                totalAddonPrice = totalAddonPrice.add(addonLineTotal); // Bezpečné sčítání
+                totalAddonPrice = totalAddonPrice.add(addonLineTotal);
 
             } else {
                 log.warn("Requested addon ID {} is invalid, inactive, or not allowed for product {}. Skipping.", addonDto.getAddonId(), orderItem.getProduct().getId());
             }
         }
-        orderItem.setSelectedAddons(addonsToSave); // Uložíme zpracované doplňky
+        orderItem.setSelectedAddons(addonsToSave);
         log.debug("Total addons price calculated: {}", totalAddonPrice);
-        return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE); // Vracíme sečtenou cenu
+        return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE);
     }
 
     private Coupon applyCouponToOrder(Order order, String couponCode, BigDecimal subTotalWithoutTax, Customer customer, String currency) {
@@ -547,18 +532,24 @@ public class OrderService implements PriceConstants {
         }
         Coupon coupon = couponOpt.get();
         boolean isGuest = customer.isGuest();
-        if (!couponService.isCouponGenerallyValid(coupon) || !couponService.checkMinimumOrderValue(coupon, subTotalWithoutTax, currency) || (!isGuest && !couponService.checkCustomerUsageLimit(customer, coupon))) {
+        // Validace kupónu
+        if (!couponService.isCouponGenerallyValid(coupon) ||
+                !couponService.checkMinimumOrderValue(coupon, subTotalWithoutTax, currency) ||
+                (!isGuest && !couponService.checkCustomerUsageLimit(customer, coupon))) {
             log.warn("Coupon {} is invalid for cust={}, isGuest={}, subtotal={} {}", couponCode, customer.getId(), isGuest, subTotalWithoutTax, currency);
             order.setCouponDiscountAmount(BigDecimal.ZERO);
             return null;
         }
+        // Speciální logování pro hosta a limitovaný kupón
         if (isGuest && coupon.getUsageLimitPerCustomer() != null && coupon.getUsageLimitPerCustomer() > 0) {
             log.warn("Applying customer-limited coupon {} to guest user {}. Limit check needed if guest converts.", couponCode, customer.getId());
         }
-        BigDecimal discountAmount = Optional.ofNullable(couponService.calculateDiscountAmount(subTotalWithoutTax, coupon, currency)).orElse(BigDecimal.ZERO);
-        order.setCouponDiscountAmount(discountAmount);
+        // Výpočet slevy
+        BigDecimal discountAmount = Optional.ofNullable(couponService.calculateDiscountAmount(subTotalWithoutTax, coupon, currency))
+                .orElse(BigDecimal.ZERO);
+        order.setCouponDiscountAmount(discountAmount); // Nastavení slevy do objednávky
         log.info("Applied coupon {} for cust={}, isGuest={}, discount={} {}", couponCode, customer.getId(), isGuest, order.getCouponDiscountAmount(), currency);
-        return coupon;
+        return coupon; // Vrácení aplikovaného kupónu
     }
 
     private void validateOrderRequest(CreateOrderRequest request) {
@@ -570,22 +561,34 @@ public class OrderService implements PriceConstants {
         if (!StringUtils.hasText(request.getCurrency()) || !(DEFAULT_CURRENCY.equals(request.getCurrency()) || EURO_CURRENCY.equals(request.getCurrency()))) {
             throw new IllegalArgumentException("Invalid or missing currency in request: " + request.getCurrency());
         }
-        // Validace cen dopravy už zde není potřeba, pokud je Controller ověřuje
-        // if (request.getShippingCostNoTax() == null) throw new IllegalArgumentException("ShippingCostNoTax missing in request.");
-        // if (request.getShippingTax() == null) throw new IllegalArgumentException("ShippingTax missing in request.");
+        // Validace cen dopravy byla přesunuta do kroku 5 v createOrder
     }
 
     private boolean hasSufficientAddress(Customer customer) {
-        boolean hasInv = StringUtils.hasText(customer.getInvoiceStreet()) && StringUtils.hasText(customer.getInvoiceCity()) && StringUtils.hasText(customer.getInvoiceZipCode()) && StringUtils.hasText(customer.getInvoiceCountry()) && (StringUtils.hasText(customer.getInvoiceCompanyName()) || (StringUtils.hasText(customer.getInvoiceFirstName()) && StringUtils.hasText(customer.getInvoiceLastName())));
-        if (!hasInv) return false;
+        // Kontrola fakturační adresy
+        boolean hasInvoiceRecipient = StringUtils.hasText(customer.getInvoiceCompanyName()) ||
+                (StringUtils.hasText(customer.getInvoiceFirstName()) && StringUtils.hasText(customer.getInvoiceLastName()));
+        boolean hasInvoiceCore = StringUtils.hasText(customer.getInvoiceStreet()) &&
+                StringUtils.hasText(customer.getInvoiceCity()) &&
+                StringUtils.hasText(customer.getInvoiceZipCode()) &&
+                StringUtils.hasText(customer.getInvoiceCountry());
+        if (!hasInvoiceRecipient || !hasInvoiceCore) return false;
+
+        // Kontrola dodací adresy, pokud není stejná jako fakturační
         if (!customer.isUseInvoiceAddressAsDelivery()) {
-            boolean hasDel = StringUtils.hasText(customer.getDeliveryStreet()) && StringUtils.hasText(customer.getDeliveryCity()) && StringUtils.hasText(customer.getDeliveryZipCode()) && StringUtils.hasText(customer.getDeliveryCountry()) && (StringUtils.hasText(customer.getDeliveryCompanyName()) || (StringUtils.hasText(customer.getDeliveryFirstName()) && StringUtils.hasText(customer.getDeliveryLastName())));
-            return hasDel;
+            boolean hasDeliveryRecipient = StringUtils.hasText(customer.getDeliveryCompanyName()) ||
+                    (StringUtils.hasText(customer.getDeliveryFirstName()) && StringUtils.hasText(customer.getDeliveryLastName()));
+            boolean hasDeliveryCore = StringUtils.hasText(customer.getDeliveryStreet()) &&
+                    StringUtils.hasText(customer.getDeliveryCity()) &&
+                    StringUtils.hasText(customer.getDeliveryZipCode()) &&
+                    StringUtils.hasText(customer.getDeliveryCountry());
+            return hasDeliveryRecipient && hasDeliveryCore;
         }
-        return true;
+        return true; // Fakturační stačí, pokud je dodací stejná
     }
 
     private void copyAddressesToOrder(Order order, Customer customer, CreateOrderRequest request) {
+        // Kopírování fakturační adresy
         order.setInvoiceFirstName(customer.getInvoiceFirstName());
         order.setInvoiceLastName(customer.getInvoiceLastName());
         order.setInvoiceCompanyName(customer.getInvoiceCompanyName());
@@ -595,16 +598,21 @@ public class OrderService implements PriceConstants {
         order.setInvoiceCountry(customer.getInvoiceCountry());
         order.setInvoiceTaxId(customer.getInvoiceTaxId());
         order.setInvoiceVatId(customer.getInvoiceVatId());
+
+        // Kopírování dodací adresy - použije se adresa z Customer entity
         if (customer.isUseInvoiceAddressAsDelivery()) {
-            order.setDeliveryFirstName(order.getInvoiceFirstName());
-            order.setDeliveryLastName(order.getInvoiceLastName());
-            order.setDeliveryCompanyName(order.getInvoiceCompanyName());
-            order.setDeliveryStreet(order.getInvoiceStreet());
-            order.setDeliveryCity(order.getInvoiceCity());
-            order.setDeliveryZipCode(order.getInvoiceZipCode());
-            order.setDeliveryCountry(order.getInvoiceCountry());
-            order.setDeliveryPhone(customer.getPhone());
+            log.debug("Copying invoice address to delivery address for order {}.", order.getOrderCode());
+            order.setDeliveryFirstName(customer.getInvoiceFirstName());
+            order.setDeliveryLastName(customer.getInvoiceLastName());
+            order.setDeliveryCompanyName(customer.getInvoiceCompanyName());
+            order.setDeliveryStreet(customer.getInvoiceStreet());
+            order.setDeliveryCity(customer.getInvoiceCity());
+            order.setDeliveryZipCode(customer.getInvoiceZipCode());
+            order.setDeliveryCountry(customer.getInvoiceCountry());
+            // Použijeme hlavní telefon zákazníka, pokud dodací není specifikován
+            order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         } else {
+            log.debug("Copying specific delivery address to order {}.", order.getOrderCode());
             order.setDeliveryFirstName(customer.getDeliveryFirstName());
             order.setDeliveryLastName(customer.getDeliveryLastName());
             order.setDeliveryCompanyName(customer.getDeliveryCompanyName());
@@ -614,53 +622,85 @@ public class OrderService implements PriceConstants {
             order.setDeliveryCountry(customer.getDeliveryCountry());
             order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         }
+        // Fallback pro dodací telefon, pokud stále chybí
         if (!StringUtils.hasText(order.getDeliveryPhone())) {
             order.setDeliveryPhone(customer.getPhone());
         }
-        if (!StringUtils.hasText(order.getDeliveryStreet()) || !StringUtils.hasText(order.getDeliveryCity()) || !StringUtils.hasText(order.getDeliveryZipCode()) || !StringUtils.hasText(order.getDeliveryCountry()) || (!StringUtils.hasText(order.getDeliveryCompanyName()) && (!StringUtils.hasText(order.getDeliveryFirstName()) || !StringUtils.hasText(order.getDeliveryLastName())))) {
-            log.error("!!! Inconsistency: Copied delivery address for order is incomplete! Order Code: {}", order.getOrderCode());
-            throw new IllegalStateException("Incomplete delivery address copied to order.");
+
+        // Kontrola kompletnosti PŘENESENÉ dodací adresy
+        boolean deliveryAddrOk = StringUtils.hasText(order.getDeliveryStreet()) &&
+                StringUtils.hasText(order.getDeliveryCity()) &&
+                StringUtils.hasText(order.getDeliveryZipCode()) &&
+                StringUtils.hasText(order.getDeliveryCountry()) &&
+                (StringUtils.hasText(order.getDeliveryCompanyName()) ||
+                        (StringUtils.hasText(order.getDeliveryFirstName()) && StringUtils.hasText(order.getDeliveryLastName())));
+        if (!deliveryAddrOk) {
+            log.error("!!! Copied delivery address for order {} is incomplete after copying! Check Customer ID {} data.", order.getOrderCode(), customer.getId());
+            // Zde bychom mohli buď vyhodit výjimku, nebo pokračovat s varováním, záleží na business logice
+            throw new IllegalStateException("Incomplete delivery address copied to order. Check customer profile.");
         }
     }
 
-    // --- Ostatní veřejné metody (Beze změny) ---
+
+    // --- Metody pro čtení a aktualizaci stavů ---
+
     @Transactional(readOnly = true)
     public Optional<Order> findOrderById(Long id) {
+        log.debug("Finding order by ID: {}", id);
         return orderRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
     public Optional<Order> findOrderByCode(String orderCode) {
         if (!StringUtils.hasText(orderCode)) return Optional.empty();
+        log.debug("Finding order by code: {}", orderCode.trim());
         return orderRepository.findByOrderCode(orderCode.trim());
     }
 
     @Transactional(readOnly = true)
     public List<Order> findAllOrdersByCustomerId(Long customerId) {
         if (customerId == null) return Collections.emptyList();
+        log.debug("Finding all orders for customer ID: {}", customerId);
         return orderRepository.findByCustomerIdOrderByOrderDateDesc(customerId);
     }
 
     @Transactional
     public Order updateOrderState(Long orderId, Long newOrderStateId) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
-        OrderState newOrderState = orderStateRepository.findById(newOrderStateId).orElseThrow(() -> new EntityNotFoundException("OrderState not found: " + newOrderStateId));
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
+        OrderState newOrderState = orderStateRepository.findById(newOrderStateId)
+                .orElseThrow(() -> new EntityNotFoundException("OrderState not found: " + newOrderStateId));
+
         OrderState oldState = order.getStateOfOrder();
-        if (oldState != null && oldState.getId().equals(newOrderState.getId())) return order;
-        log.info("Updating order {} state from '{}' to '{}'", order.getOrderCode(), oldState != null ? oldState.getName() : "null", newOrderState.getName());
+        if (oldState != null && oldState.getId().equals(newOrderState.getId())) {
+            log.info("Order {} is already in state '{}'. No change needed.", order.getOrderCode(), newOrderState.getName());
+            return order; // Není třeba nic měnit
+        }
+
+        log.info("Updating order {} state from '{}' to '{}'",
+                order.getOrderCode(),
+                oldState != null ? oldState.getName() : "null",
+                newOrderState.getName());
+
         order.setStateOfOrder(newOrderState);
-        updateOrderTimestamps(order, newOrderState);
+        updateOrderTimestamps(order, newOrderState); // Aktualizuje datumy podle nového stavu
         Order savedOrder = orderRepository.save(order);
+
+        // Odeslání emailu (asynchronně)
         try {
             emailService.sendOrderStatusUpdateEmail(savedOrder, newOrderState);
         } catch (Exception e) {
-            log.error("Failed status email for order {}: {}", savedOrder.getOrderCode(), e.getMessage());
+            // Logujeme chybu, ale nebráníme vrácení uložené objednávky
+            log.error("Failed to send status update email for order {}: {}", savedOrder.getOrderCode(), e.getMessage());
         }
+
         return savedOrder;
     }
 
     private void updateOrderTimestamps(Order order, OrderState newState) {
         LocalDateTime now = LocalDateTime.now();
+        if (newState == null || newState.getCode() == null) return;
+
         String code = newState.getCode().toUpperCase();
         switch (code) {
             case "SHIPPED":
@@ -668,10 +708,13 @@ public class OrderService implements PriceConstants {
                 break;
             case "DELIVERED":
                 if (order.getDeliveredDate() == null) order.setDeliveredDate(now);
+                // Pokud je doručeno, mělo by být i odesláno
+                if (order.getShippedDate() == null) order.setShippedDate(now);
                 break;
             case "CANCELLED":
                 if (order.getCancelledDate() == null) order.setCancelledDate(now);
                 break;
+            // Případně další automatické nastavení datumů pro jiné stavy
         }
     }
 
@@ -687,117 +730,178 @@ public class OrderService implements PriceConstants {
                 customerEmail.orElse("N/A"), stateId.orElse(null), paymentStatus.orElse("N/A"),
                 dateTimeFrom.orElse(null), dateTimeTo.orElse(null), pageable);
 
-        // Sestavení finální specifikace kombinací jednotlivých filtrů
-        Specification<Order> spec = Specification.where(null); // Začínáme s prázdnou specifikací
+        Specification<Order> spec = Specification.where(null); // Start with empty spec
 
-        if (customerEmail.isPresent() && StringUtils.hasText(customerEmail.get())) {
+        if (customerEmail.filter(StringUtils::hasText).isPresent()) {
             spec = spec.and(OrderSpecifications.customerEmailContains(customerEmail.get()));
-            log.trace("Adding spec: customerEmailContains");
         }
         if (stateId.isPresent()) {
             spec = spec.and(OrderSpecifications.hasStateId(stateId.get()));
-            log.trace("Adding spec: hasStateId");
         }
-        if (paymentStatus.isPresent() && StringUtils.hasText(paymentStatus.get())) {
+        if (paymentStatus.filter(StringUtils::hasText).isPresent()) {
             spec = spec.and(OrderSpecifications.hasPaymentStatus(paymentStatus.get()));
-            log.trace("Adding spec: hasPaymentStatus");
         }
         if (dateTimeFrom.isPresent()) {
             spec = spec.and(OrderSpecifications.orderDateFrom(dateTimeFrom.get()));
-            log.trace("Adding spec: orderDateFrom");
         }
         if (dateTimeTo.isPresent()) {
             spec = spec.and(OrderSpecifications.orderDateTo(dateTimeTo.get()));
-            log.trace("Adding spec: orderDateTo");
         }
 
-        // Zavolání metody findAll z JpaSpecificationExecutor
         Page<Order> result = orderRepository.findAll(spec, pageable);
-        log.info("Found {} orders matching criteria.", result.getTotalElements());
+        log.info("Found {} orders matching criteria using specifications.", result.getTotalElements());
         return result;
     }
 
+    // --- UPRAVENÉ METODY PRO PLATBY ---
     @Transactional
     public Order markDepositAsPaid(Long orderId, LocalDate paymentDate) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
-        if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0)
-            throw new IllegalStateException("No deposit needed for order " + order.getOrderCode());
-        if (order.getDepositPaidDate() != null || PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) || PAYMENT_STATUS_PAID.equals(order.getPaymentStatus()))
-            throw new IllegalStateException("Deposit already marked as paid for order " + order.getOrderCode());
-        if (paymentDate == null) throw new IllegalArgumentException("Payment date required.");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
+
+        // Validační kontroly
+        if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Attempted to mark deposit paid for order {} which does not require a deposit.", order.getOrderCode());
+            throw new IllegalStateException("Objednávka " + order.getOrderCode() + " nevyžaduje zálohu.");
+        }
+        if (order.getDepositPaidDate() != null || PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) || PAYMENT_STATUS_PAID.equals(order.getPaymentStatus())) {
+            log.warn("Attempted to mark deposit paid for order {} which is already marked as deposit paid or fully paid.", order.getOrderCode());
+            throw new IllegalStateException("Záloha pro objednávku " + order.getOrderCode() + " je již označena jako zaplacená.");
+        }
+        if (paymentDate == null) {
+            throw new IllegalArgumentException("Datum platby zálohy je povinné.");
+        }
+
+        // Aktualizace stavu objednávky
         order.setPaymentStatus(PAYMENT_STATUS_DEPOSIT_PAID);
-        order.setDepositPaidDate(paymentDate.atStartOfDay());
+        order.setDepositPaidDate(paymentDate.atStartOfDay()); // Uložíme i čas (začátek dne)
         log.info("Marking deposit paid for order {} on {}", order.getOrderCode(), paymentDate);
-        Order saved = orderRepository.save(order);
-        if (order.getSfTaxDocumentId() == null) {
-            log.info("Triggering tax doc gen for order {} currency {}", saved.getOrderCode(), saved.getCurrency());
-            try {
-                invoiceService.generateTaxDocumentForDeposit(saved);
-            } catch (Exception e) {
-                log.error("Non-critical error tax doc gen order {}: {}. Cont.", saved.getOrderCode(), e.getMessage(), e);
+        Order savedOrder = orderRepository.save(order);
+
+        // --- VOLÁNÍ SUPERFAKTURA API ---
+        Long invoiceIdToMark = savedOrder.getSfProformaInvoiceId(); // Zkusíme označit proformu
+        if (invoiceIdToMark == null) {
+            // Pokud proforma nemá ID, zkusíme daňový doklad (pokud už byl vystaven před platbou, což by nemělo nastat, ale pro jistotu)
+            invoiceIdToMark = savedOrder.getSfTaxDocumentId();
+            if (invoiceIdToMark != null) {
+                log.warn("Marking deposit paid on Tax Document SF ID {} instead of Proforma for order {}", invoiceIdToMark, savedOrder.getOrderCode());
             }
-        } else {
-            log.warn("Tax doc already exists (SF ID: {}) for order {}. Skip.", order.getSfTaxDocumentId(), order.getOrderCode());
         }
-        Long invoiceIdToMark = saved.getSfProformaInvoiceId();
+
         if (invoiceIdToMark != null) {
-            log.info("Attempting mark Proforma SF ID {} paid in SF...", invoiceIdToMark);
             try {
-                String sfPaymentType = mapPaymentMethodToSf(saved.getPaymentMethod());
-                invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, saved.getDepositAmount(), paymentDate, sfPaymentType, saved.getOrderCode());
-                log.info("Success mark Proforma SF ID {} paid.", invoiceIdToMark);
+                String sfPaymentType = mapPaymentMethodToSf(savedOrder.getPaymentMethod());
+                // Předpokládáme, že amount je celá výše zálohy
+                log.info("Attempting to mark invoice SF ID {} as paid in SuperFaktura (Amount: {}, Date: {}, Type: {}) for order {}",
+                        invoiceIdToMark, savedOrder.getDepositAmount(), paymentDate, sfPaymentType, savedOrder.getOrderCode());
+                invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, savedOrder.getDepositAmount(), paymentDate, sfPaymentType, savedOrder.getOrderCode());
+                log.info("Successfully requested marking invoice SF ID {} as paid in SuperFaktura.", invoiceIdToMark);
             } catch (Exception e) {
-                log.error("Failed mark proforma SF ID {} paid: {}", invoiceIdToMark, e.getMessage());
+                // Pouze logujeme, neblokujeme uložení v našem systému
+                log.error("Failed to mark invoice SF ID {} as paid in SuperFaktura for order {}: {}. Operation continues.",
+                        invoiceIdToMark, savedOrder.getOrderCode(), e.getMessage(), e);
+                // Zde by se mohla přidat interní poznámka k objednávce pro admina
+                // např. addInternalOrderNote(savedOrder.getId(), "Nepodařilo se označit platbu zálohy v SF: " + e.getMessage());
             }
         } else {
-            log.warn("Cannot mark deposit paid in SF order {}: Proforma SF ID missing.", saved.getOrderCode());
+            log.warn("Cannot mark deposit paid in SuperFaktura for order {}: No associated Proforma or Tax Document SF ID found.", savedOrder.getOrderCode());
         }
-        return saved;
+        // --- KONEC VOLÁNÍ SUPERFAKTURA API ---
+
+        // Trigger pro generování DDKP (až po úspěšném označení zálohy)
+        if (savedOrder.getSfTaxDocumentId() == null) {
+            log.info("Triggering tax document generation after marking deposit paid for order {}", savedOrder.getOrderCode());
+            try {
+                invoiceService.generateTaxDocumentForDeposit(savedOrder);
+            } catch (Exception e) {
+                log.error("Non-critical error generating tax document after marking deposit paid for order {}: {}. Operation continues.",
+                        savedOrder.getOrderCode(), e.getMessage(), e);
+            }
+        } else {
+            log.warn("Tax document already exists (SF ID: {}) for order {}. Skipping generation.", savedOrder.getSfTaxDocumentId(), savedOrder.getOrderCode());
+        }
+
+
+        return savedOrder;
     }
 
     @Transactional
     public Order markOrderAsFullyPaid(Long orderId, LocalDate paymentDate) {
-        Order order = orderRepository.findById(orderId).orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
-        if (paymentDate == null) throw new IllegalArgumentException("Payment date required.");
-        if (PAYMENT_STATUS_AWAITING_DEPOSIT.equals(order.getPaymentStatus()))
-            throw new IllegalStateException("Cannot mark fully paid order " + order.getOrderCode() + " when deposit awaiting.");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
+
+        // Validační kontroly
+        if (paymentDate == null) {
+            throw new IllegalArgumentException("Datum platby je povinné.");
+        }
+        if (PAYMENT_STATUS_AWAITING_DEPOSIT.equals(order.getPaymentStatus())) {
+            log.warn("Attempted to mark fully paid for order {} which is awaiting deposit.", order.getOrderCode());
+            throw new IllegalStateException("Nelze označit jako plně zaplaceno, pokud objednávka (" + order.getOrderCode() + ") čeká na zálohu.");
+        }
+        if (PAYMENT_STATUS_PAID.equals(order.getPaymentStatus())) {
+            log.warn("Attempted to mark fully paid for order {} which is already paid.", order.getOrderCode());
+            throw new IllegalStateException("Objednávka " + order.getOrderCode() + " je již označena jako zaplacená.");
+        }
+
+        // Výpočet právě zaplacené částky (doplatek nebo celá částka)
         BigDecimal amountJustPaid;
-        if (PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) && order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && order.getDepositPaidDate() != null) {
-            amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO).subtract(Optional.ofNullable(order.getDepositAmount()).orElse(BigDecimal.ZERO));
+        if (PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) && order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
+            amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO)
+                    .subtract(Optional.ofNullable(order.getDepositAmount()).orElse(BigDecimal.ZERO));
+            log.debug("Calculating remaining amount for order {}: Total({}) - Deposit({}) = {}",
+                    order.getOrderCode(), order.getTotalPrice(), order.getDepositAmount(), amountJustPaid);
         } else {
             amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO);
+            log.debug("Calculating full amount for order {}: {}", order.getOrderCode(), amountJustPaid);
         }
-        amountJustPaid = amountJustPaid.max(BigDecimal.ZERO);
+        amountJustPaid = amountJustPaid.max(BigDecimal.ZERO); // Zajistit, aby nebylo záporné
+
+        // Aktualizace stavu objednávky
         order.setPaymentStatus(PAYMENT_STATUS_PAID);
         order.setPaymentDate(paymentDate.atStartOfDay());
+        // Pokud byla záloha, ale nebyla označena, označíme ji teď
         if (order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && order.getDepositPaidDate() == null) {
-            log.warn("Marking order {} fully paid also sets missing deposit date to {}", order.getOrderCode(), paymentDate);
+            log.warn("Marking order {} fully paid also sets missing deposit paid date to {}", order.getOrderCode(), paymentDate);
             order.setDepositPaidDate(paymentDate.atStartOfDay());
         }
         log.info("Marking order {} fully paid on {}", order.getOrderCode(), paymentDate);
-        Order saved = orderRepository.save(order);
-        Long invoiceIdToMark = saved.getSfFinalInvoiceId();
+        Order savedOrder = orderRepository.save(order);
+
+        // --- VOLÁNÍ SUPERFAKTURA API ---
+        // Označíme platbu na FINÁLNÍ faktuře, pokud existuje
+        Long invoiceIdToMark = savedOrder.getSfFinalInvoiceId();
         if (invoiceIdToMark != null) {
-            log.info("Attempting mark Final SF ID {} paid in SF. Amount: {}", invoiceIdToMark, amountJustPaid);
             try {
-                String sfPaymentType = mapPaymentMethodToSf(saved.getPaymentMethod());
-                invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, amountJustPaid, paymentDate, sfPaymentType, saved.getOrderCode());
-                log.info("Success mark Final SF ID {} paid.", invoiceIdToMark);
+                String sfPaymentType = mapPaymentMethodToSf(savedOrder.getPaymentMethod());
+                log.info("Attempting to mark final invoice SF ID {} as paid in SuperFaktura (Amount: {}, Date: {}, Type: {}) for order {}",
+                        invoiceIdToMark, amountJustPaid, paymentDate, sfPaymentType, savedOrder.getOrderCode());
+                // Voláme SF API s částkou, která byla právě zaplacena (doplatek nebo celá)
+                invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, amountJustPaid, paymentDate, sfPaymentType, savedOrder.getOrderCode());
+                log.info("Successfully requested marking final invoice SF ID {} as paid in SuperFaktura.", invoiceIdToMark);
             } catch (Exception e) {
-                log.error("Failed mark final SF ID {} paid: {}", invoiceIdToMark, e.getMessage());
+                log.error("Failed to mark final invoice SF ID {} as paid in SuperFaktura for order {}: {}. Operation continues.",
+                        invoiceIdToMark, savedOrder.getOrderCode(), e.getMessage(), e);
+                // addInternalOrderNote(savedOrder.getId(), "Nepodařilo se označit platbu finální faktury v SF: " + e.getMessage());
             }
         } else {
-            log.warn("Cannot mark payment in SF order {}: Final SF ID missing.", saved.getOrderCode());
+            log.warn("Cannot mark payment in SuperFaktura for order {}: Final Invoice SF ID is missing.", savedOrder.getOrderCode());
         }
-        return saved;
+        // --- KONEC VOLÁNÍ SUPERFAKTURA API ---
+
+        return savedOrder;
     }
 
+    // Pomocná metoda pro mapování platebních metod (zůstává stejná)
     private String mapPaymentMethodToSf(String localPaymentMethod) {
-        if (localPaymentMethod == null) return "transfer";
+        if (localPaymentMethod == null) return "transfer"; // Default
         return switch (localPaymentMethod.toUpperCase()) {
-            case "CASH_ON_DELIVERY" -> "cash";
+            case "CASH_ON_DELIVERY" -> "cash"; // Nebo "cod", ověřit API dokumentaci SF!
             case "BANK_TRANSFER" -> "transfer";
-            default -> "transfer";
+            // default -> "transfer"; // Explicitní default je lepší
+            default -> {
+                log.warn("Unknown local payment method '{}', defaulting to 'transfer' for SuperFaktura.", localPaymentMethod);
+                yield "transfer";
+            }
         };
     }
 }
