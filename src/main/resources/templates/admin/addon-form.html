@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="${pageTitle ?: 'Správa Doplňku'}">Správa Doplňku</title>
+    <style>
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2" th:text="${pageTitle ?: 'Správa Doplňku'}">Správa Doplňku</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/addons}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zpět na přehled
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <form th:object="${addon}"
+          th:action="${addon.id == null} ? @{/admin/addons} : @{/admin/addons/{id}(id=${addon.id})}"
+          method="post" novalidate>
+
+        <input type="hidden" name="_method" th:if="${addon.id != null}" value="POST"/>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+                    <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="sku" class="form-label">SKU</label>
+                    <input type="text" class="form-control" th:errorclass="is-invalid" id="sku" th:field="*{sku}">
+                    <div id="skuHelp" class="form-text">Unikátní kód produktu (nepovinné).</div>
+                    <div th:if="${#fields.hasErrors('sku')}" class="invalid-feedback" th:errors="*{sku}">Chyba SKU</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Popis</label>
+                    <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                    <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}">Chyba popisu</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="priceCZK" class="form-label">Cena CZK (bez DPH) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceCZK" th:field="*{priceCZK}" required placeholder="Např. 350.00">
+                        <div th:if="${#fields.hasErrors('priceCZK')}" class="invalid-feedback" th:errors="*{priceCZK}">Chyba ceny CZK</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="priceEUR" class="form-label">Cena EUR (bez DPH) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceEUR" th:field="*{priceEUR}" required placeholder="Např. 15.00">
+                        <div th:if="${#fields.hasErrors('priceEUR')}" class="invalid-feedback" th:errors="*{priceEUR}">Chyba ceny EUR</div>
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+                    <label class="form-check-label" for="active">Aktivní</label>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <a th:href="@{/admin/addons}" class="btn btn-secondary me-2">Zrušit</a>
+                    <button type="submit" class="btn btn-primary">Uložit Doplněk</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>
+
+</body>
+</html>

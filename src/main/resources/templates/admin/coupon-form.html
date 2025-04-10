@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="${pageTitle ?: 'Správa Kupónu'}">Správa Kupónu</title>
+    <style>
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+        /* Styly pro skrytí/zobrazení polí podle typu */
+        .value-fields-section { display: none; }
+        .value-fields-section.active { display: block; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2" th:text="${pageTitle ?: 'Správa Kupónu'}">Správa Kupónu</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/coupons}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zpět na přehled
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <form th:object="${coupon}"
+          th:action="${coupon.id == null} ? @{/admin/coupons} : @{/admin/coupons/{id}(id=${coupon.id})}"
+          method="post" novalidate>
+
+        <input type="hidden" name="_method" th:if="${coupon.id != null}" value="POST"/>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="code" class="form-label">Kód kupónu <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control text-uppercase" th:errorclass="is-invalid" id="code" th:field="*{code}" required placeholder="NAPŘ. SLEVA10">
+                        <div id="codeHelp" class="form-text">Zadávejte velkými písmeny, bez diakritiky a mezer.</div>
+                        <div th:if="${#fields.hasErrors('code')}" class="invalid-feedback" th:errors="*{code}">Chyba kódu</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">Název kupónu <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required placeholder="Např. Vánoční sleva 10%">
+                        <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Popis (interní poznámka)</label>
+                    <textarea class="form-control" id="description" th:field="*{description}" rows="2"></textarea>
+                </div>
+
+                <hr>
+                <h6>Typ a Hodnota Slevy</h6>
+
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discountTypeChoice" id="radioPercentage" value="percentage" th:checked="*{percentage}" onclick="toggleValueFields(true, false)">
+                        <label class="form-check-label" for="radioPercentage">Procentuální sleva</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discountTypeChoice" id="radioFixed" value="fixed" th:checked="*{!percentage and !freeShipping}" onclick="toggleValueFields(false, false)">
+                        <label class="form-check-label" for="radioFixed">Pevná částka</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="discountTypeChoice" id="radioFreeShipping" value="freeShipping" th:checked="*{freeShipping}" onclick="toggleValueFields(false, true)">
+                        <label class="form-check-label" for="radioFreeShipping">Doprava zdarma</label>
+                    </div>
+                    <input type="hidden" id="isPercentageHidden" th:field="*{percentage}" />
+                    <input type="hidden" id="isFreeShippingHidden" th:field="*{freeShipping}" />
+                </div>
+
+
+                <div id="value-percentage-group" class="value-fields-section" th:classappend="*{percentage ? 'active' : ''}">
+                    <div class="mb-3">
+                        <label for="value" class="form-label">Hodnota (%) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" min="0.01" max="100" class="form-control" th:errorclass="is-invalid" id="value" th:field="*{value}" placeholder="Např. 10 pro 10%">
+                        <div th:if="${#fields.hasErrors('value')}" class="invalid-feedback" th:errors="*{value}">Chyba procentuální hodnoty</div>
+                    </div>
+                </div>
+                <div id="value-fixed-group" class="value-fields-section" th:classappend="*{!percentage and !freeShipping ? 'active' : ''}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="valueCZK" class="form-label">Pevná částka CZK (bez DPH)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="valueCZK" th:field="*{valueCZK}" placeholder="Např. 200.00">
+                            <div th:if="${#fields.hasErrors('valueCZK')}" class="invalid-feedback" th:errors="*{valueCZK}">Chyba pevné částky CZK</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="valueEUR" class="form-label">Pevná částka EUR (bez DPH)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="valueEUR" th:field="*{valueEUR}" placeholder="Např. 8.00">
+                            <div th:if="${#fields.hasErrors('valueEUR')}" class="invalid-feedback" th:errors="*{valueEUR}">Chyba pevné částky EUR</div>
+                        </div>
+                    </div>
+                    <div class="form-text">Zadejte alespoň jednu kladnou pevnou částku.</div>
+                </div>
+                <div id="free-shipping-info" class="value-fields-section alert alert-info" th:classappend="*{freeShipping ? 'active' : ''}">
+                    Pro tento typ kupónu se nenastavuje hodnota slevy. Bude aplikována doprava zdarma.
+                </div>
+
+                <hr>
+                <h6>Podmínky a Omezení</h6>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="minimumOrderValueCZK" class="form-label">Min. hodnota obj. CZK (bez DPH)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="minimumOrderValueCZK" th:field="*{minimumOrderValueCZK}" placeholder="Nechte prázdné pro neomezeno">
+                        <div th:if="${#fields.hasErrors('minimumOrderValueCZK')}" class="invalid-feedback" th:errors="*{minimumOrderValueCZK}">Chyba min. hodnoty CZK</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="minimumOrderValueEUR" class="form-label">Min. hodnota obj. EUR (bez DPH)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="minimumOrderValueEUR" th:field="*{minimumOrderValueEUR}" placeholder="Nechte prázdné pro neomezeno">
+                        <div th:if="${#fields.hasErrors('minimumOrderValueEUR')}" class="invalid-feedback" th:errors="*{minimumOrderValueEUR}">Chyba min. hodnoty EUR</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="startDateString" class="form-label">Platnost od</label>
+                        <input type="date" class="form-control" th:errorclass="${#fields.hasErrors('startDate')} ? 'is-invalid' : ''"
+                               id="startDateString" name="startDateString"
+                               th:value="${coupon.startDate != null ? #temporals.format(coupon.startDate, 'yyyy-MM-dd') : ''}">
+                        <div th:if="${#fields.hasErrors('startDate')}" class="invalid-feedback" th:errors="*{startDate}">Chyba data od</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="expirationDateString" class="form-label">Platnost do (včetně)</label>
+                        <input type="date" class="form-control" th:errorclass="${#fields.hasErrors('expirationDate')} ? 'is-invalid' : ''"
+                               id="expirationDateString" name="expirationDateString"
+                               th:value="${coupon.expirationDate != null ? #temporals.format(coupon.expirationDate, 'yyyy-MM-dd') : ''}">
+                        <div th:if="${#fields.hasErrors('expirationDate')}" class="invalid-feedback" th:errors="*{expirationDate}">Chyba data do</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="usageLimit" class="form-label">Limit použití (celkem)</label>
+                        <input type="number" min="0" class="form-control" th:errorclass="is-invalid" id="usageLimit" th:field="*{usageLimit}" placeholder="Nechte prázdné pro neomezeno">
+                        <div th:if="${#fields.hasErrors('usageLimit')}" class="invalid-feedback" th:errors="*{usageLimit}">Chyba limitu použití</div>
+                        <div th:if="${coupon.id != null}" class="form-text text-muted">Aktuálně použito: <span th:text="${coupon.usedTimes}">0</span>x</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="usageLimitPerCustomer" class="form-label">Limit použití (na zákazníka)</label>
+                        <input type="number" min="0" class="form-control" th:errorclass="is-invalid" id="usageLimitPerCustomer" th:field="*{usageLimitPerCustomer}" placeholder="Nechte prázdné pro neomezeno">
+                        <div th:if="${#fields.hasErrors('usageLimitPerCustomer')}" class="invalid-feedback" th:errors="*{usageLimitPerCustomer}">Chyba limitu na zákazníka</div>
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+                    <label class="form-check-label" for="active">Aktivní</label>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <a th:href="@{/admin/coupons}" class="btn btn-secondary me-2">Zrušit</a>
+                    <button type="submit" class="btn btn-primary">Uložit Kupón</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // JS pro zobrazení správných polí a nastavení skrytých polí podle typu kupónu
+        function toggleValueFields(isPercentage, isFreeShipping) {
+            // Získání elementů
+            const percentageGroup = document.getElementById('value-percentage-group');
+            const fixedGroup = document.getElementById('value-fixed-group');
+            const freeShippingInfo = document.getElementById('free-shipping-info');
+            const isPercentageHidden = document.getElementById('isPercentageHidden');
+            const isFreeShippingHidden = document.getElementById('isFreeShippingHidden');
+
+            // Skrytí všech sekcí
+            percentageGroup.classList.remove('active');
+            fixedGroup.classList.remove('active');
+            freeShippingInfo.classList.remove('active');
+
+            // Nastavení skrytých polí
+            isPercentageHidden.value = isPercentage;
+            isFreeShippingHidden.value = isFreeShipping;
+
+            // Zobrazení relevantní sekce
+            if (isPercentage) {
+                percentageGroup.classList.add('active');
+            } else if (isFreeShipping) {
+                freeShippingInfo.classList.add('active');
+            } else { // Must be fixed amount
+                fixedGroup.classList.add('active');
+            }
+        }
+
+        // Zavoláme funkci při načtení stránky pro případ úpravy
+        document.addEventListener('DOMContentLoaded', function() {
+            // Najdeme, který radio button je zaškrtnutý
+            const checkedRadio = document.querySelector('input[name="discountTypeChoice"]:checked');
+            let initialIsPercentage = false;
+            let initialIsFreeShipping = false;
+            if(checkedRadio) {
+                if (checkedRadio.value === 'percentage') {
+                    initialIsPercentage = true;
+                } else if (checkedRadio.value === 'freeShipping') {
+                    initialIsFreeShipping = true;
+                }
+            } else {
+                // Pokud nic není vybráno (nový kupón), můžeme defaultně nastavit např. procenta
+                // document.getElementById('radioPercentage').checked = true;
+                // initialIsPercentage = true;
+            }
+            toggleValueFields(initialIsPercentage, initialIsFreeShipping);
+
+            // Přidáme event listenery na radio buttons pro budoucí změny
+            document.querySelectorAll('input[name="discountTypeChoice"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    toggleValueFields(this.value === 'percentage', this.value === 'freeShipping');
+                });
+            });
+        });
+    </script>
+
+</section>
+
+</body>
+</html>

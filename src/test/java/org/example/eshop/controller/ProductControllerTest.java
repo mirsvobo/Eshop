@@ -2,11 +2,10 @@
 package org.example.eshop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.config.SecurityTestConfig;
 import org.example.eshop.dto.CustomPriceRequestDto;
-import org.example.eshop.dto.CustomPriceResponseDto;
 import org.example.eshop.model.*;
-import org.example.eshop.service.AddonsService;
 import org.example.eshop.service.CurrencyService;
 import org.example.eshop.service.ProductService;
 import org.jetbrains.annotations.NotNull;
@@ -21,11 +20,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.*;

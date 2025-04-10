@@ -2,6 +2,7 @@
 
 package org.example.eshop.controller;
 
+import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.config.SecurityTestConfig; // Import sdílené konfigurace
 import org.example.eshop.dto.AddonDto;

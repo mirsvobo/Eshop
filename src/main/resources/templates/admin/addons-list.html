@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa Doplňků</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Doplňky Produktů</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/addons/new}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle"></i> Vytvořit nový doplněk
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${addons == null or #lists.isEmpty(addons)}" class="alert alert-info">
+        Nebyly nalezeny žádné doplňky.
+    </div>
+
+    <div th:unless="${addons == null or #lists.isEmpty(addons)}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Název</th>
+                <th>SKU</th>
+                <th>Popis</th>
+                <th class="text-end">Cena CZK</th>
+                <th class="text-end">Cena EUR</th>
+                <th>Aktivní</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="addon : ${addons}">
+                <td th:text="${addon.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/addons/{id}/edit(id=${addon.id})}" th:text="${addon.name}">Název Doplňku</a>
+                </td>
+                <td th:text="${addon.sku ?: '-'}">SKU-001</td>
+                <td th:text="${#strings.abbreviate(addon.description, 80)}">Krátký popis...</td>
+                <td class="text-end" th:text="${addon.priceCZK != null ? #numbers.formatDecimal(addon.priceCZK, 1, 'POINT', 2, 'COMMA') + ' Kč' : '-'}"></td>
+                <td class="text-end" th:text="${addon.priceEUR != null ? #numbers.formatDecimal(addon.priceEUR, 1, 'POINT', 2, 'COMMA') + ' €' : '-'}"></td>
+                <td>
+                    <span th:if="${addon.active}" class="badge bg-success">Ano</span>
+                    <span th:unless="${addon.active}" class="badge bg-danger">Ne</span>
+                </td>
+                <td>
+                    <a th:href="@{/admin/addons/{id}/edit(id=${addon.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <form th:action="@{/admin/addons/{id}/delete(id=${addon.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tento doplněk?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
+                            <i class="bi bi-toggle-off"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+</body>
+</html>

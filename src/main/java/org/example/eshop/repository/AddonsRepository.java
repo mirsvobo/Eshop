@@ -11,4 +11,5 @@ public interface AddonsRepository extends JpaRepository<Addon, Long> {
 
     Optional<Addon> findByNameIgnoreCase(String name);
 
+    Optional<Object> findBySkuIgnoreCase(String trim);
 }

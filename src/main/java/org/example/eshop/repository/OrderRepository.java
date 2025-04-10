@@ -57,4 +57,5 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Optional<Order> findBySfProformaInvoiceIdOrSfTaxDocumentIdOrSfFinalInvoiceId(Long sfInvoiceId, Long sfInvoiceId1, Long sfInvoiceId2);
 
+    long countByCustomerIdAndAppliedCouponId(Long id, Long id1);
 }

@@ -1,7 +1,7 @@
 package org.example.eshop.controller;
 
+import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.model.*; // Import všech modelů
-import org.example.eshop.service.AddonsService;
 import org.example.eshop.service.ProductService;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CustomPriceRequestDto;
