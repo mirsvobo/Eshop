@@ -3,80 +3,86 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{admin/layout/admin-layout}">
 <head>
-    <title th:text="${pageTitle ?: 'Správa Lazury'}">Správa Lazury</title>
-    <style>
-        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
-    </style>
+    <title>Správa Lazur</title>
 </head>
 <body>
 
 <section layout:fragment="content">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2" th:text="${pageTitle ?: 'Správa Lazury'}">Správa Lazury</h1>
+        <h1 class="h2">Lazury Produktů</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <a th:href="@{/admin/glazes}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Zpět na přehled
+            <a th:href="@{/admin/glazes/new}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle"></i> Vytvořit novou lazuru
             </a>
         </div>
     </div>
 
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span th:text="${errorMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div th:if="${glazes == null or #lists.isEmpty(glazes)}" class="alert alert-info">
+        Nebyly nalezeny žádné lazury.
     </div>
 
-    <form th:object="${glaze}"
-          th:action="${glaze.id == null} ? @{/admin/glazes} : @{/admin/glazes/{id}(id=${glaze.id})}"
-          method="post" novalidate>
+    <div th:unless="${glazes == null or #lists.isEmpty(glazes)}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Název</th>
+                <th>Popis</th>
+                <th class="text-end">Příplatek CZK</th>
+                <th class="text-end">Příplatek EUR</th>
+                <th>Obrázek</th>
+                <th>Aktivní</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${glazes != null}" th:each="glaze : ${glazes}">
+                <td th:if="${glaze != null}" th:text="${glaze.id}">1</td>
+                <td th:unless="${glaze != null}" class="text-danger">N/A</td> <td th:if="${glaze != null}">
+                <a th:href="@{/admin/glazes/{id}/edit(id=${glaze.id})}"
+                   th:text="${glaze.name ?: '(Chybí název)'}">Název Lazury</a>
+            </td>
+                <td th:unless="${glaze != null}" class="text-danger">Chybí data</td>
 
-        <input type="hidden" name="_method" th:if="${glaze.id != null}" value="POST"/>
+                <td th:if="${glaze != null}" th:text="${#strings.abbreviate(glaze.description, 80)}">Krátký popis...</td>
+                <td th:unless="${glaze != null}">-</td>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
-                    <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
-                </div>
+                <td th:if="${glaze != null}" class="text-end" th:text="${glaze.priceSurchargeCZK != null ? #numbers.formatDecimal(glaze.priceSurchargeCZK, 1, 'POINT', 2, 'COMMA') + ' Kč' : '-'}"></td>
+                <td th:unless="${glaze != null}">-</td>
 
-                <div class="mb-3">
-                    <label for="description" class="form-label">Popis</label>
-                    <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
-                    <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}">Chyba popisu</div>
-                </div>
+                <td th:if="${glaze != null}" class="text-end" th:text="${glaze.priceSurchargeEUR != null ? #numbers.formatDecimal(glaze.priceSurchargeEUR, 1, 'POINT', 2, 'COMMA') + ' €' : '-'}"></td>
+                <td th:unless="${glaze != null}">-</td>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="priceSurchargeCZK" class="form-label">Příplatek CZK (bez DPH)</label>
-                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceSurchargeCZK" th:field="*{priceSurchargeCZK}" placeholder="Např. 150.00">
-                        <div th:if="${#fields.hasErrors('priceSurchargeCZK')}" class="invalid-feedback" th:errors="*{priceSurchargeCZK}">Chyba ceny CZK</div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="priceSurchargeEUR" class="form-label">Příplatek EUR (bez DPH)</label>
-                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceSurchargeEUR" th:field="*{priceSurchargeEUR}" placeholder="Např. 6.00">
-                        <div th:if="${#fields.hasErrors('priceSurchargeEUR')}" class="invalid-feedback" th:errors="*{priceSurchargeEUR}">Chyba ceny EUR</div>
-                    </div>
-                </div>
+                <td th:if="${glaze != null}">
+                    <img th:if="${glaze.imageUrl}" th:src="${glaze.imageUrl}" th:alt="${glaze.name}" style="max-height: 30px; max-width: 50px;">
+                    <span th:unless="${glaze.imageUrl}">-</span>
+                </td>
+                <td th:unless="${glaze != null}">-</td>
 
-                <div class="mb-3">
-                    <label for="imageUrl" class="form-label">URL obrázku vzorku</label>
-                    <input type="url" class="form-control" th:errorclass="is-invalid" id="imageUrl" th:field="*{imageUrl}" placeholder="https://...">
-                    <div th:if="${#fields.hasErrors('imageUrl')}" class="invalid-feedback" th:errors="*{imageUrl}">Chyba URL</div>
-                </div>
+                <td th:if="${glaze != null}">
+                    <span th:if="${glaze.active}" class="badge bg-success">Ano</span>
+                    <span th:unless="${glaze.active}" class="badge bg-danger">Ne</span>
+                </td>
+                <td th:unless="${glaze != null}">-</td>
 
-
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
-                    <label class="form-check-label" for="active">Aktivní</label>
-                </div>
-
-                <div class="d-flex justify-content-end">
-                    <a th:href="@{/admin/glazes}" class="btn btn-secondary me-2">Zrušit</a>
-                    <button type="submit" class="btn btn-primary">Uložit Lazuru</button>
-                </div>
-            </div>
-        </div>
-    </form>
+                <td th:if="${glaze != null}">
+                    <a th:href="@{/admin/glazes/{id}/edit(id=${glaze.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <form th:action="@{/admin/glazes/{id}/delete(id=${glaze.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tuto lazuru?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
+                            <i class="bi bi-toggle-off"></i>
+                        </button>
+                    </form>
+                </td>
+                <td th:unless="${glaze != null}">-</td>
+            </tr>
+            <tr th:if="${glazes != null and #lists.isEmpty(glazes)}">
+                <td colspan="8" class="text-center text-muted">Nebyly nalezeny žádné lazury.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </section>
 
 </body>

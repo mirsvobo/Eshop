@@ -3,18 +3,20 @@ package org.example.eshop.admin.service;
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.model.Design;
 import org.example.eshop.repository.DesignRepository;
-import org.example.eshop.repository.ProductRepository; // Pro kontrolu závislostí
+import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal; // <-- Přidat import
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set; // <-- Přidat import
 
 @Service
 public class DesignService {
@@ -22,7 +24,7 @@ public class DesignService {
     private static final Logger log = LoggerFactory.getLogger(DesignService.class);
 
     @Autowired private DesignRepository designRepository;
-    @Autowired private ProductRepository productRepository; // Pro kontrolu použití
+    @Autowired private ProductRepository productRepository;
 
     @Transactional(readOnly = true)
     public List<Design> getAllDesignsSortedByName() {
@@ -39,30 +41,29 @@ public class DesignService {
     @Transactional
     public Design createDesign(Design design) {
         log.info("Creating new design: {}", design.getName());
-        validateDesign(design);
+        validateDesign(design); // Validace nyní kontroluje i ceny
 
-        // Kontrola unikátnosti názvu
         designRepository.findByNameIgnoreCase(design.getName().trim()).ifPresent(d -> {
             throw new IllegalArgumentException("Design s názvem '" + design.getName().trim() + "' již existuje.");
         });
         design.setName(design.getName().trim());
-        design.setActive(true); // Nový design je defaultně aktivní
+        normalizePrices(design); // Normalizace cen
+        design.setActive(true);
         return designRepository.save(design);
     }
 
     @Transactional
     public Design updateDesign(Long id, Design designData) {
         log.info("Updating design with ID: {}", id);
-        validateDesign(designData);
+        validateDesign(designData); // Validace nyní kontroluje i ceny
 
         Design existingDesign = designRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Design with ID " + id + " not found."));
 
         String newName = designData.getName().trim();
-        // Kontrola unikátnosti názvu, pokud se mění
         if (!existingDesign.getName().equalsIgnoreCase(newName)) {
             designRepository.findByNameIgnoreCase(newName)
-                    .filter(found -> !found.getId().equals(id)) // Zkontrolovat, zda nalezený není ten samý
+                    .filter(found -> !found.getId().equals(id))
                     .ifPresent(found -> {
                         throw new IllegalArgumentException("Design s názvem '" + newName + "' již existuje.");
                     });
@@ -70,7 +71,11 @@ public class DesignService {
         }
 
         existingDesign.setDescription(designData.getDescription());
-        existingDesign.setActive(designData.isActive()); // Umožníme měnit aktivitu
+        existingDesign.setImageUrl(designData.getImageUrl()); // <-- Aktualizace imageUrl
+        existingDesign.setActive(designData.isActive());
+        normalizePrices(designData); // Normalizace cen z DTO
+        existingDesign.setPriceSurchargeCZK(designData.getPriceSurchargeCZK()); // <-- Aktualizace ceny CZK
+        existingDesign.setPriceSurchargeEUR(designData.getPriceSurchargeEUR()); // <-- Aktualizace ceny EUR
 
         Design updatedDesign = designRepository.save(existingDesign);
         log.info("Design '{}' (ID: {}) updated successfully.", updatedDesign.getName(), updatedDesign.getId());
@@ -83,25 +88,13 @@ public class DesignService {
         Design design = designRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Design with ID " + id + " not found."));
 
-        // Kontrola závislostí - jsou produkty, které TENTO design používají?
-        // Efektivnější by bylo mít metodu v ProductRepository: countByAvailableDesignsContains(Design design)
+        // Kontrola použití (zůstává stejná)
         boolean isUsed = design.getProducts() != null && !design.getProducts().isEmpty();
-        // Alternativa (méně efektivní, pokud je mnoho produktů):
-        // boolean isUsed = productRepository.findAll().stream()
-        //        .anyMatch(p -> p.getAvailableDesigns() != null && p.getAvailableDesigns().contains(design));
-
 
         if (isUsed) {
             log.error("Cannot deactivate design '{}' (ID: {}) because it is assigned to products.", design.getName(), id);
-            // Můžeme buď vyhodit výjimku, nebo jen deaktivovat a nechat ho přiřazený
-            // Prozatím vyhodíme výjimku, aby admin musel nejprve odebrat asociace
             throw new IllegalStateException("Design '" + design.getName() + "' nelze deaktivovat, je přiřazen k produktům. Nejprve odstraňte přiřazení u produktů.");
-            // Alternativa: Jen deaktivovat
-            // design.setActive(false);
-            // designRepository.save(design);
-            // log.warn("Design '{}' (ID: {}) deactivated, but it remains assigned to some products.", design.getName(), id);
         } else {
-            // Pokud není použit, můžeme ho deaktivovat (nebo smazat - preferujeme deaktivaci)
             if (design.isActive()) {
                 design.setActive(false);
                 designRepository.save(design);
@@ -109,19 +102,28 @@ public class DesignService {
             } else {
                 log.info("Design '{}' (ID: {}) is already inactive.", design.getName(), id);
             }
-            // Fyzické smazání:
-            // designRepository.delete(design);
-            // log.info("Design '{}' (ID: {}) successfully deleted.", design.getName(), id);
         }
     }
 
     private void validateDesign(Design design) {
-        if (design == null) {
-            throw new IllegalArgumentException("Design object cannot be null.");
+        if (design == null) throw new IllegalArgumentException("Design object cannot be null.");
+        if (!StringUtils.hasText(design.getName())) throw new IllegalArgumentException("Design name cannot be empty.");
+        // Validace cen - nesmí být záporné
+        if (design.getPriceSurchargeCZK() != null && design.getPriceSurchargeCZK().signum() < 0) {
+            throw new IllegalArgumentException("Price surcharge CZK cannot be negative.");
         }
-        if (!StringUtils.hasText(design.getName())) {
-            throw new IllegalArgumentException("Design name cannot be empty.");
+        if (design.getPriceSurchargeEUR() != null && design.getPriceSurchargeEUR().signum() < 0) {
+            throw new IllegalArgumentException("Price surcharge EUR cannot be negative.");
         }
-        // Případně další validace (délka názvu, popisu atd.)
+    }
+
+    // Přidána pomocná metoda pro normalizaci cen
+    private void normalizePrices(Design design) {
+        if (design.getPriceSurchargeCZK() != null && design.getPriceSurchargeCZK().compareTo(BigDecimal.ZERO) <= 0) {
+            design.setPriceSurchargeCZK(null); // Nulový nebo záporný příplatek uložíme jako null
+        }
+        if (design.getPriceSurchargeEUR() != null && design.getPriceSurchargeEUR().compareTo(BigDecimal.ZERO) <= 0) {
+            design.setPriceSurchargeEUR(null); // Nulový nebo záporný příplatek uložíme jako null
+        }
     }
 }

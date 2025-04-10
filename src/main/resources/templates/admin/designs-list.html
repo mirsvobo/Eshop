@@ -28,36 +28,61 @@
                 <th>ID</th>
                 <th>Název</th>
                 <th>Popis</th>
+                <th class="text-end">Příplatek CZK</th>
+                <th class="text-end">Příplatek EUR</th>
+                <th>Obrázek</th>
                 <th>Aktivní</th>
                 <th>Akce</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="design : ${designs}">
-                <td th:text="${design.id}">1</td>
-                <td>
-                    <a th:href="@{/admin/designs/{id}/edit(id=${design.id})}" th:text="${design.name}">Název Designu</a>
+            <tr th:if="${designs != null}" th:each="design : ${designs}">
+                <td th:if="${design != null}" th:text="${design.id}">1</td>
+                <td th:unless="${design != null}" class="text-danger">N/A</td>
+
+                <td th:if="${design != null}">
+                    <a th:href="@{/admin/designs/{id}/edit(id=${design.id})}"
+                       th:text="${design.name ?: '(Chybí název)'}">Název Designu</a>
                 </td>
-                <td th:text="${#strings.abbreviate(design.description, 100)}">Krátký popis...</td>
-                <td>
+                <td th:unless="${design != null}" class="text-danger">Chybí data</td>
+
+                <td th:if="${design != null}" th:text="${#strings.abbreviate(design.description, 80)}">Krátký popis...</td>
+                <td th:unless="${design != null}">-</td>
+
+                <td th:if="${design != null}" class="text-end" th:text="${design.priceSurchargeCZK != null ? #numbers.formatDecimal(design.priceSurchargeCZK, 1, 'POINT', 2, 'COMMA') + ' Kč' : '-'}"></td>
+                <td th:unless="${design != null}">-</td>
+
+                <td th:if="${design != null}" class="text-end" th:text="${design.priceSurchargeEUR != null ? #numbers.formatDecimal(design.priceSurchargeEUR, 1, 'POINT', 2, 'COMMA') + ' €' : '-'}"></td>
+                <td th:unless="${design != null}">-</td>
+
+                <td th:if="${design != null}">
+                    <img th:if="${design.imageUrl}" th:src="${design.imageUrl}" th:alt="${design.name}" style="max-height: 30px; max-width: 50px;">
+                    <span th:unless="${design.imageUrl}">-</span>
+                </td>
+                <td th:unless="${design != null}">-</td>
+                <td th:if="${design != null}">
                     <span th:if="${design.active}" class="badge bg-success">Ano</span>
                     <span th:unless="${design.active}" class="badge bg-danger">Ne</span>
                 </td>
-                <td>
+                <td th:unless="${design != null}">-</td>
+
+                <td th:if="${design != null}">
                     <a th:href="@{/admin/designs/{id}/edit(id=${design.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
                         <i class="bi bi-pencil-square"></i>
                     </a>
-                    <form th:action="@{/admin/designs/{id}/delete(id=${design.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tento design? Produkty, které ho používají, ho nebudou moci dále vybrat.');">
-                        <input type="hidden" name="_method" value="POST"/> <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
-                        <i class="bi bi-toggle-off"></i>
-                    </button>
+                    <form th:action="@{/admin/designs/{id}/delete(id=${design.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tento design?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
+                            <i class="bi bi-toggle-off"></i>
+                        </button>
                     </form>
                 </td>
+                <td th:unless="${design != null}">-</td>
             </tr>
+            <tr th:if="${designs != null and #lists.isEmpty(designs)}">
+                <td colspan="9" class="text-center text-muted">Nebyly nalezeny žádné designy.</td> </tr>
             </tbody>
         </table>
     </div>
-
 </section>
 
 </body>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa Barev Střech</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Barvy Střech Produktů</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/roof-colors/new}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle"></i> Vytvořit novou barvu
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${roofColors == null or #lists.isEmpty(roofColors)}" class="alert alert-info">
+        Nebyly nalezeny žádné barvy střech.
+    </div>
+
+    <div th:unless="${roofColors == null or #lists.isEmpty(roofColors)}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Název</th>
+                <th>Popis</th>
+                <th class="text-end">Příplatek CZK</th>
+                <th class="text-end">Příplatek EUR</th>
+                <th>Obrázek</th>
+                <th>Aktivní</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="color : ${roofColors}">
+                <td th:text="${color.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/roof-colors/{id}/edit(id=${color.id})}" th:text="${color.name}">Název Barvy</a>
+                </td>
+                <td th:text="${#strings.abbreviate(color.description, 80)}">Krátký popis...</td>
+                <td class="text-end" th:text="${color.priceSurchargeCZK != null ? #numbers.formatDecimal(color.priceSurchargeCZK, 1, 'POINT', 2, 'COMMA') + ' Kč' : '-'}"></td>
+                <td class="text-end" th:text="${color.priceSurchargeEUR != null ? #numbers.formatDecimal(color.priceSurchargeEUR, 1, 'POINT', 2, 'COMMA') + ' €' : '-'}"></td>
+                <td>
+                    <img th:if="${color.imageUrl}" th:src="${color.imageUrl}" th:alt="${color.name}" style="max-height: 30px; max-width: 50px;">
+                    <span th:unless="${color.imageUrl}">-</span>
+                </td>
+                <td>
+                    <span th:if="${color.active}" class="badge bg-success">Ano</span>
+                    <span th:unless="${color.active}" class="badge bg-danger">Ne</span>
+                </td>
+                <td>
+                    <a th:href="@{/admin/roof-colors/{id}/edit(id=${color.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <form th:action="@{/admin/roof-colors/{id}/delete(id=${color.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tuto barvu střechy?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
+                            <i class="bi bi-toggle-off"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+</body>
+</html>

@@ -4,8 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal; // <-- Přidat import
 import java.util.Set;
-import java.util.Objects; // Import pro Objects.hash
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -27,7 +28,17 @@ public class Design {
     @ManyToMany(mappedBy = "availableDesigns", fetch = FetchType.LAZY)
     private Set<Product> products;
 
-    // NEMÁ příplatky
+    // --- NOVÁ POLE ---
+    @Column(length = 1000)
+    private String imageUrl; // URL obrázku vzorku
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal priceSurchargeCZK; // Příplatek v CZK (může být null)
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal priceSurchargeEUR; // Příplatek v EUR (může být null)
+    // --- KONEC NOVÝCH POLÍ ---
+
 
     @Override
     public boolean equals(Object o) {
@@ -39,8 +50,6 @@ public class Design {
 
     @Override
     public int hashCode() {
-        // Použít Objects.hash pro konzistentní hash kód založený na ID
-        // nebo vrátit pevnou hodnotu, pokud je ID null (pro nové entity)
         return id != null ? Objects.hash(id) : getClass().hashCode();
     }
 }

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="${pageTitle ?: 'Správa Designu'}">Správa Designu</title>
+    <style>
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2" th:text="${pageTitle ?: 'Správa Designu'}">Správa Designu</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/designs}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zpět na přehled
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <form th:object="${design}"
+          th:action="${design.id == null} ? @{/admin/designs} : @{/admin/designs/{id}(id=${design.id})}"
+          method="post" novalidate>
+
+        <input type="hidden" name="_method" th:if="${design.id != null}" value="POST"/>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+                    <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Popis</label>
+                    <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                    <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}">Chyba popisu</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="priceSurchargeCZK" class="form-label">Příplatek CZK (bez DPH)</label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceSurchargeCZK" th:field="*{priceSurchargeCZK}" placeholder="Např. 150.00">
+                        <div th:if="${#fields.hasErrors('priceSurchargeCZK')}" class="invalid-feedback" th:errors="*{priceSurchargeCZK}">Chyba ceny CZK</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="priceSurchargeEUR" class="form-label">Příplatek EUR (bez DPH)</label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceSurchargeEUR" th:field="*{priceSurchargeEUR}" placeholder="Např. 6.00">
+                        <div th:if="${#fields.hasErrors('priceSurchargeEUR')}" class="invalid-feedback" th:errors="*{priceSurchargeEUR}">Chyba ceny EUR</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="imageUrl" class="form-label">URL obrázku vzorku</label>
+                    <input type="url" class="form-control" th:errorclass="is-invalid" id="imageUrl" th:field="*{imageUrl}" placeholder="https://...">
+                    <div th:if="${#fields.hasErrors('imageUrl')}" class="invalid-feedback" th:errors="*{imageUrl}">Chyba URL</div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+                    <label class="form-check-label" for="active">Aktivní</label>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <a th:href="@{/admin/designs}" class="btn btn-secondary me-2">Zrušit</a>
+                    <button type="submit" class="btn btn-primary">Uložit Design</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>
+
+</body>
+</html>
