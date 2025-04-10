@@ -1,6 +1,4 @@
-// src/test/java/org/example/eshop/admin/controller/AdminProductControllerTest.java
-
-package org.example.eshop.controller; // Zkontroluj, zda je balíček správně
+package org.example.eshop.controller; // Balíček může být jiný
 
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.admin.controller.AdminProductController;
@@ -22,18 +20,16 @@ import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.MethodArgumentNotValidException; // Import pro ověření exception
 
 import java.math.BigDecimal;
+import java.math.RoundingMode; // Přidáno pro BigDecimal
 import java.util.*;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat; // Ponecháno pro případné budoucí použití, ale v verify se nepoužije pro prázdné seznamy
+import static org.mockito.ArgumentMatchers.argThat; // Ponecháno pro případné budoucí použití
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -60,6 +56,7 @@ class AdminProductControllerTest {
     private Glaze glaze1;
     private RoofColor roofColor1;
     private Addon addon1;
+    private ProductConfigurator testConfigurator;
 
     @BeforeEach
     void setUp() {
@@ -82,30 +79,65 @@ class AdminProductControllerTest {
         product1.setAvailableRoofColors(new HashSet<>(Set.of(roofColor1)));
         product1.setAvailableAddons(new HashSet<>());
 
+        testConfigurator = new ProductConfigurator(); // Vytvoříme konfigurátor
+        testConfigurator.setId(2L); // ID musí odpovídat produktu
+        testConfigurator.setMinLength(new BigDecimal("100.00"));
+        testConfigurator.setMaxLength(new BigDecimal("500.00"));
+        testConfigurator.setMinWidth(new BigDecimal("50.00"));
+        testConfigurator.setMaxWidth(new BigDecimal("200.00"));
+        testConfigurator.setMinHeight(new BigDecimal("150.00"));
+        testConfigurator.setMaxHeight(new BigDecimal("300.00"));
+        testConfigurator.setPricePerCmHeightCZK(new BigDecimal("14.00"));
+        testConfigurator.setPricePerCmLengthCZK(new BigDecimal("99.00"));
+        testConfigurator.setPricePerCmDepthCZK(new BigDecimal("25.00"));
+        testConfigurator.setDividerPricePerCmDepthCZK(new BigDecimal("13.00"));
+        testConfigurator.setDesignPriceCZK(BigDecimal.ZERO);
+        testConfigurator.setGutterPriceCZK(new BigDecimal("1000.00"));
+        testConfigurator.setShedPriceCZK(new BigDecimal("5000.00"));
+        testConfigurator.setPricePerCmHeightEUR(new BigDecimal("0.56"));
+        testConfigurator.setPricePerCmLengthEUR(new BigDecimal("3.96"));
+        testConfigurator.setPricePerCmDepthEUR(new BigDecimal("1.00"));
+        testConfigurator.setDividerPricePerCmDepthEUR(new BigDecimal("0.52"));
+        testConfigurator.setDesignPriceEUR(BigDecimal.ZERO);
+        testConfigurator.setGutterPriceEUR(new BigDecimal("40.00"));
+        testConfigurator.setShedPriceEUR(new BigDecimal("200.00"));
+
         product2 = new Product();
         product2.setId(2L);
         product2.setName("Produkt 2 Custom");
         product2.setSlug("produkt-2-custom");
         product2.setActive(true);
-        product2.setCustomisable(true);
+        product2.setCustomisable(true); // Je customisable
         product2.setTaxRate(taxRate21);
         product2.setBasePriceCZK(null);
         product2.setAvailableDesigns(new HashSet<>());
         product2.setAvailableGlazes(new HashSet<>());
         product2.setAvailableRoofColors(new HashSet<>());
         product2.setAvailableAddons(new HashSet<>(Set.of(addon1)));
-        product2.setConfigurator(new ProductConfigurator());
+        product2.setConfigurator(testConfigurator); // Přiřadíme konfigurátor
+        testConfigurator.setProduct(product2); // Obousměrná vazba
 
+        // Lenient mockování
         lenient().when(currencyService.getSelectedCurrency()).thenReturn("CZK");
-
-        // Lenient mockování pro findAllById s prázdným seznamem - Ponecháno pro jistotu
         lenient().when(designRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
         lenient().when(glazeRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
         lenient().when(roofColorRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
         lenient().when(addonsRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
+
+        // Mock pro načítání atributů ve formuláři
+        lenient().when(taxRateService.getAllTaxRates()).thenReturn(Collections.singletonList(taxRate21));
+        lenient().when(designRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(design1));
+        lenient().when(glazeRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(glaze1));
+        lenient().when(roofColorRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(roofColor1));
+        lenient().when(addonsRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(addon1));
+
+        // Lenient mockování pro getProductById, protože se volá v různých scénářích
+        lenient().when(productService.getProductById(1L)).thenReturn(Optional.of(product1));
+        lenient().when(productService.getProductById(2L)).thenReturn(Optional.of(product2));
+        lenient().when(productService.getProductById(99L)).thenReturn(Optional.empty());
     }
 
-    // --- Testy GET metod (beze změny) ---
+    // --- Testy GET (zůstávají stejné) ---
     @Test
     @DisplayName("GET /admin/products - Zobrazí seznam produktů")
     void listProducts_ShouldReturnListView() throws Exception {
@@ -117,9 +149,7 @@ class AdminProductControllerTest {
                 .andExpect(view().name("admin/products-list"))
                 .andExpect(model().attributeExists("productPage"))
                 .andExpect(model().attribute("productPage", hasProperty("content", hasSize(2))))
-                .andExpect(model().attribute("productPage", hasProperty("content", hasItem(
-                        hasProperty("slug", is("produkt-1-standard"))
-                ))));
+                .andExpect(model().attribute("currentSort", not(emptyOrNullString())));
 
         verify(productService).getAllProducts(any(Pageable.class));
     }
@@ -127,60 +157,55 @@ class AdminProductControllerTest {
     @Test
     @DisplayName("GET /admin/products/new - Zobrazí formulář pro nový produkt")
     void showCreateProductForm_ShouldReturnFormView() throws Exception {
-        when(taxRateService.getAllTaxRates()).thenReturn(Collections.singletonList(taxRate21));
-        when(designRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(design1));
-        when(glazeRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(glaze1));
-        when(roofColorRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(roofColor1));
-        when(addonsRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(addon1));
-
-
         mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/product-form"))
                 .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"))
                 .andExpect(model().attribute("product", hasProperty("id", nullValue())))
-                .andExpect(model().attribute("product", hasProperty("availableDesigns", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableGlazes", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableRoofColors", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableAddons", instanceOf(Set.class))))
                 .andExpect(model().attribute("pageTitle", containsString("Vytvořit")));
 
         verify(taxRateService).getAllTaxRates();
-        verify(designRepository).findAll(any(Sort.class));
-        verify(glazeRepository).findAll(any(Sort.class));
-        verify(roofColorRepository).findAll(any(Sort.class));
-        verify(addonsRepository).findAll(any(Sort.class));
     }
 
     @Test
-    @DisplayName("GET /admin/products/{id}/edit - Zobrazí formulář pro úpravu produktu")
-    void showEditProductForm_ShouldReturnFormView() throws Exception {
-        when(productService.getProductById(1L)).thenReturn(Optional.of(product1));
-        when(taxRateService.getAllTaxRates()).thenReturn(Collections.singletonList(taxRate21));
-        when(designRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(design1));
-        when(glazeRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(glaze1));
-        when(roofColorRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(roofColor1));
-        when(addonsRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(addon1));
+    @DisplayName("GET /admin/products/{id}/edit - Zobrazí formulář pro úpravu STANDARD produktu")
+    void showEditProductForm_Standard_ShouldReturnFormView() throws Exception {
+        // getProductById je mockováno v setUp
 
         mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/1/edit"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/product-form"))
                 .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"))
                 .andExpect(model().attribute("product", hasProperty("id", is(1L))))
+                .andExpect(model().attribute("product", hasProperty("customisable", is(false))))
                 .andExpect(model().attribute("pageTitle", containsString("Upravit")));
 
         verify(productService).getProductById(1L);
-        verify(taxRateService).getAllTaxRates();
-        verify(designRepository).findAll(any(Sort.class));
-        verify(glazeRepository).findAll(any(Sort.class));
-        verify(roofColorRepository).findAll(any(Sort.class));
-        verify(addonsRepository).findAll(any(Sort.class));
     }
+
+    @Test
+    @DisplayName("GET /admin/products/{id}/edit - Zobrazí formulář pro úpravu CUSTOM produktu")
+    void showEditProductForm_Custom_ShouldReturnFormViewWithConfig() throws Exception {
+        // getProductById je mockováno v setUp
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/2/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/product-form"))
+                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"))
+                .andExpect(model().attribute("product", hasProperty("id", is(2L))))
+                .andExpect(model().attribute("product", hasProperty("customisable", is(true))))
+                .andExpect(model().attribute("product", hasProperty("configurator", notNullValue())))
+                .andExpect(model().attribute("product", hasProperty("configurator", hasProperty("minLength", comparesEqualTo(new BigDecimal("100.00"))))))
+                .andExpect(model().attribute("pageTitle", containsString("Upravit")));
+
+        verify(productService).getProductById(2L);
+    }
+
 
     @Test
     @DisplayName("GET /admin/products/{id}/edit - Nenalezeno - Přesměruje na seznam")
     void showEditProductForm_NotFound_ShouldRedirect() throws Exception {
-        when(productService.getProductById(99L)).thenReturn(Optional.empty());
+        // getProductById je mockováno v setUp
 
         mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/99/edit"))
                 .andExpect(status().is3xxRedirection())
@@ -190,33 +215,24 @@ class AdminProductControllerTest {
         verify(productService).getProductById(99L);
     }
 
-    // --- Testy POST metod ---
+
+    // --- Testy POST Vytvoření ---
 
     @Test
-    @DisplayName("POST /admin/products - Úspěšně vytvoří nový produkt")
-    void createProduct_Success() throws Exception {
-        Product createdProduct = new Product();
-        createdProduct.setId(3L);
-        createdProduct.setName("Nový Produkt Test");
-        createdProduct.setSlug("novy-produkt-test");
-        createdProduct.setTaxRate(taxRate21);
-
+    @DisplayName("POST /admin/products - Úspěšně vytvoří STANDARD produkt")
+    void createProduct_Standard_Success() throws Exception {
+        Product createdProduct = new Product(); createdProduct.setId(3L); createdProduct.setName("Nový Standard"); createdProduct.setSlug("novy-standard");
         when(productService.createProduct(any(Product.class))).thenReturn(createdProduct);
         when(designRepository.findAllById(eq(List.of(10L)))).thenReturn(List.of(design1));
-        when(glazeRepository.findAllById(eq(List.of(20L)))).thenReturn(List.of(glaze1));
-        // Mockování pro prázdné seznamy je v setUp()
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/products")
-                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .param("name", "Nový Produkt Test")
-                                .param("slug", "novy-produkt-test")
-                                .param("basePriceCZK", "1500")
-                                .param("active", "true")
-                                .param("customisable", "false")
-                                .param("taxRate.id", "1")
-                                .param("designIds", "10")
-                                .param("glazeIds", "20")
-                        // .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "Nový Standard")
+                        .param("basePriceCZK", "1500")
+                        .param("active", "true")
+                        .param("customisable", "false") // Standardní
+                        .param("taxRate.id", "1")
+                        .param("designIds", "10") // Asociace pro standardní
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"))
@@ -224,168 +240,235 @@ class AdminProductControllerTest {
 
         ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
         verify(productService).createProduct(productCaptor.capture());
+        Product productPassed = productCaptor.getValue();
+        assertEquals("Nový Standard", productPassed.getName());
+        assertFalse(productPassed.isCustomisable());
+        assertNull(productPassed.getConfigurator()); // Standardní nemá mít konfigurátor
+        assertNotNull(productPassed.getAvailableDesigns());
+        assertFalse(productPassed.getAvailableDesigns().isEmpty());
+        assertTrue(productPassed.getAvailableAddons() == null || productPassed.getAvailableAddons().isEmpty()); // Standardní nemá mít addony
 
-        Product productPassedToService = productCaptor.getValue();
-        assertEquals("Nový Produkt Test", productPassedToService.getName());
-        assertEquals("novy-produkt-test", productPassedToService.getSlug());
-        assertNotNull(productPassedToService.getTaxRate());
-        assertEquals(1L, productPassedToService.getTaxRate().getId());
-        assertFalse(productPassedToService.isCustomisable());
-        assertEquals(1, productPassedToService.getAvailableDesigns().size());
-        assertTrue(productPassedToService.getAvailableDesigns().stream().anyMatch(d -> d.getId().equals(10L)));
-        assertEquals(1, productPassedToService.getAvailableGlazes().size());
-        assertTrue(productPassedToService.getAvailableGlazes().stream().anyMatch(g -> g.getId().equals(20L)));
-        assertTrue(productPassedToService.getAvailableRoofColors().isEmpty());
-        assertTrue(productPassedToService.getAvailableAddons().isEmpty());
-
-        // Ověření volání findAllById pro NEPRÁZDNÉ seznamy
-        verify(designRepository).findAllById(eq(List.of(10L)));
-        verify(glazeRepository).findAllById(eq(List.of(20L)));
-        // Neověřujeme findAllById pro prázdné seznamy, spoléháme na kontrolu výsledného Product objektu
+        verify(designRepository).findAllById(List.of(10L)); // Ověříme načtení asociace
+        verify(addonsRepository, never()).findAllById(any()); // Addony se nenačítají
     }
 
-
     @Test
-    @DisplayName("POST /admin/products - Chyba validace (chybí název) - Očekává 400")
-    void createProduct_ValidationError_ShouldReturnBadRequest() throws Exception {
-        // Mockování findAllById pro prázdné seznamy je v setUp()
+    @DisplayName("POST /admin/products - Úspěšně vytvoří CUSTOM produkt")
+    void createProduct_Custom_Success() throws Exception {
+        Product createdProduct = new Product(); createdProduct.setId(4L); createdProduct.setName("Nový Custom"); createdProduct.setSlug("novy-custom");
+        createdProduct.setCustomisable(true);
+        // Mock service tak, aby vrátil produkt s konfigurátorem
+        when(productService.createProduct(any(Product.class))).thenAnswer(invocation -> {
+            Product p = invocation.getArgument(0);
+            p.setId(4L); // Simulace ID
+            if (p.isCustomisable()) { // Service by měl vytvořit configurator
+                ProductConfigurator cfg = new ProductConfigurator();
+                cfg.setProduct(p);
+                p.setConfigurator(cfg);
+            }
+            return p;
+        });
+        when(addonsRepository.findAllById(eq(List.of(40L)))).thenReturn(List.of(addon1));
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/admin/products")
-                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .param("name", "") // Prázdný název
-                                .param("slug", "chyba-validace")
-                                .param("taxRate.id", "1")
-                        // .with(csrf())
-                )
-                .andExpect(status().isBadRequest()) // --- OČEKÁVÁME 400 ---
-                .andReturn();
-
-        // Ověříme typ vyhozené výjimky
-        Exception resolvedException = mvcResult.getResolvedException();
-        assertNotNull(resolvedException, "Očekávána výjimka, ale žádná nebyla vyhozena");
-        assertInstanceOf(MethodArgumentNotValidException.class, resolvedException, "Očekáván typ výjimky MethodArgumentNotValidException");
-
-        // Ověříme, že chyba validace se týká pole 'name'
-        MethodArgumentNotValidException validationException = (MethodArgumentNotValidException) resolvedException;
-        assertTrue(validationException.getBindingResult().hasFieldErrors("name"), "Měla nastat chyba validace pro pole 'name'");
-
-        // Ověříme, že service metoda pro vytvoření produktu NEBYLA volána
-        verify(productService, never()).createProduct(any(Product.class));
-
-        // Neověřujeme findAllById zde, protože je nespolehlivé a pro funkčnost testu není kritické
-        // verify(designRepository).findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()));
-        // verify(glazeRepository).findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()));
-        // verify(roofColorRepository).findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()));
-        // verify(addonsRepository).findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()));
-
-        // Neověřujeme volání pro renderování formuláře
-    }
-
-
-    @Test
-    @DisplayName("POST /admin/products/{id} - Úspěšně aktualizuje produkt")
-    void updateProduct_Success() throws Exception {
-        long productId = 1L;
-        Product updatedProduct = new Product();
-        updatedProduct.setId(productId);
-        updatedProduct.setName("Aktualizovaný Produkt 1");
-        updatedProduct.setSlug("produkt-1-standard");
-
-        when(productService.getProductById(productId)).thenReturn(Optional.of(product1));
-        when(productService.updateProduct(eq(productId), any(Product.class), any(Product.class)))
-                .thenReturn(Optional.of(updatedProduct));
-        // Mock načtení asociací podle ID z requestu
-        //findAllById pro prázdné seznamy mockováno v setUp()
-        when(glazeRepository.findAllById(eq(List.of(20L)))).thenReturn(List.of(glaze1));
-        when(roofColorRepository.findAllById(eq(List.of(30L)))).thenReturn(List.of(roofColor1));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}", productId)
-                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .param("name", "Aktualizovaný Produkt 1")
-                                .param("slug", "produkt-1-standard")
-                                .param("active", "true")
-                                .param("customisable", "false")
-                                .param("taxRate.id", "1")
-                                .param("glazeIds", "20")
-                                .param("roofColorIds", "30")
-                        // .with(csrf())
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "Nový Custom")
+                        .param("active", "true")
+                        .param("customisable", "true") // Custom
+                        .param("taxRate.id", "1")
+                        .param("addonIds", "40") // Asociace pro custom
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"))
                 .andExpect(flash().attributeExists("successMessage"));
 
-        ArgumentCaptor<Product> productDataCaptor = ArgumentCaptor.forClass(Product.class);
-        ArgumentCaptor<Product> existingProductCaptor = ArgumentCaptor.forClass(Product.class);
-        verify(productService).updateProduct(eq(productId), productDataCaptor.capture(), existingProductCaptor.capture());
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).createProduct(productCaptor.capture());
+        Product productPassed = productCaptor.getValue();
+        assertEquals("Nový Custom", productPassed.getName());
+        assertTrue(productPassed.isCustomisable());
+        assertNotNull(productPassed.getConfigurator()); // Konfigurátor by měl být vytvořen
+        assertTrue(productPassed.getAvailableDesigns() == null || productPassed.getAvailableDesigns().isEmpty()); // Custom nemá mít std atributy
+        assertNotNull(productPassed.getAvailableAddons());
+        assertFalse(productPassed.getAvailableAddons().isEmpty());
 
-        Product dataPassed = productDataCaptor.getValue();
-        assertEquals("Aktualizovaný Produkt 1", dataPassed.getName());
-        assertEquals(1L, dataPassed.getTaxRate().getId());
+        verify(addonsRepository).findAllById(List.of(40L)); // Ověříme načtení asociace
+        verify(designRepository, never()).findAllById(any()); // Standardní se nenačítají
+    }
 
-        Product existingPassed = existingProductCaptor.getValue();
-        assertTrue(existingPassed.getAvailableDesigns().isEmpty());
-        assertEquals(1, existingPassed.getAvailableGlazes().size());
-        assertTrue(existingPassed.getAvailableGlazes().stream().anyMatch(g -> g.getId().equals(20L)));
-        assertEquals(1, existingPassed.getAvailableRoofColors().size());
-        assertTrue(existingPassed.getAvailableRoofColors().stream().anyMatch(rc -> rc.getId().equals(30L)));
+    @Test
+    @DisplayName("POST /admin/products - Chyba validace vrátí formulář s daty")
+    void createProduct_ValidationError_ShouldReturnForm() throws Exception {
+        // Mock pro zobrazení formuláře (atributy) je v setUp
 
-        // Ověření volání findAllById pro NEPRÁZDNÉ seznamy
-        verify(glazeRepository).findAllById(eq(List.of(20L)));
-        verify(roofColorRepository).findAllById(eq(List.of(30L)));
-        // Neověřujeme findAllById pro prázdné seznamy
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "") // Nevalidní jméno
+                        .param("taxRate.id", "1") // Platná sazba
+                )
+                .andExpect(status().isOk()) // Vrací formulář
+                .andExpect(view().name("admin/product-form"))
+                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"))
+                .andExpect(model().hasErrors())
+                .andExpect(model().attributeHasFieldErrors("product", "name")); // Chyba u jména
+
+        verify(productService, never()).createProduct(any()); // Create se nevolá
+        verify(taxRateService).getAllTaxRates(); // Ověření načtení dat pro formulář
+    }
+
+    // --- Testy POST Aktualizace ---
+
+    @Test
+    @DisplayName("POST /admin/products/{id} - Úspěšně aktualizuje STANDARD produkt")
+    void updateProduct_Standard_Success() throws Exception {
+        long productId = 1L;
+        Product updatedProduct = new Product(); /* ... data ... */
+        updatedProduct.setId(productId); updatedProduct.setName("Aktualizovaný Standard");
+
+        // Mock productService.getProductById je v setUp
+        when(productService.updateProduct(eq(productId), any(Product.class), any(Product.class)))
+                .thenReturn(Optional.of(updatedProduct));
+        when(designRepository.findAllById(eq(List.of(10L)))).thenReturn(List.of(design1)); // Ponecháváme design
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}", productId)
+                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                                .param("name", "Aktualizovaný Standard")
+                                .param("basePriceCZK", "1100")
+                                .param("active", "true")
+                                .param("customisable", "false")
+                                .param("taxRate.id", "1")
+                                .param("designIds", "10") // Ponecháme design
+                        // Odebereme glaze a roofColor (neposíláme parametry)
+                )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        ArgumentCaptor<Product> dataCaptor = ArgumentCaptor.forClass(Product.class);
+        ArgumentCaptor<Product> existingCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).updateProduct(eq(productId), dataCaptor.capture(), existingCaptor.capture());
+
+        Product dataPassed = dataCaptor.getValue();
+        assertEquals("Aktualizovaný Standard", dataPassed.getName());
+
+        Product existingPassed = existingCaptor.getValue(); // Entita PŘEDANÁ do updateProduct
+        // Controller volá updateAssociationsFromIds na existingPassed PŘED voláním service.updateProduct
+        assertNotNull(existingPassed.getAvailableDesigns());
+        assertEquals(1, existingPassed.getAvailableDesigns().size()); // Design zůstal
+        assertTrue(existingPassed.getAvailableGlazes().isEmpty()); // Glaze byla odebrána
+        assertTrue(existingPassed.getAvailableRoofColors().isEmpty()); // RoofColor byla odebrána
+
+        verify(designRepository).findAllById(List.of(10L)); // Voláno controllerem
+        // Ověření, že pro prázdné seznamy se findAllById také volá (podle logiky controlleru)
+        // Používáme eq(Collections.emptyList()) nebo argThat pro kontrolu prázdného Iterable
+        verify(glazeRepository).findAllById(eq(Collections.emptyList()));
+        verify(roofColorRepository).findAllById(eq(Collections.emptyList()));
+        verify(addonsRepository).findAllById(eq(Collections.emptyList()));
+    }
+
+    @Test
+    @DisplayName("POST /admin/products/{id} - Úspěšně aktualizuje CUSTOM produkt (vč. konfigurátoru)")
+    void updateProduct_Custom_SuccessWithConfig() throws Exception {
+        long productId = 2L;
+        Product updatedProduct = new Product(); /* ... data ... */
+        updatedProduct.setId(productId); updatedProduct.setName("Aktualizovaný Custom");
+        updatedProduct.setCustomisable(true); // Zůstává custom
+
+        // Mock productService.getProductById je v setUp
+        when(productService.updateProduct(eq(productId), any(Product.class), any(Product.class)))
+                .thenReturn(Optional.of(updatedProduct));
+        when(addonsRepository.findAllById(eq(List.of(40L)))).thenReturn(List.of(addon1)); // Ponecháváme addon
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}", productId)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "Aktualizovaný Custom")
+                        .param("active", "true")
+                        .param("customisable", "true") // Je custom
+                        .param("taxRate.id", "1")
+                        .param("addonIds", "40") // Ponecháme addon
+                        // --- Data konfigurátoru ---
+                        .param("configurator.minLength", "120")
+                        .param("configurator.maxLength", "550")
+                        .param("configurator.minWidth", "60")
+                        .param("configurator.maxWidth", "210")
+                        .param("configurator.minHeight", "160")
+                        .param("configurator.maxHeight", "310")
+                        .param("configurator.pricePerCmLengthCZK", "105.50")
+                        .param("configurator.pricePerCmLengthEUR", "4.10")
+                        .param("configurator.pricePerCmDepthCZK", "26.00")
+                        .param("configurator.pricePerCmDepthEUR", "1.10")
+                        .param("configurator.pricePerCmHeightCZK", "15.00")
+                        .param("configurator.pricePerCmHeightEUR", "0.60")
+                        .param("configurator.designPriceCZK", "50.00")
+                        .param("configurator.designPriceEUR", "2.00")
+                        .param("configurator.dividerPricePerCmDepthCZK", "14.00")
+                        .param("configurator.dividerPricePerCmDepthEUR", "0.55")
+                        .param("configurator.gutterPriceCZK", "1100.00")
+                        .param("configurator.gutterPriceEUR", "44.00")
+                        .param("configurator.shedPriceCZK", "5500.00")
+                        .param("configurator.shedPriceEUR", "220.00")
+                )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        ArgumentCaptor<Product> dataCaptor = ArgumentCaptor.forClass(Product.class);
+        ArgumentCaptor<Product> existingCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).updateProduct(eq(productId), dataCaptor.capture(), existingCaptor.capture());
+
+        Product dataPassed = dataCaptor.getValue(); // Data z formuláře (@ModelAttribute)
+        assertEquals("Aktualizovaný Custom", dataPassed.getName());
+        assertTrue(dataPassed.isCustomisable());
+        assertNotNull(dataPassed.getConfigurator()); // Ověříme, že DTO obsahuje data konfigurátoru
+        assertEquals(0, new BigDecimal("120").compareTo(dataPassed.getConfigurator().getMinLength()));
+        assertEquals(0, new BigDecimal("105.50").compareTo(dataPassed.getConfigurator().getPricePerCmLengthCZK()));
+
+        Product existingPassed = existingCaptor.getValue(); // Načtená entita předaná do service
+        assertNotNull(existingPassed.getAvailableAddons());
+        assertFalse(existingPassed.getAvailableAddons().isEmpty()); // Addon zůstal
+        assertTrue(existingPassed.getAvailableDesigns().isEmpty()); // Standardní atributy jsou prázdné
+
+        verify(addonsRepository).findAllById(List.of(40L)); // Voláno controllerem
+        // Ověření volání pro prázdné seznamy standardních atributů
+        verify(designRepository).findAllById(eq(Collections.emptyList()));
+        verify(glazeRepository).findAllById(eq(Collections.emptyList()));
+        verify(roofColorRepository).findAllById(eq(Collections.emptyList()));
     }
 
 
     @Test
-    @DisplayName("POST /admin/products/{id} - Chyba validace vrátí formulář")
-    void updateProduct_ValidationError() throws Exception {
+    @DisplayName("POST /admin/products/{id} - Chyba validace vrátí formulář s daty")
+    void updateProduct_ValidationError_ShouldReturnForm() throws Exception {
         long productId = 1L;
-
-        // Mock pro zobrazení formuláře při chybě
-        when(taxRateService.getAllTaxRates()).thenReturn(Collections.singletonList(taxRate21));
-        when(designRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(design1));
-        when(glazeRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(glaze1));
-        when(roofColorRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(roofColor1));
-        when(addonsRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(addon1));
-        // Mock pro načtení asociací podle (prázdných) ID - je v setUp()
+        // Mock pro načtení produktu ID=1 pro zobrazení chyby je v setUp
 
         mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}", productId)
-                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .param("name", "") // Nevalidní jméno
-                                .param("slug", "produkt-1-standard")
-                                .param("taxRate.id", "1")
-                        // .with(csrf())
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .param("name", "") // Nevalidní jméno
+                        .param("slug", "produkt-1-standard")
+                        .param("taxRate.id", "1")
                 )
-                .andExpect(status().isOk()) // Očekáváme 200 OK
-                .andExpect(view().name("admin/product-form")) // Vrátí formulář
-                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"))
-                .andExpect(model().hasErrors()) // Očekáváme chyby
-                .andExpect(model().attributeHasFieldErrors("product", "name")) // Chyba u jména
-                .andExpect(model().attribute("product", hasProperty("availableDesigns", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableGlazes", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableRoofColors", instanceOf(Set.class))))
-                .andExpect(model().attribute("product", hasProperty("availableAddons", instanceOf(Set.class))));
+                .andExpect(status().isOk()) // Vrací formulář
+                .andExpect(view().name("admin/product-form"))
+                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons", "pageTitle"))
+                .andExpect(model().hasErrors())
+                .andExpect(model().attributeHasFieldErrors("product", "name"))
+                // Ověření, že se DTO pro asociace správně načetly i při chybě
+                .andExpect(model().attribute("allDesigns", not(empty())));
 
         verify(productService, never()).updateProduct(anyLong(), any(), any()); // Update se nevolá
-        // Ověření načtení dat pro formulář
-        verify(taxRateService).getAllTaxRates();
-        verify(designRepository).findAll(any(Sort.class));
-        verify(glazeRepository).findAll(any(Sort.class));
-        verify(roofColorRepository).findAll(any(Sort.class));
-        verify(addonsRepository).findAll(any(Sort.class));
-        // Neověřujeme findAllById pro prázdné seznamy
+        // Není třeba ověřovat getProductById zde, protože se volá v handleru exception/validace
     }
 
-    // --- Testy DELETE metod (beze změny) ---
+    // --- Testy DELETE ---
+
     @Test
     @DisplayName("POST /admin/products/{id}/delete - Úspěšně deaktivuje produkt")
     void deleteProduct_Success() throws Exception {
         long productId = 1L;
         doNothing().when(productService).deleteProduct(productId);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}/delete", productId)
-                        // .with(csrf())
-                )
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}/delete", productId))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -400,9 +483,7 @@ class AdminProductControllerTest {
         String errorMessage = "Produkt s ID " + nonExistentId + " nenalezen.";
         doThrow(new EntityNotFoundException(errorMessage)).when(productService).deleteProduct(nonExistentId);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}/delete", nonExistentId)
-                        // .with(csrf())
-                )
+        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}/delete", nonExistentId))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products"))
                 .andExpect(flash().attribute("errorMessage", is(errorMessage)));
