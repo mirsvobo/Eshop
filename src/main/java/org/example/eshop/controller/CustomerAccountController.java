@@ -127,31 +127,51 @@ public class CustomerAccountController {
         return "muj-ucet/objednavky";
     }
 
-    @GetMapping("/objednavky/{orderId}")
-    public String viewOrderDetail(@PathVariable Long orderId, Model model, Principal principal, RedirectAttributes redirectAttributes) {
+    // Metoda pro zobrazení detailu objednávky podle KÓDU
+    @GetMapping("/objednavky/{orderCode}") // Mapování na orderCode
+    public String viewOrderDetail(@PathVariable String orderCode, // Parametr je String
+                                  Model model,
+                                  Principal principal, // Můžeš použít Principal nebo Authentication
+                                  RedirectAttributes redirectAttributes) {
+        Customer loggedInCustomer = null; // Inicializace pro catch bloky
         try {
-            Customer loggedInCustomer = getCurrentCustomer(principal);
-            Order order = orderService.findOrderById(orderId)
-                    .orElseThrow(() -> new EntityNotFoundException("Objednávka s ID " + orderId + " nenalezena."));
+            // Získání přihlášeného uživatele (použij svou metodu getCurrentCustomer)
+            // Použijeme verzi s Principal, jak byla v metodě, kterou jsi poslal
+            if (principal == null) { throw new IllegalStateException("Uživatel není přihlášen."); }
+            String userEmail = principal.getName();
+            loggedInCustomer = customerService.getCustomerByEmail(userEmail)
+                    .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen. Email: " + userEmail));
+
+            log.debug("Customer {} (ID: {}) viewing order detail for CODE: {}", loggedInCustomer.getEmail(), loggedInCustomer.getId(), orderCode);
+
+            // OPRAVA ZDE: Volání správné metody findOrderByCode
+            Order order = orderService.findOrderByCode(orderCode)
+                    .orElseThrow(() -> new EntityNotFoundException("Objednávka s kódem '" + orderCode + "' nenalezena.")); // Používáme orderCode v chybě
+
+            // Bezpečnostní kontrola (zůstává stejná)
             if (order.getCustomer() == null || !order.getCustomer().getId().equals(loggedInCustomer.getId())) {
+                // Můžeš zde použít SecurityException nebo vlastní lokální OrderAccessDeniedException
                 throw new SecurityException("K této objednávce nemáte přístup.");
             }
+
             model.addAttribute("order", order);
-        } catch (EntityNotFoundException | SecurityException e) {
-            log.warn("Chyba přístupu nebo nenalezení objednávky ID: {} pro uživatele {}", orderId, principal.getName(), e);
+            log.info("Order detail for CODE {} loaded successfully for customer {}", orderCode, loggedInCustomer.getEmail());
+            return "muj-ucet/objednavka-detail"; // Název šablony pro detail
+
+        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
+            // Zachycení všech očekávaných chyb pro přesměrování
+            log.warn("Chyba přístupu nebo nenalezení objednávky CODE: {} pro uživatele {}: {}",
+                    orderCode, (principal != null ? principal.getName() : "null"), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/muj-ucet/objednavky";
         } catch (Exception e) {
-            log.error("Neočekávaná chyba při zobrazení detailu objednávky ID: {} pro {}: {}", orderId, principal.getName(), e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazení detailu objednávky nastala chyba.");
+            // Jakákoliv jiná neočekávaná chyba
+            log.error("Neočekávaná chyba při zobrazení detailu objednávky CODE: {} pro {}: {}",
+                    orderCode, (principal != null ? principal.getName() : "null"), e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazení detailu objednávky nastala neočekávaná chyba.");
             return "redirect:/muj-ucet/objednavky";
         }
-        return "muj-ucet/objednavka-detail";
     }
-
-
-    // --- Adresy ---
-
     @GetMapping("/adresy")
     public String viewAddresses(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {

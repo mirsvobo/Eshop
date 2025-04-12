@@ -1,209 +1,346 @@
-</div> </div> <div class="card mb-4 configurator-section"
-                   th:if="${product.customisable}"> <div class="card-header">Nastavení Konfigurátoru</div>
-  <div class.card-body>
-    <div th:if="${product.configurator == null}" class="alert alert-warning">
-      Konfigurátor pro tento produkt ještě nebyl inicializován. Uložte produkt pro vytvoření defaultního nastavení.
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title th:text="${pageTitle ?: 'Správa Produktu'}">Správa Produktu</title>
+  <style>
+    .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    .assoc-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: .25rem; background-color: #f8f9fa; }
+    .configurator-section { background-color: #f8f9fa; }
+  </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2" th:text="${pageTitle ?: 'Správa Produktu'}">Správa Produktu</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a th:href="@{/admin/products}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Zpět na přehled
+      </a>
     </div>
-    <div th:unless="${product.configurator == null}">
-      <h6 class="card-subtitle mb-2 text-muted">Limity rozměrů (cm)</h6>
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label for="configMinLength" class="form-label">Min délka</label>
-          <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinLength" th:field="*{configurator.minLength}">
-          <div th:if="${#fields.hasErrors('configurator.minLength')}" class="invalid-feedback" th:errors="*{configurator.minLength}"></div>
+  </div>
+
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <ul>
+      <li th:each="err : ${#fields.globalErrors()}" th:text="${err}">Globální chyba</li>
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  <form th:object="${product}"
+        th:action="${product.id == null} ? @{/admin/products} : @{/admin/products/{id}(id=${product.id})}"
+        method="post" novalidate>
+
+    <input type="hidden" name="_method" th:if="${product.id != null}" value="POST"/>
+
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card mb-4">
+          <div class="card-header">Základní údaje</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+              <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}"></div>
+            </div>
+            <div class="mb-3">
+              <label for="slug" class="form-label">URL Slug</label>
+              <input type="text" class="form-control" th:errorclass="is-invalid" id="slug" th:field="*{slug}" aria-describedby="slugHelp">
+              <div id="slugHelp" class="form-text">Automaticky se generuje z názvu, pokud je prázdný. Pouze malá písmena, čísla a pomlčky.</div>
+              <div th:if="${#fields.hasErrors('slug')}" class="invalid-feedback" th:errors="*{slug}"></div>
+            </div>
+            <div class="mb-3">
+              <label for="description" class="form-label">Popis</label>
+              <textarea class="form-control" id="description" th:field="*{description}" rows="5"></textarea>
+              <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}"></div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="basePriceCZK" class="form-label">Základní cena CZK (bez DPH)</label>
+                <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="basePriceCZK" th:field="*{basePriceCZK}" placeholder="Pouze pro standardní produkty">
+                <div th:if="${#fields.hasErrors('basePriceCZK')}" class="invalid-feedback" th:errors="*{basePriceCZK}"></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="basePriceEUR" class="form-label">Základní cena EUR (bez DPH)</label>
+                <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="basePriceEUR" th:field="*{basePriceEUR}" placeholder="Pouze pro standardní produkty">
+                <div th:if="${#fields.hasErrors('basePriceEUR')}" class="invalid-feedback" th:errors="*{basePriceEUR}"></div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="taxRate" class="form-label">Daňová sazba <span class="text-danger">*</span></label>
+              <select class="form-select" th:errorclass="is-invalid" id="taxRate" th:field="*{taxRate.id}" required>
+                <option value="">-- Vyberte sazbu --</option>
+                <option th:each="rate : ${allTaxRates}"
+                        th:value="${rate.id}"
+                        th:text="${rate.name}">Sazba DPH
+                </option>
+              </select>
+              <div th:if="${#fields.hasErrors('taxRate.id')}" class="invalid-feedback" th:errors="*{taxRate.id}"></div>
+              <div th:if="${#fields.hasErrors('taxRate')}" class="invalid-feedback" th:errors="*{taxRate}"></div>
+            </div>
+          </div>
         </div>
-        <div class="col-md-6">
-          <label for="configMaxLength" class="form-label">Max délka</label>
-          <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxLength" th:field="*{configurator.maxLength}">
-          <div th:if="${#fields.hasErrors('configurator.maxLength')}" class="invalid-feedback" th:errors="*{configurator.maxLength}"></div>
+
+        <div class="card mb-4">
+          <div class="card-header">Parametry</div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="model" class="form-label">Model</label>
+                <input type="text" class="form-control" id="model" th:field="*{model}" placeholder="Např. Klasik, Pultová střecha...">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="material" class="form-label">Materiál</label>
+                <input type="text" class="form-control" id="material" th:field="*{material}" placeholder="Např. Smrk, Modřín...">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="length" class="form-label">Délka (cm)</label>
+                <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="length" th:field="*{length}" placeholder="Pro standardní produkty">
+                <div th:if="${#fields.hasErrors('length')}" class="invalid-feedback" th:errors="*{length}"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="width" class="form-label">Hloubka (cm)</label>
+                <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="width" th:field="*{width}" placeholder="Pro standardní produkty">
+                <div th:if="${#fields.hasErrors('width')}" class="invalid-feedback" th:errors="*{width}"></div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="height" class="form-label">Výška (cm)</label>
+                <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="height" th:field="*{height}" placeholder="Pro standardní produkty">
+                <div th:if="${#fields.hasErrors('height')}" class="invalid-feedback" th:errors="*{height}"></div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="roofOverstep" class="form-label">Přesah střechy</label>
+              <input type="text" class="form-control" id="roofOverstep" th:field="*{roofOverstep}" placeholder="Např. Standardní, Minimální...">
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header">SEO</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="metaTitle" class="form-label">Meta Title</label>
+              <input type="text" class="form-control" id="metaTitle" th:field="*{metaTitle}">
+            </div>
+            <div class="mb-3">
+              <label for="metaDescription" class="form-label">Meta Description</label>
+              <textarea class="form-control" id="metaDescription" th:field="*{metaDescription}" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+
+      </div> <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header">Nastavení produktu</div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+            <label class="form-check-label" for="active">Aktivní (zobrazit na e-shopu)</label>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="customisable" th:field="*{customisable}">
+            <label class="form-check-label" for="customisable">Produkt na míru (s konfigurátorem)</label>
+          </div>
         </div>
       </div>
-    </div>
-    </section>
-  </div>
 
-  <div class="row">
-  </div>
-
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configMinWidth" class="form-label">Min hloubka</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinWidth" th:field="*{configurator.minWidth}">
-      <div th:if="${#fields.hasErrors('configurator.minWidth')}" class="invalid-feedback" th:errors="*{configurator.minWidth}"></div>
-    </div>
-    <div class="col-md-6">
-      <div class="col-md-6">
-        <label for="configMaxWidth" class="form-label">Max hloubka</label>
-        <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxWidth" th:field="*{configurator.maxWidth}">
-        <div th:if="${#fields.hasErrors('configurator.maxWidth')}" class="invalid-feedback" th:errors="*{configurator.maxWidth}"></div>
+      <div class="card mb-4">
+        <div class="card-header">Přiřazené atributy</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Dostupné Designy (pro standardní)</label>
+            <div class="assoc-checkbox-list">
+              <div th:each="designOpt : ${allDesigns}" class="form-check">
+                <input class="form-check-input" type="checkbox" name="designIds"
+                       th:value="${designOpt.id}" th:id="'design_'+${designOpt.id}"
+                       th:checked="${product.availableDesigns != null and product.availableDesigns.contains(designOpt)}">
+                <label class="form-check-label" th:for="'design_'+${designOpt.id}" th:text="${designOpt.name}"></label>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dostupné Lazury (pro standardní)</label>
+            <div class="assoc-checkbox-list">
+              <div th:each="glazeOpt : ${allGlazes}" class="form-check">
+                <input class="form-check-input" type="checkbox" name="glazeIds"
+                       th:value="${glazeOpt.id}" th:id="'glaze_'+${glazeOpt.id}"
+                       th:checked="${product.availableGlazes != null and product.availableGlazes.contains(glazeOpt)}">
+                <label class="form-check-label" th:for="'glaze_'+${glazeOpt.id}" th:text="${glazeOpt.name}"></label>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dostupné Barvy střech (pro standardní)</label>
+            <div class="assoc-checkbox-list">
+              <div th:each="roofColorOpt : ${allRoofColors}" class="form-check">
+                <input class="form-check-input" type="checkbox" name="roofColorIds"
+                       th:value="${roofColorOpt.id}" th:id="'roofColor_'+${roofColorOpt.id}"
+                       th:checked="${product.availableRoofColors != null and product.availableRoofColors.contains(roofColorOpt)}">
+                <label class="form-check-label" th:for="'roofColor_'+${roofColorOpt.id}" th:text="${roofColorOpt.name}"></label>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dostupné Doplňky (pro produkt na míru)</label>
+            <div class="assoc-checkbox-list">
+              <div th:each="addonOpt : ${allAddons}" class="form-check">
+                <input class="form-check-input" type="checkbox" name="addonIds"
+                       th:value="${addonOpt.id}" th:id="'addon_'+${addonOpt.id}"
+                       th:checked="${product.availableAddons != null and product.availableAddons.contains(addonOpt)}">
+                <label class="form-check-label" th:for="'addon_'+${addonOpt.id}" th:text="${addonOpt.name}"></label>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-  </section>
-</div>
 
-<div class="row">
-</div>
+      <div th:if="${product.customisable and product.configurator != null}" class="card mb-4 configurator-section">
+        <div class="card-header">Nastavení Konfigurátoru</div>
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Limity rozměrů (cm)</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configMinLength" class="form-label">Min délka</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinLength" th:field="*{configurator.minLength}">
+              <div th:if="${#fields.hasErrors('configurator.minLength')}" class="invalid-feedback" th:errors="*{configurator.minLength}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configMaxLength" class="form-label">Max délka</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxLength" th:field="*{configurator.maxLength}">
+              <div th:if="${#fields.hasErrors('configurator.maxLength')}" class="invalid-feedback" th:errors="*{configurator.maxLength}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configMinWidth" class="form-label">Min hloubka</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinWidth" th:field="*{configurator.minWidth}">
+              <div th:if="${#fields.hasErrors('configurator.minWidth')}" class="invalid-feedback" th:errors="*{configurator.minWidth}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configMaxWidth" class="form-label">Max hloubka</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxWidth" th:field="*{configurator.maxWidth}">
+              <div th:if="${#fields.hasErrors('configurator.maxWidth')}" class="invalid-feedback" th:errors="*{configurator.maxWidth}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configMinHeight" class="form-label">Min výška</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinHeight" th:field="*{configurator.minHeight}">
+              <div th:if="${#fields.hasErrors('configurator.minHeight')}" class="invalid-feedback" th:errors="*{configurator.minHeight}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configMaxHeight" class="form-label">Max výška</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxHeight" th:field="*{configurator.maxHeight}">
+              <div th:if="${#fields.hasErrors('configurator.maxHeight')}" class="invalid-feedback" th:errors="*{configurator.maxHeight}"></div>
+            </div>
+          </div>
 
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configMinHeight" class="form-label">Min výška</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinHeight" th:field="*{configurator.minHeight}">
-    <div th:if="${#fields.hasErrors('configurator.minHeight')}" class="invalid-feedback" th:errors="*{configurator.minHeight}"></div>
+          <hr>
+          <h6 class="card-subtitle my-2 text-muted">Ceny za rozměry (za cm)</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configPriceCmLengthCZK" class="form-label">Cena/cm délky (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmLengthCZK" th:field="*{configurator.pricePerCmLengthCZK}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmLengthCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmLengthCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configPriceCmLengthEUR" class="form-label">Cena/cm délky (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmLengthEUR" th:field="*{configurator.pricePerCmLengthEUR}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmLengthEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmLengthEUR}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configPriceCmDepthCZK" class="form-label">Cena/cm hloubky (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmDepthCZK" th:field="*{configurator.pricePerCmDepthCZK}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmDepthCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmDepthCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configPriceCmDepthEUR" class="form-label">Cena/cm hloubky (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmDepthEUR" th:field="*{configurator.pricePerCmDepthEUR}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmDepthEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmDepthEUR}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configPriceCmHeightCZK" class="form-label">Cena/cm výšky (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightCZK" th:field="*{configurator.pricePerCmHeightCZK}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmHeightCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configPriceCmHeightEUR" class="form-label">Cena/cm výšky (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightEUR" th:field="*{configurator.pricePerCmHeightEUR}">
+              <div th:if="${#fields.hasErrors('configurator.pricePerCmHeightEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightEUR}"></div>
+            </div>
+          </div>
+
+          <hr>
+          <h6 class="card-subtitle my-2 text-muted">Ceny za volitelné prvky</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configDesignPriceCZK" class="form-label">Přípl. za design (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDesignPriceCZK" th:field="*{configurator.designPriceCZK}">
+              <div th:if="${#fields.hasErrors('configurator.designPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.designPriceCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configDesignPriceEUR" class="form-label">Přípl. za design (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDesignPriceEUR" th:field="*{configurator.designPriceEUR}">
+              <div th:if="${#fields.hasErrors('configurator.designPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.designPriceEUR}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configDividerPriceCZK" class="form-label">Cena příčky/cm hl. (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDividerPriceCZK" th:field="*{configurator.dividerPricePerCmDepthCZK}">
+              <div th:if="${#fields.hasErrors('configurator.dividerPricePerCmDepthCZK')}" class="invalid-feedback" th:errors="*{configurator.dividerPricePerCmDepthCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configDividerPriceEUR" class="form-label">Cena příčky/cm hl. (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDividerPriceEUR" th:field="*{configurator.dividerPricePerCmDepthEUR}">
+              <div th:if="${#fields.hasErrors('configurator.dividerPricePerCmDepthEUR')}" class="invalid-feedback" th:errors="*{configurator.dividerPricePerCmDepthEUR}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configGutterPriceCZK" class="form-label">Pevná cena za okap (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configGutterPriceCZK" th:field="*{configurator.gutterPriceCZK}">
+              <div th:if="${#fields.hasErrors('configurator.gutterPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.gutterPriceCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configGutterPriceEUR" class="form-label">Pevná cena za okap (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configGutterPriceEUR" th:field="*{configurator.gutterPriceEUR}">
+              <div th:if="${#fields.hasErrors('configurator.gutterPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.gutterPriceEUR}"></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="configShedPriceCZK" class="form-label">Pevná cena za zahr. domek (CZK)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configShedPriceCZK" th:field="*{configurator.shedPriceCZK}">
+              <div th:if="${#fields.hasErrors('configurator.shedPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.shedPriceCZK}"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="configShedPriceEUR" class="form-label">Pevná cena za zahr. domek (EUR)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configShedPriceEUR" th:field="*{configurator.shedPriceEUR}">
+              <div th:if="${#fields.hasErrors('configurator.shedPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.shedPriceEUR}"></div>
+            </div>
+          </div>
+        </div> </div> </div> </div> <div class="mt-4 d-flex justify-content-end">
+    <a th:href="@{/admin/products}" class="btn btn-secondary me-2">Zrušit</a>
+    <button type="submit" class="btn btn-primary">Uložit Produkt</button>
   </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configMaxHeight" class="form-label">Max výška</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxHeight" th:field="*{configurator.maxHeight}">
-      <div th:if="${#fields.hasErrors('configurator.maxHeight')}" class="invalid-feedback" th:errors="*{configurator.maxHeight}"></div>
-    </div>
-  </div>
-</div>
+  </form>
 </section>
-</div>
 
-<hr>
-<h6 class="card-subtitle my-2 text-muted">Ceny za rozměry (za cm)</h6>
-<div class="row g-3 mb-3">
-  <div class="col-md-6">
-    <label for="configPriceCmLengthCZK" class="form-label">Cena/cm délky (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmLengthCZK" th:field="*{configurator.pricePerCmLengthCZK}">
-    <div th:if="${#fields.hasErrors('configurator.pricePerCmLengthCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmLengthCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <label for="configPriceCmLengthEUR" class="form-label">Cena/cm délky (EUR)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmLengthEUR" th:field="*{configurator.pricePerCmLengthEUR}">
-    <div th:if="${#fields.hasErrors('configurator.pricePerCmLengthEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmLengthEUR}"></div>
-  </div>
-</div>
-</div>
-</section>
-</div>
-
-<div class="row">
-</div>
-
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configPriceCmDepthCZK" class="form-label">Cena/cm hloubky (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmDepthCZK" th:field="*{configurator.pricePerCmDepthCZK}">
-    <div th:if="${#fields.hasErrors('configurator.pricePerCmDepthCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmDepthCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configPriceCmDepthEUR" class="form-label">Cena/cm hloubky (EUR)</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmDepthEUR" th:field="*{configurator.pricePerCmDepthEUR}">
-      <div th:if="${#fields.hasErrors('configurator.pricePerCmDepthEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmDepthEUR}"></div>
-    </div>
-  </div>
-</div>
-</section>
-</div>
-
-<div class="row">
-</div>
-
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configPriceCmHeightCZK" class="form-label">Cena/cm výšky (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightCZK" th:field="*{configurator.pricePerCmHeightCZK}">
-    <div th:if="${#fields.hasErrors('configurator.pricePerCmHeightCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configPriceCmHeightEUR" class="form-label">Cena/cm výšky (EUR)</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightEUR" th:field="*{configurator.pricePerCmHeightEUR}">
-      <div th:if="${#fields.hasErrors('configurator.pricePerCmHeightEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightEUR}"></div>
-    </div>
-  </div>
-</div>
-</section>
-</div>
-
-<hr>
-<h6 class="card-subtitle my-2 text-muted">Ceny za volitelné prvky</h6>
-<div class="row g-3 mb-3">
-  <div class="col-md-6">
-    <label for="configDesignPriceCZK" class="form-label">Přípl. za design (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDesignPriceCZK" th:field="*{configurator.designPriceCZK}">
-    <div th:if="${#fields.hasErrors('configurator.designPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.designPriceCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <label for="configDesignPriceEUR" class="form-label">Přípl. za design (EUR)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDesignPriceEUR" th:field="*{configurator.designPriceEUR}">
-    <div th:if="${#fields.hasErrors('configurator.designPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.designPriceEUR}"></div>
-  </div>
-</div>
-</div>
-</section>
-</div>
-
-<div class="row">
-</div>
-
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configDividerPriceCZK" class="form-label">Cena příčky/cm hl. (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDividerPriceCZK" th:field="*{configurator.dividerPricePerCmDepthCZK}">
-    <div th:if="${#fields.hasErrors('configurator.dividerPricePerCmDepthCZK')}" class="invalid-feedback" th:errors="*{configurator.dividerPricePerCmDepthCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configDividerPriceEUR" class="form-label">Cena příčky/cm hl. (EUR)</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configDividerPriceEUR" th:field="*{configurator.dividerPricePerCmDepthEUR}">
-      <div th:if="${#fields.hasErrors('configurator.dividerPricePerCmDepthEUR')}" class="invalid-feedback" th:errors="*{configurator.dividerPricePerCmDepthEUR}"></div>
-    </div>
-  </div>
-</div>
-</section>
-</div>
-
-<div class="row">
-</div>
-
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configGutterPriceCZK" class="form-label">Pevná cena za okap (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configGutterPriceCZK" th:field="*{configurator.gutterPriceCZK}">
-    <div th:if="${#fields.hasErrors('configurator.gutterPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.gutterPriceCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configGutterPriceEUR" class="form-label">Pevná cena za okap (EUR)</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configGutterPriceEUR" th:field="*{configurator.gutterPriceEUR}">
-      <div th:if="${#fields.hasErrors('configurator.gutterPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.gutterPriceEUR}"></div>
-    </div>
-  </div>
-</div>
-</section>
-</div>
-
-<div class="row">
-</div>
-
-<div class="col-md-6">
-  <div class="col-md-6">
-    <label for="configShedPriceCZK" class="form-label">Pevná cena za zahr. domek (CZK)</label>
-    <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configShedPriceCZK" th:field="*{configurator.shedPriceCZK}">
-    <div th:if="${#fields.hasErrors('configurator.shedPriceCZK')}" class="invalid-feedback" th:errors="*{configurator.shedPriceCZK}"></div>
-  </div>
-  <div class="col-md-6">
-    <div class="col-md-6">
-      <label for="configShedPriceEUR" class="form-label">Pevná cena za zahr. domek (EUR)</label>
-      <input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configShedPriceEUR" th:field="*{configurator.shedPriceEUR}">
-      <div th:if="${#fields.hasErrors('configurator.shedPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.shedPriceEUR}"></div>
-    </div>
-  </div>
-</div>
-</section>
-</div>
-
-</div>
-</div> </div> <div class="card mb-4">
-</div>
-
-<div class="card mb-4">
-</div>
-
-</div> <div class="col-md-4">
-</div> </div> </form>
+</body>
+</html>
