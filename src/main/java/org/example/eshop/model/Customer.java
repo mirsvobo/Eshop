@@ -20,7 +20,7 @@ public class Customer {
     @Column(nullable = false) private String lastName;
     @Column(nullable = false, unique = true) private String email; // Unikátní pro přihlášení
     private String phone;
-    @Column(nullable = false) private String password; // Uložené HASH heslo
+    @Column(nullable = true) private String password; // Uložené HASH heslo
     @Column(nullable = false)
     private boolean isGuest = false;
 

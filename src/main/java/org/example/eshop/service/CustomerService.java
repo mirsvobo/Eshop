@@ -155,26 +155,24 @@ public class CustomerService {
         if (dto.getPhone() != null) customer.setPhone(dto.getPhone());
 
         // --- Fakturační údaje ---
-        customer.setInvoiceCompanyName(dto.getInvoiceCompanyName()); // Uložíme firmu
+        customer.setInvoiceCompanyName(dto.getInvoiceCompanyName());
         customer.setInvoiceTaxId(dto.getInvoiceTaxId());
         customer.setInvoiceVatId(dto.getInvoiceVatId());
-        // Uložíme adresu
         if (dto.getInvoiceStreet() != null) customer.setInvoiceStreet(dto.getInvoiceStreet());
         if (dto.getInvoiceCity() != null) customer.setInvoiceCity(dto.getInvoiceCity());
         if (dto.getInvoiceZipCode() != null) customer.setInvoiceZipCode(dto.getInvoiceZipCode());
         if (dto.getInvoiceCountry() != null) customer.setInvoiceCountry(dto.getInvoiceCountry());
 
         // Nastavení jména/příjmení na faktuře v Customer entitě
+        String customerIdLog = customer.getId() != null ? customer.getId().toString() : "(new)"; // Bezpečné získání ID pro log
         if (StringUtils.hasText(dto.getInvoiceCompanyName())) {
-            // Pokud je firma, jméno/příjmení na faktuře nepotřebujeme (nebo je null)
             customer.setInvoiceFirstName(null);
             customer.setInvoiceLastName(null);
-            log.debug("Setting invoice name/lastname to null for customer ID {} due to company name.", customer.getId() != 0 ? customer.getId() : "(new)");
+            log.debug("Setting invoice name/lastname to null for customer ID {} due to company name.", customerIdLog);
         } else {
-            // Pokud není firma, použijeme hlavní kontaktní jméno/příjmení
             customer.setInvoiceFirstName(dto.getFirstName());
             customer.setInvoiceLastName(dto.getLastName());
-            log.debug("Setting invoice name/lastname from main contact for customer ID {}.", customer.getId() != 0 ? customer.getId() : "(new)");
+            log.debug("Setting invoice name/lastname from main contact for customer ID {}.", customerIdLog);
         }
 
         // --- Dodací údaje ---
@@ -190,7 +188,6 @@ public class CustomerService {
             if (dto.getDeliveryPhone() != null) customer.setDeliveryPhone(dto.getDeliveryPhone());
         }
         // @PreUpdate/@PrePersist v Customer entitě se postará o synchronizaci/vymazání dodací adresy
-        // podle flagu useInvoiceAddressAsDelivery PŘED uložením do DB.
     }
 
 

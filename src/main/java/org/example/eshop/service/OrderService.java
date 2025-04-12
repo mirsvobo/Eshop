@@ -68,21 +68,23 @@ public class OrderService implements PriceConstants {
     public Order createOrder(CreateOrderRequest request) {
         log.info("Attempting to create order for customer ID: {} with explicit currency: {}", request.getCustomerId(), request.getCurrency());
         String orderCurrency = request.getCurrency();
-        Order order = null;
-        Customer customer = null;
-        Coupon appliedCoupon = null;
+        Order order = null; // Initialization to be accessible in catch block
+        Customer customer = null; // Initialization
+        Coupon appliedCoupon = null; // Initialization
 
         try {
-            // 1. Validace & Načtení Hlavních Entit
+            // 1. Validation & Loading Main Entities
             log.debug("[Order Creation - Step 1] Validating request and loading entities for currency: {}", orderCurrency);
-            validateOrderRequest(request);
-            customer = customerRepository.findById(request.getCustomerId()).orElseThrow(() -> new EntityNotFoundException("Customer not found with id: " + request.getCustomerId()));
+            validateOrderRequest(request); // Validate input DTO
+            customer = customerRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new EntityNotFoundException("Customer not found with id: " + request.getCustomerId()));
             if (request.isUseCustomerAddresses() && !hasSufficientAddress(customer)) {
-                throw new IllegalArgumentException("Customer (ID: " + customer.getId() + ") missing required address info.");
+                throw new IllegalArgumentException("Customer (ID: " + customer.getId() + ") missing required address info for selected address usage.");
             }
-            OrderState initialState = orderStateRepository.findByCodeIgnoreCase(INITIAL_ORDER_STATE_CODE).orElseThrow(() -> new IllegalStateException("Initial OrderState missing (code: " + INITIAL_ORDER_STATE_CODE + ")."));
+            OrderState initialState = orderStateRepository.findByCodeIgnoreCase(INITIAL_ORDER_STATE_CODE)
+                    .orElseThrow(() -> new IllegalStateException("Initial OrderState missing (code: " + INITIAL_ORDER_STATE_CODE + ")."));
 
-            // 2. Inicializace Objektu Order
+            // 2. Initialization of Order Object
             log.debug("[Order Creation - Step 2] Initializing Order object for currency: {}", orderCurrency);
             order = new Order();
             order.setCustomer(customer);
@@ -90,9 +92,9 @@ public class OrderService implements PriceConstants {
             order.setPaymentMethod(request.getPaymentMethod());
             order.setOrderItems(new ArrayList<>());
             order.setNote(request.getCustomerNote());
-            copyAddressesToOrder(order, customer, request);
+            copyAddressesToOrder(order, customer, request); // Copy address from Customer or DTO
             order.setCurrency(orderCurrency);
-            log.info("Order processing with currency: {}", orderCurrency);
+            // Initialize numeric fields to zero
             order.setSubTotalWithoutTax(BigDecimal.ZERO);
             order.setTotalItemsTax(BigDecimal.ZERO);
             order.setCouponDiscountAmount(BigDecimal.ZERO);
@@ -107,7 +109,7 @@ public class OrderService implements PriceConstants {
             BigDecimal runningTotalTaxFromItems = BigDecimal.ZERO;
             boolean containsCustomProduct = false;
 
-            // 3. Zpracování Položek Objednávky
+            // 3. Processing Order Items
             log.debug("[Order Creation - Step 3] Processing order items for currency: {}", orderCurrency);
             if (request.getItems() == null) {
                 throw new IllegalArgumentException("Order items list cannot be null.");
@@ -119,143 +121,199 @@ public class OrderService implements PriceConstants {
                 }
                 try {
                     log.debug("Processing item with Product ID: {}", itemDto.getProductId());
-                    OrderItem orderItem = processCartItem(itemDto, order, orderCurrency);
+                    OrderItem orderItem = processCartItem(itemDto, order, orderCurrency); // Process one item
                     order.getOrderItems().add(orderItem);
+                    // Add to running totals (with null checks)
                     BigDecimal itemSubtotal = Optional.ofNullable(orderItem.getTotalPriceWithoutTax()).orElse(BigDecimal.ZERO);
                     BigDecimal itemTax = Optional.ofNullable(orderItem.getTotalTaxAmount()).orElse(BigDecimal.ZERO);
-                    runningSubTotalWithoutTax = Optional.ofNullable(runningSubTotalWithoutTax).orElse(BigDecimal.ZERO).add(itemSubtotal);
-                    runningTotalTaxFromItems = Optional.ofNullable(runningTotalTaxFromItems).orElse(BigDecimal.ZERO).add(itemTax);
+                    runningSubTotalWithoutTax = runningSubTotalWithoutTax.add(itemSubtotal);
+                    runningTotalTaxFromItems = runningTotalTaxFromItems.add(itemTax);
                     if (orderItem.isCustomConfigured()) containsCustomProduct = true;
-                    log.debug("Processed item successfully. Subtotal: {}, Tax: {}", runningSubTotalWithoutTax, runningTotalTaxFromItems);
+                    log.debug("Processed item successfully. Running Subtotal: {}, Running Item Tax: {}", runningSubTotalWithoutTax, runningTotalTaxFromItems);
                 } catch (Exception e) {
                     log.error("!!! CRITICAL ERROR processing item (Product ID: {}): {}", itemDto.getProductId(), e.getMessage(), e);
+                    // Re-throw to interrupt order creation
                     throw new RuntimeException("Failed to process order item (Product ID: " + itemDto.getProductId() + "): " + e.getMessage(), e);
                 }
             }
-            if (order.getOrderItems().isEmpty())
+            // Check if any valid items remain
+            if (order.getOrderItems().isEmpty()) {
                 throw new IllegalArgumentException("Order must contain at least one valid item.");
+            }
+            // Set final item totals
             order.setSubTotalWithoutTax(runningSubTotalWithoutTax.setScale(PRICE_SCALE, ROUNDING_MODE));
             order.setTotalItemsTax(runningTotalTaxFromItems.setScale(PRICE_SCALE, ROUNDING_MODE));
-            log.debug("Finished items. Subtotal: {}, Item Tax: {}", order.getSubTotalWithoutTax(), order.getTotalItemsTax());
+            log.debug("Finished items processing. Final Subtotal: {}, Final Item Tax: {}", order.getSubTotalWithoutTax(), order.getTotalItemsTax());
 
-            // 4. Aplikace Kupónu
-            BigDecimal couponDiscount = BigDecimal.ZERO;
-            appliedCoupon = null;
+            // 4. Applying Coupon
+            BigDecimal couponDiscount = BigDecimal.ZERO; // Default discount is 0
+            appliedCoupon = null; // Reset before validation
             if (StringUtils.hasText(request.getCouponCode())) {
-                log.debug("[Order Creation - Step 4] Applying coupon '{}' currency: {}", request.getCouponCode(), orderCurrency);
+                log.debug("[Order Creation - Step 4] Applying coupon '{}' for currency: {}", request.getCouponCode(), orderCurrency);
                 try {
-                    appliedCoupon = applyCouponToOrder(order, request.getCouponCode(), order.getSubTotalWithoutTax(), customer, orderCurrency);
-                    couponDiscount = Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO);
-                    log.debug("Coupon applied. Discount: {}", couponDiscount);
+                    // Use the helper method to validate and apply the coupon
+                    appliedCoupon = validateAndApplyCoupon(order, request.getCouponCode(), customer);
+                    couponDiscount = Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO); // Get the set discount
+                    log.debug("Coupon validation finished. Applied Coupon: {}, Discount Amount: {}", (appliedCoupon != null ? appliedCoupon.getCode() : "None"), couponDiscount);
                 } catch (Exception e) {
-                    log.error("Exception during coupon application (Code: {}): {}. Ignoring.", request.getCouponCode(), e.getMessage(), e);
+                    // Log the error but continue without the coupon
+                    log.error("Exception during coupon application (Code: {}): {}. Ignoring coupon for this order.", request.getCouponCode(), e.getMessage());
                     appliedCoupon = null;
                     couponDiscount = BigDecimal.ZERO;
-                    order.setCouponDiscountAmount(couponDiscount);
+                    order.setCouponDiscountAmount(couponDiscount); // Ensure zero discount
                 }
             }
-            order.setAppliedCouponCode(StringUtils.hasText(request.getCouponCode()) ? request.getCouponCode() : null);
+            // Store the coupon code (even if invalid) and the reference to the valid coupon
+            order.setAppliedCouponCode(StringUtils.hasText(request.getCouponCode()) ? request.getCouponCode().trim().toUpperCase() : null);
             order.setCouponDiscountAmount(couponDiscount.setScale(PRICE_SCALE, ROUNDING_MODE));
-            order.setAppliedCoupon(appliedCoupon);
+            order.setAppliedCoupon(appliedCoupon); // Will be null if coupon was not valid
 
-            // 5. Výpočet Ceny Dopravy
+            // 5. Calculating Shipping Cost
             BigDecimal shippingCostNoTax = BigDecimal.ZERO;
             BigDecimal shippingTaxRate = BigDecimal.ZERO;
             BigDecimal shippingTax = BigDecimal.ZERO;
+            BigDecimal shippingDiscountAmount = BigDecimal.ZERO; // Variable to track shipping discount
+
+            // Calculate shipping only if there's no active coupon for free shipping
             if (appliedCoupon == null || !appliedCoupon.isFreeShipping()) {
-                log.debug("[Order Creation - Step 5] Calculating shipping cost currency: {}", orderCurrency);
+                log.debug("[Order Creation - Step 5] Calculating shipping cost (no free shipping coupon). Currency: {}", orderCurrency);
                 try {
-                    // Použijeme hodnoty z requestu, pokud jsou validní, jinak fallback na calculation
-                    if (request.getShippingCostNoTax() != null && request.getShippingTax() != null) {
+                    // Use values from request if valid and non-negative
+                    if (request.getShippingCostNoTax() != null && request.getShippingTax() != null && request.getShippingCostNoTax().compareTo(BigDecimal.ZERO) >= 0) {
                         shippingCostNoTax = request.getShippingCostNoTax();
                         shippingTax = request.getShippingTax();
-                        // Odhadneme sazbu, pokud je cena > 0
+                        // Estimate rate if cost > 0
                         if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0) {
+                            // Use higher precision for division
                             shippingTaxRate = shippingTax.divide(shippingCostNoTax, CALCULATION_SCALE, ROUNDING_MODE);
                         } else {
-                            shippingTaxRate = BigDecimal.ZERO;
+                            shippingTaxRate = BigDecimal.ZERO; // Rate is 0 if cost is 0
                         }
                         log.debug("Using shipping costs from request. CostNoTax: {}, Tax: {}, Estimated Rate: {}", shippingCostNoTax, shippingTax, shippingTaxRate);
                     } else {
-                        log.warn("Shipping costs missing in request, recalculating...");
+                        // Recalculate if request values are missing or invalid
+                        log.warn("Shipping costs missing or invalid in request, recalculating for order {}...", (order.getOrderCode() != null ? order.getOrderCode() : "(new)"));
                         shippingCostNoTax = Optional.ofNullable(shippingService.calculateShippingCost(order, orderCurrency)).orElse(BigDecimal.ZERO);
                         shippingTaxRate = Optional.ofNullable(shippingService.getShippingTaxRate()).orElse(BigDecimal.ZERO);
                         if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0) {
-                            if (shippingTaxRate.compareTo(BigDecimal.ZERO) <= 0)
-                                throw new IllegalStateException("Shipping tax rate missing or zero during recalculation.");
+                            if (shippingTaxRate.compareTo(BigDecimal.ZERO) <= 0) {
+                                log.error("Shipping tax rate missing or zero during recalculation for order {}!", (order.getOrderCode() != null ? order.getOrderCode() : "(new)"));
+                                shippingTaxRate = new BigDecimal("0.21"); // Fallback to 21%? Or leave 0?
+                                log.warn("Falling back to default shipping tax rate: {}", shippingTaxRate);
+                            }
                             shippingTax = shippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
+                        } else {
+                            shippingTax = BigDecimal.ZERO; // Zero cost = zero tax
                         }
                         log.debug("Shipping recalculated. CostNoTax: {}, Tax: {}, Rate: {}", shippingCostNoTax, shippingTax, shippingTaxRate);
                     }
                 } catch (Exception e) {
-                    log.error("!!! CRITICAL ERROR shipping calculation: {}", e.getMessage(), e);
+                    log.error("!!! CRITICAL ERROR during shipping calculation for order {}: {}", (order.getOrderCode() != null ? order.getOrderCode() : "(new)"), e.getMessage(), e);
+                    // Re-throw to interrupt order creation
                     throw new RuntimeException("Failed to calculate shipping cost: " + e.getMessage(), e);
                 }
             } else {
-                log.info("Free shipping applied due to coupon '{}'", appliedCoupon.getCode());
+                // Free shipping coupon IS active
+                log.info("Free shipping applied due to coupon '{}' for order {}.", appliedCoupon.getCode(), (order.getOrderCode() != null ? order.getOrderCode() : "(new)"));
+                // Determine the original shipping cost to know the discount amount
+                try {
+                    // Try from request first (if AJAX calculated)
+                    if (request.getShippingCostNoTax() != null && request.getShippingCostNoTax().compareTo(BigDecimal.ZERO) > 0) {
+                        shippingDiscountAmount = request.getShippingCostNoTax();
+                    } else {
+                        // If not in request, try recalculating
+                        shippingDiscountAmount = Optional.ofNullable(shippingService.calculateShippingCost(order, orderCurrency)).orElse(BigDecimal.ZERO);
+                    }
+                } catch (Exception e) {
+                    log.error("Could not determine original shipping cost to calculate discount amount for order {}: {}", (order.getOrderCode() != null ? order.getOrderCode() : "(new)"), e.getMessage());
+                    shippingDiscountAmount = BigDecimal.ZERO; // Fallback
+                }
+                shippingDiscountAmount = shippingDiscountAmount.max(BigDecimal.ZERO); // Ensure non-negative
+
+                // Set final costs to zero
+                shippingCostNoTax = BigDecimal.ZERO;
+                shippingTaxRate = BigDecimal.ZERO; // Rate is zero if cost is zero
+                shippingTax = BigDecimal.ZERO;
+                log.info("Shipping costs set to ZERO for order {}. Discount amount recorded: {}", (order.getOrderCode() != null ? order.getOrderCode() : "(new)"), shippingDiscountAmount);
             }
+            // Save final (potentially zero) costs and rate to the order
             order.setShippingCostWithoutTax(shippingCostNoTax.setScale(PRICE_SCALE, ROUNDING_MODE));
             order.setShippingTaxRate(shippingTaxRate.setScale(CALCULATION_SCALE, ROUNDING_MODE));
             order.setShippingTax(shippingTax.setScale(PRICE_SCALE, ROUNDING_MODE));
+            // NOTE: If shippingDiscountAmount needs to be stored, add a field to the Order entity.
 
-            // 6. Výpočet Finálních Součtů
-            log.debug("[Order Creation - Step 6] Calculating final totals currency: {}", orderCurrency);
+            // 6. Calculating Final Totals
+            log.debug("[Order Creation - Step 6] Calculating final totals for currency: {}", orderCurrency);
             try {
-                BigDecimal subTotalAfterDiscount = Optional.ofNullable(order.getSubTotalWithoutTax()).orElse(BigDecimal.ZERO).subtract(Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO));
-                BigDecimal finalTotalWithoutTax = subTotalAfterDiscount.add(Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO));
-                BigDecimal finalTotalTax = Optional.ofNullable(order.getTotalItemsTax()).orElse(BigDecimal.ZERO).add(Optional.ofNullable(order.getShippingTax()).orElse(BigDecimal.ZERO));
+                BigDecimal subTotalAfterDiscount = Optional.ofNullable(order.getSubTotalWithoutTax()).orElse(BigDecimal.ZERO)
+                        .subtract(Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO));
+                // Use final (potentially zero) shipping costs
+                BigDecimal finalTotalWithoutTax = subTotalAfterDiscount
+                        .add(Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO));
+                // Use final (potentially zero) shipping tax
+                BigDecimal finalTotalTax = Optional.ofNullable(order.getTotalItemsTax()).orElse(BigDecimal.ZERO)
+                        .add(Optional.ofNullable(order.getShippingTax()).orElse(BigDecimal.ZERO));
                 BigDecimal finalTotalWithTax = finalTotalWithoutTax.add(finalTotalTax);
+
                 order.setTotalPriceWithoutTax(finalTotalWithoutTax.setScale(PRICE_SCALE, ROUNDING_MODE));
                 order.setTotalTax(finalTotalTax.setScale(PRICE_SCALE, ROUNDING_MODE));
                 order.setTotalPrice(finalTotalWithTax.setScale(PRICE_SCALE, ROUNDING_MODE));
-                log.debug("Final totals calculated. TotalNoTax: {}, TotalTax: {}, TotalWithTax: {}", order.getTotalPriceWithoutTax(), order.getTotalTax(), order.getTotalPrice());
+                log.debug("Final totals calculated. TotalNoTax: {}, TotalTax: {}, TotalWithTax: {}",
+                        order.getTotalPriceWithoutTax(), order.getTotalTax(), order.getTotalPrice());
             } catch (Exception e) {
-                log.error("!!! CRITICAL ERROR calculating final totals: {}", e.getMessage(), e);
+                String orderCodeLog = order.getOrderCode() != null ? order.getOrderCode() : "(new)";
+                log.error("!!! CRITICAL ERROR calculating final totals for order {}: {}", orderCodeLog, e.getMessage(), e);
                 throw new RuntimeException("Failed to calculate final totals: " + e.getMessage(), e);
             }
 
-            // 7. Zpracování Stavu Platby a Zálohy
-            log.debug("[Order Creation - Step 7] Determining payment status/deposit currency: {}", orderCurrency);
+            // 7. Processing Payment Status and Deposit
+            log.debug("[Order Creation - Step 7] Determining payment status/deposit for currency: {}", orderCurrency);
             try {
+                // Use PaymentService to determine initial status
                 order.setPaymentStatus(paymentService.determineInitialPaymentStatus(order));
+                // Calculate deposit only for custom products
                 if (containsCustomProduct) {
                     BigDecimal deposit = paymentService.calculateDeposit(order.getTotalPrice());
                     order.setDepositAmount(Optional.ofNullable(deposit).orElse(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE));
-                    // Pokud služba nevrátila AWAITING_DEPOSIT, ale má být, přenastavíme
+                    // If service didn't return AWAITING_DEPOSIT but should have, override
                     if (order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && !PAYMENT_STATUS_AWAITING_DEPOSIT.equals(order.getPaymentStatus())) {
-                        log.warn("Order has custom product and deposit amount > 0, overriding initial payment status from '{}' to '{}'.",
-                                order.getPaymentStatus(), PAYMENT_STATUS_AWAITING_DEPOSIT);
+                        String orderCodeLog = order.getOrderCode() != null ? order.getOrderCode() : "(new)";
+                        log.warn("Order {} has custom product and deposit amount > 0, overriding initial payment status from '{}' to '{}'.",
+                                orderCodeLog, order.getPaymentStatus(), PAYMENT_STATUS_AWAITING_DEPOSIT);
                         order.setPaymentStatus(PAYMENT_STATUS_AWAITING_DEPOSIT);
                     }
-                    log.info("Deposit amount {} {} calculated.", order.getDepositAmount(), order.getCurrency());
+                    String orderCodeLog = order.getOrderCode() != null ? order.getOrderCode() : "(new)";
+                    log.info("Deposit amount {} {} calculated for custom order {}.", order.getDepositAmount(), order.getCurrency(), orderCodeLog);
                 } else {
-                    order.setDepositAmount(null); // Standardní produkt nemá zálohu
+                    order.setDepositAmount(null); // Standard product has no deposit
                 }
-                log.debug("Final Payment status: {}, Deposit: {}", order.getPaymentStatus(), order.getDepositAmount());
+                log.debug("Final Payment status: {}, Deposit Amount: {}", order.getPaymentStatus(), order.getDepositAmount());
             } catch (Exception e) {
-                log.error("!!! CRITICAL ERROR determining payment status/deposit: {}", e.getMessage(), e);
+                String orderCodeLog = order.getOrderCode() != null ? order.getOrderCode() : "(new)";
+                log.error("!!! CRITICAL ERROR determining payment status/deposit for order {}: {}", orderCodeLog, e.getMessage(), e);
                 throw new RuntimeException("Failed to determine payment status/deposit: " + e.getMessage(), e);
             }
 
-            // Nastavení kódu objednávky
+            // Set order code
             order.setOrderCode(orderCodeGeneratorService.getNextOrderCode());
             log.debug("Generated Order Code: {}", order.getOrderCode());
 
-            // 8. Uložení Objednávky
+            // 8. Saving the Order
             log.debug("[Order Creation - Step 8] Saving order...");
             Order savedOrder;
             try {
                 savedOrder = orderRepository.save(order);
                 log.info("Order {} created successfully. Total: {} {}", savedOrder.getOrderCode(), savedOrder.getTotalPrice(), savedOrder.getCurrency());
             } catch (Exception e) {
-                log.error("!!! CRITICAL ERROR during order save: {}", e.getMessage(), e);
+                log.error("!!! CRITICAL ERROR during order save for potential order code {}: {}", order.getOrderCode(), e.getMessage(), e);
+                // Re-throw to interrupt order creation
                 throw new RuntimeException("Failed to save order: " + e.getMessage(), e);
             }
 
-            // --- Nekritické kroky (Logujeme chyby, ale neselže to transakci) ---
-            // 9. Označení kupónu
+            // --- Non-critical steps (Log errors, but don't fail the transaction) ---
+            // 9. Marking Coupon Used
             if (appliedCoupon != null) {
-                log.debug("[Order Creation - Step 9] Marking coupon used...");
+                log.debug("[Order Creation - Step 9] Marking coupon {} used...", appliedCoupon.getCode());
                 try {
                     couponService.markCouponAsUsed(appliedCoupon);
                 } catch (Exception e) {
@@ -263,17 +321,17 @@ public class OrderService implements PriceConstants {
                             appliedCoupon.getId(), e.getMessage(), e);
                 }
             }
-            // 10. Odeslání potvrzovacího emailu
-            log.debug("[Order Creation - Step 10] Sending confirmation email...");
+            // 10. Sending Confirmation Email
+            log.debug("[Order Creation - Step 10] Sending confirmation email for order {}...", savedOrder.getOrderCode());
             try {
                 emailService.sendOrderConfirmationEmail(savedOrder);
             } catch (Exception e) {
                 log.error("Non-critical error sending confirmation email for order {}: {}. Order creation continues.",
                         savedOrder.getOrderCode(), e.getMessage(), e);
             }
-            // 11. Generování zálohové faktury (pokud je třeba)
-            if (savedOrder.getDepositAmount() != null && savedOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
-                log.debug("[Order Creation - Step 11] Triggering proforma invoice generation. Currency: {}", savedOrder.getCurrency());
+            // 11. Generating Proforma Invoice (if needed)
+            if (PAYMENT_STATUS_AWAITING_DEPOSIT.equals(savedOrder.getPaymentStatus()) && savedOrder.getDepositAmount() != null && savedOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
+                log.debug("[Order Creation - Step 11] Triggering proforma invoice generation for order {}. Currency: {}", savedOrder.getOrderCode(), savedOrder.getCurrency());
                 try {
                     invoiceService.generateProformaInvoice(savedOrder);
                 } catch (Exception e) {
@@ -282,17 +340,22 @@ public class OrderService implements PriceConstants {
                 }
             }
 
-            return savedOrder;
+            return savedOrder; // Return the successfully saved order
 
         } catch (Exception mainException) {
+            // Log the main error
             String customerIdStr = (request != null && request.getCustomerId() != null) ? request.getCustomerId().toString() : "Unknown";
-            log.error("!!! ORDER CREATION FAILED for customer ID {}. Error message: {} !!!", customerIdStr, mainException.getMessage());
+            String orderCodeLog = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "(new)";
+            log.error("!!! ORDER CREATION FAILED for customer ID {} / Order Code {}. Error message: {} !!!", customerIdStr, orderCodeLog, mainException.getMessage());
+            // Log the stack trace for detailed analysis
             log.error("Order Creation Exception Stack Trace:", mainException);
-            throw mainException; // Znovu vyhodit pro rollback transakce
+            // Re-throw the exception to ensure transaction rollback and controller can react
+            throw mainException;
         }
     }
 
-    // ... (processCartItem a ostatní pomocné metody zůstávají stejné jako v předchozí verzi) ...
+
+    // ... (processCartItem a ostatní pomocné metody zůstávají stejné) ...
     private OrderItem processCartItem(CartItemDto itemDto, Order order, String currency) {
         log.debug("Starting processCartItem for Product ID: {}", itemDto.getProductId());
         // --- Fetching Product and Tax Rate ---
@@ -519,39 +582,6 @@ public class OrderService implements PriceConstants {
         return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE);
     }
 
-    private Coupon applyCouponToOrder(Order order, String couponCode, BigDecimal subTotalWithoutTax, Customer customer, String currency) {
-        if (!StringUtils.hasText(couponCode) || order == null || subTotalWithoutTax == null || customer == null) {
-            if (order != null) order.setCouponDiscountAmount(BigDecimal.ZERO);
-            return null;
-        }
-        Optional<Coupon> couponOpt = couponService.findByCode(couponCode);
-        if (couponOpt.isEmpty()) {
-            log.warn("Coupon code '{}' not found.", couponCode);
-            order.setCouponDiscountAmount(BigDecimal.ZERO);
-            return null;
-        }
-        Coupon coupon = couponOpt.get();
-        boolean isGuest = customer.isGuest();
-        // Validace kupónu
-        if (!couponService.isCouponGenerallyValid(coupon) ||
-                !couponService.checkMinimumOrderValue(coupon, subTotalWithoutTax, currency) ||
-                (!isGuest && !couponService.checkCustomerUsageLimit(customer, coupon))) {
-            log.warn("Coupon {} is invalid for cust={}, isGuest={}, subtotal={} {}", couponCode, customer.getId(), isGuest, subTotalWithoutTax, currency);
-            order.setCouponDiscountAmount(BigDecimal.ZERO);
-            return null;
-        }
-        // Speciální logování pro hosta a limitovaný kupón
-        if (isGuest && coupon.getUsageLimitPerCustomer() != null && coupon.getUsageLimitPerCustomer() > 0) {
-            log.warn("Applying customer-limited coupon {} to guest user {}. Limit check needed if guest converts.", couponCode, customer.getId());
-        }
-        // Výpočet slevy
-        BigDecimal discountAmount = Optional.ofNullable(couponService.calculateDiscountAmount(subTotalWithoutTax, coupon, currency))
-                .orElse(BigDecimal.ZERO);
-        order.setCouponDiscountAmount(discountAmount); // Nastavení slevy do objednávky
-        log.info("Applied coupon {} for cust={}, isGuest={}, discount={} {}", couponCode, customer.getId(), isGuest, order.getCouponDiscountAmount(), currency);
-        return coupon; // Vrácení aplikovaného kupónu
-    }
-
     private void validateOrderRequest(CreateOrderRequest request) {
         if (request == null) throw new IllegalArgumentException("Request cannot be null.");
         if (request.getCustomerId() == null) throw new IllegalArgumentException("Customer ID missing.");
@@ -561,11 +591,11 @@ public class OrderService implements PriceConstants {
         if (!StringUtils.hasText(request.getCurrency()) || !(DEFAULT_CURRENCY.equals(request.getCurrency()) || EURO_CURRENCY.equals(request.getCurrency()))) {
             throw new IllegalArgumentException("Invalid or missing currency in request: " + request.getCurrency());
         }
-        // Validace cen dopravy byla přesunuta do kroku 5 v createOrder
+        // Shipping cost validation is now handled within the createOrder logic
     }
 
     private boolean hasSufficientAddress(Customer customer) {
-        // Kontrola fakturační adresy
+        // Check invoice address
         boolean hasInvoiceRecipient = StringUtils.hasText(customer.getInvoiceCompanyName()) ||
                 (StringUtils.hasText(customer.getInvoiceFirstName()) && StringUtils.hasText(customer.getInvoiceLastName()));
         boolean hasInvoiceCore = StringUtils.hasText(customer.getInvoiceStreet()) &&
@@ -574,7 +604,7 @@ public class OrderService implements PriceConstants {
                 StringUtils.hasText(customer.getInvoiceCountry());
         if (!hasInvoiceRecipient || !hasInvoiceCore) return false;
 
-        // Kontrola dodací adresy, pokud není stejná jako fakturační
+        // Check delivery address if it's different
         if (!customer.isUseInvoiceAddressAsDelivery()) {
             boolean hasDeliveryRecipient = StringUtils.hasText(customer.getDeliveryCompanyName()) ||
                     (StringUtils.hasText(customer.getDeliveryFirstName()) && StringUtils.hasText(customer.getDeliveryLastName()));
@@ -584,12 +614,11 @@ public class OrderService implements PriceConstants {
                     StringUtils.hasText(customer.getDeliveryCountry());
             return hasDeliveryRecipient && hasDeliveryCore;
         }
-        return true; // Fakturační stačí, pokud je dodací stejná
+        return true; // Invoice address is sufficient if delivery is the same
     }
 
-    // Uvnitř třídy OrderService
     private void copyAddressesToOrder(Order order, Customer customer, CreateOrderRequest request) {
-        // Kopírování fakturační adresy (včetně IČO/DIČ)
+        // Copying invoice address (including Tax IDs)
         order.setInvoiceCompanyName(customer.getInvoiceCompanyName());
         order.setInvoiceStreet(customer.getInvoiceStreet());
         order.setInvoiceCity(customer.getInvoiceCity());
@@ -598,29 +627,25 @@ public class OrderService implements PriceConstants {
         order.setInvoiceTaxId(customer.getInvoiceTaxId());
         order.setInvoiceVatId(customer.getInvoiceVatId());
 
-        // Nastavení jména/příjmení na faktuře v OBJEDNÁVCE
+        // Setting invoice recipient name based on company/contact
         if (StringUtils.hasText(customer.getInvoiceCompanyName())) {
-            // Pokud je firma, primárně použijeme ji. Jméno/příjmení na faktuře v Order může být null.
-            // Záleží na požadavcích SuperFaktury - pokud vyžaduje i jméno, můžeme sem dát kontaktní osobu.
-            order.setInvoiceFirstName(null); // Nebo customer.getFirstName() ? Záleží na SF.
-            order.setInvoiceLastName(null); // Nebo customer.getLastName() ?
+            order.setInvoiceFirstName(null); // Or customer contact name if needed by SF
+            order.setInvoiceLastName(null);
         } else {
-            // Pokud není firma, použijeme hlavní kontaktní jméno/příjmení
             order.setInvoiceFirstName(customer.getFirstName());
             order.setInvoiceLastName(customer.getLastName());
         }
 
-        // Kopírování dodací adresy (použije aktuální stav z Customer entity)
+        // Copying delivery address (uses current state from Customer entity)
         if (customer.isUseInvoiceAddressAsDelivery()) {
             log.debug("Copying invoice address to delivery address for order.");
-            order.setDeliveryFirstName(order.getInvoiceFirstName()); // Použijeme jméno z faktury (které je buď null nebo z kontaktu)
-            order.setDeliveryLastName(order.getInvoiceLastName());   // Použijeme příjmení z faktury
-            order.setDeliveryCompanyName(order.getInvoiceCompanyName()); // Použijeme firmu z faktury
+            order.setDeliveryFirstName(order.getInvoiceFirstName());
+            order.setDeliveryLastName(order.getInvoiceLastName());
+            order.setDeliveryCompanyName(order.getInvoiceCompanyName());
             order.setDeliveryStreet(customer.getInvoiceStreet());
             order.setDeliveryCity(customer.getInvoiceCity());
             order.setDeliveryZipCode(customer.getInvoiceZipCode());
             order.setDeliveryCountry(customer.getInvoiceCountry());
-            // Použijeme hlavní telefon zákazníka, pokud dodací není specifikován v Customer
             order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         } else {
             log.debug("Copying specific delivery address to order.");
@@ -631,15 +656,14 @@ public class OrderService implements PriceConstants {
             order.setDeliveryCity(customer.getDeliveryCity());
             order.setDeliveryZipCode(customer.getDeliveryZipCode());
             order.setDeliveryCountry(customer.getDeliveryCountry());
-            // Použijeme dodací telefon, pokud existuje, jinak hlavní
             order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         }
-        // Fallback pro dodací telefon, pokud stále chybí
+        // Fallback for delivery phone
         if (!StringUtils.hasText(order.getDeliveryPhone()) && StringUtils.hasText(customer.getPhone())) {
             order.setDeliveryPhone(customer.getPhone());
         }
 
-        // Kontrola kompletnosti PŘENESENÉ dodací adresy (zůstává)
+        // Ensure copied delivery address is complete
         boolean deliveryAddrOk = StringUtils.hasText(order.getDeliveryStreet()) &&
                 StringUtils.hasText(order.getDeliveryCity()) &&
                 StringUtils.hasText(order.getDeliveryZipCode()) &&
@@ -647,13 +671,14 @@ public class OrderService implements PriceConstants {
                 (StringUtils.hasText(order.getDeliveryCompanyName()) ||
                         (StringUtils.hasText(order.getDeliveryFirstName()) && StringUtils.hasText(order.getDeliveryLastName())));
         if (!deliveryAddrOk) {
-            log.error("!!! Copied delivery address for order is incomplete after copying! Check Customer ID {} data.", customer.getId());
+            String orderCodeLog = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "(new)";
+            log.error("!!! Copied delivery address for order {} is incomplete after copying! Check Customer ID {} data.", orderCodeLog, customer.getId());
             throw new IllegalStateException("Incomplete delivery address copied to order. Check customer profile.");
         }
     }
 
 
-    // --- Metody pro čtení a aktualizaci stavů ---
+    // --- Metody pro čtení a aktualizaci stavů (zůstávají stejné) ---
 
     @Transactional(readOnly = true)
     public Optional<Order> findOrderById(Long id) {
@@ -685,7 +710,7 @@ public class OrderService implements PriceConstants {
         OrderState oldState = order.getStateOfOrder();
         if (oldState != null && oldState.getId().equals(newOrderState.getId())) {
             log.info("Order {} is already in state '{}'. No change needed.", order.getOrderCode(), newOrderState.getName());
-            return order; // Není třeba nic měnit
+            return order; // No need to change anything
         }
 
         log.info("Updating order {} state from '{}' to '{}'",
@@ -694,14 +719,14 @@ public class OrderService implements PriceConstants {
                 newOrderState.getName());
 
         order.setStateOfOrder(newOrderState);
-        updateOrderTimestamps(order, newOrderState); // Aktualizuje datumy podle nového stavu
+        updateOrderTimestamps(order, newOrderState); // Update timestamps based on the new state
         Order savedOrder = orderRepository.save(order);
 
-        // Odeslání emailu (asynchronně)
+        // Send email (asynchronously)
         try {
             emailService.sendOrderStatusUpdateEmail(savedOrder, newOrderState);
         } catch (Exception e) {
-            // Logujeme chybu, ale nebráníme vrácení uložené objednávky
+            // Log the error, but don't prevent returning the saved order
             log.error("Failed to send status update email for order {}: {}", savedOrder.getOrderCode(), e.getMessage());
         }
 
@@ -719,13 +744,13 @@ public class OrderService implements PriceConstants {
                 break;
             case "DELIVERED":
                 if (order.getDeliveredDate() == null) order.setDeliveredDate(now);
-                // Pokud je doručeno, mělo by být i odesláno
+                // If delivered, it should also be shipped
                 if (order.getShippedDate() == null) order.setShippedDate(now);
                 break;
             case "CANCELLED":
                 if (order.getCancelledDate() == null) order.setCancelledDate(now);
                 break;
-            // Případně další automatické nastavení datumů pro jiné stavy
+            // Potentially add other automatic date settings for other states
         }
     }
 
@@ -764,13 +789,13 @@ public class OrderService implements PriceConstants {
         return result;
     }
 
-    // --- UPRAVENÉ METODY PRO PLATBY ---
+    // --- Metody pro platby (zůstávají stejné) ---
     @Transactional
     public Order markDepositAsPaid(Long orderId, LocalDate paymentDate) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
 
-        // Validační kontroly
+        // Validation checks
         if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("Attempted to mark deposit paid for order {} which does not require a deposit.", order.getOrderCode());
             throw new IllegalStateException("Objednávka " + order.getOrderCode() + " nevyžaduje zálohu.");
@@ -783,16 +808,16 @@ public class OrderService implements PriceConstants {
             throw new IllegalArgumentException("Datum platby zálohy je povinné.");
         }
 
-        // Aktualizace stavu objednávky
+        // Update order status
         order.setPaymentStatus(PAYMENT_STATUS_DEPOSIT_PAID);
-        order.setDepositPaidDate(paymentDate.atStartOfDay()); // Uložíme i čas (začátek dne)
+        order.setDepositPaidDate(paymentDate.atStartOfDay()); // Store time as well (start of day)
         log.info("Marking deposit paid for order {} on {}", order.getOrderCode(), paymentDate);
         Order savedOrder = orderRepository.save(order);
 
-        // --- VOLÁNÍ SUPERFAKTURA API ---
-        Long invoiceIdToMark = savedOrder.getSfProformaInvoiceId(); // Zkusíme označit proformu
+        // --- Call SuperFaktura API ---
+        Long invoiceIdToMark = savedOrder.getSfProformaInvoiceId(); // Try to mark the proforma
         if (invoiceIdToMark == null) {
-            // Pokud proforma nemá ID, zkusíme daňový doklad (pokud už byl vystaven před platbou, což by nemělo nastat, ale pro jistotu)
+            // If proforma has no ID, try the tax document (shouldn't happen if paid before tax doc, but just in case)
             invoiceIdToMark = savedOrder.getSfTaxDocumentId();
             if (invoiceIdToMark != null) {
                 log.warn("Marking deposit paid on Tax Document SF ID {} instead of Proforma for order {}", invoiceIdToMark, savedOrder.getOrderCode());
@@ -802,24 +827,23 @@ public class OrderService implements PriceConstants {
         if (invoiceIdToMark != null) {
             try {
                 String sfPaymentType = mapPaymentMethodToSf(savedOrder.getPaymentMethod());
-                // Předpokládáme, že amount je celá výše zálohy
+                // Assume amount is the full deposit amount
                 log.info("Attempting to mark invoice SF ID {} as paid in SuperFaktura (Amount: {}, Date: {}, Type: {}) for order {}",
                         invoiceIdToMark, savedOrder.getDepositAmount(), paymentDate, sfPaymentType, savedOrder.getOrderCode());
                 invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, savedOrder.getDepositAmount(), paymentDate, sfPaymentType, savedOrder.getOrderCode());
                 log.info("Successfully requested marking invoice SF ID {} as paid in SuperFaktura.", invoiceIdToMark);
             } catch (Exception e) {
-                // Pouze logujeme, neblokujeme uložení v našem systému
+                // Only log, don't block saving in our system
                 log.error("Failed to mark invoice SF ID {} as paid in SuperFaktura for order {}: {}. Operation continues.",
                         invoiceIdToMark, savedOrder.getOrderCode(), e.getMessage(), e);
-                // Zde by se mohla přidat interní poznámka k objednávce pro admina
-                // např. addInternalOrderNote(savedOrder.getId(), "Nepodařilo se označit platbu zálohy v SF: " + e.getMessage());
+                // Could add an internal note to the order here
             }
         } else {
             log.warn("Cannot mark deposit paid in SuperFaktura for order {}: No associated Proforma or Tax Document SF ID found.", savedOrder.getOrderCode());
         }
-        // --- KONEC VOLÁNÍ SUPERFAKTURA API ---
+        // --- End SuperFaktura API Call ---
 
-        // Trigger pro generování DDKP (až po úspěšném označení zálohy)
+        // Trigger Tax Document generation (AFTER marking deposit paid)
         if (savedOrder.getSfTaxDocumentId() == null) {
             log.info("Triggering tax document generation after marking deposit paid for order {}", savedOrder.getOrderCode());
             try {
@@ -841,7 +865,7 @@ public class OrderService implements PriceConstants {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
 
-        // Validační kontroly
+        // Validation checks
         if (paymentDate == null) {
             throw new IllegalArgumentException("Datum platby je povinné.");
         }
@@ -854,7 +878,7 @@ public class OrderService implements PriceConstants {
             throw new IllegalStateException("Objednávka " + order.getOrderCode() + " je již označena jako zaplacená.");
         }
 
-        // Výpočet právě zaplacené částky (doplatek nebo celá částka)
+        // Calculate amount just paid (remaining or full)
         BigDecimal amountJustPaid;
         if (PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) && order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
             amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO)
@@ -865,12 +889,12 @@ public class OrderService implements PriceConstants {
             amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO);
             log.debug("Calculating full amount for order {}: {}", order.getOrderCode(), amountJustPaid);
         }
-        amountJustPaid = amountJustPaid.max(BigDecimal.ZERO); // Zajistit, aby nebylo záporné
+        amountJustPaid = amountJustPaid.max(BigDecimal.ZERO); // Ensure non-negative
 
-        // Aktualizace stavu objednávky
+        // Update order status
         order.setPaymentStatus(PAYMENT_STATUS_PAID);
         order.setPaymentDate(paymentDate.atStartOfDay());
-        // Pokud byla záloha, ale nebyla označena, označíme ji teď
+        // If deposit was required but not marked, mark it now
         if (order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && order.getDepositPaidDate() == null) {
             log.warn("Marking order {} fully paid also sets missing deposit paid date to {}", order.getOrderCode(), paymentDate);
             order.setDepositPaidDate(paymentDate.atStartOfDay());
@@ -878,15 +902,15 @@ public class OrderService implements PriceConstants {
         log.info("Marking order {} fully paid on {}", order.getOrderCode(), paymentDate);
         Order savedOrder = orderRepository.save(order);
 
-        // --- VOLÁNÍ SUPERFAKTURA API ---
-        // Označíme platbu na FINÁLNÍ faktuře, pokud existuje
+        // --- Call SuperFaktura API ---
+        // Mark payment on the FINAL invoice if it exists
         Long invoiceIdToMark = savedOrder.getSfFinalInvoiceId();
         if (invoiceIdToMark != null) {
             try {
                 String sfPaymentType = mapPaymentMethodToSf(savedOrder.getPaymentMethod());
                 log.info("Attempting to mark final invoice SF ID {} as paid in SuperFaktura (Amount: {}, Date: {}, Type: {}) for order {}",
                         invoiceIdToMark, amountJustPaid, paymentDate, sfPaymentType, savedOrder.getOrderCode());
-                // Voláme SF API s částkou, která byla právě zaplacena (doplatek nebo celá)
+                // Call SF API with the amount that was just paid (remaining or full)
                 invoiceService.markInvoiceAsPaidInSF(invoiceIdToMark, amountJustPaid, paymentDate, sfPaymentType, savedOrder.getOrderCode());
                 log.info("Successfully requested marking final invoice SF ID {} as paid in SuperFaktura.", invoiceIdToMark);
             } catch (Exception e) {
@@ -897,7 +921,7 @@ public class OrderService implements PriceConstants {
         } else {
             log.warn("Cannot mark payment in SuperFaktura for order {}: Final Invoice SF ID is missing.", savedOrder.getOrderCode());
         }
-        // --- KONEC VOLÁNÍ SUPERFAKTURA API ---
+        // --- End SuperFaktura API Call ---
 
         return savedOrder;
     }
@@ -906,13 +930,72 @@ public class OrderService implements PriceConstants {
     private String mapPaymentMethodToSf(String localPaymentMethod) {
         if (localPaymentMethod == null) return "transfer"; // Default
         return switch (localPaymentMethod.toUpperCase()) {
-            case "CASH_ON_DELIVERY" -> "cash"; // Nebo "cod", ověřit API dokumentaci SF!
+            case "CASH_ON_DELIVERY" -> "cash"; // Or "cod", check SF API docs!
             case "BANK_TRANSFER" -> "transfer";
-            // default -> "transfer"; // Explicitní default je lepší
             default -> {
                 log.warn("Unknown local payment method '{}', defaulting to 'transfer' for SuperFaktura.", localPaymentMethod);
                 yield "transfer";
             }
         };
     }
-}
+
+    // ----- NOVÁ POMOCNÁ METODA PRO KUPÓN -----
+    /**
+     * Validates the coupon based on general rules, minimum order value, and customer usage limits.
+     * If valid, calculates the discount and applies it to the order object.
+     *
+     * @param order The order object (used to set the discount amount).
+     * @param couponCode The code entered by the user.
+     * @param customer The customer placing the order.
+     * @return The validated Coupon object if it's valid and applied, otherwise null.
+     */
+    private Coupon validateAndApplyCoupon(Order order, String couponCode, Customer customer) {
+        // Reset discount and coupon on order before validation
+        order.setCouponDiscountAmount(BigDecimal.ZERO);
+        order.setAppliedCoupon(null);
+
+        if (!StringUtils.hasText(couponCode) || order == null || customer == null || order.getSubTotalWithoutTax() == null) {
+            log.debug("validateAndApplyCoupon: Missing coupon code, order, customer, or subtotal. No coupon applied.");
+            return null; // Missing required data
+        }
+
+        String currency = order.getCurrency();
+        BigDecimal subTotalWithoutTax = order.getSubTotalWithoutTax();
+
+        Optional<Coupon> couponOpt = couponService.findByCode(couponCode.trim());
+        if (couponOpt.isEmpty()) {
+            log.warn("Coupon code '{}' not found during order creation.", couponCode);
+            return null; // Coupon not found
+        }
+
+        Coupon coupon = couponOpt.get();
+        boolean isGuest = customer.isGuest();
+
+        // Perform all validity checks using CouponService methods
+        if (!couponService.isCouponGenerallyValid(coupon)) {
+            log.warn("Coupon '{}' is generally invalid (inactive, expired, limit reached).", couponCode);
+            return null;
+        }
+        if (!couponService.checkMinimumOrderValue(coupon, subTotalWithoutTax, currency)) {
+            log.warn("Coupon '{}' minimum order value not met for subtotal {} {}.", couponCode, subTotalWithoutTax, currency);
+            return null;
+        }
+        // Check customer usage limit for registered users
+        if (!isGuest && !couponService.checkCustomerUsageLimit(customer, coupon)) {
+            log.warn("Coupon '{}' customer usage limit reached for customer {}.", couponCode, customer.getId());
+            return null;
+        }
+        // Special warning for guests using limited coupons
+        if (isGuest && coupon.getUsageLimitPerCustomer() != null && coupon.getUsageLimitPerCustomer() > 0) {
+            log.warn("Applying customer-limited coupon '{}' to guest user {}. Limit check will occur if guest converts.", couponCode, customer.getId());
+        }
+
+        // If all checks pass, calculate and apply the discount
+        BigDecimal discountAmount = couponService.calculateDiscountAmount(subTotalWithoutTax, coupon, currency);
+        order.setCouponDiscountAmount(discountAmount.setScale(PRICE_SCALE, ROUNDING_MODE)); // Set discount directly on the order
+        order.setAppliedCoupon(coupon); // Set reference to the valid coupon
+        log.info("Applied coupon {} for cust={}, isGuest={}, discount={} {}", couponCode, customer.getId(), isGuest, order.getCouponDiscountAmount(), currency);
+
+        return coupon; // Return the valid coupon
+    }
+} // Konec třídy OrderService
