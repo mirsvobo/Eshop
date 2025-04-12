@@ -1,6 +1,7 @@
 package org.example.eshop.controller;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.example.eshop.dto.AddressDto;
 import org.example.eshop.dto.ChangePasswordDto;
@@ -9,6 +10,7 @@ import org.example.eshop.model.Customer;
 import org.example.eshop.model.Order;
 import org.example.eshop.service.CustomerService;
 import org.example.eshop.service.OrderService;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -127,16 +129,16 @@ public class CustomerAccountController {
         return "muj-ucet/objednavky";
     }
 
-    // Metoda pro zobrazení detailu objednávky podle KÓDU
-    @GetMapping("/objednavky/{orderCode}") // Mapování na orderCode
-    public String viewOrderDetail(@PathVariable String orderCode, // Parametr je String
+    // V src/main/java/org/example/eshop/controller/CustomerAccountController.java
+
+    @GetMapping("/objednavky/{orderCode}")
+    @Transactional() // Přidáme transakci pro LAZY loading
+    public String viewOrderDetail(@PathVariable String orderCode,
                                   Model model,
-                                  Principal principal, // Můžeš použít Principal nebo Authentication
+                                  Principal principal,
                                   RedirectAttributes redirectAttributes) {
-        Customer loggedInCustomer = null; // Inicializace pro catch bloky
+        Customer loggedInCustomer = null;
         try {
-            // Získání přihlášeného uživatele (použij svou metodu getCurrentCustomer)
-            // Použijeme verzi s Principal, jak byla v metodě, kterou jsi poslal
             if (principal == null) { throw new IllegalStateException("Uživatel není přihlášen."); }
             String userEmail = principal.getName();
             loggedInCustomer = customerService.getCustomerByEmail(userEmail)
@@ -144,28 +146,36 @@ public class CustomerAccountController {
 
             log.debug("Customer {} (ID: {}) viewing order detail for CODE: {}", loggedInCustomer.getEmail(), loggedInCustomer.getId(), orderCode);
 
-            // OPRAVA ZDE: Volání správné metody findOrderByCode
             Order order = orderService.findOrderByCode(orderCode)
-                    .orElseThrow(() -> new EntityNotFoundException("Objednávka s kódem '" + orderCode + "' nenalezena.")); // Používáme orderCode v chybě
+                    .orElseThrow(() -> new EntityNotFoundException("Objednávka s kódem '" + orderCode + "' nenalezena."));
 
-            // Bezpečnostní kontrola (zůstává stejná)
             if (order.getCustomer() == null || !order.getCustomer().getId().equals(loggedInCustomer.getId())) {
-                // Můžeš zde použít SecurityException nebo vlastní lokální OrderAccessDeniedException
                 throw new SecurityException("K této objednávce nemáte přístup.");
             }
 
+            // ***** ZAČÁTEK ZMĚNY: Explicitní inicializace *****
+            Hibernate.initialize(order.getCustomer()); // <--- PŘIDÁNO TOTO
+            Hibernate.initialize(order.getStateOfOrder()); // Pokud je LAZY
+            Hibernate.initialize(order.getOrderItems()); // Pokud je LAZY
+            if (order.getOrderItems() != null) {
+                order.getOrderItems().forEach(item -> {
+                    Hibernate.initialize(item.getProduct()); // Pokud je LAZY
+                    Hibernate.initialize(item.getSelectedAddons()); // Pokud je LAZY
+                });
+            }
+            Hibernate.initialize(order.getAppliedCoupon()); // Pokud je LAZY
+            // ***** KONEC ZMĚNY *****
+
             model.addAttribute("order", order);
             log.info("Order detail for CODE {} loaded successfully for customer {}", orderCode, loggedInCustomer.getEmail());
-            return "muj-ucet/objednavka-detail"; // Název šablony pro detail
+            return "muj-ucet/objednavka-detail";
 
         } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
-            // Zachycení všech očekávaných chyb pro přesměrování
             log.warn("Chyba přístupu nebo nenalezení objednávky CODE: {} pro uživatele {}: {}",
                     orderCode, (principal != null ? principal.getName() : "null"), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/muj-ucet/objednavky";
         } catch (Exception e) {
-            // Jakákoliv jiná neočekávaná chyba
             log.error("Neočekávaná chyba při zobrazení detailu objednávky CODE: {} pro {}: {}",
                     orderCode, (principal != null ? principal.getName() : "null"), e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazení detailu objednávky nastala neočekávaná chyba.");

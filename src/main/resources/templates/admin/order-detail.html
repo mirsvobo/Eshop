@@ -3,32 +3,87 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{admin/layout/admin-layout}">
 <head>
-    <title th:text="'Detail objednávky ' + ${order.orderCode}">Detail objednávky</title>
+    <title th:text="'Detail objednávky ' + ${order?.orderCode}">Detail objednávky</title>
     <style>
-        /* ... (stávající styly) ... */
         .action-buttons .btn, .action-buttons .form-select, .action-buttons .input-group { margin-right: 0.5rem; margin-bottom: 0.5rem; vertical-align: middle; }
         .invoice-actions .btn-sm { margin-left: 5px; vertical-align: middle; }
         .sf-link { font-weight: normal; margin-right: 5px; }
         .invoice-line { display: flex; align-items: center; margin-bottom: 0.3rem; flex-wrap: wrap;}
         .invoice-label { min-width: 60px; display: inline-block; font-weight: bold; }
         .invoice-link-actions { display: inline-flex; align-items: center; }
+        .detail-section { margin-bottom: 1.5rem; }
+        .address-box { background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem; }
+        .order-items-table th { background-color: #f8f9fa; }
+        .variant-details { font-size: 0.85em; color: #6c757d; }
+        .summary-box { background-color: #f8f9fa; padding: 1.5rem; border-radius: 0.25rem; }
+        .summary-box ul { list-style: none; padding-left: 0; margin-bottom: 0; }
+        .summary-box li { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #eee; }
+        .summary-box li:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
 <section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2" th:text="'Detail objednávky ' + ${order != null ? order.orderCode : ''}">Detail objednávky</h1>
+        <a th:href="@{/admin/orders}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Zpět na přehled
+        </a>
+    </div>
+
     <div th:if="${order != null}">
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">
+            <span th:text="${warningMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <div class="row mb-4">
             <div class="col-md-7">
                 <h4>Základní informace</h4>
                 <p><strong>Stav objednávky:</strong>
+                    <span th:if="${order.stateOfOrder != null}" class="badge fs-6" th:switch="${order.stateOfOrder.code?.toUpperCase()}">
+                         <th:block th:case="'NEW'"><span class="bg-primary" th:text="${order.stateOfOrder.name}">Nová</span></th:block>
+                         <th:block th:case="'AWAITING_PAYMENT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na platbu</span></th:block>
+                         <th:block th:case="'AWAITING_DEPOSIT'"><span class="bg-warning text-dark" th:text="${order.stateOfOrder.name}">Čeká na zálohu</span></th:block>
+                         <th:block th:case="'DEPOSIT_PAID'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Záloha zaplacena</span></th:block>
+                         <th:block th:case="'PAID'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Zaplaceno</span></th:block>
+                         <th:block th:case="'PROCESSING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Zpracovává se</span></th:block>
+                         <th:block th:case="'IN_PRODUCTION'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Ve výrobě</span></th:block>
+                         <th:block th:case="'AT_ZINC_PLATING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">V zinkovně</span></th:block>
+                         <th:block th:case="'READY_TO_SHIP'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Připraveno</span></th:block>
+                         <th:block th:case="'SHIPPED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Odesláno</span></th:block>
+                         <th:block th:case="'DELIVERED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Doručeno</span></th:block>
+                         <th:block th:case="'CANCELLED'"><span class="bg-danger" th:text="${order.stateOfOrder.name}">Zrušeno</span></th:block>
+                         <th:block th:case="*"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Neznámý</span></th:block>
+                     </span>
+                    <span th:unless="${order.stateOfOrder != null}" class="badge bg-secondary fs-6">Neznámý</span>
                 </p>
-                <p><strong>Stav platby:</strong> <strong th:text="${order.paymentStatus}"></strong>
-                    <span th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" th:text="' (Požadovaná záloha: ' + ${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency} + ')'"></span>
+                <p><strong>Stav platby:</strong>
+                    <span class="badge" th:switch="${order.paymentStatus}">
+                         <span th:case="'PENDING'" class="bg-secondary">Čeká</span>
+                         <span th:case="'AWAITING_DEPOSIT'" class="bg-warning text-dark">Čeká záloha</span>
+                         <span th:case="'DEPOSIT_PAID'" class="bg-info text-dark">Záloha OK</span>
+                         <span th:case="'PENDING_PAYMENT'" class="bg-warning text-dark">Čeká platba</span>
+                         <span th:case="'PAID'" class="bg-success">Zaplaceno</span>
+                         <span th:case="*" class="bg-light text-dark" th:text="${order.paymentStatus}">?</span>
+                     </span>
+                    <span th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                          th:text="' (Požadovaná záloha: ' + ${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency} + ')'">
+                    </span>
                 </p>
                 <p><strong>Zaplacená záloha:</strong> <span th:text="${order.depositPaidDate != null ? #temporals.format(order.depositPaidDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
                 <p><strong>Zaplaceno celkem:</strong> <span th:text="${order.paymentDate != null ? #temporals.format(order.paymentDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
                 <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}"></span></p>
+                <p><strong>Datum objednání:</strong> <span th:text="${order.orderDate != null ? #temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm') : '---'}"></span></p>
+                <p><strong>Zákazník:</strong> <a th:if="${order.customer != null}" th:href="@{/admin/customers/{id}(id=${order.customer.id})}" th:text="${order.customer.email}"></a><span th:unless="${order.customer != null}">Neznámý</span></p>
             </div>
             <div class="col-md-5">
                 <h4>Akce</h4>
@@ -46,11 +101,11 @@
                             <button type="submit" class="btn btn-primary">Uložit stav</button>
                         </div>
                     </form>
-                    <br/> <form th:action="@{/admin/orders/{id}/mark-deposit-paid(id=${order.id})}" method="post" class="d-inline"
-                                th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.paymentStatus == 'AWAITING_DEPOSIT'}">
-                    <button type="submit" class="btn btn-sm btn-warning">Označit zálohu zaplacenou</button>
-                </form>
-
+                    <br/>
+                    <form th:action="@{/admin/orders/{id}/mark-deposit-paid(id=${order.id})}" method="post" class="d-inline"
+                          th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.paymentStatus == 'AWAITING_DEPOSIT'}">
+                        <button type="submit" class="btn btn-sm btn-warning">Označit zálohu zaplacenou</button>
+                    </form>
                     <form th:action="@{/admin/orders/{id}/mark-fully-paid(id=${order.id})}" method="post" class="d-inline"
                           th:if="${order.paymentStatus != 'PAID'}">
                         <button type="submit" class="btn btn-sm btn-success">Označit jako zaplaceno</button>
@@ -64,7 +119,7 @@
                         <button type="submit" class="btn btn-sm btn-info">Vystavit ZÁLOHOVOU</button>
                     </form>
                     <form th:action="@{/admin/orders/{id}/generate-tax-doc(id=${order.id})}" method="post" class="d-inline"
-                          th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and order.paymentStatus == 'DEPOSIT_PAID' and order.sfTaxDocumentId == null}">
+                          th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 and (order.paymentStatus == 'DEPOSIT_PAID' or order.paymentStatus == 'PAID') and order.sfTaxDocumentId == null}">
                         <button type="submit" class="btn btn-sm btn-info">Vystavit DAŇ. DOKLAD</button>
                     </form>
                     <form th:action="@{/admin/orders/{id}/generate-final(id=${order.id})}" method="post" class="d-inline"
@@ -130,17 +185,20 @@
                         <span class="text-muted">Žádné faktury</span>
                     </div>
                 </div>
-
             </div>
         </div>
 
         <div class="row detail-section">
             <div class="col-md-6">
-                <h4>Fakturační adresa</h4>
                 <div class="address-box">
+                    <h5>Fakturační adresa</h5>
                     <address>
                         <strong th:if="${order.invoiceCompanyName}" th:text="${order.invoiceCompanyName}"></strong><br th:if="${order.invoiceCompanyName}">
-                        <th:block th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></th:block><br>
+                        <th:block th:if="${!#strings.isEmpty(order.invoiceFirstName)}" th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></th:block>
+                        <th:block th:if="${!#strings.isEmpty(order.invoiceCompanyName) and order.customer != null}" >
+                            <small class="text-muted d-block">(Kontakt: <span th:text="${order.customer.firstName + ' ' + order.customer.lastName}"></span>)</small>
+                        </th:block>
+                        <br th:if="${!#strings.isEmpty(order.invoiceFirstName) or !#strings.isEmpty(order.invoiceCompanyName)}">
                         <th:block th:text="${order.invoiceStreet}"></th:block><br>
                         <th:block th:text="${order.invoiceZipCode + ' ' + order.invoiceCity}"></th:block><br>
                         <th:block th:text="${order.invoiceCountry}"></th:block><br>
@@ -150,8 +208,8 @@
                 </div>
             </div>
             <div class="col-md-6">
-                <h4>Dodací adresa</h4>
                 <div class="address-box">
+                    <h5>Dodací adresa</h5>
                     <address>
                         <strong th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName}"></strong><br th:if="${order.deliveryCompanyName}">
                         <th:block th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName}"></th:block><br>
@@ -206,19 +264,19 @@
 
         <div class="row justify-content-end">
             <div class="col-md-6 col-lg-5">
-                <h4>Celkový souhrn</h4>
                 <div class="summary-box">
-                    <ul class="list-unstyled mb-0">
-                        <li class="d-flex justify-content-between py-1"><span>Mezisoučet položek (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="d-flex justify-content-between py-1 text-success"><span>Sleva (<span th:text="${order.appliedCouponCode ?: order.appliedCoupon?.code}">KUPON</span>)</span> <span th:text="'-' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li class="d-flex justify-content-between py-1"><span>Doprava (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li class="d-flex justify-content-between py-1 border-top mt-2 pt-2"><span>Celkem bez DPH</span> <span class="fw-bold" th:text="${#numbers.formatDecimal(order.totalPriceWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li class="d-flex justify-content-between py-1"><span>Celkem DPH</span> <span th:text="${#numbers.formatDecimal(order.totalTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li class="d-flex justify-content-between py-2 border-top mt-2 fs-5"><strong>Celkem k úhradě</strong> <strong><span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></strong></li>
-                        <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="d-flex justify-content-between py-1 text-muted border-top mt-2 pt-2"><span>Požadovaná záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li th:if="${order.depositPaidDate != null}" class="d-flex justify-content-between py-1 text-success"><span>Zaplacená záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li th:if="${order.paymentDate != null and order.paymentStatus == 'PAID'}" class="d-flex justify-content-between py-1 text-success"><span>Zaplaceno celkem</span> <span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
-                        <li th:if="${order.paymentStatus != 'PAID' and order.paymentMethod != 'CASH_ON_DELIVERY'}" class="d-flex justify-content-between py-1 text-danger fw-bold border-top mt-2 pt-2"><span>Zbývá uhradit</span> <span th:with="remaining=${order.totalPrice - (order.depositPaidDate != null ? order.depositAmount : T(java.math.BigDecimal).ZERO)}" th:text="${#numbers.formatDecimal(remaining, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                    <h4>Celkový souhrn</h4>
+                    <ul>
+                        <li><span>Mezisoučet položek (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="text-success"><span>Sleva (<span th:text="${order.appliedCouponCode ?: order.appliedCoupon?.code}">KUPON</span>)</span> <span th:text="'-' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li><span>Doprava (bez DPH)</span> <span th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="border-top mt-2 pt-2"><span>Celkem bez DPH</span> <span class="fw-bold" th:text="${#numbers.formatDecimal(order.totalPriceWithoutTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li><span>Celkem DPH</span> <span th:text="${#numbers.formatDecimal(order.totalTax, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li class="border-top mt-2 fs-5"><strong>Celkem k úhradě</strong> <strong><span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></strong></li>
+                        <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="text-muted border-top mt-2 pt-2"><span>Požadovaná záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.depositPaidDate != null}" class="text-success"><span>Zaplacená záloha</span> <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.paymentDate != null and order.paymentStatus == 'PAID'}" class="text-success"><span>Zaplaceno celkem</span> <span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
+                        <li th:if="${order.paymentStatus != 'PAID' and order.paymentMethod != 'CASH_ON_DELIVERY'}" class="text-danger fw-bold border-top mt-2 pt-2"><span>Zbývá uhradit</span> <span th:with="remaining=${order.totalPrice - (order.depositPaidDate != null ? order.depositAmount : T(java.math.BigDecimal).ZERO)}" th:text="${#numbers.formatDecimal(remaining.max(T(java.math.BigDecimal).ZERO), 1, 'POINT', 2, 'COMMA')} + ' ' + ${order.currency}"></span></li>
                     </ul>
                 </div>
             </div>

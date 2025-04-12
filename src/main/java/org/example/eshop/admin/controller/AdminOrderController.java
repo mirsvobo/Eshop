@@ -144,27 +144,29 @@ public class AdminOrderController {
     }
 
 
-    // --- Detail objednávky (Metoda viewOrderDetail zůstává, jak byla upravena dříve) ---
+    // V src/main/java/org/example/eshop/admin/controller/AdminOrderController.java
+
     @GetMapping("/{id}")
-    @Transactional(readOnly = true)
-    public String viewOrderDetail(@PathVariable Long id, Model model, /*HttpServletRequest request,*/ RedirectAttributes redirectAttributes) { // request už nepotřebujeme kvůli @ModelAttribute
+    @Transactional(readOnly = true) // Ponecháme transakci pro LAZY loading
+    public String viewOrderDetail(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting admin order detail view for ID: {}", id);
-        // model.addAttribute("currentUri", request.getRequestURI()); // Už není potřeba
         try {
             Order order = orderService.findOrderById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka s ID " + id + " nenalezena."));
 
-            // Explicitní inicializace LAZY kolekcí
-            Hibernate.initialize(order.getCustomer());
+            // ***** ZAČÁTEK ZMĚNY: Explicitní inicializace LAZY asociací *****
+            Hibernate.initialize(order.getCustomer()); // <--- PŘIDÁNO TOTO
             Hibernate.initialize(order.getStateOfOrder());
             Hibernate.initialize(order.getOrderItems());
             if (order.getOrderItems() != null) {
                 order.getOrderItems().forEach(item -> {
-                    Hibernate.initialize(item.getProduct());
+                    Hibernate.initialize(item.getProduct()); // Pokud je LAZY
                     Hibernate.initialize(item.getSelectedAddons());
                 });
             }
-            Hibernate.initialize(order.getAppliedCoupon());
+            Hibernate.initialize(order.getAppliedCoupon()); // Pokud je LAZY
+            // ***** KONEC ZMĚNY *****
+
 
             model.addAttribute("order", order);
             List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
@@ -184,9 +186,6 @@ public class AdminOrderController {
         }
         return "admin/order-detail";
     }
-
-    // --- AKCE ---
-
     /**
      * Změní stav objednávky.
      */
