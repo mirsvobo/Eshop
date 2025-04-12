@@ -1,45 +1,55 @@
 package org.example.eshop.model;
 
 import jakarta.persistence.*;
-import lombok.Getter; // Ujisti se, že import je správný
-import lombok.Setter; // Ujisti se, že import je správný
+import lombok.Getter;
+import lombok.Setter;
 import java.math.BigDecimal;
 
-@Getter // Tato anotace generuje všechny gettery
-@Setter // Tato anotace generuje všechny settery
+@Getter
+@Setter
 @Entity
 public class ProductConfigurator {
     @Id
-    private Long id; // Getter: getId(), Setter: setId(Long id)
+    private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId
     @JoinColumn(name = "id")
-    private Product product; // Getter: getProduct(), Setter: setProduct(Product product)
+    private Product product;
 
-    // Limity rozměrů (v cm)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal minLength; // getMinLength(), setMinLength(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal maxLength; // getMaxLength(), setMaxLength(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal minWidth;
+    // --- Limity rozměrů (v mm nebo cm - musí být konzistentní!) ---
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal minLength;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal maxLength;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal minWidth;  // Hloubka
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal maxWidth;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal minHeight;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal maxHeight;
 
-    // Konstanty pro výpočet ceny z rozměrů (Kč/cm a EUR/cm)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmHeightCZK; // getPricePerCmHeightCZK(), setPricePerCmHeightCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmHeightEUR; // getPricePerCmHeightEUR(), setPricePerCmHeightEUR(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthCZK; // getPricePerCmLengthCZK(), setPricePerCmLengthCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthEUR; // getPricePerCmLengthEUR(), setPricePerCmLengthEUR(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthCZK;  // getPricePerCmDepthCZK(), setPricePerCmDepthCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthEUR;  // getPricePerCmDepthEUR(), setPricePerCmDepthEUR(...)
+    // --- NOVÉ: Kroky a výchozí hodnoty (v mm nebo cm - stejná jednotka jako min/max) ---
+    @Column(precision = 10, scale = 2) private BigDecimal stepLength = BigDecimal.TEN;  // Výchozí krok 10 (1 cm)
+    @Column(precision = 10, scale = 2) private BigDecimal stepWidth = BigDecimal.TEN;   // Výchozí krok 10 (1 cm)
+    @Column(precision = 10, scale = 2) private BigDecimal stepHeight = BigDecimal.valueOf(5); // Výchozí krok 5 (0.5 cm)
 
-    // Konstanty/ceny pro "dynamické" doplňky/volby
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceCZK;      // getDesignPriceCZK(), setDesignPriceCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceEUR;      // getDesignPriceEUR(), setDesignPriceEUR(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthCZK; // getDividerPricePerCmDepthCZK(), setDividerPricePerCmDepthCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthEUR; // getDividerPricePerCmDepthEUR(), setDividerPricePerCmDepthEUR(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceCZK;      // getGutterPriceCZK(), setGutterPriceCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceEUR;      // getGutterPriceEUR(), setGutterPriceEUR(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceCZK;        // getShedPriceCZK(), setShedPriceCZK(...)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceEUR;        // getShedPriceEUR(), setShedPriceEUR(...)
+    @Column(precision = 10, scale = 2) private BigDecimal defaultLength; // Výchozí délka (může být null, použije se min)
+    @Column(precision = 10, scale = 2) private BigDecimal defaultWidth;  // Výchozí hloubka
+    @Column(precision = 10, scale = 2) private BigDecimal defaultHeight; // Výchozí výška
+
+    // --- Ceny ---
+    // Ceny za rozměry (za cm nebo mm - musí odpovídat jednotce min/max/step!)
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmHeightCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmHeightEUR;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthEUR;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthEUR;
+
+    // Ceny za volitelné prvky
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceCZK = BigDecimal.ZERO;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceEUR = BigDecimal.ZERO;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthEUR;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceEUR;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceEUR;
 }
