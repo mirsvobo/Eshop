@@ -587,10 +587,9 @@ public class OrderService implements PriceConstants {
         return true; // Fakturační stačí, pokud je dodací stejná
     }
 
+    // Uvnitř třídy OrderService
     private void copyAddressesToOrder(Order order, Customer customer, CreateOrderRequest request) {
-        // Kopírování fakturační adresy
-        order.setInvoiceFirstName(customer.getInvoiceFirstName());
-        order.setInvoiceLastName(customer.getInvoiceLastName());
+        // Kopírování fakturační adresy (včetně IČO/DIČ)
         order.setInvoiceCompanyName(customer.getInvoiceCompanyName());
         order.setInvoiceStreet(customer.getInvoiceStreet());
         order.setInvoiceCity(customer.getInvoiceCity());
@@ -599,20 +598,32 @@ public class OrderService implements PriceConstants {
         order.setInvoiceTaxId(customer.getInvoiceTaxId());
         order.setInvoiceVatId(customer.getInvoiceVatId());
 
-        // Kopírování dodací adresy - použije se adresa z Customer entity
+        // Nastavení jména/příjmení na faktuře v OBJEDNÁVCE
+        if (StringUtils.hasText(customer.getInvoiceCompanyName())) {
+            // Pokud je firma, primárně použijeme ji. Jméno/příjmení na faktuře v Order může být null.
+            // Záleží na požadavcích SuperFaktury - pokud vyžaduje i jméno, můžeme sem dát kontaktní osobu.
+            order.setInvoiceFirstName(null); // Nebo customer.getFirstName() ? Záleží na SF.
+            order.setInvoiceLastName(null); // Nebo customer.getLastName() ?
+        } else {
+            // Pokud není firma, použijeme hlavní kontaktní jméno/příjmení
+            order.setInvoiceFirstName(customer.getFirstName());
+            order.setInvoiceLastName(customer.getLastName());
+        }
+
+        // Kopírování dodací adresy (použije aktuální stav z Customer entity)
         if (customer.isUseInvoiceAddressAsDelivery()) {
-            log.debug("Copying invoice address to delivery address for order {}.", order.getOrderCode());
-            order.setDeliveryFirstName(customer.getInvoiceFirstName());
-            order.setDeliveryLastName(customer.getInvoiceLastName());
-            order.setDeliveryCompanyName(customer.getInvoiceCompanyName());
+            log.debug("Copying invoice address to delivery address for order.");
+            order.setDeliveryFirstName(order.getInvoiceFirstName()); // Použijeme jméno z faktury (které je buď null nebo z kontaktu)
+            order.setDeliveryLastName(order.getInvoiceLastName());   // Použijeme příjmení z faktury
+            order.setDeliveryCompanyName(order.getInvoiceCompanyName()); // Použijeme firmu z faktury
             order.setDeliveryStreet(customer.getInvoiceStreet());
             order.setDeliveryCity(customer.getInvoiceCity());
             order.setDeliveryZipCode(customer.getInvoiceZipCode());
             order.setDeliveryCountry(customer.getInvoiceCountry());
-            // Použijeme hlavní telefon zákazníka, pokud dodací není specifikován
+            // Použijeme hlavní telefon zákazníka, pokud dodací není specifikován v Customer
             order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         } else {
-            log.debug("Copying specific delivery address to order {}.", order.getOrderCode());
+            log.debug("Copying specific delivery address to order.");
             order.setDeliveryFirstName(customer.getDeliveryFirstName());
             order.setDeliveryLastName(customer.getDeliveryLastName());
             order.setDeliveryCompanyName(customer.getDeliveryCompanyName());
@@ -620,14 +631,15 @@ public class OrderService implements PriceConstants {
             order.setDeliveryCity(customer.getDeliveryCity());
             order.setDeliveryZipCode(customer.getDeliveryZipCode());
             order.setDeliveryCountry(customer.getDeliveryCountry());
+            // Použijeme dodací telefon, pokud existuje, jinak hlavní
             order.setDeliveryPhone(StringUtils.hasText(customer.getDeliveryPhone()) ? customer.getDeliveryPhone() : customer.getPhone());
         }
         // Fallback pro dodací telefon, pokud stále chybí
-        if (!StringUtils.hasText(order.getDeliveryPhone())) {
+        if (!StringUtils.hasText(order.getDeliveryPhone()) && StringUtils.hasText(customer.getPhone())) {
             order.setDeliveryPhone(customer.getPhone());
         }
 
-        // Kontrola kompletnosti PŘENESENÉ dodací adresy
+        // Kontrola kompletnosti PŘENESENÉ dodací adresy (zůstává)
         boolean deliveryAddrOk = StringUtils.hasText(order.getDeliveryStreet()) &&
                 StringUtils.hasText(order.getDeliveryCity()) &&
                 StringUtils.hasText(order.getDeliveryZipCode()) &&
@@ -635,8 +647,7 @@ public class OrderService implements PriceConstants {
                 (StringUtils.hasText(order.getDeliveryCompanyName()) ||
                         (StringUtils.hasText(order.getDeliveryFirstName()) && StringUtils.hasText(order.getDeliveryLastName())));
         if (!deliveryAddrOk) {
-            log.error("!!! Copied delivery address for order {} is incomplete after copying! Check Customer ID {} data.", order.getOrderCode(), customer.getId());
-            // Zde bychom mohli buď vyhodit výjimku, nebo pokračovat s varováním, záleží na business logice
+            log.error("!!! Copied delivery address for order is incomplete after copying! Check Customer ID {} data.", customer.getId());
             throw new IllegalStateException("Incomplete delivery address copied to order. Check customer profile.");
         }
     }

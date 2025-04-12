@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Import pro LocalDateTime
-import java.time.format.DateTimeParseException; // Import pro chybu parsování data
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,11 +32,7 @@ public class AdminCouponController {
     @Autowired private CouponService couponService;
 
     @ModelAttribute("currentUri")
-    public String getCurrentUri(HttpServletRequest request) {
-        return request.getRequestURI();
-    }
-
-    // Odstraněno @ModelAttribute("couponTypes")
+    public String getCurrentUri(HttpServletRequest request) { return request.getRequestURI(); }
 
     @GetMapping
     public String listCoupons(Model model) {
@@ -56,58 +52,70 @@ public class AdminCouponController {
     public String showCreateForm(Model model) {
         log.info("Requesting new coupon form.");
         Coupon newCoupon = new Coupon();
-        newCoupon.setActive(true); // Defaultně aktivní
+        newCoupon.setActive(true);
+        newCoupon.setPercentage(false); // Default na fixní/dopravu
+        newCoupon.setFreeShipping(false);
         model.addAttribute("coupon", newCoupon);
         model.addAttribute("pageTitle", "Vytvořit nový kupón");
         return "admin/coupon-form";
     }
 
     @PostMapping
-    public String createCoupon(@Valid @ModelAttribute("coupon") Coupon coupon,
+    public String createCoupon(@Valid @ModelAttribute("coupon") Coupon coupon, // Použijeme data přímo z coupon objektu
                                BindingResult bindingResult,
-                               // Přidáváme parametry pro datum, protože @DateTimeFormat nemusí fungovat správně s @ModelAttribute
                                @RequestParam(value = "startDateString", required = false) String startDateString,
                                @RequestParam(value = "expirationDateString", required = false) String expirationDateString,
+                               // Odstraněny @RequestParam pro isPercentage a freeShipping
                                RedirectAttributes redirectAttributes,
                                Model model) {
-        log.info("Attempting to create new coupon: {}", coupon.getCode());
+        // Logujeme hodnoty PŘÍMO z navázaného objektu coupon
+        log.info("Attempting to create new coupon: Code='{}', isPercentage={}, freeShipping={}",
+                coupon.getCode(), coupon.isPercentage(), coupon.isFreeShipping());
 
-        // Manuální zpracování datumů
         parseAndSetDates(coupon, startDateString, expirationDateString, bindingResult);
 
-        // Spoléháme na validaci v CouponService, ale @Valid zachytí základní chyby
+        // @Valid zachytí základní anotace
         if (bindingResult.hasErrors()) {
             log.warn("Initial validation errors creating coupon: {}", bindingResult.getAllErrors());
             model.addAttribute("pageTitle", "Vytvořit nový kupón (Chyba)");
+            // Vrátíme data z formuláře (včetně isPercentage a freeShipping)
+            model.addAttribute("coupon", coupon);
             return "admin/coupon-form";
         }
         try {
-            // Service provede vlastní detailní validaci
+            // Service metoda nyní dostane coupon objekt s flagy nastavenými Springem
             Coupon savedCoupon = couponService.createCoupon(coupon);
             redirectAttributes.addFlashAttribute("successMessage", "Kupón '" + savedCoupon.getCode() + "' byl úspěšně vytvořen.");
             log.info("Coupon '{}' created successfully with ID: {}", savedCoupon.getCode(), savedCoupon.getId());
             return "redirect:/admin/coupons";
         } catch (IllegalArgumentException e) {
             log.warn("Error creating coupon '{}': {}", coupon.getCode(), e.getMessage());
-            assignValidationError(e, bindingResult, model); // Přiřazení validační chyby
+            assignValidationError(e, bindingResult, model); // Zůstává stejné
             model.addAttribute("pageTitle", "Vytvořit nový kupón (Chyba)");
+            // Vracíme data z formuláře
+            model.addAttribute("coupon", coupon);
             return "admin/coupon-form";
         } catch (Exception e) {
             log.error("Unexpected error creating coupon '{}': {}", coupon.getCode(), e.getMessage(), e);
             model.addAttribute("pageTitle", "Vytvořit nový kupón (Chyba)");
             model.addAttribute("errorMessage", "Při vytváření kupónu nastala neočekávaná chyba: " + e.getMessage());
+            model.addAttribute("coupon", coupon);
             return "admin/coupon-form";
         }
     }
 
     @GetMapping("/{id}/edit")
     public String showEditForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        // Zůstává stejné, jen už nepotřebujeme explicitně přidávat isPercentage a freeShipping,
+        // protože jsou součástí objektu coupon
         log.info("Requesting edit form for coupon ID: {}", id);
         try {
-            Coupon coupon = couponService.findById(id) // findById vrací Optional
+            Coupon coupon = couponService.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Kupón s ID " + id + " nenalezen."));
             model.addAttribute("coupon", coupon);
             model.addAttribute("pageTitle", "Upravit kupón: " + coupon.getCode());
+            // Odstraněno: model.addAttribute("isPercentage", coupon.isPercentage());
+            // Odstraněno: model.addAttribute("freeShipping", coupon.isFreeShipping());
             return "admin/coupon-form";
         } catch (EntityNotFoundException e) {
             log.warn("Coupon with ID {} not found for editing.", id);
@@ -122,15 +130,16 @@ public class AdminCouponController {
 
     @PostMapping("/{id}")
     public String updateCoupon(@PathVariable Long id,
-                               @Valid @ModelAttribute("coupon") Coupon couponData,
+                               @Valid @ModelAttribute("coupon") Coupon couponData, // isPercentage a freeShipping přijdou v tomto objektu
                                BindingResult bindingResult,
                                @RequestParam(value = "startDateString", required = false) String startDateString,
                                @RequestParam(value = "expirationDateString", required = false) String expirationDateString,
+                               // Odstraněny @RequestParam pro isPercentage a freeShipping
                                RedirectAttributes redirectAttributes,
                                Model model) {
-        log.info("Attempting to update coupon ID: {}", id);
+        log.info("Attempting to update coupon ID: {}. Received flags: isPercentage={}, freeShipping={}",
+                id, couponData.isPercentage(), couponData.isFreeShipping());
 
-        // Manuální zpracování datumů
         parseAndSetDates(couponData, startDateString, expirationDateString, bindingResult);
 
         if (bindingResult.hasErrors()) {
@@ -141,8 +150,8 @@ public class AdminCouponController {
             return "admin/coupon-form";
         }
         try {
-            // Service provede vlastní validaci
-            Coupon updatedCoupon = couponService.updateCoupon(id, couponData); // Vrací Coupon
+            // Service metoda dostane coupon objekt s flagy nastavenými Springem
+            Coupon updatedCoupon = couponService.updateCoupon(id, couponData);
             redirectAttributes.addFlashAttribute("successMessage", "Kupón '" + updatedCoupon.getCode() + "' byl úspěšně aktualizován.");
             log.info("Coupon ID {} updated successfully.", id);
             return "redirect:/admin/coupons";
@@ -152,16 +161,16 @@ public class AdminCouponController {
             return "redirect:/admin/coupons";
         } catch (IllegalArgumentException e) {
             log.warn("Error updating coupon ID {}: {}", id, e.getMessage());
-            assignValidationError(e, bindingResult, model); // Přiřazení chyby
+            assignValidationError(e, bindingResult, model);
             model.addAttribute("pageTitle", "Upravit kupón (Chyba)");
-            couponData.setId(id);
+            couponData.setId(id); // Zachovat ID
             model.addAttribute("coupon", couponData); // Vrátíme data z formuláře
             return "admin/coupon-form";
         } catch (Exception e) {
             log.error("Unexpected error updating coupon ID {}: {}", id, e.getMessage(), e);
             model.addAttribute("pageTitle", "Upravit kupón (Chyba)");
-            couponData.setId(id);
-            model.addAttribute("coupon", couponData);
+            couponData.setId(id); // Zachovat ID
+            model.addAttribute("coupon", couponData); // Vrátíme data z formuláře
             model.addAttribute("errorMessage", "Při aktualizaci kupónu nastala neočekávaná chyba: " + e.getMessage());
             return "admin/coupon-form";
         }
@@ -185,28 +194,20 @@ public class AdminCouponController {
     }
 
     // --- Pomocné metody ---
-
     private void parseAndSetDates(Coupon coupon, String startDateStr, String expirationDateStr, BindingResult bindingResult) {
-        // Zpracování startDate
         if (StringUtils.hasText(startDateStr)) {
             try {
-                // Zpracujeme YYYY-MM-DD a přidáme začátek dne
                 coupon.setStartDate(LocalDate.parse(startDateStr).atStartOfDay());
             } catch (DateTimeParseException e) {
-                log.warn("Invalid start date format: {}", startDateStr);
                 bindingResult.rejectValue("startDate", "typeMismatch.coupon.startDate", "Neplatný formát data 'Platnost od'");
             }
         } else {
             coupon.setStartDate(null); // Povolit prázdné datum
         }
-
-        // Zpracování expirationDate
         if (StringUtils.hasText(expirationDateStr)) {
             try {
-                // Zpracujeme YYYY-MM-DD a přidáme konec dne pro platnost DO včetně
                 coupon.setExpirationDate(LocalDate.parse(expirationDateStr).atTime(23, 59, 59));
             } catch (DateTimeParseException e) {
-                log.warn("Invalid expiration date format: {}", expirationDateStr);
                 bindingResult.rejectValue("expirationDate", "typeMismatch.coupon.expirationDate", "Neplatný formát data 'Platnost do'");
             }
         } else {
@@ -214,36 +215,36 @@ public class AdminCouponController {
         }
     }
 
-
-    // Pomocná metoda pro přiřazení validační chyby z IllegalArgumentException
     private void assignValidationError(IllegalArgumentException e, BindingResult bindingResult, Model model) {
         String message = e.getMessage();
         if (message == null) message = "Neznámá chyba validace.";
 
-        if (message.contains("kódem")) {
+        if (message.contains("Kód kupónu") && message.contains("již existuje")) {
             bindingResult.rejectValue("code", "error.coupon.duplicate", message);
-        } else if (message.contains("Percentage value") || message.contains("Procentuální hodnota")) {
-            bindingResult.rejectValue("value", "error.coupon.value", message); // Změněno na 'value'
-        } else if (message.contains("fixed amount") || message.contains("Pevná částka")) {
-            bindingResult.rejectValue("valueCZK", "error.coupon.value", message); // Změněno na 'valueCZK'
-            bindingResult.rejectValue("valueEUR", "error.coupon.value", message); // Změněno na 'valueEUR'
-        } else if (message.contains("Valid From") || message.contains("Valid To") || message.contains("Platnost od")) {
-            bindingResult.rejectValue("startDate", "error.coupon.date", message); // Změněno na 'startDate'
-            bindingResult.rejectValue("expirationDate", "error.coupon.date", message); // Změněno na 'expirationDate'
-        } else if (message.contains("usage limit") || message.contains("limit použití")) {
-            if (message.contains("nižší než aktuální")) {
-                bindingResult.rejectValue("usageLimit", "error.coupon.limit.count", message); // Změněno na 'usageLimit'
-            } else if (message.contains("na zákazníka")) {
-                bindingResult.rejectValue("usageLimitPerCustomer", "error.coupon.limit.customer", message);
+        } else if (message.contains("Procentuální hodnota")) {
+            bindingResult.rejectValue("value", "error.coupon.value", message);
+        } else if (message.contains("Pevná částka") && (message.contains("CZK") || message.contains("EUR"))) {
+            if (message.contains("CZK")) bindingResult.rejectValue("valueCZK", "error.coupon.value", message);
+            if (message.contains("EUR")) bindingResult.rejectValue("valueEUR", "error.coupon.value", message);
+        } else if (message.contains("musí mít definovanou platnou slevu")) {
+            // Chyba obecné validace kombinace polí
+            model.addAttribute("errorMessage", message);
+        } else if (message.contains("Platnost od") || message.contains("Platnost do")) {
+            if(bindingResult.hasFieldErrors("startDate") || bindingResult.hasFieldErrors("expirationDate")) {
+                // Chyba už byla přidána při parsování datumu
             } else {
-                bindingResult.rejectValue("usageLimit", "error.coupon.limit", message); // Změněno na 'usageLimit'
+                // Chyba z validace v service
+                bindingResult.rejectValue("startDate", "error.coupon.date", message);
+                bindingResult.rejectValue("expirationDate", "error.coupon.date", message);
             }
+        } else if (message.contains("limit použití")) {
+            if (message.contains("nižší než aktuální")) bindingResult.rejectValue("usageLimit", "error.coupon.limit.count", message);
+            else if (message.contains("na zákazníka")) bindingResult.rejectValue("usageLimitPerCustomer", "error.coupon.limit.customer", message);
+            else bindingResult.rejectValue("usageLimit", "error.coupon.limit", message);
         } else if (message.contains("Minimální hodnota")) {
             if (message.contains("CZK")) bindingResult.rejectValue("minimumOrderValueCZK", "error.coupon.minvalue", message);
             if (message.contains("EUR")) bindingResult.rejectValue("minimumOrderValueEUR", "error.coupon.minvalue", message);
-        }
-        // Odstraněna větev pro 'typ kupónu', protože validace isPercentage je jinde
-        else {
+        } else {
             model.addAttribute("errorMessage", message); // Obecná chyba
         }
     }

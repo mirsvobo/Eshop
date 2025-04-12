@@ -21,7 +21,10 @@ public class ShippingCalculationResponseDto {
     private Map<BigDecimal, BigDecimal> vatBreakdown; // Rozpis DPH ze ZBOŽÍ (pro případnou aktualizaci)
     private BigDecimal totalVatWithShipping; // Celkové DPH (zboží + doprava)
     private String errorMessage;        // Chybová zpráva (null pokud OK)
-    private String currencySymbol;      // Symbol měny (např. "Kč" nebo "€")
+    private String currencySymbol;// Symbol měny (např. "Kč" nebo "€")
+    private BigDecimal originalShippingCostNoTax; // Původní cena dopravy bez DPH (před slevou)
+    private BigDecimal originalShippingTax;       // Původní DPH z dopravy (před slevou)
+    private BigDecimal shippingDiscountAmount;
     // ---------------------
 
     // Konstruktor, gettery, settery... jsou generovány Lombokem

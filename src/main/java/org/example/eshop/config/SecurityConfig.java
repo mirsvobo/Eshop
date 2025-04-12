@@ -48,6 +48,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()
+                        .requestMatchers(HttpMethod.POST,"/pokladna/calculate-shipping").permitAll()
                         .requestMatchers(
                                 new AntPathRequestMatcher("/muj-ucet/**")
                         ).authenticated()

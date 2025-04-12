@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Použít Long místo long
+    private Long id;
 
     @Column(nullable = false, unique = true, length = 50) private String code;
     @Column(nullable = false) private String name;
@@ -31,20 +31,40 @@ public class Coupon {
     @Column(nullable = false)
     private boolean isPercentage; // True = procenta (použije 'value'), False = pevná částka (použije 'valueCZK'/'valueEUR')
 
-    @Column(nullable = false) private LocalDateTime startDate;
-    @Column(nullable = false) private LocalDateTime expirationDate;
+    /**
+     * Pokud je true, kupón poskytne dopravu zdarma,
+     * navíc k případné procentuální nebo fixní slevě.
+     * Pokud je hodnota/procenta 0 a toto je true, kupón poskytne *pouze* dopravu zdarma.
+     */
+    @Column(nullable = false)
+    private boolean freeShipping = false; // Defaultně false
+
+    // Ostatní pole zůstávají stejná...
+    private LocalDateTime startDate; // Změněno na nullable
+    private LocalDateTime expirationDate; // Nullable
 
     private Integer usageLimit;
     private Integer usageLimitPerCustomer;
     @Column(nullable = false) private Integer usedTimes = 0;
 
-    // Minimální hodnota objednávky (bez DPH, před slevami) pro uplatnění kupónu
     @Column(precision = 10, scale = 2)
     private BigDecimal minimumOrderValueCZK;
     @Column(precision = 10, scale = 2)
     private BigDecimal minimumOrderValueEUR;
 
     @Column(nullable = false) private boolean active = true;
-    @Column(nullable = false)
-    private boolean freeShipping = false; // Defaultně false
+
+    /**
+     * Pomocná metoda pro logiku "jen doprava zdarma".
+     * @return true pokud je kupón jen na dopravu zdarma.
+     */
+    @Transient // Nebude se ukládat do DB
+    public boolean isFreeShippingOnly() {
+        boolean noPercentageValue = value == null || value.compareTo(BigDecimal.ZERO) == 0;
+        boolean noFixedValue = (valueCZK == null || valueCZK.compareTo(BigDecimal.ZERO) == 0) &&
+                (valueEUR == null || valueEUR.compareTo(BigDecimal.ZERO) == 0);
+
+        // Je freeShipping a (není procentuální NEBO procentuální hodnota je nulová) A zároveň nemá fixní hodnotu
+        return freeShipping && (!isPercentage || noPercentageValue) && noFixedValue;
+    }
 }

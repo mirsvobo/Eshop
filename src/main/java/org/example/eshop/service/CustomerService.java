@@ -3,6 +3,7 @@ package org.example.eshop.service;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import lombok.Getter;
 import org.example.eshop.model.Customer;
 import org.example.eshop.dto.AddressDto;
 import org.example.eshop.dto.ChangePasswordDto;
@@ -32,6 +33,7 @@ public class CustomerService {
 
     @Autowired private CustomerRepository customerRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Getter
     @Autowired(required = false) private Validator validator;
 
     public enum AddressType { INVOICE, DELIVERY }
@@ -146,120 +148,49 @@ public class CustomerService {
      * @param dto DTO s daty z formuláře.
      */
     public void updateCustomerFromDto(Customer customer, CheckoutFormDataDto dto) {
-        // Základní údaje
-        if (dto.getEmail() != null) {
-            customer.setEmail(dto.getEmail().toLowerCase().trim());
-        } else {
-            log.warn("Email in CheckoutFormDataDto is null. Skipping email update for customer ID: {}", customer.getId() != 0 ? customer.getId() : "(new guest)");
-        }
+        // --- Základní / Kontaktní údaje ---
+        if (dto.getEmail() != null) customer.setEmail(dto.getEmail().toLowerCase().trim());
+        if (dto.getFirstName() != null) customer.setFirstName(dto.getFirstName());
+        if (dto.getLastName() != null) customer.setLastName(dto.getLastName());
+        if (dto.getPhone() != null) customer.setPhone(dto.getPhone());
 
-        // *** ADDED NULL CHECKS for NOT NULL columns ***
-        if (dto.getFirstName() != null) {
-            customer.setFirstName(dto.getFirstName());
-        } else {
-            if (customer.getId() != 0) { // Log only if updating existing customer
-                log.warn("FirstName in CheckoutFormDataDto is null. Keeping existing value for customer ID: {}", customer.getId());
-            }
-            // Keep existing value, do not set to null
-        }
-
-        if (dto.getLastName() != null) {
-            customer.setLastName(dto.getLastName());
-        } else {
-            if (customer.getId() != 0) {
-                log.warn("LastName in CheckoutFormDataDto is null. Keeping existing value for customer ID: {}", customer.getId());
-            }
-            // Keep existing value, do not set to null
-        }
-
-        // Phone can be nullable
-        if (dto.getPhone() != null) {
-            customer.setPhone(dto.getPhone());
-        } else {
-            // Keep existing if null in DTO
-            // log.trace("Phone in CheckoutFormDataDto is null. Keeping existing phone for customer ID: {}", customer.getId());
-        }
-
-        // --- Fakturační adresa ---
-        customer.setInvoiceCompanyName(dto.getInvoiceCompanyName()); // Nullable
-
-        // Ensure invoice names are not set to null if company name is also null and names in DTO are null
-        if (StringUtils.hasText(dto.getInvoiceCompanyName())) {
-            customer.setInvoiceFirstName(null);
-            customer.setInvoiceLastName(null);
-        } else {
-            // Only update invoice names if corresponding DTO names are NOT null
-            if (dto.getFirstName() != null) {
-                customer.setInvoiceFirstName(dto.getFirstName());
-            } // else: keep existing invoiceFirstName
-            if (dto.getLastName() != null) {
-                customer.setInvoiceLastName(dto.getLastName());
-            } // else: keep existing invoiceLastName
-        }
-
-        // Check other invoice address fields (assuming they are NOT NULL in DB)
-        if (dto.getInvoiceStreet() != null) { customer.setInvoiceStreet(dto.getInvoiceStreet()); }
-        else if (customer.getId() != 0) { log.warn("InvoiceStreet in DTO is null for customer {}", customer.getId()); }
-
-        if (dto.getInvoiceCity() != null) { customer.setInvoiceCity(dto.getInvoiceCity()); }
-        else if (customer.getId() != 0) { log.warn("InvoiceCity in DTO is null for customer {}", customer.getId()); }
-
-        if (dto.getInvoiceZipCode() != null) { customer.setInvoiceZipCode(dto.getInvoiceZipCode()); }
-        else if (customer.getId() != 0) { log.warn("InvoiceZipCode in DTO is null for customer {}", customer.getId()); }
-
-        if (dto.getInvoiceCountry() != null) { customer.setInvoiceCountry(dto.getInvoiceCountry()); }
-        else if (customer.getId() != 0) { log.warn("InvoiceCountry in DTO is null for customer {}", customer.getId()); }
-
-        // Tax IDs are nullable
+        // --- Fakturační údaje ---
+        customer.setInvoiceCompanyName(dto.getInvoiceCompanyName()); // Uložíme firmu
         customer.setInvoiceTaxId(dto.getInvoiceTaxId());
         customer.setInvoiceVatId(dto.getInvoiceVatId());
+        // Uložíme adresu
+        if (dto.getInvoiceStreet() != null) customer.setInvoiceStreet(dto.getInvoiceStreet());
+        if (dto.getInvoiceCity() != null) customer.setInvoiceCity(dto.getInvoiceCity());
+        if (dto.getInvoiceZipCode() != null) customer.setInvoiceZipCode(dto.getInvoiceZipCode());
+        if (dto.getInvoiceCountry() != null) customer.setInvoiceCountry(dto.getInvoiceCountry());
 
-        // --- Dodací adresa ---
+        // Nastavení jména/příjmení na faktuře v Customer entitě
+        if (StringUtils.hasText(dto.getInvoiceCompanyName())) {
+            // Pokud je firma, jméno/příjmení na faktuře nepotřebujeme (nebo je null)
+            customer.setInvoiceFirstName(null);
+            customer.setInvoiceLastName(null);
+            log.debug("Setting invoice name/lastname to null for customer ID {} due to company name.", customer.getId() != 0 ? customer.getId() : "(new)");
+        } else {
+            // Pokud není firma, použijeme hlavní kontaktní jméno/příjmení
+            customer.setInvoiceFirstName(dto.getFirstName());
+            customer.setInvoiceLastName(dto.getLastName());
+            log.debug("Setting invoice name/lastname from main contact for customer ID {}.", customer.getId() != 0 ? customer.getId() : "(new)");
+        }
+
+        // --- Dodací údaje ---
         customer.setUseInvoiceAddressAsDelivery(dto.isUseInvoiceAddressAsDelivery());
         if (!dto.isUseInvoiceAddressAsDelivery()) {
-            customer.setDeliveryCompanyName(dto.getDeliveryCompanyName()); // Nullable
-
-            // Protect delivery names similar to invoice names
-            if (StringUtils.hasText(dto.getDeliveryCompanyName())) {
-                customer.setDeliveryFirstName(null);
-                customer.setDeliveryLastName(null);
-            } else {
-                if (dto.getDeliveryFirstName() != null) {
-                    customer.setDeliveryFirstName(dto.getDeliveryFirstName());
-                } // else keep existing
-                if (dto.getDeliveryLastName() != null) {
-                    customer.setDeliveryLastName(dto.getDeliveryLastName());
-                } // else keep existing
-            }
-
-            // Check required delivery address fields (assuming NOT NULL in DB)
-            if (dto.getDeliveryStreet() != null) { customer.setDeliveryStreet(dto.getDeliveryStreet()); }
-            else if (customer.getId() != 0) { log.warn("DeliveryStreet in DTO is null for customer {}", customer.getId()); }
-
-            if (dto.getDeliveryCity() != null) { customer.setDeliveryCity(dto.getDeliveryCity()); }
-            else if (customer.getId() != 0) { log.warn("DeliveryCity in DTO is null for customer {}", customer.getId()); }
-
-            if (dto.getDeliveryZipCode() != null) { customer.setDeliveryZipCode(dto.getDeliveryZipCode()); }
-            else if (customer.getId() != 0) { log.warn("DeliveryZipCode in DTO is null for customer {}", customer.getId()); }
-
-            if (dto.getDeliveryCountry() != null) { customer.setDeliveryCountry(dto.getDeliveryCountry()); }
-            else if (customer.getId() != 0) { log.warn("DeliveryCountry in DTO is null for customer {}", customer.getId()); }
-
-            // Delivery phone (nullable?)
-            if (dto.getDeliveryPhone() != null) {
-                customer.setDeliveryPhone(dto.getDeliveryPhone());
-            } else {
-                // Keep existing or fallback
-                // customer.setDeliveryPhone(customer.getPhone());
-            }
-
-        } else {
-            // Clear specific delivery fields when using invoice address
-            customer.setDeliveryCompanyName(null); customer.setDeliveryFirstName(null); customer.setDeliveryLastName(null);
-            customer.setDeliveryStreet(null); customer.setDeliveryCity(null); customer.setDeliveryZipCode(null);
-            customer.setDeliveryCountry(null); customer.setDeliveryPhone(null);
-            // Sync happens in @PreUpdate / @PrePersist
+            customer.setDeliveryCompanyName(dto.getDeliveryCompanyName());
+            customer.setDeliveryFirstName(dto.getDeliveryFirstName());
+            customer.setDeliveryLastName(dto.getDeliveryLastName());
+            if (dto.getDeliveryStreet() != null) customer.setDeliveryStreet(dto.getDeliveryStreet());
+            if (dto.getDeliveryCity() != null) customer.setDeliveryCity(dto.getDeliveryCity());
+            if (dto.getDeliveryZipCode() != null) customer.setDeliveryZipCode(dto.getDeliveryZipCode());
+            if (dto.getDeliveryCountry() != null) customer.setDeliveryCountry(dto.getDeliveryCountry());
+            if (dto.getDeliveryPhone() != null) customer.setDeliveryPhone(dto.getDeliveryPhone());
         }
+        // @PreUpdate/@PrePersist v Customer entitě se postará o synchronizaci/vymazání dodací adresy
+        // podle flagu useInvoiceAddressAsDelivery PŘED uložením do DB.
     }
 
 

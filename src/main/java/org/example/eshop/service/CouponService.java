@@ -16,12 +16,11 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
-import java.time.LocalDateTime; // Váš model používá LocalDateTime
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-// Import statických konstant pro ceny
 import static org.example.eshop.config.PriceConstants.*;
 
 @Service
@@ -29,15 +28,13 @@ public class CouponService {
 
     private static final Logger log = LoggerFactory.getLogger(CouponService.class);
 
-    // Použití Locale.forLanguageTag pro modernější přístup
     private static final Locale CZECH_LOCALE = Locale.forLanguageTag("cs-CZ");
-    private static final Locale EURO_LOCALE =  Locale.forLanguageTag("sk-SK");
+    private static final Locale EURO_LOCALE = Locale.forLanguageTag("sk-SK");
 
     @Autowired private CouponRepository couponRepository;
     @Autowired private OrderRepository orderRepository;
 
     // --- Metody pro čtení ---
-
     @Transactional(readOnly = true)
     public Optional<Coupon> findById(Long id) {
         log.debug("Fetching coupon by ID: {}", id);
@@ -54,8 +51,7 @@ public class CouponService {
         return couponRepository.findByCodeIgnoreCase(trimmedCode);
     }
 
-    // --- Metody pro validaci a aplikaci (upraveno pro váš model) ---
-
+    // --- Metody pro validaci a aplikaci ---
     @Transactional(readOnly = true)
     public boolean isCouponGenerallyValid(Coupon coupon) {
         if (coupon == null) {
@@ -67,7 +63,6 @@ public class CouponService {
             return false;
         }
         LocalDateTime now = LocalDateTime.now();
-        // Porovnání LocalDateTime
         if (coupon.getStartDate() != null && now.isBefore(coupon.getStartDate())) {
             log.debug("Coupon '{}' invalid: not yet valid (from {}).", coupon.getCode(), coupon.getStartDate());
             return false;
@@ -76,7 +71,6 @@ public class CouponService {
             log.debug("Coupon '{}' invalid: expired (to {}).", coupon.getCode(), coupon.getExpirationDate());
             return false;
         }
-        // Porovnání limitu použití
         if (coupon.getUsageLimit() != null && coupon.getUsageLimit() > 0
                 && coupon.getUsedTimes() >= coupon.getUsageLimit()) {
             log.debug("Coupon '{}' invalid: total usage limit ({}) reached (used: {}).", coupon.getCode(), coupon.getUsageLimit(), coupon.getUsedTimes());
@@ -90,11 +84,14 @@ public class CouponService {
         if (coupon == null || subTotalWithoutTax == null || subTotalWithoutTax.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
+        // Kupóny "pouze doprava zdarma" neposkytují slevu na ceně zboží
+        if (coupon.isFreeShippingOnly()) {
+            log.debug("Coupon '{}' is free shipping only. Returning zero discount amount.", coupon.getCode());
+            return BigDecimal.ZERO;
+        }
 
         BigDecimal discountAmount = BigDecimal.ZERO;
-
         if (coupon.isPercentage()) {
-            // Použijeme pole 'value' pro procenta
             if (coupon.getValue() != null && coupon.getValue().compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal percentage = coupon.getValue().divide(new BigDecimal("100"), CALCULATION_SCALE, ROUNDING_MODE);
                 discountAmount = subTotalWithoutTax.multiply(percentage);
@@ -102,21 +99,22 @@ public class CouponService {
                 log.warn("Percentage coupon '{}' has invalid value: {}. Applying zero discount.", coupon.getCode(), coupon.getValue());
             }
         } else { // Pevná částka
-            BigDecimal fixedValue = EURO_CURRENCY.equals(currency)
-                    ? coupon.getValueEUR()
-                    : coupon.getValueCZK();
+            BigDecimal fixedValue = EURO_CURRENCY.equals(currency) ? coupon.getValueEUR() : coupon.getValueCZK();
             if (fixedValue != null && fixedValue.compareTo(BigDecimal.ZERO) > 0) {
-                discountAmount = fixedValue.min(subTotalWithoutTax); // Sleva nemůže být větší než mezisoučet
+                discountAmount = fixedValue; // Sleva je fixní hodnota
             } else {
-                log.warn("Fixed amount coupon '{}' has no valid value for currency '{}'. Applying zero discount.", coupon.getCode(), currency);
+                // Toto by nemělo nastat, pokud není freeShippingOnly a validace projde, ale pro jistotu
+                log.warn("Fixed amount coupon '{}' has no valid value for currency '{}' and is not freeShippingOnly. Applying zero discount.", coupon.getCode(), currency);
             }
         }
 
+        // Sleva nemůže být větší než mezisoučet
+        discountAmount = discountAmount.min(subTotalWithoutTax);
         discountAmount = discountAmount.setScale(PRICE_SCALE, ROUNDING_MODE);
-        log.debug("Calculated discount amount for coupon '{}' (isPercentage: {}): {} {}",
-                coupon.getCode(), coupon.isPercentage(), discountAmount, currency);
+        log.debug("Calculated discount amount for coupon '{}': {} {}", coupon.getCode(), discountAmount, currency);
         return discountAmount;
     }
+
 
     @Transactional(readOnly = true)
     public boolean checkMinimumOrderValue(Coupon coupon, BigDecimal orderSubtotal, String currency) {
@@ -125,8 +123,13 @@ public class CouponService {
             return false;
         }
         BigDecimal minimumValue = EURO_CURRENCY.equals(currency)
+                ? coupon.getMinimumOrderValueCZK() // Zde byla chyba, mělo být EUR
+                : coupon.getMinimumOrderValueCZK();
+        // OPRAVA: Správné pole pro EUR
+        minimumValue = EURO_CURRENCY.equals(currency)
                 ? coupon.getMinimumOrderValueEUR()
                 : coupon.getMinimumOrderValueCZK();
+
 
         if (minimumValue == null || minimumValue.compareTo(BigDecimal.ZERO) <= 0) {
             return true; // No minimum value set.
@@ -142,7 +145,6 @@ public class CouponService {
     }
 
     public String getMinimumValueString(Coupon coupon, String currency) {
-        // Tato metoda zůstává funkční
         if (coupon == null) return "";
         BigDecimal minimumValue = EURO_CURRENCY.equals(currency) ? coupon.getMinimumOrderValueEUR() : coupon.getMinimumOrderValueCZK();
         if (minimumValue == null || minimumValue.compareTo(BigDecimal.ZERO) <= 0) return "";
@@ -165,17 +167,7 @@ public class CouponService {
             log.warn("Checking customer usage limit for coupon '{}' on a guest or customer without ID. Allowing usage.", coupon.getCode());
             return true;
         }
-        // POZNÁMKA: Ujistěte se, že máte v OrderRepository metodu countByCustomerIdAndAppliedCouponId
-        // Pokud ne, musíte ji přidat, nebo použít alternativní (méně efektivní) způsob počítání.
-        // Předpokládáme, že metoda existuje:
         long customerUsageCount = orderRepository.countByCustomerIdAndAppliedCouponId(customer.getId(), coupon.getId());
-        /*
-        // Alternativa, POKUD NEMÁTE metodu countBy... v OrderRepository:
-        long customerUsageCount = orderRepository.findByCustomerIdOrderByOrderDateDesc(customer.getId()).stream()
-                 .filter(order -> order.getAppliedCoupon() != null && order.getAppliedCoupon().getId().equals(coupon.getId()))
-                 .count();
-        */
-
         boolean allowed = customerUsageCount < coupon.getUsageLimitPerCustomer();
         if (!allowed) {
             log.debug("Coupon '{}' invalid for customer {}: usage limit per customer ({}) reached (count: {}).",
@@ -191,18 +183,17 @@ public class CouponService {
             return;
         }
         couponRepository.findById(coupon.getId()).ifPresentOrElse(couponToUpdate -> {
-            couponToUpdate.setUsedTimes(couponToUpdate.getUsedTimes() + 1); // Používáme usedTimes
+            couponToUpdate.setUsedTimes(couponToUpdate.getUsedTimes() + 1);
             couponRepository.save(couponToUpdate);
             log.info("Incremented usage count for coupon '{}' (ID: {}). New count: {}",
-                    couponToUpdate.getCode(), couponToUpdate.getId(), couponToUpdate.getUsedTimes()); // Používáme usedTimes
+                    couponToUpdate.getCode(), couponToUpdate.getId(), couponToUpdate.getUsedTimes());
         }, () -> {
             log.error("Could not mark coupon as used, not found with ID: {}", coupon.getId());
         });
     }
 
 
-    // --- Metody pro CMS (přizpůsobeno vašemu modelu) ---
-
+    // --- Metody pro CMS ---
     @Transactional(readOnly = true)
     public List<Coupon> getAllCoupons() {
         log.debug("Fetching all coupons for CMS");
@@ -211,7 +202,8 @@ public class CouponService {
 
     @Transactional
     public Coupon createCoupon(Coupon coupon) {
-        log.info("Creating new coupon via CMS: Code='{}', isPercentage='{}'", coupon.getCode(), coupon.isPercentage());
+        log.info("Creating new coupon via CMS: Code='{}', isPercentage='{}', freeShipping='{}'",
+                coupon.getCode(), coupon.isPercentage(), coupon.isFreeShipping());
         coupon.setCode(coupon.getCode() != null ? coupon.getCode().trim().toUpperCase() : null);
         validateCouponData(coupon, null); // Validace
 
@@ -219,11 +211,8 @@ public class CouponService {
             throw new IllegalArgumentException("Kupón s kódem '" + coupon.getCode() + "' již existuje.");
         });
 
-        coupon.setUsedTimes(0); // Začínáme s 0 použitím
-        if (!coupon.isActive()) { // Default je true v modelu, takže kontrolujeme, zda není explicitně false
-            coupon.setActive(true);
-        }
-        // FreeShipping se přebírá z formuláře
+        coupon.setUsedTimes(0);
+        // Model má defaultně active=true, zde není třeba nastavovat
 
         Coupon savedCoupon = couponRepository.save(coupon);
         log.info("Coupon '{}' (ID: {}) created successfully via CMS.", savedCoupon.getCode(), savedCoupon.getId());
@@ -231,17 +220,15 @@ public class CouponService {
     }
 
     @Transactional
-    public Coupon updateCoupon(Long id, Coupon couponData) { // Vrací Coupon
+    public Coupon updateCoupon(Long id, Coupon couponData) {
         log.info("Updating coupon with ID: {} via CMS", id);
 
         Coupon existingCoupon = couponRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Coupon with ID " + id + " not found."));
 
-        // Připravit data a validovat
         couponData.setCode(couponData.getCode() != null ? couponData.getCode().trim().toUpperCase() : null);
         validateCouponData(couponData, id); // Validace PŘED uložením
 
-        // Kontrola kódu
         if (!existingCoupon.getCode().equalsIgnoreCase(couponData.getCode())) {
             couponRepository.findByCodeIgnoreCase(couponData.getCode())
                     .filter(found -> !found.getId().equals(id))
@@ -252,31 +239,28 @@ public class CouponService {
         }
 
         // Update polí
-        existingCoupon.setName(couponData.getName()); // Přidáno pole Name
+        existingCoupon.setName(couponData.getName());
         existingCoupon.setDescription(couponData.getDescription());
-        existingCoupon.setPercentage(couponData.isPercentage()); // Příznak procent
+        existingCoupon.setPercentage(couponData.isPercentage());
+        existingCoupon.setFreeShipping(couponData.isFreeShipping());
         // Hodnoty jsou normalizovány ve validateCouponData
         existingCoupon.setValue(couponData.getValue());
         existingCoupon.setValueCZK(couponData.getValueCZK());
         existingCoupon.setValueEUR(couponData.getValueEUR());
         existingCoupon.setMinimumOrderValueCZK(couponData.getMinimumOrderValueCZK());
         existingCoupon.setMinimumOrderValueEUR(couponData.getMinimumOrderValueEUR());
-        existingCoupon.setStartDate(couponData.getStartDate()); // Používáme startDate
-        existingCoupon.setExpirationDate(couponData.getExpirationDate()); // Používáme expirationDate
-        existingCoupon.setUsageLimit(couponData.getUsageLimit()); // Používáme usageLimit
+        existingCoupon.setStartDate(couponData.getStartDate());
+        existingCoupon.setExpirationDate(couponData.getExpirationDate());
+        existingCoupon.setUsageLimit(couponData.getUsageLimit());
         existingCoupon.setUsageLimitPerCustomer(couponData.getUsageLimitPerCustomer());
         existingCoupon.setActive(couponData.isActive());
-        existingCoupon.setFreeShipping(couponData.isFreeShipping());
-        // usedTimes neaktualizujeme
+        // usedTimes se neaktualizuje
 
         Coupon updatedCoupon = couponRepository.save(existingCoupon);
         log.info("Coupon '{}' (ID: {}) updated successfully via CMS.", updatedCoupon.getCode(), updatedCoupon.getId());
-        return updatedCoupon; // Vrací přímo aktualizovaný kupón
+        return updatedCoupon;
     }
 
-    /**
-     * Deactivates a coupon (soft delete).
-     */
     @Transactional
     public void deactivateCoupon(Long id) {
         log.warn("Attempting to deactivate coupon with ID: {} via CMS", id);
@@ -292,88 +276,82 @@ public class CouponService {
         }
     }
 
-
     /**
      * Validates coupon data before saving (create or update).
      * Throws IllegalArgumentException for validation errors.
-     * Normalizes values based on isPercentage flag.
+     * Normalizes values based on isPercentage and freeShipping flags.
      */
     private void validateCouponData(Coupon coupon, Long idBeingUpdated) {
         if (coupon == null) throw new IllegalArgumentException("Coupon data cannot be null.");
         if (!StringUtils.hasText(coupon.getCode())) throw new IllegalArgumentException("Kód kupónu nesmí být prázdný.");
-        // Přidána validace pro Name (z vašeho modelu)
         if (!StringUtils.hasText(coupon.getName())) throw new IllegalArgumentException("Název kupónu nesmí být prázdný.");
 
         coupon.setCode(coupon.getCode().trim().toUpperCase());
 
-        // Validace hodnot podle typu (isPercentage)
+        boolean hasValueDiscount = false;
+
+        // 1. Validace procentuální slevy
         if (coupon.isPercentage()) {
-            if (coupon.getValue() == null || coupon.getValue().compareTo(BigDecimal.ZERO) <= 0 || coupon.getValue().compareTo(new BigDecimal("100")) > 0) {
-                throw new IllegalArgumentException("Procentuální hodnota (pole 'value') musí být větší než 0 a menší nebo rovna 100.");
+            if (coupon.getValue() == null || coupon.getValue().signum() < 0 || coupon.getValue().compareTo(new BigDecimal("100")) > 0) {
+                throw new IllegalArgumentException("Procentuální hodnota (pole 'value') musí být mezi 0.00 a 100.00.");
+            }
+            // Normalizace - může být 0, pokud je freeShipping
+            if (coupon.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                hasValueDiscount = true;
             }
             // Normalizace - vynulovat fixní hodnoty
             coupon.setValueCZK(null);
             coupon.setValueEUR(null);
-            coupon.setFreeShipping(false); // Procentuální nemůže být doprava zdarma zároveň
-        } else { // Není procentuální (je Pevná částka NEBO Doprava zdarma)
-            if (coupon.isFreeShipping()) {
-                // Je doprava zdarma - vynulovat hodnoty
-                coupon.setValue(null);
-                coupon.setValueCZK(null);
-                coupon.setValueEUR(null);
-            } else {
-                // Musí být Pevná částka
-                boolean hasCzValue = coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) > 0;
-                boolean hasEuValue = coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) > 0;
-                if (!hasCzValue && !hasEuValue) {
-                    throw new IllegalArgumentException("Pro pevnou částku musí být zadána alespoň jedna kladná hodnota (CZK nebo EUR).");
-                }
-                // Kontrola záporných hodnot
-                if (coupon.getValueCZK() != null && coupon.getValueCZK().signum() < 0) throw new IllegalArgumentException("Pevná částka CZK nesmí být záporná.");
-                if (coupon.getValueEUR() != null && coupon.getValueEUR().signum() < 0) throw new IllegalArgumentException("Pevná částka EUR nesmí být záporná.");
-                // Normalizace - vynulovat procento
-                coupon.setValue(null);
-                coupon.setFreeShipping(false); // Pevná částka není doprava zdarma
+        }
+        // 2. Validace fixní slevy
+        else {
+            boolean hasCzValue = coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) > 0;
+            boolean hasEuValue = coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) > 0;
+            if (coupon.getValueCZK() != null && coupon.getValueCZK().signum() < 0) throw new IllegalArgumentException("Pevná částka CZK nesmí být záporná.");
+            if (coupon.getValueEUR() != null && coupon.getValueEUR().signum() < 0) throw new IllegalArgumentException("Pevná částka EUR nesmí být záporná.");
+
+            if (hasCzValue || hasEuValue) {
+                hasValueDiscount = true;
             }
+            // Normalizace - vynulovat procento a nepoužité fixní ceny
+            coupon.setValue(null);
+            if (coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) <= 0) coupon.setValueCZK(null);
+            if (coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) <= 0) coupon.setValueEUR(null);
         }
 
-        // Normalizace a validace minimálních hodnot
-        if (coupon.getMinimumOrderValueCZK() != null) {
-            if (coupon.getMinimumOrderValueCZK().signum() < 0) throw new IllegalArgumentException("Minimální hodnota CZK nesmí být záporná.");
-            if (coupon.getMinimumOrderValueCZK().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueCZK(null);
+        // 3. Kontrola kombinace hodnoty a freeShipping
+        if (!hasValueDiscount && !coupon.isFreeShipping()) {
+            throw new IllegalArgumentException("Kupón musí mít definovanou kladnou slevu (procentuální nebo fixní) NEBO musí mít zaškrtnutou dopravu zdarma.");
         }
-        if (coupon.getMinimumOrderValueEUR() != null) {
-            if (coupon.getMinimumOrderValueEUR().signum() < 0) throw new IllegalArgumentException("Minimální hodnota EUR nesmí být záporná.");
-            if (coupon.getMinimumOrderValueEUR().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueEUR(null);
+        // Pokud je zaškrtnuta doprava zdarma a hodnota slevy je 0, je to OK (jen doprava zdarma).
+        if (coupon.isFreeShipping() && !hasValueDiscount) {
+            log.debug("Coupon {} configured for free shipping only.", coupon.getCode());
+            // Explicitně vynulujeme hodnoty pro jistotu
+            coupon.setValue(null);
+            coupon.setValueCZK(null);
+            coupon.setValueEUR(null);
+            coupon.setPercentage(false); // "Free shipping only" je technicky typ "fixní slevy" s nulovou hodnotou
         }
 
-        // Validace datumů (používáme LocalDateTime)
-        if (coupon.getStartDate() != null && coupon.getExpirationDate() != null && coupon.getStartDate().isAfter(coupon.getExpirationDate())) {
-            throw new IllegalArgumentException("Datum 'Platnost od' nesmí být po datu 'Platnost do'.");
-        }
 
-        // Validace a normalizace limitů (null nebo > 0)
-        if (coupon.getUsageLimit() != null) {
-            if(coupon.getUsageLimit() < 0) throw new IllegalArgumentException("Celkový limit použití nesmí být záporný.");
-            if(coupon.getUsageLimit() == 0) coupon.setUsageLimit(null); // 0 = neomezeno
-        }
-        if (coupon.getUsageLimitPerCustomer() != null) {
-            if (coupon.getUsageLimitPerCustomer() < 0) throw new IllegalArgumentException("Limit použití na zákazníka nesmí být záporný.");
-            if(coupon.getUsageLimitPerCustomer() == 0) coupon.setUsageLimitPerCustomer(null); // 0 = neomezeno
-        }
+        // Normalizace minimálních hodnot
+        if (coupon.getMinimumOrderValueCZK() != null) { if (coupon.getMinimumOrderValueCZK().signum() < 0) throw new IllegalArgumentException("Minimální hodnota CZK nesmí být záporná."); if (coupon.getMinimumOrderValueCZK().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueCZK(null); }
+        if (coupon.getMinimumOrderValueEUR() != null) { if (coupon.getMinimumOrderValueEUR().signum() < 0) throw new IllegalArgumentException("Minimální hodnota EUR nesmí být záporná."); if (coupon.getMinimumOrderValueEUR().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueEUR(null); }
+
+        // Validace datumů
+        if (coupon.getStartDate() != null && coupon.getExpirationDate() != null && coupon.getStartDate().isAfter(coupon.getExpirationDate())) { throw new IllegalArgumentException("Datum 'Platnost od' nesmí být po datu 'Platnost do'."); }
+
+        // Validace a normalizace limitů
+        if (coupon.getUsageLimit() != null) { if(coupon.getUsageLimit() < 0) throw new IllegalArgumentException("Celkový limit použití nesmí být záporný."); if(coupon.getUsageLimit() == 0) coupon.setUsageLimit(null); }
+        if (coupon.getUsageLimitPerCustomer() != null) { if (coupon.getUsageLimitPerCustomer() < 0) throw new IllegalArgumentException("Limit použití na zákazníka nesmí být záporný."); if(coupon.getUsageLimitPerCustomer() == 0) coupon.setUsageLimitPerCustomer(null); }
 
         // Validace limitu vs. aktuální počet použití při UPDATE
         if (idBeingUpdated != null && coupon.getUsageLimit() != null) {
             couponRepository.findById(idBeingUpdated).ifPresent(existing -> {
-                if (coupon.getUsageLimit() < existing.getUsedTimes()) { // Porovnáváme s usedTimes
+                if (coupon.getUsageLimit() < existing.getUsedTimes()) {
                     throw new IllegalArgumentException("Celkový limit použití ("+coupon.getUsageLimit()+") nesmí být nižší než aktuální počet použití (" + existing.getUsedTimes() + ").");
                 }
             });
         }
-        // Kontrola active flag - V modelu má default true, ale @Valid může poslat null, pokud není v requestu
-        // if (coupon.isActive() == null) { // Toto porovnání boolean s null neprojde kompilací
-        //     coupon.setActive(true); // Raději nastavíme v controlleru nebo zajistíme, že boolean není null
-        // }
-        // Kontrola active flag by měla být spíše v controlleru nebo pomocí @NotNull v DTO, pokud by se použilo DTO
     }
 }
