@@ -53,6 +53,9 @@
     text-align: right;
     font-weight: 500;
 }
+#summary-shipping-tax{
+    text-align: right;
+}
 .summary-total .summary-value {
     font-weight: bold;
     font-size: 1.1em;

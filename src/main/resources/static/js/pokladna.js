@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vatBreakdownShippingDiv && summaryShippingTaxEl) {
                 if (tax !== null && tax > 0) {
                     summaryShippingTaxEl.textContent = formatCurrency(tax, data.currencySymbol);
-                    vatBreakdownShippingDiv.style.display = 'flex'; // Zobrazit
+                    vatBreakdownShippingDiv.style.display = 'block'; // Zobrazit
                     console.log("JS Debug: Updated and showing #summary-shipping-tax:", summaryShippingTaxEl.textContent);
                 } else {
                     vatBreakdownShippingDiv.style.display = 'none'; // Skrýt
