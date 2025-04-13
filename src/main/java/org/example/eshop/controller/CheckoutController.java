@@ -750,18 +750,18 @@ public class CheckoutController implements PriceConstants {
         dto.setProductId(cartItem.getProductId());
         dto.setQuantity(cartItem.getQuantity());
         dto.setCustom(cartItem.isCustom());
-        dto.setSelectedDesignId(cartItem.getSelectedDesignId());
-        dto.setSelectedGlazeId(cartItem.getSelectedGlazeId());
-        dto.setSelectedRoofColorId(cartItem.getSelectedRoofColorId());
+        dto.setSelectedDesignId(cartItem.getSelectedDesignId()); // Ponechat
+        dto.setSelectedGlazeId(cartItem.getSelectedGlazeId());   // Ponechat
+        dto.setSelectedRoofColorId(cartItem.getSelectedRoofColorId()); // Ponechat
         dto.setCustomDimensions(cartItem.getCustomDimensions());
-        dto.setCustomGlaze(cartItem.getCustomGlaze());
-        dto.setCustomRoofColor(cartItem.getCustomRoofColor());
-        dto.setCustomRoofOverstep(cartItem.getCustomRoofOverstep());
-        dto.setCustomDesign(cartItem.getCustomDesign());
-        dto.setCustomHasDivider(cartItem.isCustomHasDivider());
-        dto.setCustomHasGutter(cartItem.isCustomHasGutter());
-        dto.setCustomHasGardenShed(cartItem.isCustomHasGardenShed());
-        dto.setSelectedAddons(cartItem.getSelectedAddons());
+        // ODEBRAT: dto.setCustomGlaze(cartItem.getCustomGlaze());
+        // ODEBRAT: dto.setCustomRoofColor(cartItem.getCustomRoofColor());
+        dto.setCustomRoofOverstep(cartItem.getCustomRoofOverstep()); // Ponechat
+        // ODEBRAT: dto.setCustomDesign(cartItem.getCustomDesign());
+        dto.setCustomHasDivider(cartItem.isCustomHasDivider()); // Ponechat
+        dto.setCustomHasGutter(cartItem.isCustomHasGutter());   // Ponechat
+        dto.setCustomHasGardenShed(cartItem.isCustomHasGardenShed()); // Ponechat
+        dto.setSelectedAddons(cartItem.getSelectedAddons()); // Ponechat
         return dto;
     }
 

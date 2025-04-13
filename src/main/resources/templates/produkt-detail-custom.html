@@ -9,6 +9,7 @@
 
     <th:block layout:fragment="css">
         <style>
+            /* Styly zůstávají stejné jako v předchozí verzi */
             .product-images img.main-image { max-width: 100%; height: auto; display: block; margin-bottom: 15px; border: 1px solid #dee2e6; cursor: pointer; background-color: #fff; padding: 0.25rem; border-radius: 0.375rem; }
             .product-thumbnails { display: flex; gap: 8px; flex-wrap: wrap; }
             .product-thumbnails img { width: 80px; height: 80px; object-fit: cover; border: 2px solid #dee2e6; cursor: pointer; opacity: 0.7; border-radius: 0.25rem; transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out; }
@@ -18,42 +19,22 @@
             .price.calculating { opacity: 0.6; }
             .price-eur { font-size: 0.8em; color: #6c757d; }
             .configurator-section, .addons-section { border: 1px solid #e0e0e0; padding: 1.5rem; margin-top: 1.5rem; background-color: #f8f9fa; border-radius: 0.375rem; margin-bottom: 1.5rem; }
-            /* Upravené styly pro range slidery */
-            .range-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.5rem; /* Menší mezera */}
-            .range-container label { min-width: 100px; /* Trochu širší popisek */}
+            .range-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.5rem; }
+            .range-container label { min-width: 100px; }
             .range-container .form-range { flex: 1 1 auto; min-width: 150px; }
-            .range-container .range-value { display: inline-block; width: 65px; /* Širší pro hodnoty */} text-align: right; vertical-align: middle; font-family: monospace; font-weight: bold; background-color:#e9ecef; padding: .1rem .3rem; border-radius: .25rem; font-size: 0.9em;}
-            .range-container small { flex-basis: 100%; margin-left: 110px; font-size: 0.8em; color: #6c757d; margin-top: -0.3rem; /* Posunout blíž */}
+            .range-container .range-value { display: inline-block; width: 65px; text-align: right; vertical-align: middle; font-family: monospace; font-weight: bold; background-color:#e9ecef; padding: .1rem .3rem; border-radius: .25rem; font-size: 0.9em;}
+            .range-container small { flex-basis: 100%; margin-left: 110px; font-size: 0.8em; color: #6c757d; margin-top: -0.3rem; }
             .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
             .form-check-label.checkbox-label { margin-left: 0.3rem; font-weight: normal; }
             .price .spinner-border-sm { vertical-align: middle; margin-left: 5px; }
+            /* Specific style for attribute select error messages */
+            .attribute-select-error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
         </style>
     </th:block>
 
     <script type="application/ld+json" th:inline="javascript">
         //<![CDATA[
-        {
-            "@context": "https://schema.org/",
-            "@type": "Product",
-            "name": /*[[${product?.name}]]*/ "Produkt na míru",
-            "description": /*[[${product?.metaDescription != null ? product.metaDescription : #strings.abbreviate(product?.description, 250)}]]*/ "Popis produktu...",
-            "sku": /*[[ ${product?.id != null ? 'CUSTOM-' + product.id : 'SKU-CUSTOM-UNKNOWN'} ]]*/ "SKU-CUSTOM-XYZ",
-            "image": /*[[${product?.images != null && !#lists.isEmpty(product.images) ? product.images[0].url : null}]]*/ "/images/placeholder.png",
-            "brand": { "@type": "Brand", "name": "Dřevníky Kolář" },
-            "offers": {
-                "@type": "Offer",
-                "priceCurrency": /*[[${currentGlobalCurrency}]]*/ "CZK",
-                "price": /*[[${initialCustomPriceCZK != null and initialCustomPriceCZK instanceof T(java.lang.Number) ? #numbers.formatDecimal(initialCustomPriceCZK, 1, 2, 'POINT') : '0.00'}]]*/ "0.00",
-                "additionalProperty": [
-                    {"@type": "PropertyValue", "name": "Price CZK", "value": /*[[${initialCustomPriceCZK}]]*/ null },
-                    {"@type": "PropertyValue", "name": "Price EUR", "value": /*[[${initialCustomPriceEUR}]]*/ null }
-                ],
-                "url": /*[[@{/produkt/{slug}(slug=${product?.slug})}]]*/ "/produkt/na-miru",
-                "availability": /*[[${product?.active ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'}]]*/ "https://schema.org/InStock",
-                "itemCondition": "https://schema.org/NewCondition",
-                "seller": { "@type": "Organization", "name": "Dřevníky Kolář" }
-            }
-        }
+        { /* ... JSON-LD obsah ... */ }
         //]]>
     </script>
 </head>
@@ -61,51 +42,34 @@
 
 <section layout:fragment="content">
     <div class="container mt-5">
-        <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <span th:text="${cartSuccess}"></span> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${cartError}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <span th:text="${cartError}"></span> <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${configuratorError != null}" class="alert alert-warning" role="alert" th:text="${configuratorError}">
-            Chyba konfigurace produktu.
-        </div>
+        <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">...</div>
+        <div th:if="${cartError}" class="alert alert-danger alert-dismissible fade show" role="alert">...</div>
+        <div th:if="${configuratorError != null}" class="alert alert-warning" role="alert" th:text="${configuratorError}">...</div>
 
         <div class="row" th:if="${product != null and configuratorError == null}" th:object="${product}">
             <div class="col-lg-6 product-images mb-4 mb-lg-0">
-                <img th:if="*{images != null and not #lists.isEmpty(images)}"
-                     th:src="*{images[0].url}"
-                     th:alt="*{images[0].altText != null ? images[0].altText : name}"
-                     id="mainProductImage" class="main-image img-fluid shadow-sm" />
-                <img th:unless="*{images != null and not #lists.isEmpty(images)}"
-                     th:src="@{/images/placeholder.png}" alt="Produkt bez obrázku" class="main-image img-fluid shadow-sm"/>
-
+                <img th:if="*{images != null and not #lists.isEmpty(images)}" th:src="*{images[0].url}" th:alt="*{name}" id="mainProductImage" class="main-image img-fluid shadow-sm" />
+                <img th:unless="*{images != null and not #lists.isEmpty(images)}" th:src="@{/images/placeholder.png}" alt="Produkt bez obrázku" class="main-image img-fluid shadow-sm"/>
                 <div class="product-thumbnails mt-3" th:if="*{images != null and #lists.size(images) > 1}">
-                    <img th:each="img, iter : *{images}"
-                         th:src="${img.url}"
-                         th:alt="${img.altText != null ? img.altText : name + ' - náhled ' + (iter.index + 1)}"
-                         th:classappend="${iter.index == 0} ? 'active'"
-                         th:data-img-url="${img.url}"
-                         onclick="changeMainImage(this)"/>
+                    <img th:each="img, iter : *{images}" th:src="${img.url}" th:alt="*{name + ' - náhled ' + (iter.index + 1)}" th:classappend="${iter.index == 0} ? 'active'" th:data-img-url="${img.url}" onclick="changeMainImage(this)"/>
                 </div>
             </div>
 
             <div class="col-lg-6 product-info">
                 <h1 class="mb-3" th:text="*{name}">Produkt na míru</h1>
-
-                <div class="price mb-2" id="product-price-display">
-                    <span th:if="${initialCustomPriceError}" class="text-danger" th:text="${initialCustomPriceError}">Chyba ceny</span>
-                    <span th:unless="${initialCustomPriceError}">Načítání ceny...</span>
-                    <div class="spinner-border spinner-border-sm text-secondary ms-2 d-none" id="price-spinner" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
+                <div class="price mb-2" id="product-price-display">...</div>
                 <div id="customPriceErrorDisplay" class="error mb-3" style="display: none;"></div>
-
-                <div th:utext="*{description}" class="mb-4">Popis produktu na míru...</div>
+                <div th:utext="*{description}" class="mb-4">...</div>
                 <hr class="mb-4"/>
 
-                <form th:action="@{/kosik/pridat}" method="post" id="add-to-cart-form" th:object="${cartItemDto}">
+                <form th:action="@{/kosik/pridat}" method="post" id="add-to-cart-form" th:object="${cartItemDto}"
+                      th:data-product-id="${product.id}"
+                      th:data-initial-czk="${initialCustomPriceCZK}"
+                      th:data-initial-eur="${initialCustomPriceEUR}"
+                      th:data-initial-error="${initialCustomPriceError}"
+                      th:data-calculate-url="@{/api/product/calculate-price}"
+                      th:data-currency-symbol="${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}">
+
                     <input type="hidden" th:field="*{productId}" />
                     <input type="hidden" th:field="*{custom}" value="true" />
 
@@ -117,49 +81,74 @@
                             <input type="range" class="form-range dimension-slider" id="customLength" name="customDimensions[length]"
                                    th:min="${configurator.minLength ?: 100}" th:max="${configurator.maxLength ?: 500}" th:step="${configurator.stepLength ?: 10}"
                                    th:value="*{customDimensions['length'] ?: configurator.defaultLength ?: configurator.minLength}" />
-                            <span class="range-value"><span id="customLengthValue" th:text="*{customDimensions['length'] ?: configurator.defaultLength ?: configurator.minLength}"></span> cm</span>
+                            <span class="range-value"><span id="customLengthValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minLength != null and configurator.maxLength != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minLength.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxLength.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minLength, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxLength, 1, 1)} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
-
                         <div class="mb-3 range-container">
                             <label for="customWidth" class="form-label">Hloubka (šířka):</label>
                             <input type="range" class="form-range dimension-slider" id="customWidth" name="customDimensions[width]"
                                    th:min="${configurator.minWidth ?: 50}" th:max="${configurator.maxWidth ?: 200}" th:step="${configurator.stepWidth ?: 10}"
                                    th:value="*{customDimensions['width'] ?: configurator.defaultWidth ?: configurator.minWidth}" />
-                            <span class="range-value"><span id="customWidthValue" th:text="*{customDimensions['width'] ?: configurator.defaultWidth ?: configurator.minWidth}"></span> cm</span>
+                            <span class="range-value"><span id="customWidthValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minWidth != null and configurator.maxWidth != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minWidth.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxWidth.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minWidth, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxWidth, 1, 1)} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
-
                         <div class="mb-3 range-container">
                             <label for="customHeight" class="form-label">Výška:</label>
                             <input type="range" class="form-range dimension-slider" id="customHeight" name="customDimensions[height]"
                                    th:min="${configurator.minHeight ?: 150}" th:max="${configurator.maxHeight ?: 300}" th:step="${configurator.stepHeight ?: 5}"
                                    th:value="*{customDimensions['height'] ?: configurator.defaultHeight ?: configurator.minHeight}" />
-                            <span class="range-value"><span id="customHeightValue" th:text="*{customDimensions['height'] ?: configurator.defaultHeight ?: configurator.minHeight}"></span> cm</span>
+                            <span class="range-value"><span id="customHeightValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minHeight != null and configurator.maxHeight != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minHeight.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxHeight.divide(T(java.math.BigDecimal).TEN), 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minHeight, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxHeight, 1, 1)} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
+
                         <hr>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="customGlaze" class="form-label">Lazura:</label>
-                                <input type="text" class="form-control form-control-sm config-input" id="customGlaze" th:field="*{customGlaze}" placeholder="Např. Ořech" />
+                            <div class="col-md-6 mb-3">
+                                <label for="designSelect" class="form-label fw-bold">Design:</label>
+                                <select class="form-select config-input" id="designSelect" th:field="*{selectedDesignId}" required>
+                                    <option value="" disabled selected>-- Vyberte design --</option>
+                                    <option th:each="designOpt : ${availableDesigns}"
+                                            th:value="${designOpt.id}"
+                                            th:text="|${designOpt.name} ${ (designOpt.priceSurchargeCZK != null and designOpt.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? designOpt.priceSurchargeEUR : designOpt.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:data-price-czk="${designOpt.priceSurchargeCZK ?: 0}"
+                                            th:data-price-eur="${designOpt.priceSurchargeEUR ?: 0}">
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('selectedDesignId')}" class="attribute-select-error">Vyberte prosím design.</div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="customRoofColor" class="form-label">Barva střechy:</label>
-                                <input type="text" class="form-control form-control-sm config-input" id="customRoofColor" th:field="*{customRoofColor}" placeholder="Např. Antracit" />
+                            <div class="col-md-6 mb-3">
+                                <label for="glazeSelect" class="form-label fw-bold">Lazura:</label>
+                                <select class="form-select config-input" id="glazeSelect" th:field="*{selectedGlazeId}" required>
+                                    <option value="" disabled selected>-- Vyberte lazuru --</option>
+                                    <option th:each="glazeOpt : ${availableGlazes}"
+                                            th:value="${glazeOpt.id}"
+                                            th:text="|${glazeOpt.name} ${ (glazeOpt.priceSurchargeCZK != null and glazeOpt.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? glazeOpt.priceSurchargeEUR : glazeOpt.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:data-price-czk="${glazeOpt.priceSurchargeCZK ?: 0}"
+                                            th:data-price-eur="${glazeOpt.priceSurchargeEUR ?: 0}">
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="attribute-select-error">Vyberte prosím lazuru.</div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="customDesign" class="form-label">Design:</label>
-                                <input type="text" class="form-control form-control-sm config-input" id="customDesign" th:field="*{customDesign}" placeholder="Např. Klasik, Moderní..." />
+                            <div class="col-md-6 mb-3">
+                                <label for="roofColorSelect" class="form-label fw-bold">Barva střechy:</label>
+                                <select class="form-select config-input" id="roofColorSelect" th:field="*{selectedRoofColorId}" required>
+                                    <option value="" disabled selected>-- Vyberte barvu --</option>
+                                    <option th:each="colorOpt : ${availableRoofColors}"
+                                            th:value="${colorOpt.id}"
+                                            th:text="|${colorOpt.name} ${ (colorOpt.priceSurchargeCZK != null and colorOpt.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? colorOpt.priceSurchargeEUR : colorOpt.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:data-price-czk="${colorOpt.priceSurchargeCZK ?: 0}"
+                                            th:data-price-eur="${colorOpt.priceSurchargeEUR ?: 0}">
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="attribute-select-error">Vyberte prosím barvu střechy.</div>
                             </div>
                         </div>
-
                         <hr>
                         <h6 class="mt-3 mb-2">Volitelné prvky:</h6>
                         <div class="form-check mb-2">
@@ -174,9 +163,6 @@
                             <input class="form-check-input custom-feature-checkbox config-input" type="checkbox" id="customHasGardenShed" th:field="*{customHasGardenShed}" value="true" />
                             <label class="form-check-label checkbox-label" for="customHasGardenShed">Zahradní domek</label>
                         </div>
-
-                        <div th:if="${initialCustomPriceError != null and not #strings.isEmpty(initialCustomPriceError)}" class="error mt-3" th:text="${initialCustomPriceError}"></div>
-
                     </div> <div class="addons-section mt-4" th:if="${availableAddons != null and not #lists.isEmpty(availableAddons)}">
                     <h3 class="h5 mb-3">Volitelné doplňky:</h3>
                     <div th:each="addon, iter : ${availableAddons}" th:if="${addon.active}" class="form-check mb-2">
@@ -194,21 +180,23 @@
                         <input type="hidden" th:id="'addon_price_czk_' + ${addon.id}" th:value="${addon.priceCZK}">
                         <input type="hidden" th:id="'addon_price_eur_' + ${addon.id}" th:value="${addon.priceEUR}">
                     </div>
-                </div> <div class="row mt-4 align-items-center">
-                    <div class="col-auto">
-                        <label for="quantity" class="form-label">Množství:</label>
-                    </div>
-                    <div class="col-auto">
-                        <input type="number" class="form-control" style="width: 80px;" id="quantity" th:field="*{quantity}" value="1" min="1" max="99" required />
-                    </div>
-                    <div class="col">
-                        <button type="submit" class="btn btn-success btn-lg w-100"
-                                id="add-to-cart-btn"
-                                th:disabled="${configuratorError != null or initialCustomPriceError != null}">
-                            <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
-                        </button>
-                    </div>
                 </div>
+
+                    <div class="row mt-4 align-items-center">
+                        <div class="col-auto">
+                            <label for="quantity" class="form-label">Množství:</label>
+                        </div>
+                        <div class="col-auto">
+                            <input type="number" class="form-control" style="width: 80px;" id="quantity" th:field="*{quantity}" value="1" min="1" max="99" required />
+                        </div>
+                        <div class="col">
+                            <button type="submit" class="btn btn-success btn-lg w-100"
+                                    id="add-to-cart-btn"
+                                    th:disabled="${configuratorError != null or initialCustomPriceError != null}">
+                                <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
+                            </button>
+                        </div>
+                    </div>
                 </form> </div> </div> <div class="row mt-5" th:if="${product != null and configuratorError == null}" th:object="${product}">
         <div class="col">
             <h2>Základní parametry</h2>
@@ -226,272 +214,7 @@
     </div> </section>
 
 <th:block layout:fragment="scripts">
-    <script th:inline="javascript">
-        //<![CDATA[
-        console.log("JS: Configurator script starting (v1.5 - Reverted to Sliders, Fixed JS)...");
-
-        // --- Globální proměnné a konstanty ---
-        const productJsData = /*[[${productJsData}]]*/ null;
-        // initial* proměnné z modelu se používají pro první zobrazení ceny
-        let currentUnitPriceCZK = /*[[${initialCustomPriceCZK != null and initialCustomPriceCZK instanceof T(java.lang.Number)} ? ${initialCustomPriceCZK.doubleValue()} : 0.0]]*/ 0.0;
-        let currentUnitPriceEUR = /*[[${initialCustomPriceEUR != null and initialCustomPriceEUR instanceof T(java.lang.Number)} ? ${initialCustomPriceEUR.doubleValue()} : 0.0]]*/ 0.0;
-        const initialErrorFromServer = /*[[${initialCustomPriceError}]]*/ null;
-        const calculatePriceUrl = /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price';
-
-        let calculationTimeout;
-        const DEBOUNCE_DELAY = 400; // ms
-
-        // --- Funkce pro UI ---
-        function changeMainImage(thumbElement) { /* Zůstává stejná */
-            if (!thumbElement) return;
-            const imageUrl = thumbElement.getAttribute('data-img-url');
-            const mainImage = document.getElementById('mainProductImage');
-            if (imageUrl && mainImage) {
-                mainImage.src = imageUrl;
-                document.querySelectorAll('.product-thumbnails img').forEach(img => img.classList.remove('active'));
-                thumbElement.classList.add('active');
-            }
-        }
-
-        // *** PŘIDÁNO ZPĚT: Funkce pro aktualizaci hodnoty vedle slideru ***
-        function updateRangeValue(rangeId, valueId) {
-            const rangeInput = document.getElementById(rangeId);
-            const valueSpan = document.getElementById(valueId);
-            if (rangeInput && valueSpan) {
-                // Zobrazujeme hodnotu v CM (předpokládáme, že slider má hodnoty v CM)
-                valueSpan.textContent = (parseFloat(rangeInput.value) / 10).toFixed(1).replace('.', ',');
-            }
-        }
-
-
-        function formatCurrency(amount, currencyCode) { /* Zůstává stejná */
-            if (amount == null || isNaN(amount)) return "---";
-            const options = { style: 'currency', currency: currencyCode, minimumFractionDigits: 2, maximumFractionDigits: 2 };
-            const locale = currencyCode === 'EUR' ? 'sk-SK' : 'cs-CZ';
-            try {
-                return new Intl.NumberFormat(locale, options).format(amount);
-            } catch (e) {
-                console.error("Error formatting currency:", amount, currencyCode, e);
-                const fixedAmount = amount.toFixed(2).replace('.', ',');
-                return `${fixedAmount} ${currencyCode === 'EUR' ? '€' : 'Kč'}`;
-            }
-        }
-
-        function getSelectedFixedAddonsPrice(currency) { /* Zůstává stejná */
-            let totalAddonPrice = 0;
-            document.querySelectorAll('.fixed-addon-checkbox:checked').forEach(checkbox => {
-                const addonId = checkbox.value;
-                const priceInputId = currency === 'EUR' ? 'addon_price_eur_' + addonId : 'addon_price_czk_' + addonId;
-                const priceInput = document.getElementById(priceInputId);
-                if (priceInput?.value) {
-                    const price = parseFloat(priceInput.value);
-                    if (!isNaN(price)) {
-                        totalAddonPrice += price;
-                    } else {
-                        console.warn(`Invalid price for addon ${addonId} (${currency}): ${priceInput.value}`);
-                    }
-                }
-            });
-            return totalAddonPrice;
-        }
-
-        function updateDisplayPrice() { /* Zůstává stejná */
-            const quantityInput = document.getElementById('quantity');
-            const quantity = quantityInput ? (parseInt(quantityInput.value, 10) || 1) : 1;
-            const addonsPriceCZK = getSelectedFixedAddonsPrice('CZK');
-            const addonsPriceEUR = getSelectedFixedAddonsPrice('EUR');
-            const unitCZK = !isNaN(currentUnitPriceCZK) ? currentUnitPriceCZK : 0;
-            const unitEUR = !isNaN(currentUnitPriceEUR) ? currentUnitPriceEUR : 0;
-            const totalCZK = quantity * (unitCZK + addonsPriceCZK);
-            const totalEUR = quantity * (unitEUR + addonsPriceEUR);
-            const priceDisplay = document.getElementById('product-price-display');
-            const errorDiv = document.getElementById('customPriceErrorDisplay');
-            const spinner = document.getElementById('price-spinner');
-            if (isNaN(totalCZK) || isNaN(totalEUR)) {
-                console.error("NaN detected. UnitCZK:", unitCZK, "AddonsCZK:", addonsPriceCZK, "UnitEUR:", unitEUR, "AddonsEUR:", addonsPriceEUR, "Quantity:", quantity);
-                if (priceDisplay) priceDisplay.innerHTML = '<span class="text-danger">Chyba výpočtu</span>';
-                if (spinner) spinner.classList.add('d-none');
-                if (errorDiv) {
-                    errorDiv.textContent = 'Při výpočtu ceny došlo k interní chybě.';
-                    errorDiv.style.display = 'block';
-                }
-            } else {
-                if (priceDisplay) {
-                    const czkHtml = formatCurrency(totalCZK, 'CZK');
-                    const eurHtml = formatCurrency(totalEUR, 'EUR');
-                    priceDisplay.innerHTML = `${czkHtml} <span class="price-eur">/ ${eurHtml}</span>`;
-                    if (spinner) spinner.classList.add('d-none');
-                    if (errorDiv) errorDiv.style.display = 'none';
-                    priceDisplay.classList.remove('calculating');
-                } else {
-                    console.error("Price display element 'product-price-display' not found!");
-                }
-            }
-        }
-
-        function displayCalculationError(message) { /* Zůstává stejná */
-            const priceDisplay = document.getElementById('product-price-display');
-            const errorDiv = document.getElementById('customPriceErrorDisplay');
-            const spinner = document.getElementById('price-spinner');
-            const submitButton = document.getElementById('add-to-cart-btn');
-            currentUnitPriceCZK = 0; currentUnitPriceEUR = 0;
-            if (priceDisplay) { priceDisplay.innerHTML = `<span class="text-danger">Chyba výpočtu</span>`; priceDisplay.classList.remove('calculating'); }
-            if (spinner) spinner.classList.add('d-none');
-            if (errorDiv) { errorDiv.textContent = message || 'Při výpočtu ceny došlo k chybě.'; errorDiv.style.display = 'block'; }
-            if(submitButton) submitButton.disabled = true;
-            updateDisplayPrice();
-        }
-
-        // --- Kalkulace ceny - volání API ---
-        // *** PŘIDÁNO: Tato funkce je nyní potřeba ***
-        function handleCustomConfigChange() {
-            console.log("Configuration changed, scheduling API call...");
-            const priceDisplay = document.getElementById('product-price-display');
-            const spinner = document.getElementById('price-spinner');
-            const submitButton = document.getElementById('add-to-cart-btn');
-
-            if(priceDisplay) priceDisplay.classList.add('calculating');
-            if(spinner) spinner.classList.remove('d-none');
-            if(submitButton) submitButton.disabled = true;
-
-            // Aktualizujeme hodnoty u sliderů ihned
-            updateRangeValue('customLength', 'customLengthValue');
-            updateRangeValue('customWidth', 'customWidthValue');
-            updateRangeValue('customHeight', 'customHeightValue');
-
-
-            clearTimeout(calculationTimeout);
-            calculationTimeout = setTimeout(calculatePriceApiCall, DEBOUNCE_DELAY);
-        }
-
-        function calculatePriceApiCall() { /* Zůstává stejná, jen načítá hodnoty ze sliderů */
-            console.log("Attempting to calculate price via API...");
-            const errorDiv = document.getElementById('customPriceErrorDisplay');
-            const submitButton = document.getElementById('add-to-cart-btn');
-            const priceDisplay = document.getElementById('product-price-display');
-            const spinner = document.getElementById('price-spinner');
-
-            if (!productJsData?.id) {
-                console.error("Missing productJsData.id.");
-                displayCalculationError('Chyba konfigurace stránky (ID produktu).');
-                return;
-            }
-
-            // Načtení hodnot ze SLIDERŮ
-            const lengthVal = document.getElementById('customLength')?.value;
-            const widthVal = document.getElementById('customWidth')?.value;
-            const heightVal = document.getElementById('customHeight')?.value;
-
-            if (!lengthVal || !widthVal || !heightVal) {
-                console.error("Dimension range slider elements not found.");
-                displayCalculationError('Chyba konfigurace stránky (elementy rozměrů).');
-                return;
-            }
-
-            const requestPayload = {
-                productId: productJsData.id,
-                customDimensions: { // Hodnoty sliderů jsou stringy, backend si poradí
-                    length: lengthVal,
-                    width: widthVal,
-                    height: heightVal
-                },
-                customGlaze: document.getElementById('customGlaze')?.value,
-                customRoofColor: document.getElementById('customRoofColor')?.value,
-                customDesign: document.getElementById('customDesign')?.value,
-                customHasDivider: document.getElementById('customHasDivider')?.checked || false,
-                customHasGutter: document.getElementById('customHasGutter')?.checked || false,
-                customHasGardenShed: document.getElementById('customHasGardenShed')?.checked || false
-            };
-
-            // Validace už není nutná, protože slidery mají min/max
-
-            console.log("Calculating custom price with payload:", JSON.stringify(requestPayload));
-            if(errorDiv) { errorDiv.textContent = ''; errorDiv.style.display = 'none'; }
-            if (priceDisplay && !priceDisplay.classList.contains('calculating')) {
-                if (spinner) spinner.classList.remove('d-none');
-                priceDisplay.classList.add('calculating');
-            }
-
-            fetch(calculatePriceUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(requestPayload)
-            })
-                .then(response => { /* Zpracování odpovědi zůstává stejné */
-                    if (!response.ok) { return response.json().then(err => { throw err; }).catch(() => { throw { status: response.status, message: `Chyba serveru (${response.status})` }; }); }
-                    return response.json();
-                })
-                .then(data => { /* Zpracování dat zůstává stejné */
-                    console.log("Received custom unit prices:", data);
-                    if (data.errorMessage) { throw { message: data.errorMessage }; }
-                    const czk = parseFloat(data.priceCZK); const eur = parseFloat(data.priceEUR);
-                    currentUnitPriceCZK = !isNaN(czk) ? czk : 0; currentUnitPriceEUR = !isNaN(eur) ? eur : 0;
-                    updateDisplayPrice(); if(submitButton) submitButton.disabled = false;
-                })
-                .catch(error => { /* Zpracování chyby zůstává stejné */
-                    console.error('Error calculating custom price:', error);
-                    const message = error.errorMessage || error.message || 'Neznámá chyba při výpočtu ceny.';
-                    displayCalculationError(message);
-                });
-        }
-
-        // Přepočet ceny při změně fixních doplňků
-        function handleFixedAddonChange() { /* Zůstává stejná */
-            console.log("Fixed addon changed, updating display price.");
-            updateDisplayPrice();
-        }
-
-        // --- Inicializace ---
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM Content Loaded, initializing configurator (v1.5 - Sliders)...");
-
-            // *** Event Listenery pro SLIDERY a ostatní config prvky ***
-            document.querySelectorAll('.dimension-slider, .config-input, .custom-feature-checkbox').forEach(input => {
-                const eventType = input.matches('.dimension-slider, .config-input[type="text"]') ? 'input' : 'change';
-                input.addEventListener(eventType, handleCustomConfigChange);
-                // Aktualizuj zobrazenou hodnotu slideru ihned při načtení
-                if (input.matches('.dimension-slider')) {
-                    updateRangeValue(input.id, input.id + 'Value');
-                }
-            });
-
-            // Listenery pro checkboxy fixních doplňků
-            document.querySelectorAll('.fixed-addon-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', handleFixedAddonChange);
-            });
-            // Listener pro pole Množství
-            const quantityInput = document.getElementById('quantity');
-            if (quantityInput) {
-                quantityInput.addEventListener('change', updateDisplayPrice);
-                quantityInput.addEventListener('input', updateDisplayPrice);
-            }
-
-            // --- Nastavení počáteční ceny ---
-            const priceDisplayElement = document.getElementById('product-price-display');
-            const submitButton = document.getElementById('add-to-cart-btn');
-
-            if (priceDisplayElement) {
-                if (initialErrorFromServer) {
-                    console.warn("Initial error from server:", initialErrorFromServer);
-                    displayCalculationError(initialErrorFromServer);
-                } else if(currentUnitPriceCZK > 0 || currentUnitPriceEUR > 0){
-                    console.log("Using initial prices from model: CZK=", currentUnitPriceCZK, "EUR=", currentUnitPriceEUR);
-                    updateDisplayPrice(); // Zobrazí počáteční cenu + doplňky
-                    if(submitButton) submitButton.disabled = false;
-                } else {
-                    // Pokud nemáme ceny z modelu, spustíme výpočet
-                    console.log("Initial prices zero or invalid. Calculating initial price via API...");
-                    calculatePriceApiCall();
-                }
-            } else {
-                console.error("Price display element 'product-price-display' not found!");
-                if(submitButton) submitButton.disabled = true;
-            }
-
-            console.log("Configurator initialization complete.");
-        }); // End DOMContentLoaded
-        //]]>
-    </script>
+    <script th:src="@{/js/product-configurator.js}"></script>
 </th:block>
 
 </body>

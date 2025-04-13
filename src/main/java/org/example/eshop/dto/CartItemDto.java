@@ -19,22 +19,22 @@ public class CartItemDto {
 
     private boolean isCustom = false;
 
-    // --- Atributy pro standardní produkt vybírané selectem (nyní ID) ---
-    @NotNull(message = "Lazura musí být vybrána.") // Přidána validace
-    private Long selectedGlazeId;
-
-    @NotNull(message = "Barva střechy musí být vybrána.") // Přidána validace
-    private Long selectedRoofColorId;
-
-    @NotNull(message = "Design musí být vybrán.") // Přidána validace
+    // --- Atributy vybírané selectem (použijí se pro standardní i custom) ---
+    @NotNull(message = "Design musí být vybrán.")
     private Long selectedDesignId;
 
-    // --- Atributy pro custom produkt (zůstávají String) ---
+    @NotNull(message = "Lazura musí být vybrána.")
+    private Long selectedGlazeId;
+
+    @NotNull(message = "Barva střechy musí být vybrána.")
+    private Long selectedRoofColorId;
+
+    // --- Atributy pro custom produkt (zůstávají) ---
     private Map<String, BigDecimal> customDimensions;
-    private String customGlaze;
-    private String customRoofColor;
-    private String customRoofOverstep;
-    private String customDesign;
+    // Odebráno: private String customGlaze;
+    // Odebráno: private String customRoofColor;
+    private String customRoofOverstep; // Ponecháme, pokud je to stále textový vstup
+    // Odebráno: private String customDesign;
     private boolean customHasDivider = false;
     private boolean customHasGutter = false;
     private boolean customHasGardenShed = false;

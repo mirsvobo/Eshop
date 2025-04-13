@@ -448,39 +448,60 @@ public class OrderService implements PriceConstants {
     }
 
     private void saveHistoricalItemData(OrderItem orderItem, Product product, CartItemDto itemDto, Design design, Glaze glaze, RoofColor roofColor) {
+        log.debug("Saving historical data for OrderItem (Product ID: {})", product.getId());
         orderItem.setProductName(product.getName());
-        orderItem.setMaterial(product.getMaterial());
+        orderItem.setMaterial(product.getMaterial()); // Základní materiál
+
         if (itemDto.isCustom()) {
             orderItem.setSku("CUSTOM-" + product.getId());
-            orderItem.setVariantInfo("Produkt na míru");
+            StringBuilder variantSb = new StringBuilder("Na míru");
             if (itemDto.getCustomDimensions() != null) {
+                variantSb.append(" (")
+                        .append(itemDto.getCustomDimensions().get("length") != null ? itemDto.getCustomDimensions().get("length").stripTrailingZeros().toPlainString() : "?")
+                        .append("x")
+                        .append(itemDto.getCustomDimensions().get("width") != null ? itemDto.getCustomDimensions().get("width").stripTrailingZeros().toPlainString() : "?")
+                        .append("x")
+                        .append(itemDto.getCustomDimensions().get("height") != null ? itemDto.getCustomDimensions().get("height").stripTrailingZeros().toPlainString() : "?")
+                        .append(" cm)");
                 orderItem.setLength(itemDto.getCustomDimensions().get("length"));
                 orderItem.setWidth(itemDto.getCustomDimensions().get("width"));
                 orderItem.setHeight(itemDto.getCustomDimensions().get("height"));
             } else {
                 log.warn("Custom dimensions map missing for custom OrderItem (Product ID: {})", product.getId());
-                orderItem.setLength(null);
-                orderItem.setWidth(null);
-                orderItem.setHeight(null);
+                orderItem.setLength(null); orderItem.setWidth(null); orderItem.setHeight(null);
             }
-            orderItem.setGlaze(itemDto.getCustomGlaze());
-            orderItem.setRoofColor(itemDto.getCustomRoofColor());
+            orderItem.setVariantInfo(variantSb.toString()); // Uložíme rozměry do variantInfo
+
+            // Načteme entity znovu podle ID z DTO, abychom získali jména
+            // (Bezpečnější než spoléhat na to, že CartItem má jména)
+            String designName = (itemDto.getSelectedDesignId() != null) ? designRepository.findById(itemDto.getSelectedDesignId()).map(Design::getName).orElse(null) : "(Nespecifikováno)";
+            String glazeName = (itemDto.getSelectedGlazeId() != null) ? glazeRepository.findById(itemDto.getSelectedGlazeId()).map(Glaze::getName).orElse(null) : "(Nespecifikováno)";
+            String roofColorName = (itemDto.getSelectedRoofColorId() != null) ? roofColorRepository.findById(itemDto.getSelectedRoofColorId()).map(RoofColor::getName).orElse(null) : "(Nespecifikováno)";
+
+            orderItem.setGlaze(glazeName);          // <<< ZMĚNA: Jméno z načtené entity
+            orderItem.setRoofColor(roofColorName); // <<< ZMĚNA: Jméno z načtené entity
+            orderItem.setModel(designName);         // <<< ZMĚNA: Jméno z načtené entity
             orderItem.setRoofOverstep(itemDto.getCustomRoofOverstep());
-            orderItem.setModel(null); // Standardní model není relevantní
-            orderItem.setDesign(itemDto.getCustomDesign()); // Textový design
+            orderItem.setDesign(null); // Textový design se už nepoužívá
+
             orderItem.setHasDivider(itemDto.isCustomHasDivider());
             orderItem.setHasGutter(itemDto.isCustomHasGutter());
             orderItem.setHasGardenShed(itemDto.isCustomHasGardenShed());
-        } else {
+        } else { // Standardní produkt
             orderItem.setSku(product.getSlug());
             orderItem.setLength(product.getLength());
             orderItem.setWidth(product.getWidth());
             orderItem.setHeight(product.getHeight());
             orderItem.setRoofOverstep(product.getRoofOverstep());
+            // Použijeme jména z předaných entit (načtených v processCartItem)
             orderItem.setModel(design != null ? design.getName() : null);
             orderItem.setGlaze(glaze != null ? glaze.getName() : null);
             orderItem.setRoofColor(roofColor != null ? roofColor.getName() : null);
-            // Sestavení variantInfo
+            orderItem.setDesign(null);
+            orderItem.setHasDivider(null);
+            orderItem.setHasGutter(null);
+            orderItem.setHasGardenShed(null);
+            // Sestavení variantInfo pro standardní produkt
             StringBuilder variantSb = new StringBuilder();
             if (design != null) variantSb.append("Design: ").append(design.getName());
             if (glaze != null) {
@@ -492,23 +513,23 @@ public class OrderService implements PriceConstants {
                 variantSb.append("Střecha: ").append(roofColor.getName());
             }
             orderItem.setVariantInfo(variantSb.toString());
-            orderItem.setDesign(null); // Textový design je null pro standardní
-            orderItem.setHasDivider(null);
-            orderItem.setHasGutter(null);
-            orderItem.setHasGardenShed(null);
         }
+        log.debug("Finished saving historical data for OrderItem. VariantInfo: {}", orderItem.getVariantInfo());
     }
 
+
+    // UPRAVENÁ METODA: Odebrán argument customDesign z volání productService
     private BigDecimal calculateBaseUnitPrice(Product product, CartItemDto itemDto, String currency) {
         if (itemDto.isCustom()) {
             if (itemDto.getCustomDimensions() == null) {
                 log.error("!!! Missing custom dimensions for price calculation of product ID {}", product.getId());
                 throw new IllegalArgumentException("Custom dimensions missing for price calculation.");
             }
+            // Volání BEZ customDesign Stringu
             BigDecimal dynamicPrice = productService.calculateDynamicProductPrice(
                     product,
                     itemDto.getCustomDimensions(),
-                    itemDto.getCustomDesign(),
+                    null, // <-- customDesign String je nyní null
                     itemDto.isCustomHasDivider(),
                     itemDto.isCustomHasGutter(),
                     itemDto.isCustomHasGardenShed(),
@@ -523,63 +544,6 @@ public class OrderService implements PriceConstants {
             }
             return price.max(BigDecimal.ZERO); // Zajistit, že cena není záporná
         }
-    }
-
-    private BigDecimal processAndCalculateAddons(OrderItem orderItem, CartItemDto itemDto, String currency) {
-        BigDecimal totalAddonPrice = BigDecimal.ZERO;
-        if (!itemDto.isCustom() || CollectionUtils.isEmpty(itemDto.getSelectedAddons())) {
-            orderItem.setSelectedAddons(Collections.emptyList()); // Zajistit prázdný seznam
-            return totalAddonPrice;
-        }
-
-        List<AddonDto> validAddonDtos = itemDto.getSelectedAddons().stream()
-                .filter(dto -> dto != null && dto.getAddonId() != null && dto.getQuantity() > 0)
-                .collect(Collectors.toList());
-
-        if (validAddonDtos.isEmpty()) {
-            orderItem.setSelectedAddons(Collections.emptyList());
-            return totalAddonPrice;
-        }
-
-        Set<Long> requestedAddonIds = validAddonDtos.stream().map(AddonDto::getAddonId).collect(Collectors.toSet());
-        Map<Long, Addon> addonsMap = addonsRepository.findAllById(requestedAddonIds).stream()
-                .collect(Collectors.toMap(Addon::getId, a -> a));
-        // Zajistit, že product.getAvailableAddons() není null
-        Set<Long> allowedAddonIds = Optional.ofNullable(orderItem.getProduct().getAvailableAddons())
-                .orElse(Collections.emptySet())
-                .stream()
-                .map(Addon::getId).collect(Collectors.toSet());
-
-        List<OrderItemAddon> addonsToSave = new ArrayList<>();
-        for (AddonDto addonDto : validAddonDtos) {
-            Addon addon = addonsMap.get(addonDto.getAddonId());
-            if (addon != null && addon.isActive() && allowedAddonIds.contains(addon.getId())) {
-                OrderItemAddon oia = new OrderItemAddon();
-                oia.setOrderItem(orderItem);
-                oia.setAddon(addon);
-                oia.setAddonName(addon.getName());
-                oia.setQuantity(addonDto.getQuantity());
-
-                BigDecimal addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
-                if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
-                    log.error("!!! Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
-                    throw new IllegalStateException("Invalid price configuration for addon " + addon.getName() + " in " + currency);
-                }
-
-                oia.setAddonPriceWithoutTax(addonUnitPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-                BigDecimal addonLineTotal = addonUnitPrice.multiply(BigDecimal.valueOf(addonDto.getQuantity())).setScale(PRICE_SCALE, ROUNDING_MODE);
-                oia.setTotalPriceWithoutTax(addonLineTotal);
-
-                addonsToSave.add(oia);
-                totalAddonPrice = totalAddonPrice.add(addonLineTotal);
-
-            } else {
-                log.warn("Requested addon ID {} is invalid, inactive, or not allowed for product {}. Skipping.", addonDto.getAddonId(), orderItem.getProduct().getId());
-            }
-        }
-        orderItem.setSelectedAddons(addonsToSave);
-        log.debug("Total addons price calculated: {}", totalAddonPrice);
-        return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE);
     }
 
     private void validateOrderRequest(CreateOrderRequest request) {
@@ -968,7 +932,78 @@ public class OrderService implements PriceConstants {
             }
         };
     }
+    private BigDecimal processAndCalculateAddons(OrderItem orderItem, CartItemDto itemDto, String currency) {
+        log.debug("Processing addons for OrderItem (Product ID: {}), Currency: {}", orderItem.getProduct().getId(), currency);
+        BigDecimal totalAddonPrice = BigDecimal.ZERO;
+        // Addony se zpracovávají pouze pro custom produkty
+        if (!itemDto.isCustom() || CollectionUtils.isEmpty(itemDto.getSelectedAddons())) {
+            orderItem.setSelectedAddons(Collections.emptyList()); // Zajistit prázdný seznam
+            log.debug("No addons to process or product is not custom.");
+            return totalAddonPrice;
+        }
 
+        // Odfiltrujeme neplatné DTO (bez ID nebo s nulovým množstvím)
+        List<AddonDto> validAddonDtos = itemDto.getSelectedAddons().stream()
+                .filter(dto -> dto != null && dto.getAddonId() != null && dto.getQuantity() > 0)
+                .collect(Collectors.toList());
+
+        if (validAddonDtos.isEmpty()) {
+            orderItem.setSelectedAddons(Collections.emptyList());
+            log.debug("No valid addons found in DTO.");
+            return totalAddonPrice;
+        }
+
+        // Načteme všechny potřebné addony z DB najednou
+        Set<Long> requestedAddonIds = validAddonDtos.stream().map(AddonDto::getAddonId).collect(Collectors.toSet());
+        log.debug("Requested addon IDs: {}", requestedAddonIds);
+        Map<Long, Addon> addonsMap = addonsRepository.findAllById(requestedAddonIds).stream()
+                .collect(Collectors.toMap(Addon::getId, a -> a));
+        log.debug("Found addons from DB: {}", addonsMap.keySet());
+
+        // Získáme povolené addony pro tento produkt
+        Set<Long> allowedAddonIds = Optional.ofNullable(orderItem.getProduct().getAvailableAddons())
+                .orElse(Collections.emptySet())
+                .stream()
+                .map(Addon::getId).collect(Collectors.toSet());
+        log.debug("Allowed addon IDs for this product: {}", allowedAddonIds);
+
+        List<OrderItemAddon> addonsToSave = new ArrayList<>();
+        for (AddonDto addonDto : validAddonDtos) {
+            Addon addon = addonsMap.get(addonDto.getAddonId());
+            // Ověříme, zda addon existuje, je aktivní a je povolený pro produkt
+            if (addon != null && addon.isActive() && allowedAddonIds.contains(addon.getId())) {
+                log.debug("Processing valid addon: ID={}, Name={}", addon.getId(), addon.getName());
+                OrderItemAddon oia = new OrderItemAddon();
+                oia.setOrderItem(orderItem);
+                oia.setAddon(addon); // Uložíme referenci na původní addon
+                oia.setAddonName(addon.getName());
+                oia.setQuantity(addonDto.getQuantity());
+
+                // Získáme cenu addonu pro správnou měnu
+                BigDecimal addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
+                if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                    // Cena musí být definována a nesmí být záporná
+                    log.error("!!! Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
+                    throw new IllegalStateException("Invalid price configuration for addon " + addon.getName() + " in " + currency);
+                }
+                log.debug("Addon unit price ({}): {}", currency, addonUnitPrice);
+
+                oia.setAddonPriceWithoutTax(addonUnitPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
+                BigDecimal addonLineTotal = addonUnitPrice.multiply(BigDecimal.valueOf(addonDto.getQuantity())).setScale(PRICE_SCALE, ROUNDING_MODE);
+                oia.setTotalPriceWithoutTax(addonLineTotal);
+                log.debug("Addon line total price ({}): {}", currency, addonLineTotal);
+
+                addonsToSave.add(oia);
+                totalAddonPrice = totalAddonPrice.add(addonLineTotal); // Přičteme k celkové ceně addonů
+
+            } else {
+                log.warn("Requested addon ID {} is invalid, inactive, or not allowed for product {}. Skipping.", addonDto.getAddonId(), orderItem.getProduct().getId());
+            }
+        }
+        orderItem.setSelectedAddons(addonsToSave); // Přiřadíme seznam vytvořených OrderItemAddon k OrderItem
+        log.debug("Finished processing addons. Total addon price ({}): {}", currency, totalAddonPrice);
+        return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE); // Vrátíme celkovou cenu addonů
+    }
     // ----- NOVÁ POMOCNÁ METODA PRO KUPÓN -----
     /**
      * Validates the coupon based on general rules, minimum order value, and customer usage limits.

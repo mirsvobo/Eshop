@@ -1,38 +1,35 @@
 package org.example.eshop.init;
 
-import jakarta.transaction.Transactional; // Používat jakarta.transaction
-import org.example.eshop.config.PriceConstants; // Přidat import
+import jakarta.transaction.Transactional;
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.AddonDto;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CreateOrderRequest;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.*;
-import org.example.eshop.service.*; // Přidat import pro OrderService atd.
+import org.example.eshop.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier; // Pro ShippingService
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-// import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
-import org.example.eshop.model.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
-import java.math.RoundingMode; // Přidat import
-import java.time.LocalDate; // Přidat import
-import java.util.*; // Import pro Set, List, Collections atd.
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
-
 @org.springframework.core.annotation.Order(Ordered.LOWEST_PRECEDENCE)
-public class DataInitializer implements ApplicationRunner, PriceConstants { // Implementovat PriceConstants
+public class DataInitializer implements ApplicationRunner, PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
-    // --- Repositories (stávající i nové) ---
+    // --- Repositories ---
     @Autowired private TaxRateRepository taxRateRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private AddonsRepository addonsRepository;
@@ -44,34 +41,35 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
     @Autowired private DesignRepository designRepository;
     @Autowired private GlazeRepository glazeRepository;
     @Autowired private RoofColorRepository roofColorRepository;
-    @Autowired private OrderRepository orderRepository; // Přidat OrderRepository
+    @Autowired private OrderRepository orderRepository;
 
-    // --- Services (nově potřebné) ---
+    // --- Services ---
     @Autowired private OrderService orderService;
-    // Použijeme Google Maps Service, ale v createTestOrder budeme simulovat cenu
     @Autowired @Qualifier("googleMapsShippingService") private ShippingService shippingService;
+    @Autowired private PaymentService paymentService;
+    @Autowired private OrderCodeGeneratorService orderCodeGeneratorService;
 
-    // --- Proměnné pro uchování vytvořených entit ---
+    // --- Proměnné pro entity ---
     private Customer testCustomer;
     private Customer adminCustomer;
     private Product drevnikKlasik;
     private Product drevnikModern;
     private Product drevnikNaMiru;
     private Design designKlasik;
-    private Design designKlasikPlus; // Přidáno pro přiřazení
+    private Design designKlasikPlus;
     private Design designModernSimple;
-    private Design designModernBox; // Přidáno pro přiřazení
+    private Design designModernBox;
     private Glaze glazeOrech;
-    private Glaze glazePalisandr; // Přidáno pro přiřazení
-    private Glaze glazeBezbarvy; // Přidáno pro přiřazení
-    private Glaze glazeSeda; // Přidáno pro přiřazení
-    private Glaze glazeAntracit; // Přidáno pro přiřazení
-    private Glaze glazeTeak; // Přidáno pro přiřazení
+    private Glaze glazePalisandr;
+    private Glaze glazeBezbarvy;
+    private Glaze glazeSeda;
+    private Glaze glazeAntracit;
+    private Glaze glazeTeak;
     private Glaze glazeTeakSpecial;
     private RoofColor colorAntracit;
     private RoofColor colorCervena;
-    private RoofColor colorZelena; // Přidáno pro přiřazení
-    private RoofColor colorStribrna; // Přidáno pro přiřazení
+    private RoofColor colorZelena;
+    private RoofColor colorStribrna;
     private RoofColor colorStribrnaSpecial;
     private Addon policka;
     private Addon drzakNarzadi;
@@ -80,33 +78,29 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
     private OrderState stateProcessing;
     private OrderState stateShipped;
     private OrderState stateDepositPaid;
-    private OrderState stateInProduction; // Přidáno pro test
-    // ... další potřebné entity ...
+    private OrderState stateInProduction;
 
     @Override
-    @Transactional // Celá metoda poběží v jedné transakci
+    @Transactional
     public void run(ApplicationArguments args) throws Exception {
         log.info("Initializing test data...");
-
         try {
-            // 0. Základní číselníky
+            // 0. Číselníky
             createTaxRates();
             createOrderStates();
             createEmailTemplates();
-            // Uložíme si reference na klíčové entity pro snadnější použití
             standardRate = taxRateRepository.findByNameIgnoreCase("Základní 21%").orElseThrow();
             stateNew = orderStateRepository.findByCodeIgnoreCase("NEW").orElseThrow();
             stateProcessing = orderStateRepository.findByCodeIgnoreCase("PROCESSING").orElseThrow();
             stateShipped = orderStateRepository.findByCodeIgnoreCase("SHIPPED").orElseThrow();
             stateDepositPaid = orderStateRepository.findByCodeIgnoreCase("DEPOSIT_PAID").orElseThrow(() -> new RuntimeException("Order state DEPOSIT_PAID not found!"));
-            stateInProduction = orderStateRepository.findByCodeIgnoreCase("IN_PRODUCTION").orElse(stateProcessing); // Fallback na processing
+            stateInProduction = orderStateRepository.findByCodeIgnoreCase("IN_PRODUCTION").orElse(stateProcessing);
 
-            // 1. Vytvoření Atributů
+            // 1. Atributy
             designKlasik = createDesign("Klasik", "Standardní klasický vzhled");
             designKlasikPlus = createDesign("Klasik Plus", "Klasický vzhled s přidanými prvky");
             designModernSimple = createDesign("Modern Simple", "Jednoduchý moderní design");
             designModernBox = createDesign("Modern Box", "Moderní krabicový design");
-
             glazeOrech = createGlaze("Ořech", null, null, null);
             glazePalisandr = createGlaze("Palisandr", null, null, null);
             glazeBezbarvy = createGlaze("Bezbarvý lak", null, null, null);
@@ -114,7 +108,6 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
             glazeAntracit = createGlaze("Antracit", null, null, null);
             glazeTeak = createGlaze("Teak", null, null, null);
             glazeTeakSpecial = createGlaze("Teak Premium", new BigDecimal("200.00"), new BigDecimal("8.00"), "/images/vzorky/teak_prem.jpg");
-
             colorAntracit = createRoofColor("Antracit", null, null, null);
             colorCervena = createRoofColor("Červená", null, null, null);
             colorZelena = createRoofColor("Zelená", null, null, null);
@@ -123,55 +116,30 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
 
             // 2. Doplňky
             policka = createAddon("Polička navíc", "Kvalitní dřevěná polička", new BigDecimal("350.00"), new BigDecimal("15.00"), "POL-01", true);
-            drzakNarzadi = createAddon("Držák na nářadí", "Praktický držák na zahradní nářadí", new BigDecimal("500.00"), new BigDecimal("20.00"), "DRZ-01", true);
+            drzakNarzadi = createAddon("Držák na nářadí", "Praktický držák", new BigDecimal("500.00"), new BigDecimal("20.00"), "DRZ-01", true);
             createAddon("Starý doplněk", "Toto už nenabízíme", new BigDecimal("100.00"), new BigDecimal("4.00"), "OLD-01", false);
 
-
             // 3. Produkty
-            drevnikKlasik = createProduct(
-                    "Dřevník Klasik", "klasik", "Robustní dřevník klasického designu.",
-                    new BigDecimal("5990.00"), new BigDecimal("250.00"),
-                    "Klasik", "Smrk", new BigDecimal("180"), new BigDecimal("200"), new BigDecimal("80"), "Standardní",
-                    standardRate, Collections.emptySet(), // Standardní nemá Addons
-                    Set.of(designKlasik, designKlasikPlus), // Přiřazení existujících designů
-                    Set.of(glazeOrech, glazePalisandr, glazeBezbarvy), // Přiřazení existujících lazur
-                    Set.of(colorAntracit, colorCervena, colorZelena), // Přiřazení existujících barev
-                    false // Není customisable
-            );
-            createImage(drevnikKlasik, "/images/drevnik-klasik-1.jpg", "Dřevník Klasik čelní pohled", "Dřevník Klasik 1", 0);
-            createImage(drevnikKlasik, "/images/drevnik-klasik-2.jpg", "Dřevník Klasik boční pohled", "Dřevník Klasik 2", 1);
+            drevnikKlasik = createProduct("Dřevník Klasik", "klasik", "Robustní dřevník...", new BigDecimal("5990.00"), new BigDecimal("250.00"), "Klasik", "Smrk", new BigDecimal("180"), new BigDecimal("200"), new BigDecimal("80"), "Standardní", standardRate, Collections.emptySet(), Set.of(designKlasik, designKlasikPlus), Set.of(glazeOrech, glazePalisandr, glazeBezbarvy), Set.of(colorAntracit, colorCervena, colorZelena), false);
+            createImage(drevnikKlasik, "/images/drevnik-klasik-1.jpg", "Dřevník Klasik 1", "Dřevník Klasik 1", 0);
+            createImage(drevnikKlasik, "/images/drevnik-klasik-2.jpg", "Dřevník Klasik 2", "Dřevník Klasik 2", 1);
 
-
-            drevnikModern = createProduct(
-                    "Dřevník Modern", "modern", "Moderní dřevník s pultovou střechou.",
-                    new BigDecimal("7490.00"), new BigDecimal("310.00"),
-                    "Modern", "Modřín", new BigDecimal("190"), new BigDecimal("250"), new BigDecimal("90"), "Minimální",
-                    standardRate, Collections.emptySet(), // Standardní nemá Addons
-                    Set.of(designModernSimple, designModernBox), // Přiřazení existujících designů
-                    Set.of(glazeSeda, glazeAntracit, glazeTeak, glazeTeakSpecial), // Přiřazení existujících lazur
-                    Set.of(colorAntracit, colorStribrna, colorStribrnaSpecial), // Přiřazení existujících barev
-                    false // Není customisable
-            );
+            drevnikModern = createProduct("Dřevník Modern", "modern", "Moderní dřevník...", new BigDecimal("7490.00"), new BigDecimal("310.00"), "Modern", "Modřín", new BigDecimal("190"), new BigDecimal("250"), new BigDecimal("90"), "Minimální", standardRate, Collections.emptySet(), Set.of(designModernSimple, designModernBox), Set.of(glazeSeda, glazeAntracit, glazeTeak, glazeTeakSpecial), Set.of(colorAntracit, colorStribrna, colorStribrnaSpecial), false);
             createImage(drevnikModern, "/images/drevnik-modern-1.jpg", "Dřevník Modern", "Dřevník Modern 1", 0);
 
-            drevnikNaMiru = createProduct(
-                    "Dřevník na míru", "na-miru", "Navrhněte si dřevník přesně podle vašich představ.",
-                    null, null, "Na míru", "Smrk/Modřín", null, null, null, null,
-                    standardRate, Set.of(policka, drzakNarzadi), // Má addony
-                    Collections.emptySet(), // Nemá pevné designy k výběru
-                    Collections.emptySet(), // Nemá pevné lazury k výběru
-                    Collections.emptySet(), // Nemá pevné barvy k výběru
-                    true // JE customisable
-            );
+            drevnikNaMiru = createProduct("Dřevník na míru", "na-miru", "Navrhněte si dřevník...", null, null, "Na míru", "Smrk/Modřín", null, null, null, null, standardRate, Set.of(policka, drzakNarzadi),
+                    Set.of(designKlasik, designModernSimple), // Jaké designy jsou povoleny pro custom?
+                    Set.of(glazeOrech, glazeTeakSpecial, glazeBezbarvy), // Jaké lazury?
+                    Set.of(colorAntracit, colorCervena, colorStribrnaSpecial), // Jaké barvy?
+                    true);
             createOrUpdateConfigurator(drevnikNaMiru);
-            createImage(drevnikNaMiru, "/images/drevnik-na-miru.jpg", "Dřevník na míru - ilustrační", "Dřevník na míru", 0);
+            createImage(drevnikNaMiru, "/images/drevnik-na-miru.jpg", "Dřevník na míru", "Dřevník na míru", 0);
 
-
-            // 4. Testovací zákazníci
+            // 4. Zákazníci
             testCustomer = createCustomer("Test", "Uživatel", "test@example.com", "123456789", "heslo123");
             adminCustomer = createAdmin("Admin", "Eshopu", "admin@example.com", "987654321", "adminHeslo123");
 
-            // 5. Vytvoření testovacích objednávek (pouze pokud v DB ještě žádné nejsou)
+            // 5. Testovací objednávky
             if (orderRepository.count() == 0) {
                 log.info("Creating test orders...");
                 createSampleOrders();
@@ -180,19 +148,17 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
             }
 
             log.info("Test data initialization finished successfully.");
-
         } catch (Exception e) {
             log.error("Error during test data initialization!", e);
-            // Zde můžeš rozhodnout, zda aplikace má spadnout, nebo pokračovat
-            // throw new RuntimeException("Failed to initialize data", e);
+            // throw new RuntimeException("Failed to initialize data", e); // Odkomentuj pro zastavení aplikace při chybě
         }
     }
 
-    // --- Metoda pro vytvoření ukázkových objednávek ---
+    // Metoda pro vytvoření ukázkových objednávek - UPRAVENO
     private void createSampleOrders() {
         if (testCustomer == null || adminCustomer == null || drevnikKlasik == null || drevnikModern == null || drevnikNaMiru == null ||
                 designKlasik == null || glazeOrech == null || colorAntracit == null || designModernSimple == null || glazeTeakSpecial == null || colorStribrnaSpecial == null ||
-                policka == null || drzakNarzadi == null) {
+                policka == null || drzakNarzadi == null || stateProcessing == null || stateInProduction == null || glazeBezbarvy == null || colorCervena == null) {
             log.error("Cannot create sample orders, required base data is missing! Check entity references in DataInitializer fields.");
             return;
         }
@@ -200,109 +166,114 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
         // Objednávka 1: Standardní produkt, Bankovní převod, CZK, Stav: Nová
         try {
             CartItemDto item1_1 = new CartItemDto();
-            item1_1.setProductId(drevnikKlasik.getId());
-            item1_1.setQuantity(1);
-            item1_1.setCustom(false);
-            // Použij ID atributů, které jsou skutečně přiřazeny k produktu drevnikKlasik!
-            // Pokud drevnikKlasik nemá přiřazený designKlasik, vyhodí to chybu v OrderService.
-            // Ověř si v createProduct, jaké sety atributů jsou přiřazeny.
+            item1_1.setProductId(drevnikKlasik.getId()); item1_1.setQuantity(1); item1_1.setCustom(false);
             item1_1.setSelectedDesignId(designKlasik.getId());
             item1_1.setSelectedGlazeId(glazeOrech.getId());
             item1_1.setSelectedRoofColorId(colorAntracit.getId());
-            createTestOrder(testCustomer, "BANK_TRANSFER", "CZK", List.of(item1_1), null, "První testovací objednávka standardního dřevníku.");
+            createTestOrder(testCustomer, "BANK_TRANSFER", "CZK", List.of(item1_1), null, "První testovací obj.");
         } catch (Exception e) { log.error("Failed to create sample order 1", e); }
 
-        // Objednávka 2: Produkt na míru, Dobírka, EUR, Stav: Čeká na zálohu (protože je custom)
+        // Objednávka 2: Produkt na míru, Dobírka, EUR - UPRAVENO pro ID atributů
         try {
             CartItemDto item2_1 = new CartItemDto();
-            item2_1.setProductId(drevnikNaMiru.getId());
-            item2_1.setQuantity(1);
-            item2_1.setCustom(true);
-            item2_1.setCustomDimensions(Map.of(
-                    "length", new BigDecimal("350"),
-                    "width", new BigDecimal("120"),
-                    "height", new BigDecimal("210")
-            ));
-            item2_1.setCustomGlaze("Teak Premium"); // Textový název
-            item2_1.setCustomRoofColor("Antracit"); // Textový název
-            item2_1.setCustomDesign("Moderní s přesahem"); // Textový název
-            item2_1.setCustomHasDivider(true);
-            item2_1.setCustomHasGutter(false);
-            item2_1.setCustomHasGardenShed(false);
-            AddonDto addonPolicka = new AddonDto(policka.getId(), 2); // 2 poličky
+            item2_1.setProductId(drevnikNaMiru.getId()); item2_1.setQuantity(1); item2_1.setCustom(true);
+            item2_1.setCustomDimensions(Map.of( "length", new BigDecimal("350"), "width", new BigDecimal("120"), "height", new BigDecimal("210")));
+            // --- Nastavení ID atributů ---
+            item2_1.setSelectedGlazeId(glazeTeakSpecial.getId());
+            item2_1.setSelectedRoofColorId(colorAntracit.getId());
+            item2_1.setSelectedDesignId(designModernSimple.getId());
+            // --- Konec Nastavení ID ---
+            item2_1.setCustomHasDivider(true); item2_1.setCustomHasGutter(false); item2_1.setCustomHasGardenShed(false);
+            AddonDto addonPolicka = new AddonDto(policka.getId(), 2);
             AddonDto addonDrzak = new AddonDto(drzakNarzadi.getId(), 1);
             item2_1.setSelectedAddons(List.of(addonPolicka, addonDrzak));
-            createTestOrder(testCustomer, "CASH_ON_DELIVERY", "EUR", List.of(item2_1), null, "Objednávka na míru s doplňky, platba dobírkou.");
+            // OrderService se postará o zjištění, že je třeba záloha a zavolá generateProformaInvoice
+            createTestOrder(testCustomer, "CASH_ON_DELIVERY", "EUR", List.of(item2_1), null, "Obj. na míru s doplňky, dobírka.");
         } catch (Exception e) { log.error("Failed to create sample order 2", e); }
 
 
         // Objednávka 3: Jiný standardní produkt, Zaplaceno převodem, CZK, Stav: Zpracovává se
         try {
             CartItemDto item3_1 = new CartItemDto();
-            item3_1.setProductId(drevnikModern.getId());
-            item3_1.setQuantity(2); // Dva kusy
-            item3_1.setCustom(false);
-            // Použij ID atributů přiřazených k drevnikModern
+            item3_1.setProductId(drevnikModern.getId()); item3_1.setQuantity(2); item3_1.setCustom(false);
             item3_1.setSelectedDesignId(designModernSimple.getId());
-            item3_1.setSelectedGlazeId(glazeTeakSpecial.getId()); // Použití příplatkové lazury
-            item3_1.setSelectedRoofColorId(colorStribrnaSpecial.getId()); // Použití příplatkové barvy
-            Order order3 = createTestOrder(adminCustomer, "BANK_TRANSFER", "CZK", List.of(item3_1), null, "Objednávka admina, 2 kusy moderního dřevníku.");
+            item3_1.setSelectedGlazeId(glazeTeakSpecial.getId());
+            item3_1.setSelectedRoofColorId(colorStribrnaSpecial.getId());
+            Order order3 = createTestOrder(adminCustomer, "BANK_TRANSFER", "CZK", List.of(item3_1), null, "Obj. admina, 2 kusy modern.");
 
-            // Manuálně označit jako zaplaceno a změnit stav (pro testování)
+            // Manuální update stavu a platby (POZOR: Může triggerovat SF API, pokud není mockováno/vypnuto)
             if (order3 != null) {
-                orderService.markOrderAsFullyPaid(order3.getId(), LocalDate.now().minusDays(2)); // Zaplaceno před 2 dny
-                orderService.updateOrderState(order3.getId(), stateProcessing.getId()); // Nastavit stav Zpracovává se
-                log.info("Manually updated order {} to PAID and state PROCESSING", order3.getOrderCode());
+                try {
+                    log.info("Manually updating order {} to PAID and state PROCESSING (SF API calls might be triggered if active)", order3.getOrderCode());
+                    // ZAKOMENTOVÁNO - může volat SF API pro označení finální faktury
+                    // orderService.markOrderAsFullyPaid(order3.getId(), LocalDate.now().minusDays(2));
+                    // Místo toho nastavíme statusy přímo, abychom se vyhnuli SF API
+                    order3.setPaymentStatus("PAID");
+                    order3.setPaymentDate(LocalDate.now().minusDays(2).atStartOfDay());
+                    order3.setStateOfOrder(stateProcessing); // Nastavíme rovnou i stav
+                    orderRepository.save(order3); // Uložíme změny
+                    // orderService.updateOrderState(order3.getId(), stateProcessing.getId()); // Toto už není potřeba
+                    log.info("Manually updated order {} to PAID and state PROCESSING (bypassed SF calls)", order3.getOrderCode());
+                } catch (Exception e) {
+                    log.error("Failed to manually update state/payment for order {}: {}", order3.getOrderCode(), e.getMessage());
+                }
             }
         } catch (Exception e) { log.error("Failed to create/update sample order 3", e); }
 
-        // Objednávka 4: Produkt na míru, Zaplacená záloha, Stav: Ve výrobě
+        // Objednávka 4: Produkt na míru, Zaplacená záloha, Stav: Ve výrobě - UPRAVENO
         try {
             CartItemDto item4_1 = new CartItemDto();
-            item4_1.setProductId(drevnikNaMiru.getId());
-            item4_1.setQuantity(1);
-            item4_1.setCustom(true);
+            item4_1.setProductId(drevnikNaMiru.getId()); item4_1.setQuantity(1); item4_1.setCustom(true);
             item4_1.setCustomDimensions(Map.of("length", new BigDecimal("280"), "width", new BigDecimal("90"), "height", new BigDecimal("195")));
-            item4_1.setCustomGlaze("Bezbarvý lak");
-            item4_1.setCustomRoofColor("Červená");
-            item4_1.setCustomDesign("Klasik Mini");
-            item4_1.setCustomHasDivider(false);
-            item4_1.setCustomHasGutter(true); // S okapem
-            item4_1.setCustomHasGardenShed(false);
+            // --- Nastavení ID atributů ---
+            item4_1.setSelectedGlazeId(glazeBezbarvy.getId());
+            item4_1.setSelectedRoofColorId(colorCervena.getId());
+            item4_1.setSelectedDesignId(designKlasik.getId());
+            // --- Konec Nastavení ID ---
+            item4_1.setCustomHasDivider(false); item4_1.setCustomHasGutter(true); item4_1.setCustomHasGardenShed(false);
             AddonDto addonPolicka4 = new AddonDto(policka.getId(), 1);
             item4_1.setSelectedAddons(List.of(addonPolicka4));
             Order order4 = createTestOrder(testCustomer, "BANK_TRANSFER", "CZK", List.of(item4_1), null, "Malý na míru s okapem.");
 
-            // Manuálně označit zálohu jako zaplacenou a změnit stav
+            // Manuální update stavu a platby zálohy (POZOR: Může triggerovat SF API a generování DDKP)
             if (order4 != null && order4.getDepositAmount() != null && order4.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
-                orderService.markDepositAsPaid(order4.getId(), LocalDate.now().minusDays(3)); // Záloha zaplacena před 3 dny
-                orderService.updateOrderState(order4.getId(), stateInProduction.getId());
-                log.info("Manually updated order {} to DEPOSIT_PAID and state {}", order4.getOrderCode(), stateInProduction.getCode());
+                try {
+                    log.info("Manually updating order {} to DEPOSIT_PAID and state IN_PRODUCTION (SF API calls might be triggered if active)", order4.getOrderCode());
+                    // ZAKOMENTOVÁNO - volá SF API a DDKP
+                    // orderService.markDepositAsPaid(order4.getId(), LocalDate.now().minusDays(3));
+                    // orderService.updateOrderState(order4.getId(), stateInProduction.getId());
+                    // Místo toho nastavíme statusy přímo
+                    order4.setPaymentStatus("DEPOSIT_PAID");
+                    order4.setDepositPaidDate(LocalDate.now().minusDays(3).atStartOfDay());
+                    order4.setStateOfOrder(stateInProduction);
+                    orderRepository.save(order4);
+                    log.info("Manually updated order {} to DEPOSIT_PAID and state IN_PRODUCTION (bypassed SF calls)", order4.getOrderCode());
+
+                } catch (Exception e) {
+                    log.error("Failed to manually update state/deposit payment for order {}: {}", order4.getOrderCode(), e.getMessage());
+                }
             } else if (order4 != null) {
                 log.warn("Could not mark deposit paid for order {}, deposit amount is missing or zero.", order4.getOrderCode());
             }
         } catch (Exception e) { log.error("Failed to create/update sample order 4", e); }
     }
 
-    // --- Pomocná metoda pro vytvoření objednávky přes OrderService ---
-    private Order createTestOrder(Customer customer, String paymentMethod, String currency, List<CartItemDto> items, String couponCode, String note) {
-        log.info("Attempting to create test order for customer {} with {} items in {}", customer.getEmail(), items.size(), currency);
-        try {
-            // Simulace výpočtu dopravy - POUŽIJ DUMMY HODNOTY
-            BigDecimal shippingCostNoTax;
-            BigDecimal shippingTaxRate = new BigDecimal("0.21"); // Pevně daná sazba pro dopravu
 
-            if (EURO_CURRENCY.equals(currency)) {
-                shippingCostNoTax = new BigDecimal("25.00").setScale(PRICE_SCALE, ROUNDING_MODE); // Dummy EUR shipping
-            } else {
-                shippingCostNoTax = new BigDecimal("500.00").setScale(PRICE_SCALE, ROUNDING_MODE); // Dummy CZK shipping
-            }
+    /**
+     * Pomocná metoda pro vytvoření testovací objednávky POUZE pomocí OrderService.
+     * Explicitně NEVOLÁ metody pro generování faktur nebo odesílání emailů z této třídy.
+     */
+    private Order createTestOrder(Customer customer, String paymentMethod, String currency, List<CartItemDto> items, String couponCode, String note) {
+        log.info("Attempting to create test order via OrderService for customer {} with {} items in {}", customer.getEmail(), items.size(), currency);
+        try {
+            // Simulace dummy dopravy
+            BigDecimal shippingCostNoTax = EURO_CURRENCY.equals(currency) ? new BigDecimal("25.00") : new BigDecimal("500.00");
+            BigDecimal shippingTaxRate = new BigDecimal("0.21");
             BigDecimal shippingTax = shippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
 
-            // Vytvoření requestu pro OrderService
             CreateOrderRequest request = new CreateOrderRequest();
             request.setCustomerId(customer.getId());
-            request.setUseCustomerAddresses(true); // Zajisti, že testovací zákazníci mají adresy!
+            request.setUseCustomerAddresses(true); // Ujisti se, že testovací zákazníci mají adresy!
             request.setPaymentMethod(paymentMethod);
             request.setCurrency(currency);
             request.setCustomerNote(note);
@@ -311,53 +282,29 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
             request.setShippingCostNoTax(shippingCostNoTax);
             request.setShippingTax(shippingTax);
 
-            // Zavolání hlavní servisní metody pro vytvoření objednávky
+            // Voláme OrderService.createOrder, který zařídí vše ostatní
+            // (včetně POTENCIÁLNÍHO volání generateProformaInvoice, pokud je to custom objednávka)
             Order createdOrder = orderService.createOrder(request);
-            log.info("Successfully created test order: {} (Total: {} {})",
+
+            log.info("Successfully initiated test order creation via OrderService: {} (Total: {} {})",
                     createdOrder.getOrderCode(), createdOrder.getTotalPrice(), createdOrder.getCurrency());
 
-            // --- SMAZAT NEBO ZAKOMENTOVAT NÁSLEDUJÍCÍ BLOK ---
-         /*
-         // Optional: Update order state for testing different scenarios
-          updateTestOrderState(createdOrder, "PROCESSING"); // Toto už neděláme zde
-          if (createdOrder.getDepositAmount() != null && createdOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
-              // orderService.markDepositAsPaid(createdOrder.getId(), LocalDate.now().minusDays(1)); // Toto neděláme zde
-              // updateTestOrderState(createdOrder, "IN_PRODUCTION"); // Toto neděláme zde
-          } else {
-              // orderService.markOrderAsFullyPaid(createdOrder.getId(), LocalDate.now().minusDays(1)); // Toto neděláme zde
-              // updateTestOrderState(createdOrder, "SHIPPED"); // Toto neděláme zde
-          }
-         */
-            // --- KONEC BLOKU K ODSTRANĚNÍ ---
-
-            return createdOrder; // Vrátíme vytvořenou objednávku
+            return createdOrder;
 
         } catch (Exception e) {
-            // Logování chyby, ale neházení výjimky, aby inicializace mohla pokračovat
-            String itemIds = items.stream()
-                    .map(i -> i.getProductId() != null ? i.getProductId().toString() : "null")
-                    .collect(Collectors.joining(", "));
-            log.error("Failed to create test order for customer {} (Items: [{}]): {}",
+            String itemIds = items.stream().map(i -> i.getProductId() != null ? i.getProductId().toString() : "null").collect(Collectors.joining(", "));
+            log.error("Failed to create test order via OrderService for customer {} (Items: [{}]): {}",
                     customer.getEmail(), itemIds, e.getMessage(), e);
-            return null; // Vrátíme null v případě chyby
+            // Můžeme zvážit logování stack trace pro lepší diagnostiku
+            // log.error("Stack trace:", e);
+            return null;
         }
     }
 
-    // Metodu updateTestOrderState můžeš smazat, pokud ji už nebudeš potřebovat
- /*
- private void updateTestOrderState(Order order, String stateCode) {
-      try {
-          OrderState newState = orderStateRepository.findByCodeIgnoreCase(stateCode)
-                  .orElseThrow(() -> new RuntimeException("Test OrderState not found: " + stateCode));
-          orderService.updateOrderState(order.getId(), newState.getId());
-          log.info("Updated test order {} state to {}", order.getOrderCode(), stateCode);
-      } catch (Exception e) {
-          log.error("Failed to update state for test order {}: {}", order.getOrderCode(), e.getMessage());
-      }
-  }
- */
 
-    // --- Ostatní pomocné metody pro vytváření entit ---
+    // --- Ostatní pomocné metody (createTaxRates, createOrderStates, createEmailTemplates, createDesign, etc.) ---
+    // Tyto metody zůstávají beze změny oproti předchozí verzi
+
     private void createTaxRates() {
         if (taxRateRepository.count() == 0) {
             log.info("Creating default Tax Rates...");
@@ -374,7 +321,7 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
             createState("NEW", "Nová", "Objednávka přijata systémem.", 10, false);
             createState("AWAITING_DEPOSIT", "Čeká na zálohu", "Čeká na zaplacení zálohy (produkt na míru).", 20, false);
             createState("AWAITING_PAYMENT", "Čeká na platbu", "Čeká na platbu bankovním převodem.", 30, false);
-            createState("DEPOSIT_PAID", "Záloha zaplacena", "Záloha byla zaplacena.", 33, false); // Přidáno
+            createState("DEPOSIT_PAID", "Záloha zaplacena", "Záloha byla zaplacena.", 33, false);
             createState("PAID", "Zaplaceno", "Objednávka byla plně zaplacena.", 35, false);
             createState("PROCESSING", "Zpracovává se", "Objednávka se připravuje k výrobě/expedici.", 40, false);
             createState("IN_PRODUCTION", "Ve výrobě", "Produkt je aktuálně ve výrobě.", 50, false);
@@ -388,21 +335,12 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
 
     private OrderState createState(String code, String name, String description, int order, boolean isFinal) {
         OrderState state = new OrderState();
-        // Uložíme kód vždy velkými písmeny
-        state.setCode(code.toUpperCase());
-        state.setName(name);
-        state.setDescription(description);
-        state.setDisplayOrder(order);
-        state.setFinalState(isFinal);
+        state.setCode(code.toUpperCase()); state.setName(name); state.setDescription(description);
+        state.setDisplayOrder(order); state.setFinalState(isFinal);
         try {
-            OrderState savedState = orderStateRepository.save(state);
-            // Ponecháme logování úspěšného uložení
-            log.info("Saved OrderState: Code='{}', Name='{}', ID={}", savedState.getCode(), savedState.getName(), savedState.getId());
-            return savedState;
+            return orderStateRepository.save(state);
         } catch (Exception e) {
-            // Logujeme chybu A ZÁROVEŇ JI ZNOVU VYHODÍME
             log.error("!!! CRITICAL FAILURE: Failed to save OrderState with code '{}': {} !!!", code.toUpperCase(), e.getMessage(), e);
-            // Tímto zastavíme inicializaci a uvidíme původní chybu
             throw new RuntimeException("Failed to save OrderState with code '" + code.toUpperCase() + "'", e);
         }
     }
@@ -412,11 +350,11 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
             log.info("Creating default Email Template Configs...");
             createEmailConfig("NEW", false, "emails/order-confirmation-admin", "{shopName} - Nová objednávka č. {orderCode}");
             createEmailConfig("SHIPPED", true, "emails/order-status-shipped", "{shopName} - Vaše objednávka č. {orderCode} byla odeslána");
+            // ... (ostatní konfigurace emailů) ...
             createEmailConfig("DELIVERED", false, "emails/order-status-delivered", "{shopName} - Vaše objednávka č. {orderCode} byla doručena");
             createEmailConfig("CANCELLED", true, "emails/order-status-cancelled", "{shopName} - Vaše objednávka č. {orderCode} byla zrušena");
             createEmailConfig("AWAITING_DEPOSIT", true, "emails/order-status-awaiting-deposit", "{shopName} - Výzva k úhradě zálohy k obj. č. {orderCode}");
             createEmailConfig("AWAITING_PAYMENT", true, "emails/order-status-awaiting-payment", "{shopName} - Výzva k úhradě obj. č. {orderCode}");
-            // Přidat konfiguraci pro další stavy, pokud je potřeba
             createEmailConfig("DEPOSIT_PAID", true, "emails/order-status-deposit-paid", "{shopName} - Přijali jsme Vaši zálohu k obj. č. {orderCode}");
             createEmailConfig("PAID", true, "emails/order-status-paid", "{shopName} - Objednávka č. {orderCode} byla zaplacena");
             createEmailConfig("PROCESSING", true, "emails/order-status-processing", "{shopName} - Objednávka č. {orderCode} se zpracovává");
@@ -527,13 +465,8 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
         Customer c = new Customer(); c.setFirstName(fname); c.setLastName(lname); c.setEmail(email); c.setPhone(phone); c.setPassword(passwordEncoder.encode(password)); c.setEnabled(true); c.setRoles(Set.of("ROLE_USER"));
         c.setInvoiceFirstName(fname); c.setInvoiceLastName(lname); c.setInvoiceStreet("Testovací 123"); c.setInvoiceCity("Testov"); c.setInvoiceZipCode("12345"); c.setInvoiceCountry("Česká republika");
         c.setUseInvoiceAddressAsDelivery(true);
-        // Explicitně nastavit dodací adresu, pokud useInvoiceAddressAsDelivery je true
         if (c.isUseInvoiceAddressAsDelivery()) {
-            c.setDeliveryStreet(c.getInvoiceStreet());
-            c.setDeliveryCity(c.getInvoiceCity());
-            c.setDeliveryZipCode(c.getInvoiceZipCode());
-            c.setDeliveryCountry(c.getInvoiceCountry());
-            c.setDeliveryPhone(c.getPhone()); // Použijeme hlavní telefon
+            c.setDeliveryStreet(c.getInvoiceStreet()); c.setDeliveryCity(c.getInvoiceCity()); c.setDeliveryZipCode(c.getInvoiceZipCode()); c.setDeliveryCountry(c.getInvoiceCountry()); c.setDeliveryPhone(c.getPhone());
         }
         return customerRepository.save(c);
     }
@@ -546,28 +479,14 @@ public class DataInitializer implements ApplicationRunner, PriceConstants { // I
         Customer c = new Customer();
         c.setFirstName(fname); c.setLastName(lname); c.setEmail(email); c.setPhone(phone);
         c.setPassword(passwordEncoder.encode(password)); c.setEnabled(true);
-        c.setRoles(Set.of("ROLE_USER", "ROLE_ADMIN")); // Role admina
-
-        // --- PŘIDAT ADRESNÍ ÚDAJE ---
-        c.setInvoiceFirstName(fname);
-        c.setInvoiceLastName(lname);
-        c.setInvoiceStreet("Adminova 1"); // Příklad
-        c.setInvoiceCity("Hlavní Město"); // Příklad
-        c.setInvoiceZipCode("11000"); // Příklad
-        c.setInvoiceCountry("Česká republika"); // Příklad
-        c.setUseInvoiceAddressAsDelivery(true); // Nastavit dle potřeby
-
-        // Explicitně nastavit dodací adresu, pokud je stejná jako fakturační
+        c.setRoles(Set.of("ROLE_USER", "ROLE_ADMIN"));
+        c.setInvoiceFirstName(fname); c.setInvoiceLastName(lname); c.setInvoiceStreet("Adminova 1"); c.setInvoiceCity("Hlavní Město"); c.setInvoiceZipCode("11000"); c.setInvoiceCountry("Česká republika");
+        c.setUseInvoiceAddressAsDelivery(true);
         if (c.isUseInvoiceAddressAsDelivery()) {
-            c.setDeliveryStreet(c.getInvoiceStreet());
-            c.setDeliveryCity(c.getInvoiceCity());
-            c.setDeliveryZipCode(c.getInvoiceZipCode());
-            c.setDeliveryCountry(c.getInvoiceCountry());
-            c.setDeliveryPhone(c.getPhone()); // Použijeme hlavní telefon
+            c.setDeliveryStreet(c.getInvoiceStreet()); c.setDeliveryCity(c.getInvoiceCity()); c.setDeliveryZipCode(c.getInvoiceZipCode()); c.setDeliveryCountry(c.getInvoiceCountry()); c.setDeliveryPhone(c.getPhone());
         }
-        // --- KONEC PŘIDÁNÍ ADRESNÍCH ÚDAJŮ ---
-
         log.info("Creating admin user: {}", email);
         return customerRepository.save(c);
     }
-}
+
+} // Konec třídy DataInitializer
