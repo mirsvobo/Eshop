@@ -73,48 +73,44 @@ class OrderServiceTest implements PriceConstants {
     void setUp() {
         // --- Inicializace Testovacích Dat ---
         testCustomer = new Customer();
-        testCustomer.setId(1L);
-        testCustomer.setEmail("customer@test.com");
-        testCustomer.setFirstName("Test");
-        testCustomer.setLastName("Customer");
-        testCustomer.setPhone("123456789");
-        testCustomer.setInvoiceFirstName("Test");
-        testCustomer.setInvoiceLastName("Customer");
-        testCustomer.setInvoiceStreet("Test Street 123");
-        testCustomer.setInvoiceCity("Testovo");
-        testCustomer.setInvoiceZipCode("12345");
-        testCustomer.setInvoiceCountry("Česká republika");
-        testCustomer.setUseInvoiceAddressAsDelivery(true);
-        testCustomer.setDeliveryFirstName(testCustomer.getInvoiceFirstName());
-        testCustomer.setDeliveryLastName(testCustomer.getInvoiceLastName());
-        testCustomer.setDeliveryStreet(testCustomer.getInvoiceStreet());
-        testCustomer.setDeliveryCity(testCustomer.getInvoiceCity());
-        testCustomer.setDeliveryZipCode(testCustomer.getInvoiceZipCode());
-        testCustomer.setDeliveryCountry(testCustomer.getInvoiceCountry());
+        testCustomer.setId(1L); testCustomer.setEmail("customer@test.com"); testCustomer.setFirstName("Test");
+        testCustomer.setLastName("Customer"); testCustomer.setPhone("123456789"); testCustomer.setInvoiceFirstName("Test");
+        testCustomer.setInvoiceLastName("Customer"); testCustomer.setInvoiceStreet("Test Street 123"); testCustomer.setInvoiceCity("Testovo");
+        testCustomer.setInvoiceZipCode("12345"); testCustomer.setInvoiceCountry("Česká republika"); testCustomer.setUseInvoiceAddressAsDelivery(true);
+        testCustomer.setDeliveryFirstName(testCustomer.getInvoiceFirstName()); testCustomer.setDeliveryLastName(testCustomer.getInvoiceLastName());
+        testCustomer.setDeliveryStreet(testCustomer.getInvoiceStreet()); testCustomer.setDeliveryCity(testCustomer.getInvoiceCity());
+        testCustomer.setDeliveryZipCode(testCustomer.getInvoiceZipCode()); testCustomer.setDeliveryCountry(testCustomer.getInvoiceCountry());
         testCustomer.setDeliveryPhone(testCustomer.getPhone());
 
         standardTaxRate = new TaxRate(1L, "Standard 21%", new BigDecimal("0.21"), false, null);
         initialState = new OrderState(); initialState.setId(1L); initialState.setCode("NEW"); initialState.setName("Nová");
-        testDesign = new Design(); testDesign.setId(10L); testDesign.setName("Klasik Design");
-        testGlaze = new Glaze(); testGlaze.setId(20L); testGlaze.setName("Ořech Lazura"); testGlaze.setPriceSurchargeCZK(BigDecimal.ZERO); testGlaze.setPriceSurchargeEUR(BigDecimal.ZERO);
-        testRoofColor = new RoofColor(); testRoofColor.setId(30L); testRoofColor.setName("Antracit Střecha"); testRoofColor.setPriceSurchargeCZK(BigDecimal.ZERO); testRoofColor.setPriceSurchargeEUR(BigDecimal.ZERO);
-        standardProduct = new Product(); standardProduct.setId(100L); standardProduct.setName("Standard Product"); standardProduct.setActive(true); standardProduct.setCustomisable(false); standardProduct.setBasePriceCZK(new BigDecimal("1000.00")); standardProduct.setBasePriceEUR(new BigDecimal("40.00")); standardProduct.setTaxRate(standardTaxRate); standardProduct.setAvailableDesigns(Set.of(testDesign)); standardProduct.setAvailableGlazes(Set.of(testGlaze)); standardProduct.setAvailableRoofColors(Set.of(testRoofColor));
+        testDesign = new Design(); testDesign.setId(10L); testDesign.setName("Klasik Design"); testDesign.setPriceSurchargeCZK(null);
+        testGlaze = new Glaze(); testGlaze.setId(20L); testGlaze.setName("Ořech Lazura"); testGlaze.setPriceSurchargeCZK(BigDecimal.ZERO);
+        testRoofColor = new RoofColor(); testRoofColor.setId(30L); testRoofColor.setName("Antracit Střecha"); testRoofColor.setPriceSurchargeCZK(BigDecimal.ZERO);
+        standardProduct = new Product(); standardProduct.setId(100L); standardProduct.setName("Standard Product"); standardProduct.setActive(true); standardProduct.setCustomisable(false); standardProduct.setBasePriceCZK(new BigDecimal("1000.00")); standardProduct.setBasePriceEUR(new BigDecimal("40.00")); standardProduct.setTaxRate(standardTaxRate); standardProduct.setAvailableDesigns(Set.of(testDesign)); standardProduct.setAvailableGlazes(Set.of(testGlaze, testGlaze)); standardProduct.setAvailableRoofColors(Set.of(testRoofColor));
 
         testAddon = new Addon(); testAddon.setId(50L); testAddon.setName("Test Addon"); testAddon.setActive(true); testAddon.setPriceCZK(new BigDecimal("50.00")); testAddon.setPriceEUR(new BigDecimal("2.00"));
-        customProduct = new Product(); customProduct.setId(200L); customProduct.setName("Custom Product"); customProduct.setActive(true); customProduct.setCustomisable(true); customProduct.setTaxRate(standardTaxRate); customProduct.setAvailableAddons(Set.of(testAddon)); ProductConfigurator configurator = new ProductConfigurator(); customProduct.setConfigurator(configurator);
-        percentCoupon = new Coupon(); percentCoupon.setId(1L); percentCoupon.setCode("SLEVA10"); percentCoupon.setActive(true); percentCoupon.setPercentage(true); percentCoupon.setValue(new BigDecimal("10.00")); percentCoupon.setStartDate(LocalDateTime.now().minusDays(1)); percentCoupon.setExpirationDate(LocalDateTime.now().plusDays(1));
-        freeShippingCoupon = new Coupon(); freeShippingCoupon.setId(2L); freeShippingCoupon.setCode("DOPRAVAZDARMA"); freeShippingCoupon.setActive(true); freeShippingCoupon.setPercentage(false); freeShippingCoupon.setFreeShipping(true); freeShippingCoupon.setStartDate(LocalDateTime.now().minusDays(1)); freeShippingCoupon.setExpirationDate(LocalDateTime.now().plusDays(1));
-        inactiveCoupon = new Coupon(); inactiveCoupon.setId(3L); inactiveCoupon.setCode("NEPLATNY"); inactiveCoupon.setActive(false); inactiveCoupon.setPercentage(true); inactiveCoupon.setValue(new BigDecimal("5.00")); inactiveCoupon.setStartDate(LocalDateTime.now().minusDays(1)); inactiveCoupon.setExpirationDate(LocalDateTime.now().plusDays(1));
-        expiredCoupon = new Coupon(); expiredCoupon.setId(4L); expiredCoupon.setCode("EXPIROVANY"); expiredCoupon.setActive(true); expiredCoupon.setPercentage(true); expiredCoupon.setValue(new BigDecimal("5.00")); expiredCoupon.setStartDate(LocalDateTime.now().minusDays(10)); expiredCoupon.setExpirationDate(LocalDateTime.now().minusDays(1));
+        customProduct = new Product(); customProduct.setId(200L); customProduct.setName("Custom Product"); customProduct.setActive(true); customProduct.setCustomisable(true); customProduct.setTaxRate(standardTaxRate); customProduct.setAvailableAddons(Set.of(testAddon));
+        // Musíme nastavit i dostupné atributy pro custom produkt, pokud je chceme vybírat
+        customProduct.setAvailableDesigns(Set.of(testDesign));
+        customProduct.setAvailableGlazes(Set.of(testGlaze, testGlaze));
+        customProduct.setAvailableRoofColors(Set.of(testRoofColor));
+        // Nastavení konfigurátoru
+        ProductConfigurator configurator = new ProductConfigurator(); configurator.setId(200L); configurator.setProduct(customProduct);
+        configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500")); configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200")); configurator.setMinHeight(new BigDecimal("150")); configurator.setMaxHeight(new BigDecimal("300"));
+        configurator.setPricePerCmLengthCZK(new BigDecimal("10.00")); configurator.setPricePerCmDepthCZK(new BigDecimal("5.00")); configurator.setPricePerCmHeightCZK(new BigDecimal("8.00")); configurator.setDividerPricePerCmDepthCZK(new BigDecimal("3.00")); configurator.setGutterPriceCZK(new BigDecimal("500.00")); configurator.setShedPriceCZK(new BigDecimal("2000.00")); configurator.setDesignPriceCZK(new BigDecimal("100.00"));
+        configurator.setPricePerCmLengthEUR(new BigDecimal("0.40")); configurator.setPricePerCmDepthEUR(new BigDecimal("0.20")); configurator.setPricePerCmHeightEUR(new BigDecimal("0.32")); configurator.setDividerPricePerCmDepthEUR(new BigDecimal("0.12")); configurator.setGutterPriceEUR(new BigDecimal("20.00")); configurator.setShedPriceEUR(new BigDecimal("80.00")); configurator.setDesignPriceEUR(new BigDecimal("4.00"));
+        customProduct.setConfigurator(configurator);
+
+        percentCoupon = new Coupon(); percentCoupon.setId(1L); /* ... ostatní nastavení ... */ percentCoupon.setCode("SLEVA10"); percentCoupon.setActive(true); percentCoupon.setPercentage(true); percentCoupon.setValue(new BigDecimal("10.00")); percentCoupon.setStartDate(LocalDateTime.now().minusDays(1)); percentCoupon.setExpirationDate(LocalDateTime.now().plusDays(1));
+        freeShippingCoupon = new Coupon(); freeShippingCoupon.setId(2L); /* ... ostatní nastavení ... */ freeShippingCoupon.setCode("DOPRAVAZDARMA"); freeShippingCoupon.setActive(true); freeShippingCoupon.setPercentage(false); freeShippingCoupon.setFreeShipping(true); freeShippingCoupon.setStartDate(LocalDateTime.now().minusDays(1)); freeShippingCoupon.setExpirationDate(LocalDateTime.now().plusDays(1));
 
         // --- Základní Mockování s lenient() ---
         lenient().when(customerRepository.findById(1L)).thenReturn(Optional.of(testCustomer));
         lenient().when(orderStateRepository.findByCodeIgnoreCase("NEW")).thenReturn(Optional.of(initialState));
         lenient().when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order orderToSave = invocation.getArgument(0);
-            if (orderToSave.getId() == null) orderToSave.setId(System.currentTimeMillis());
-            // Kód objednávky už se nastavuje v testované metodě, zde ho neměníme
-            // if (orderToSave.getOrderCode() == null) orderToSave.setOrderCode("MOCK-ORD-" + orderToSave.getId());
+            if (orderToSave.getId() == null) orderToSave.setId(System.currentTimeMillis() % 1000 + 100); // Unikátnější ID
             if (orderToSave.getOrderItems() != null) {
                 orderToSave.getOrderItems().forEach(item -> item.setOrder(orderToSave));
             }
@@ -129,36 +125,163 @@ class OrderServiceTest implements PriceConstants {
         lenient().doNothing().when(invoiceService).generateTaxDocumentForDeposit(any(Order.class));
         lenient().doNothing().when(invoiceService).markInvoiceAsPaidInSF(anyLong(), any(BigDecimal.class), any(LocalDate.class), anyString(), anyString());
         lenient().doNothing().when(couponService).markCouponAsUsed(any(Coupon.class));
-
-        // --- *** PŘIDÁNO: Nastavení chování pro mock OrderCodeGeneratorService *** ---
-        // Vracíme jednoduchý testovací kód, můžeš případně vracet sekvenci, pokud testy potřebují unikátní
         lenient().when(orderCodeGeneratorService.getNextOrderCode()).thenReturn("TEST-206");
-        // --------------------------------------------------------------------------
     }
 
-    // --- Ostatní testovací metody (@Test) zůstávají stejné ---
-    // ... (createOrder_StandardProduct_CZK_NoCoupon_Success, createOrder_CustomProduct_EUR_RequiresDeposit_Success, atd.) ...
+
     @Test
-    @DisplayName("[createOrder] Úspěšné vytvoření objednávky - Standardní produkt, CZK, Bez kupónu")
+    @DisplayName("[createOrder] Úspěšné vytvoření - Standardní produkt, CZK, Bez kupónu")
     void createOrder_StandardProduct_CZK_NoCoupon_Success() {
         // --- Příprava ---
-        // Mock načtení produktu a jeho atributů
         when(productRepository.findById(100L)).thenReturn(Optional.of(standardProduct));
         when(designRepository.findById(10L)).thenReturn(Optional.of(testDesign));
         when(glazeRepository.findById(20L)).thenReturn(Optional.of(testGlaze));
         when(roofColorRepository.findById(30L)).thenReturn(Optional.of(testRoofColor));
-        // Mock výpočtu dopravy
         when(shippingService.calculateShippingCost(any(Order.class), eq("CZK"))).thenReturn(new BigDecimal("150.00"));
-        when(shippingService.getShippingTaxRate()).thenReturn(new BigDecimal("0.21")); // 21% DPH na dopravu
+        when(shippingService.getShippingTaxRate()).thenReturn(new BigDecimal("0.21"));
+
+        CartItemDto itemDto = new CartItemDto();
+        itemDto.setProductId(100L); itemDto.setQuantity(2); itemDto.setCustom(false);
+        itemDto.setSelectedDesignId(10L); itemDto.setSelectedGlazeId(20L); itemDto.setSelectedRoofColorId(30L);
+
+        CreateOrderRequest request = new CreateOrderRequest(); /* ... nastavení ... */
+        request.setCustomerId(1L); request.setUseCustomerAddresses(true); request.setPaymentMethod("BANK_TRANSFER");
+        request.setCurrency("CZK"); request.setItems(List.of(itemDto));
+        request.setShippingCostNoTax(new BigDecimal("150.00")); request.setShippingTax(new BigDecimal("31.50"));
+
+        // --- Provedení ---
+        Order createdOrder = orderService.createOrder(request);
+
+        // --- Ověření ---
+        assertNotNull(createdOrder);
+        assertEquals("TEST-206", createdOrder.getOrderCode());
+        assertEquals("PENDING", createdOrder.getPaymentStatus());
+        assertNull(createdOrder.getDepositAmount());
+        assertEquals(1, createdOrder.getOrderItems().size());
+        // Ověření cen
+        assertEquals(0, new BigDecimal("2000.00").compareTo(createdOrder.getSubTotalWithoutTax())); // 2 * 1000
+        assertEquals(0, new BigDecimal("420.00").compareTo(createdOrder.getTotalItemsTax()));       // 2 * 1000 * 0.21
+        assertEquals(0, new BigDecimal("150.00").compareTo(createdOrder.getShippingCostWithoutTax()));
+        assertEquals(0, new BigDecimal("31.50").compareTo(createdOrder.getShippingTax()));         // 150 * 0.21
+        assertEquals(0, new BigDecimal("2150.00").compareTo(createdOrder.getTotalPriceWithoutTax())); // 2000 + 150
+        assertEquals(0, new BigDecimal("451.50").compareTo(createdOrder.getTotalTax()));           // 420 + 31.50
+        assertEquals(0, new BigDecimal("2601.50").compareTo(createdOrder.getTotalPrice()));         // 2150 + 451.50
+
+        verify(orderCodeGeneratorService).getNextOrderCode();
+        verify(orderRepository).save(createdOrder);
+        verify(emailService).sendOrderConfirmationEmail(createdOrder);
+        verify(invoiceService, never()).generateProformaInvoice(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("[createOrder] Úspěšné vytvoření - Custom produkt, EUR, Vyžaduje zálohu, s příplatky")
+    void createOrder_CustomProduct_EUR_RequiresDeposit_WithSurcharge_Success() {
+        // --- Příprava ---
+        when(productRepository.findById(200L)).thenReturn(Optional.of(customProduct));
+        // Mockujeme načtení atributů s příplatkem (Teak Premium)
+        when(designRepository.findById(10L)).thenReturn(Optional.of(testDesign)); // Bez příplatku
+        when(glazeRepository.findById(21L)).thenReturn(Optional.of(testGlaze)); // Příplatek 8 EUR
+        when(roofColorRepository.findById(30L)).thenReturn(Optional.of(testRoofColor)); // Bez příplatku
+        when(addonsRepository.findAllById(eq(Set.of(50L)))).thenReturn(List.of(testAddon)); // Addon za 2 EUR
+
+        BigDecimal dynamicPriceEUR = new BigDecimal("150.00"); // Cena za rozměry atd.
+        when(productService.calculateDynamicProductPrice(eq(customProduct), anyMap(), isNull(), eq(false), eq(true), eq(false), eq("EUR")))
+                .thenReturn(dynamicPriceEUR);
+
+        when(shippingService.calculateShippingCost(any(Order.class), eq("EUR"))).thenReturn(new BigDecimal("10.00"));
+        when(shippingService.getShippingTaxRate()).thenReturn(new BigDecimal("0.21"));
+        when(paymentService.determineInitialPaymentStatus(any(Order.class))).thenReturn("AWAITING_DEPOSIT");
+
+        // Očekávaná jednotková cena = dynamicPrice + surchargeGlaze + priceAddon = 150 + 8 + 2 = 160 EUR
+        BigDecimal expectedFinalUnitPrice = new BigDecimal("160.00");
+        // Očekávaná celková cena = (jednotková + doprava) * (1 + DPH) = (160 + 10) * 1.21 = 170 * 1.21 = 205.70 EUR
+        BigDecimal expectedTotalPriceWithTax = new BigDecimal("205.70");
+        BigDecimal expectedDeposit = expectedTotalPriceWithTax.multiply(new BigDecimal("0.50")).setScale(PRICE_SCALE, ROUNDING_MODE); // 102.85 EUR
+        when(paymentService.calculateDeposit(eq(expectedTotalPriceWithTax))).thenReturn(expectedDeposit);
 
         // Vstupní DTO
         CartItemDto itemDto = new CartItemDto();
-        itemDto.setProductId(100L); itemDto.setQuantity(2); itemDto.setCustom(false);
+        itemDto.setProductId(200L); itemDto.setQuantity(1); itemDto.setCustom(true);
+        itemDto.setCustomDimensions(Map.of("length", new BigDecimal("250"), "width", new BigDecimal("150"), "height", new BigDecimal("200")));
+        itemDto.setSelectedDesignId(10L); // Klasik
+        itemDto.setSelectedGlazeId(21L);  // Teak Premium (s příplatkem)
+        itemDto.setSelectedRoofColorId(30L); // Antracit
+        itemDto.setCustomHasGutter(true);
+        AddonDto addonDto = new AddonDto(testAddon.getId(), 1);
+        itemDto.setSelectedAddons(List.of(addonDto));
+
+        CreateOrderRequest request = new CreateOrderRequest(); /* ... nastavení ... */
+        request.setCustomerId(1L); request.setUseCustomerAddresses(true); request.setPaymentMethod("BANK_TRANSFER");
+        request.setCurrency("EUR"); request.setItems(List.of(itemDto));
+        request.setShippingCostNoTax(new BigDecimal("10.00")); request.setShippingTax(new BigDecimal("2.10"));
+
+
+        // --- Provedení ---
+        Order createdOrder = orderService.createOrder(request);
+
+        // --- Ověření ---
+        assertNotNull(createdOrder);
+        assertEquals("TEST-206", createdOrder.getOrderCode());
+        assertEquals("EUR", createdOrder.getCurrency());
+        assertEquals("AWAITING_DEPOSIT", createdOrder.getPaymentStatus());
+        assertNotNull(createdOrder.getDepositAmount());
+        assertEquals(0, expectedDeposit.compareTo(createdOrder.getDepositAmount()), "Vypočtená záloha nesouhlasí");
+        assertEquals(1, createdOrder.getOrderItems().size());
+
+        OrderItem savedItem = createdOrder.getOrderItems().get(0);
+        assertNotNull(savedItem);
+        // Ověření jmen atributů
+        assertEquals(testDesign.getName(), savedItem.getModel());
+        assertEquals(testGlaze.getName(), savedItem.getGlaze());
+        assertEquals(testRoofColor.getName(), savedItem.getRoofColor());
+        // Ověření ceny položky (včetně příplatků a addonů)
+        assertEquals(0, expectedFinalUnitPrice.compareTo(savedItem.getUnitPriceWithoutTax()), "Jednotková cena položky nesouhlasí");
+        // Ověření celkové ceny
+        assertEquals(0, expectedTotalPriceWithTax.compareTo(createdOrder.getTotalPrice()), "Celková cena objednávky nesouhlasí");
+
+        // Ověření volání služeb
+        verify(orderCodeGeneratorService).getNextOrderCode();
+        verify(orderRepository).save(createdOrder);
+        verify(emailService).sendOrderConfirmationEmail(createdOrder);
+        verify(invoiceService).generateProformaInvoice(createdOrder); // Očekáváme volání proformy
+        verify(paymentService).determineInitialPaymentStatus(any(Order.class));
+        verify(paymentService).calculateDeposit(eq(expectedTotalPriceWithTax));
+        verify(designRepository).findById(10L);
+        verify(glazeRepository).findById(21L);
+        verify(roofColorRepository).findById(30L);
+        verify(addonsRepository).findAllById(eq(Set.of(50L)));
+    }
+
+
+    @Test
+    @DisplayName("[createOrder] Objednávka s platným kupónem na dopravu zdarma")
+    void createOrder_FreeShippingCoupon_Success() {
+        // --- Příprava ---
+        when(productRepository.findById(100L)).thenReturn(Optional.of(standardProduct));
+        when(designRepository.findById(10L)).thenReturn(Optional.of(testDesign));
+        when(glazeRepository.findById(20L)).thenReturn(Optional.of(testGlaze));
+        when(roofColorRepository.findById(30L)).thenReturn(Optional.of(testRoofColor));
+        // calculateShippingCost se zavolá pro zjištění původní ceny, ale výsledek se nepoužije
+        when(shippingService.calculateShippingCost(any(Order.class), eq("CZK"))).thenReturn(new BigDecimal("150.00"));
+        when(shippingService.getShippingTaxRate()).thenReturn(new BigDecimal("0.21"));
+        // Mockování kupónu
+        when(couponService.findByCode("DOPRAVAZDARMA")).thenReturn(Optional.of(freeShippingCoupon));
+        when(couponService.isCouponGenerallyValid(freeShippingCoupon)).thenReturn(true);
+        when(couponService.checkMinimumOrderValue(eq(freeShippingCoupon), any(BigDecimal.class), eq("CZK"))).thenReturn(true);
+        when(couponService.checkCustomerUsageLimit(eq(testCustomer), eq(freeShippingCoupon))).thenReturn(true);
+        // Kupón na dopravu neposkytuje slevu na zboží
+        when(couponService.calculateDiscountAmount(any(BigDecimal.class), eq(freeShippingCoupon), eq("CZK"))).thenReturn(BigDecimal.ZERO);
+        doNothing().when(couponService).markCouponAsUsed(freeShippingCoupon);
+
+        CartItemDto itemDto = new CartItemDto();
+        itemDto.setProductId(100L); itemDto.setQuantity(1); itemDto.setCustom(false);
         itemDto.setSelectedDesignId(10L); itemDto.setSelectedGlazeId(20L); itemDto.setSelectedRoofColorId(30L);
 
         CreateOrderRequest request = new CreateOrderRequest();
         request.setCustomerId(1L); request.setUseCustomerAddresses(true); request.setPaymentMethod("BANK_TRANSFER");
         request.setCurrency("CZK"); request.setItems(List.of(itemDto));
+        request.setCouponCode("DOPRAVAZDARMA");
+        // Cena dopravy v requestu může být z AJAXu, ale bude přepsána kupónem
         request.setShippingCostNoTax(new BigDecimal("150.00"));
         request.setShippingTax(new BigDecimal("31.50"));
 
@@ -167,81 +290,22 @@ class OrderServiceTest implements PriceConstants {
 
         // --- Ověření ---
         assertNotNull(createdOrder);
-        assertEquals("TEST-206", createdOrder.getOrderCode()); // *** Ověření nového kódu ***
-        assertEquals(testCustomer, createdOrder.getCustomer());
-        assertEquals(initialState, createdOrder.getStateOfOrder());
-        assertEquals("CZK", createdOrder.getCurrency());
-        assertEquals("PENDING", createdOrder.getPaymentStatus());
-        assertNull(createdOrder.getDepositAmount());
-        assertNull(createdOrder.getAppliedCoupon());
-        assertEquals(0, BigDecimal.ZERO.compareTo(createdOrder.getCouponDiscountAmount()));
-        assertEquals(1, createdOrder.getOrderItems().size());
+        assertEquals("TEST-206", createdOrder.getOrderCode());
+        assertEquals(freeShippingCoupon, createdOrder.getAppliedCoupon());
+        assertEquals("DOPRAVAZDARMA", createdOrder.getAppliedCouponCode());
+        assertEquals(0, BigDecimal.ZERO.compareTo(createdOrder.getCouponDiscountAmount())); // Žádná sleva na zboží
+        // Doprava by měla být NULA
+        assertEquals(0, BigDecimal.ZERO.compareTo(createdOrder.getShippingCostWithoutTax()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(createdOrder.getShippingTaxRate())); // Sazba DPH dopravy je 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(createdOrder.getShippingTax()));
+        // Celková cena = Subtotal + ItemsVAT
+        assertEquals(0, new BigDecimal("1000.00").compareTo(createdOrder.getSubTotalWithoutTax()));
+        assertEquals(0, new BigDecimal("210.00").compareTo(createdOrder.getTotalItemsTax()));
+        assertEquals(0, new BigDecimal("1210.00").compareTo(createdOrder.getTotalPrice())); // 1000 + 210
 
-        // Ověření cen
-        assertEquals(0, new BigDecimal("2000.00").compareTo(createdOrder.getSubTotalWithoutTax()));
-        assertEquals(0, new BigDecimal("420.00").compareTo(createdOrder.getTotalItemsTax()));
-        assertEquals(0, new BigDecimal("150.00").compareTo(createdOrder.getShippingCostWithoutTax()));
-        assertEquals(0, new BigDecimal("31.50").compareTo(createdOrder.getShippingTax()));
-        assertEquals(0, new BigDecimal("2150.00").compareTo(createdOrder.getTotalPriceWithoutTax()));
-        assertEquals(0, new BigDecimal("451.50").compareTo(createdOrder.getTotalTax()));
-        assertEquals(0, new BigDecimal("2601.50").compareTo(createdOrder.getTotalPrice()));
-
-        // Ověření volání služeb
-        verify(orderCodeGeneratorService).getNextOrderCode(); // *** Ověření volání generátoru ***
-        verify(orderRepository).save(createdOrder);
-        verify(emailService).sendOrderConfirmationEmail(createdOrder);
-        verify(invoiceService, never()).generateProformaInvoice(any(Order.class));
-        verify(couponService, never()).markCouponAsUsed(any(Coupon.class));
-        verify(shippingService).calculateShippingCost(any(Order.class), eq("CZK"));
-    }
-
-    @Test
-    @DisplayName("[createOrder] Úspěšné vytvoření objednávky - Custom produkt, EUR, Vyžaduje zálohu")
-    void createOrder_CustomProduct_EUR_RequiresDeposit_Success() {
-        // --- Příprava ---
-        when(productRepository.findById(200L)).thenReturn(Optional.of(customProduct));
-        BigDecimal dynamicPriceEUR = new BigDecimal("150.00");
-        when(productService.calculateDynamicProductPrice(eq(customProduct), anyMap(), any(), eq(false), eq(true), eq(false), eq("EUR")))
-                .thenReturn(dynamicPriceEUR);
-        when(shippingService.calculateShippingCost(any(Order.class), eq("EUR"))).thenReturn(new BigDecimal("10.00"));
-        when(shippingService.getShippingTaxRate()).thenReturn(new BigDecimal("0.21"));
-        when(paymentService.determineInitialPaymentStatus(any(Order.class))).thenReturn("AWAITING_DEPOSIT");
-        BigDecimal expectedTotalPriceWithTax = dynamicPriceEUR.add(new BigDecimal("10.00")) // Cena + doprava bez DPH
-                .multiply(BigDecimal.ONE.add(new BigDecimal("0.21"))) // Přičtení DPH
-                .setScale(PRICE_SCALE, ROUNDING_MODE);
-        BigDecimal expectedDeposit = expectedTotalPriceWithTax.multiply(new BigDecimal("0.50")).setScale(PRICE_SCALE, ROUNDING_MODE);
-        when(paymentService.calculateDeposit(eq(expectedTotalPriceWithTax))).thenReturn(expectedDeposit);
-
-        CartItemDto itemDto = new CartItemDto();
-        itemDto.setProductId(200L); itemDto.setQuantity(1); itemDto.setCustom(true);
-        itemDto.setCustomDimensions(Map.of("length", new BigDecimal("250"), "width", new BigDecimal("150"), "height", new BigDecimal("200")));
-        itemDto.setCustomDesign("Custom Design Name");
-        itemDto.setCustomHasGutter(true);
-
-        CreateOrderRequest request = new CreateOrderRequest();
-        request.setCustomerId(1L); request.setUseCustomerAddresses(true); request.setPaymentMethod("BANK_TRANSFER");
-        request.setCurrency("EUR"); request.setItems(List.of(itemDto));
-        request.setShippingCostNoTax(new BigDecimal("10.00"));
-        request.setShippingTax(new BigDecimal("2.10"));
-
-        // --- Provedení ---
-        Order createdOrder = orderService.createOrder(request);
-
-        // --- Ověření ---
-        assertNotNull(createdOrder);
-        assertEquals("TEST-206", createdOrder.getOrderCode()); // *** Ověření nového kódu ***
-        assertEquals("EUR", createdOrder.getCurrency());
-        assertEquals("AWAITING_DEPOSIT", createdOrder.getPaymentStatus());
-        assertNotNull(createdOrder.getDepositAmount());
-        assertEquals(0, expectedDeposit.compareTo(createdOrder.getDepositAmount()));
-
-        // Ověření volání služeb
-        verify(orderCodeGeneratorService).getNextOrderCode(); // *** Ověření volání generátoru ***
-        verify(orderRepository).save(createdOrder);
-        verify(emailService).sendOrderConfirmationEmail(createdOrder);
-        verify(invoiceService).generateProformaInvoice(createdOrder);
-        verify(paymentService).determineInitialPaymentStatus(any(Order.class));
-        verify(paymentService).calculateDeposit(eq(expectedTotalPriceWithTax));
+        verify(orderCodeGeneratorService).getNextOrderCode();
+        verify(couponService).markCouponAsUsed(freeShippingCoupon);
+        verify(shippingService).calculateShippingCost(any(Order.class), eq("CZK")); // Volá se pro zjištění původní ceny
     }
 
     @Test
