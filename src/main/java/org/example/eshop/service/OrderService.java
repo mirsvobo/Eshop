@@ -454,15 +454,18 @@ public class OrderService implements PriceConstants {
 
         if (itemDto.isCustom()) {
             orderItem.setSku("CUSTOM-" + product.getId());
-            StringBuilder variantSb = new StringBuilder("Na míru");
-            if (itemDto.getCustomDimensions() != null) {
-                variantSb.append(" (")
+            StringBuilder variantSb = new StringBuilder("Na míru"); // Začátek popisu
+
+            // Přidání rozměrů
+            if (itemDto.getCustomDimensions() != null && !itemDto.getCustomDimensions().isEmpty()) {
+                variantSb.append("|Rozměry (DxHxV): ") // Používáme '|' jako oddělovač pro snadné nahrazení <br/> v Thymeleaf
                         .append(itemDto.getCustomDimensions().get("length") != null ? itemDto.getCustomDimensions().get("length").stripTrailingZeros().toPlainString() : "?")
                         .append("x")
                         .append(itemDto.getCustomDimensions().get("width") != null ? itemDto.getCustomDimensions().get("width").stripTrailingZeros().toPlainString() : "?")
                         .append("x")
                         .append(itemDto.getCustomDimensions().get("height") != null ? itemDto.getCustomDimensions().get("height").stripTrailingZeros().toPlainString() : "?")
-                        .append(" cm)");
+                        .append(" cm");
+                // Uložíme rozměry i do samostatných polí
                 orderItem.setLength(itemDto.getCustomDimensions().get("length"));
                 orderItem.setWidth(itemDto.getCustomDimensions().get("width"));
                 orderItem.setHeight(itemDto.getCustomDimensions().get("height"));
@@ -470,48 +473,47 @@ public class OrderService implements PriceConstants {
                 log.warn("Custom dimensions map missing for custom OrderItem (Product ID: {})", product.getId());
                 orderItem.setLength(null); orderItem.setWidth(null); orderItem.setHeight(null);
             }
-            orderItem.setVariantInfo(variantSb.toString()); // Uložíme rozměry do variantInfo
 
-            // Načteme entity znovu podle ID z DTO, abychom získali jména
-            // (Bezpečnější než spoléhat na to, že CartItem má jména)
-            String designName = (itemDto.getSelectedDesignId() != null) ? designRepository.findById(itemDto.getSelectedDesignId()).map(Design::getName).orElse(null) : "(Nespecifikováno)";
-            String glazeName = (itemDto.getSelectedGlazeId() != null) ? glazeRepository.findById(itemDto.getSelectedGlazeId()).map(Glaze::getName).orElse(null) : "(Nespecifikováno)";
-            String roofColorName = (itemDto.getSelectedRoofColorId() != null) ? roofColorRepository.findById(itemDto.getSelectedRoofColorId()).map(RoofColor::getName).orElse(null) : "(Nespecifikováno)";
+            // Přidání vybraných atributů (použijeme předané entity)
+            if (design != null) variantSb.append("|Design: ").append(design.getName());
+            if (glaze != null) variantSb.append("|Lazura: ").append(glaze.getName());
+            if (roofColor != null) variantSb.append("|Střecha: ").append(roofColor.getName());
 
-            orderItem.setGlaze(glazeName);          // <<< ZMĚNA: Jméno z načtené entity
-            orderItem.setRoofColor(roofColorName); // <<< ZMĚNA: Jméno z načtené entity
-            orderItem.setModel(designName);         // <<< ZMĚNA: Jméno z načtené entity
-            orderItem.setRoofOverstep(itemDto.getCustomRoofOverstep());
+            // Uložení jmen pro historické účely (pokud je potřebuješ i jinde)
+            orderItem.setModel(design != null ? design.getName() : null); // 'model' pro design u custom
+            orderItem.setGlaze(glaze != null ? glaze.getName() : null);
+            orderItem.setRoofColor(roofColor != null ? roofColor.getName() : null);
             orderItem.setDesign(null); // Textový design se už nepoužívá
 
+            // Přidání ostatních custom voleb
+            if (StringUtils.hasText(itemDto.getCustomRoofOverstep())) variantSb.append("|Přesah: ").append(itemDto.getCustomRoofOverstep());
+            orderItem.setRoofOverstep(itemDto.getCustomRoofOverstep());
+
+            if (itemDto.isCustomHasDivider()) variantSb.append("|Příčka: Ano");
             orderItem.setHasDivider(itemDto.isCustomHasDivider());
+            if (itemDto.isCustomHasGutter()) variantSb.append("|Okap: Ano");
             orderItem.setHasGutter(itemDto.isCustomHasGutter());
+            if (itemDto.isCustomHasGardenShed()) variantSb.append("|Zahr. domek: Ano");
             orderItem.setHasGardenShed(itemDto.isCustomHasGardenShed());
-        } else { // Standardní produkt
+
+            orderItem.setVariantInfo(variantSb.toString()); // Uložíme sestavený popis
+
+        } else { // Standardní produkt (logika zůstává stejná)
             orderItem.setSku(product.getSlug());
             orderItem.setLength(product.getLength());
             orderItem.setWidth(product.getWidth());
             orderItem.setHeight(product.getHeight());
             orderItem.setRoofOverstep(product.getRoofOverstep());
-            // Použijeme jména z předaných entit (načtených v processCartItem)
             orderItem.setModel(design != null ? design.getName() : null);
             orderItem.setGlaze(glaze != null ? glaze.getName() : null);
             orderItem.setRoofColor(roofColor != null ? roofColor.getName() : null);
             orderItem.setDesign(null);
-            orderItem.setHasDivider(null);
-            orderItem.setHasGutter(null);
-            orderItem.setHasGardenShed(null);
+            orderItem.setHasDivider(null); orderItem.setHasGutter(null); orderItem.setHasGardenShed(null);
             // Sestavení variantInfo pro standardní produkt
             StringBuilder variantSb = new StringBuilder();
             if (design != null) variantSb.append("Design: ").append(design.getName());
-            if (glaze != null) {
-                if (!variantSb.isEmpty()) variantSb.append(" | ");
-                variantSb.append("Lazura: ").append(glaze.getName());
-            }
-            if (roofColor != null) {
-                if (!variantSb.isEmpty()) variantSb.append(" | ");
-                variantSb.append("Střecha: ").append(roofColor.getName());
-            }
+            if (glaze != null) { if (!variantSb.isEmpty()) variantSb.append(" | "); variantSb.append("Lazura: ").append(glaze.getName()); }
+            if (roofColor != null) { if (!variantSb.isEmpty()) variantSb.append(" | "); variantSb.append("Střecha: ").append(roofColor.getName()); }
             orderItem.setVariantInfo(variantSb.toString());
         }
         log.debug("Finished saving historical data for OrderItem. VariantInfo: {}", orderItem.getVariantInfo());

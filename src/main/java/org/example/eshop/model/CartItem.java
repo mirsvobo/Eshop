@@ -16,11 +16,9 @@ import java.util.*;
 @Getter
 @Setter
 public class CartItem implements Serializable, PriceConstants { // Implement PriceConstants if needed for scale/rounding
-
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L; // Zvýšena verze kvůli změně
     private static final Logger log = LoggerFactory.getLogger(CartItem.class);
-
 
     private String cartItemId;
     private Long productId;
@@ -30,35 +28,41 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
     private int quantity;
     private boolean isCustom;
 
-    // --- Standard Attributes (IDs and Names) ---
+    private BigDecimal length;  // Délka
+    private BigDecimal width;   // Hloubka (šířka)
+    private BigDecimal height;
+
+    // --- Atributy ID (pro standardní i custom) ---
     private Long selectedDesignId;
-    private String selectedDesignName;
-
     private Long selectedGlazeId;
-    private String selectedGlazeName;
-
     private Long selectedRoofColorId;
-    private String selectedRoofColorName;
 
-    // --- Custom Configuration ---
+    // --- PŘIDÁNA POLE PRO JMÉNA (pro zobrazení/historii) ---
+    private String selectedDesignName;
+    private String selectedGlazeName;
+    private String selectedRoofColorName;
+    // -----------------------------------------------------
+
+    // --- Custom Konfigurace ---
     private Map<String, BigDecimal> customDimensions;
-    private String customGlaze;
-    private String customRoofColor;
+    // ODEBRÁNO: private String customGlaze;
+    // ODEBRÁNO: private String customRoofColor;
     private String customRoofOverstep;
-    private String customDesign;
+    // ODEBRÁNO: private String customDesign;
     private boolean customHasDivider;
     private boolean customHasGutter;
     private boolean customHasGardenShed;
 
     private List<AddonDto> selectedAddons;
 
-    // Unit prices (per piece, without VAT)
+    // Ceny
     private BigDecimal unitPriceCZK;
     private BigDecimal unitPriceEUR;
-
-    // --- Added for VAT calculation ---
-    // Stores the rate as a decimal fraction (e.g., 0.21 for 21%)
     private BigDecimal taxRatePercent;
+
+    // **** PŘIDÁNO POLE PRO DETAILNÍ POPIS ****
+    private String variantInfo;
+    // ****************************************
 
     public CartItem() {}
 
