@@ -6,29 +6,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
     <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Pokladna - Dřevníky Kolář</title>
     <th:block layout:fragment="css">
-        <style>
-            /* Styly zůstávají stejné */
-            .address-section { border: 1px solid #dee2e6; padding: 1.5rem; margin-bottom: 1.5rem; border-radius: .375rem; }
-            .order-summary-card .list-group-item { padding: 0.75rem 1rem; }
-            .order-summary-card .list-group-item small { font-size: 0.85em; }
-            .table-total { font-weight: bold; font-size: 1.15em; }
-            .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
-            .delivery-address-fields.hidden { display: none; }
-            #shipping-cost-display.calculating::after,
-            #calculate-shipping-btn.calculating .spinner-border { display: inline-block; }
-            #calculate-shipping-btn .spinner-border { display: none; width: 1rem; height: 1rem; border-width: .2em; }
-            #shipping-cost-display.error { color: var(--bs-warning-text-emphasis); }
-            #submit-order-button:disabled { cursor: not-allowed; opacity: 0.65; }
-            .summary-label { flex-basis: 60%; text-align: left; }
-            .summary-value { flex-basis: 40%; text-align: right; font-weight: 500; }
-            .summary-total .summary-value { font-weight: bold; font-size: 1.1em; }
-            .vat-breakdown-item { font-size: 0.9em; }
-            .summary-card-body .form-check { margin-top: 1.5rem; margin-bottom: 1rem; }
-        </style>
+        <link rel="stylesheet" type="text/css" th:href="@{/css/pokladna.css}" />
     </th:block>
 </head>
 <body>
@@ -48,434 +28,285 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         <div th:if="${#fields.hasErrors('checkoutForm.*')}" class="alert alert-danger" role="alert">
-            Prosím, opravte chyby ve formuláři:
-            <ul>
-                <li th:each="err : ${#fields.errors('checkoutForm.*')}" th:text="${err}" />
-            </ul>
+            Prosím, opravte chyby ve formuláři.
         </div>
 
-
-        <form th:action="@{/pokladna/odeslat}" th:object="${checkoutForm}" method="post" id="checkout-form" novalidate>
-            <input type="hidden" id="hiddenShippingCostNoTax" name="shippingCostNoTax" value="">
-            <input type="hidden" id="hiddenShippingTax" name="shippingTax" value="">
+        <form th:action="@{/pokladna/odeslat}" th:object="${checkoutForm}" method="post" id="checkout-form" novalidate
+              th:data-is-user-logged-in="${customer != null}"
+              th:data-csrf-token="${_csrf?.token}"
+              th:data-csrf-header-name="${_csrf?.headerName}"
+              th:data-calculate-shipping-url="@{/pokladna/calculate-shipping}"
+              th:data-currency-symbol="${currencySymbol}"
+              th:data-initial-shipping-valid="${totalPrice != null && shippingError == null}"
+              th:data-initial-cart-empty="${cart == null or not cart.hasItems()}"
+              th:data-initial-total-item-vat="${totalVat != null ? #numbers.formatDecimal(totalVat, 1, 'NONE', 2, 'POINT') : '0'}"
+              th:data-initial-subtotal="${subtotal != null ? #numbers.formatDecimal(subtotal, 1, 'NONE', 2, 'POINT') : '0'}"
+              th:data-initial-coupon-discount="${couponDiscount != null ? #numbers.formatDecimal(couponDiscount, 1, 'NONE', 2, 'POINT') : '0'}"
+        >
+            <input type="hidden" id="hiddenShippingCostNoTax" name="shippingCostNoTax" th:value="${originalShippingCostNoTax != null ? #numbers.formatDecimal(originalShippingCostNoTax, 1, 'NONE', 2, 'POINT') : ''}">
+            <input type="hidden" id="hiddenShippingTax" name="shippingTax" th:value="${shippingTax != null ? #numbers.formatDecimal(shippingTax, 1, 'NONE', 2, 'POINT') : ''}">
 
             <div class="row g-5">
 
                 <div class="col-lg-7">
-                    <div th:if="${customer == null}" class="guest-info">
-                        <h4>Vaše údaje</h4>
-                        <p>Prosím, vyplňte své kontaktní a fakturační údaje.</p>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="firstName" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" id="firstName" th:field="*{firstName}" required>
-                                <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback" th:errors="*{firstName}"></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="lastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" id="lastName" th:field="*{lastName}" required>
-                                <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback" th:errors="*{lastName}"></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="email" class="form-label">E-mail <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" th:errorclass="is-invalid" id="email" th:field="*{email}" required>
-                                <div th:if="${#fields.hasErrors('email')}" class="invalid-feedback" th:errors="*{email}"></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
-                                <input type="tel" class="form-control" th:errorclass="is-invalid" id="phone" th:field="*{phone}" required placeholder="+420 123 456 789">
-                                <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback" th:errors="*{phone}"></div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                        <h5>Fakturační adresa</h5>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label for="invoiceCompanyName" class="form-label">Název firmy</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceCompanyName}" id="invoiceCompanyName">
-                                <div th:if="${#fields.hasErrors('invoiceCompanyName')}" class="invalid-feedback d-block"> <span th:errors="*{invoiceCompanyName}">Chyba názvu firmy</span></div>
-                                <div class="form-text">Pokud nevyplníte, použijí se údaje Křestní jméno a Příjmení výše.</div>
-                            </div>
-                        </div>
+                    <h4>Kontaktní a fakturační údaje</h4>
+                    <div th:unless="${customer != null}" class="guest-info">
                         <div class="mb-3">
-                            <label for="invoiceStreet" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceStreet}" id="invoiceStreet" required>
-                            <div th:if="${#fields.hasErrors('invoiceStreet')}" class="invalid-feedback d-block"><span th:errors="*{invoiceStreet}">Chyba ulice</span></div>
+                            <label for="email" class="form-label">E-mail <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" th:errorclass="is-invalid" id="email" th:field="*{email}" required>
+                            <div th:if="${#fields.hasErrors('email')}" class="invalid-feedback"><span th:errors="*{email}">Chyba emailu</span></div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceCity" class="form-label">Město <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceCity}" id="invoiceCity" required>
-                                <div th:if="${#fields.hasErrors('invoiceCity')}" class="invalid-feedback d-block"><span th:errors="*{invoiceCity}">Chyba města</span></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceZipCode" class="form-label">PSČ <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceZipCode}" id="invoiceZipCode" required>
-                                <div th:if="${#fields.hasErrors('invoiceZipCode')}" class="invalid-feedback d-block"><span th:errors="*{invoiceZipCode}">Chyba PSČ</span></div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="invoiceCountry" class="form-label">Země <span class="text-danger">*</span></label>
-                            <select class="form-select address-trigger" th:errorclass="is-invalid" th:field="*{invoiceCountry}" id="invoiceCountry" required>
-                                <option value="Česká republika">Česká republika</option>
-                                <option value="Slovensko">Slovensko</option>
-                            </select>
-                            <div th:if="${#fields.hasErrors('invoiceCountry')}" class="invalid-feedback d-block"><span th:errors="*{invoiceCountry}">Chyba země</span></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceTaxId" class="form-label">IČO</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceTaxId}" id="invoiceTaxId">
-                                <div th:if="${#fields.hasErrors('invoiceTaxId')}" class="invalid-feedback d-block"><span th:errors="*{invoiceTaxId}">Chyba IČO</span></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceVatId" class="form-label">DIČ</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceVatId}" id="invoiceVatId">
-                                <div th:if="${#fields.hasErrors('invoiceVatId')}" class="invalid-feedback d-block"><span th:errors="*{invoiceVatId}">Chyba DIČ</span></div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                        <h5>Dodací adresa</h5>
-                        <div class="form-check mb-3">
-                            <input type="checkbox" class="form-check-input address-trigger" id="useInvoiceAddressAsDelivery" th:field="*{useInvoiceAddressAsDelivery}">
-                            <label class="form-check-label" for="useInvoiceAddressAsDelivery">Dodací adresa je stejná jako fakturační</label>
-                        </div>
-                        <div class="delivery-address-fields" th:classappend="*{useInvoiceAddressAsDelivery} ? 'hidden' : ''">
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <label for="deliveryCompanyName" class="form-label">Název firmy</label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryCompanyName}" id="deliveryCompanyName">
-                                    <div th:if="${#fields.hasErrors('deliveryCompanyName')}" class="invalid-feedback d-block"> <span th:errors="*{deliveryCompanyName}">Chyba názvu firmy</span></div>
-                                </div>
-                            </div>
-                            <p class="text-muted text-center my-2 small">nebo</p>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryFirstName" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryFirstName}" id="deliveryFirstName" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryFirstName')}" class="invalid-feedback d-block"><span th:errors="*{deliveryFirstName}">Chyba křestního jména</span></div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryLastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryLastName}" id="deliveryLastName" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryLastName')}" class="invalid-feedback d-block"><span th:errors="*{deliveryLastName}">Chyba příjmení</span></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryStreet" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryStreet}" id="deliveryStreet" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                <div th:if="${#fields.hasErrors('deliveryStreet')}" class="invalid-feedback d-block"><span th:errors="*{deliveryStreet}">Chyba ulice</span></div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryCity" class="form-label">Město <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryCity}" id="deliveryCity" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryCity')}" class="invalid-feedback d-block"><span th:errors="*{deliveryCity}">Chyba města</span></div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryZipCode" class="form-label">PSČ <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryZipCode}" id="deliveryZipCode" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryZipCode')}" class="invalid-feedback d-block"><span th:errors="*{deliveryZipCode}">Chyba PSČ</span></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryCountry" class="form-label">Země <span class="text-danger">*</span></label>
-                                <select class="form-select address-trigger" th:errorclass="is-invalid" th:field="*{deliveryCountry}" id="deliveryCountry" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <option value="Česká republika">Česká republika</option>
-                                    <option value="Slovensko">Slovensko</option>
-                                </select>
-                                <div th:if="${#fields.hasErrors('deliveryCountry')}" class="invalid-feedback d-block"><span th:errors="*{deliveryCountry}">Chyba země</span></div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryPhone" class="form-label">Telefon (pro dopravce) <span class="text-danger">*</span></label>
-                                <input type="tel" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryPhone}" id="deliveryPhone" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                <div th:if="${#fields.hasErrors('deliveryPhone')}" class="invalid-feedback d-block"><span th:errors="*{deliveryPhone}">Chyba telefonu</span></div>
-                            </div>
-                        </div>
+                        <p class="text-muted">Máte účet? <a th:href="@{/prihlaseni(redirectUrl='/pokladna')}">Přihlaste se</a> pro rychlejší vyplnění.</p>
                     </div>
                     <div th:if="${customer != null}" class="registered-user-info">
-                        <div class="alert alert-secondary d-flex justify-content-between align-items-center" role="alert">
-                            <span>Objednáváte jako přihlášený uživatel: <strong th:text="${customer.email}"></strong></span>
-                            <form th:action="@{/odhlaseni}" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-secondary">Odhlásit</button>
-                            </form>
+                        <p><strong>Přihlášen jako:</strong> <span th:text="${customer.email}"></span></p>
+                        <input type="hidden" th:field="*{email}" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Jméno <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="firstName" th:field="*{firstName}" required>
+                            <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback"><span th:errors="*{firstName}">Chyba jména</span></div>
                         </div>
-
-                        <h4>Vaše údaje (pro tuto objednávku)</h4>
-                        <p><a th:href="@{/muj-ucet/profil}" class="link-secondary"><small>Upravit trvalé údaje v profilu</small></a></p>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="firstNameReg" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" id="firstNameReg" th:field="*{firstName}" required>
-                                <div th:if="${#fields.hasErrors('firstName')}" class="invalid-feedback" th:errors="*{firstName}"></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="lastNameReg" class="form-label">Příjmení <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" id="lastNameReg" th:field="*{lastName}" required>
-                                <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback" th:errors="*{lastName}"></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="emailReg" class="form-label">E-mail (nelze změnit)</label>
-                                <input type="email" class="form-control" id="emailReg" th:value="${customer.email}" disabled readonly>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="phoneReg" class="form-label">Telefon <span class="text-danger">*</span></label>
-                                <input type="tel" class="form-control" th:errorclass="is-invalid" id="phoneReg" th:field="*{phone}" required placeholder="+420 123 456 789">
-                                <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback" th:errors="*{phone}"></div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                        <h5>Fakturační adresa</h5>
-                        <div class="mb-2"><a th:href="@{/muj-ucet/adresy}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> Spravovat adresy v profilu</a></div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label for="invoiceCompanyNameReg" class="form-label">Název firmy</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceCompanyName}" id="invoiceCompanyNameReg">
-                                <div th:if="${#fields.hasErrors('invoiceCompanyName')}" class="invalid-feedback d-block"> <span th:errors="*{invoiceCompanyName}">Chyba názvu firmy</span></div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="invoiceStreetReg" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceStreet}" id="invoiceStreetReg" required>
-                            <div th:if="${#fields.hasErrors('invoiceStreet')}" class="invalid-feedback d-block"><span th:errors="*{invoiceStreet}">Chyba ulice</span></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceCityReg" class="form-label">Město <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceCity}" id="invoiceCityReg" required>
-                                <div th:if="${#fields.hasErrors('invoiceCity')}" class="invalid-feedback d-block"><span th:errors="*{invoiceCity}">Chyba města</span></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceZipCodeReg" class="form-label">PSČ <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{invoiceZipCode}" id="invoiceZipCodeReg" required>
-                                <div th:if="${#fields.hasErrors('invoiceZipCode')}" class="invalid-feedback d-block"><span th:errors="*{invoiceZipCode}">Chyba PSČ</span></div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="invoiceCountryReg" class="form-label">Země <span class="text-danger">*</span></label>
-                            <select class="form-select address-trigger" th:errorclass="is-invalid" th:field="*{invoiceCountry}" id="invoiceCountryReg" required>
-                                <option value="Česká republika">Česká republika</option>
-                                <option value="Slovensko">Slovensko</option>
-                            </select>
-                            <div th:if="${#fields.hasErrors('invoiceCountry')}" class="invalid-feedback d-block"><span th:errors="*{invoiceCountry}">Chyba země</span></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceTaxIdReg" class="form-label">IČO</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceTaxId}" id="invoiceTaxIdReg">
-                                <div th:if="${#fields.hasErrors('invoiceTaxId')}" class="invalid-feedback d-block"><span th:errors="*{invoiceTaxId}">Chyba IČO</span></div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="invoiceVatIdReg" class="form-label">DIČ</label>
-                                <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{invoiceVatId}" id="invoiceVatIdReg">
-                                <div th:if="${#fields.hasErrors('invoiceVatId')}" class="invalid-feedback d-block"><span th:errors="*{invoiceVatId}">Chyba DIČ</span></div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                        <h5>Dodací adresa</h5>
-                        <div class="form-check mb-3">
-                            <input type="checkbox" class="form-check-input address-trigger" id="useInvoiceAddressAsDeliveryReg" th:field="*{useInvoiceAddressAsDelivery}">
-                            <label class="form-check-label" for="useInvoiceAddressAsDeliveryReg">Dodací adresa je stejná jako fakturační</label>
-                        </div>
-                        <div class="delivery-address-fields" th:classappend="*{useInvoiceAddressAsDelivery} ? 'hidden' : ''">
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <label for="deliveryCompanyNameReg" class="form-label">Název firmy</label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryCompanyName}" id="deliveryCompanyNameReg">
-                                    <div th:if="${#fields.hasErrors('deliveryCompanyName')}" class="invalid-feedback d-block"> <span th:errors="*{deliveryCompanyName}">Chyba názvu firmy</span></div>
-                                </div>
-                            </div>
-                            <p class="text-muted text-center my-2 small">nebo</p>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryFirstNameReg" class="form-label">Křestní jméno <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryFirstName}" id="deliveryFirstNameReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryFirstName')}" class="invalid-feedback d-block"><span th:errors="*{deliveryFirstName}">Chyba křestního jména</span></div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryLastNameReg" class="form-label">Příjmení <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryLastName}" id="deliveryLastNameReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryLastName')}" class="invalid-feedback d-block"><span th:errors="*{deliveryLastName}">Chyba příjmení</span></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryStreetReg" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryStreet}" id="deliveryStreetReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                <div th:if="${#fields.hasErrors('deliveryStreet')}" class="invalid-feedback d-block"><span th:errors="*{deliveryStreet}">Chyba ulice</span></div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryCityReg" class="form-label">Město <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryCity}" id="deliveryCityReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryCity')}" class="invalid-feedback d-block"><span th:errors="*{deliveryCity}">Chyba města</span></div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="deliveryZipCodeReg" class="form-label">PSČ <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" th:field="*{deliveryZipCode}" id="deliveryZipCodeReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <div th:if="${#fields.hasErrors('deliveryZipCode')}" class="invalid-feedback d-block"><span th:errors="*{deliveryZipCode}">Chyba PSČ</span></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryCountryReg" class="form-label">Země <span class="text-danger">*</span></label>
-                                <select class="form-select address-trigger" th:errorclass="is-invalid" th:field="*{deliveryCountry}" id="deliveryCountryReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                    <option value="Česká republika">Česká republika</option>
-                                    <option value="Slovensko">Slovensko</option>
-                                </select>
-                                <div th:if="${#fields.hasErrors('deliveryCountry')}" class="invalid-feedback d-block"><span th:errors="*{deliveryCountry}">Chyba země</span></div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="deliveryPhoneReg" class="form-label">Telefon (pro dopravce) <span class="text-danger">*</span></label>
-                                <input type="tel" class="form-control" th:errorclass="is-invalid" th:field="*{deliveryPhone}" id="deliveryPhoneReg" th:required="${!checkoutForm.useInvoiceAddressAsDelivery}">
-                                <div th:if="${#fields.hasErrors('deliveryPhone')}" class="invalid-feedback d-block"><span th:errors="*{deliveryPhone}">Chyba telefonu</span></div>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:errorclass="is-invalid" id="lastName" th:field="*{lastName}" required>
+                            <div th:if="${#fields.hasErrors('lastName')}" class="invalid-feedback"><span th:errors="*{lastName}">Chyba příjmení</span></div>
                         </div>
                     </div>
-                    <div class="mt-4 mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h4 class="mb-0">Způsob dopravy</h4>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="calculate-shipping-btn">
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" th:errorclass="is-invalid" id="phone" th:field="*{phone}" required>
+                        <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback"><span th:errors="*{phone}">Chyba telefonu</span></div>
+                    </div>
+                    <hr>
+                    <h5>Fakturační adresa</h5>
+                    <div class="mb-3">
+                        <label for="invoiceCompanyName" class="form-label">Název firmy (volitelné)</label>
+                        <input type="text" class="form-control" id="invoiceCompanyName" th:field="*{invoiceCompanyName}">
+                        <div th:if="${#fields.hasErrors('invoiceCompanyName')}" class="invalid-feedback"><span th:errors="*{invoiceCompanyName}">Chyba názvu firmy</span></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="invoiceTaxId" class="form-label">IČO</label>
+                            <input type="text" class="form-control" id="invoiceTaxId" th:field="*{invoiceTaxId}">
+                            <div th:if="${#fields.hasErrors('invoiceTaxId')}" class="invalid-feedback"><span th:errors="*{invoiceTaxId}">Chyba IČO</span></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="invoiceVatId" class="form-label">DIČ</label>
+                            <input type="text" class="form-control" id="invoiceVatId" th:field="*{invoiceVatId}">
+                            <div th:if="${#fields.hasErrors('invoiceVatId')}" class="invalid-feedback"><span th:errors="*{invoiceVatId}">Chyba DIČ</span></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invoiceStreet" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="invoiceStreet" th:field="*{invoiceStreet}" required>
+                        <div th:if="${#fields.hasErrors('invoiceStreet')}" class="invalid-feedback"><span th:errors="*{invoiceStreet}">Chyba ulice</span></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="invoiceCity" class="form-label">Město <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="invoiceCity" th:field="*{invoiceCity}" required>
+                            <div th:if="${#fields.hasErrors('invoiceCity')}" class="invalid-feedback"><span th:errors="*{invoiceCity}">Chyba města</span></div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="invoiceZipCode" class="form-label">PSČ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="invoiceZipCode" th:field="*{invoiceZipCode}" required>
+                            <div th:if="${#fields.hasErrors('invoiceZipCode')}" class="invalid-feedback"><span th:errors="*{invoiceZipCode}">Chyba PSČ</span></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invoiceCountry" class="form-label">Země <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="invoiceCountry" th:field="*{invoiceCountry}" required>
+                        <div th:if="${#fields.hasErrors('invoiceCountry')}" class="invalid-feedback"><span th:errors="*{invoiceCountry}">Chyba země</span></div>
+                    </div>
+                    <hr>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input address-trigger" type="checkbox" id="useInvoiceAddressAsDelivery" th:field="*{useInvoiceAddressAsDelivery}">
+                        <label class="form-check-label" for="useInvoiceAddressAsDelivery">
+                            Dodací adresa je stejná jako fakturační
+                        </label>
+                    </div>
+                    <div class="delivery-address-fields" th:classappend="*{useInvoiceAddressAsDelivery} ? 'hidden' : ''">
+                        <h5>Dodací adresa</h5>
+                        <div class="mb-3">
+                            <label for="deliveryCompanyName" class="form-label">Název firmy (volitelné)</label>
+                            <input type="text" class="form-control address-trigger" id="deliveryCompanyName" th:field="*{deliveryCompanyName}">
+                            <div th:if="${#fields.hasErrors('deliveryCompanyName')}" class="invalid-feedback"><span th:errors="*{deliveryCompanyName}">Chyba názvu firmy</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="deliveryFirstName" class="form-label">Jméno <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryFirstName" th:field="*{deliveryFirstName}">
+                                <div th:if="${#fields.hasErrors('deliveryFirstName')}" class="invalid-feedback"><span th:errors="*{deliveryFirstName}">Chyba jména</span></div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="deliveryLastName" class="form-label">Příjmení <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryLastName" th:field="*{deliveryLastName}">
+                                <div th:if="${#fields.hasErrors('deliveryLastName')}" class="invalid-feedback"><span th:errors="*{deliveryLastName}">Chyba příjmení</span></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deliveryStreet" class="form-label">Ulice a č.p./č.o. <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryStreet" th:field="*{deliveryStreet}">
+                            <div th:if="${#fields.hasErrors('deliveryStreet')}" class="invalid-feedback"><span th:errors="*{deliveryStreet}">Chyba ulice</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="deliveryCity" class="form-label">Město <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryCity" th:field="*{deliveryCity}">
+                                <div th:if="${#fields.hasErrors('deliveryCity')}" class="invalid-feedback"><span th:errors="*{deliveryCity}">Chyba města</span></div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="deliveryZipCode" class="form-label">PSČ <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryZipCode" th:field="*{deliveryZipCode}">
+                                <div th:if="${#fields.hasErrors('deliveryZipCode')}" class="invalid-feedback"><span th:errors="*{deliveryZipCode}">Chyba PSČ</span></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deliveryCountry" class="form-label">Země <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryCountry" th:field="*{deliveryCountry}">
+                            <div th:if="${#fields.hasErrors('deliveryCountry')}" class="invalid-feedback"><span th:errors="*{deliveryCountry}">Chyba země</span></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="deliveryPhone" class="form-label">Telefon (pro dopravce)</label>
+                            <input type="tel" class="form-control address-trigger" id="deliveryPhone" th:field="*{deliveryPhone}">
+                            <div th:if="${#fields.hasErrors('deliveryPhone')}" class="invalid-feedback"><span th:errors="*{deliveryPhone}">Chyba telefonu</span></div>
+                        </div>
+                    </div>
+                    <hr>
+                    <h4>Doprava a platba</h4>
+                    <div class="mb-3">
+                        <label class="form-label">Doprava</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="min-width: 150px;">Doprava Kolář</span>
+                            <span class="form-control text-end" id="shipping-cost-display">
+                                <span id="shipping-cost-value">
+                                    <span th:if="${originalShippingCostNoTax != null}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol} + ' (bez DPH)'"></span>
+                                </span>
+                                <span id="shipping-cost-error" class="text-warning recalculate-shipping-notice">
+                                    <span th:if="${shippingError != null}" th:text="${shippingError}"></span>
+                                </span>
+                                <span class="spinner-border spinner-border-sm text-primary ms-2 align-middle d-none" role="status" aria-hidden="true"></span>
+                            </span>
+                            <button class="btn btn-outline-secondary" type="button" id="calculate-shipping-btn">
                                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                 Spočítat dopravu dle adresy
                             </button>
                         </div>
-                        <div class="form-check p-3 border rounded">
-                            <input class="form-check-input" type="radio" name="shippingMethod" id="shippingMethodDefault" value="DEFAULT" checked disabled>
-                            <label class="form-check-label w-100" for="shippingMethodDefault">
-                                <div class="d-flex justify-content-between">
-                                    <span>Doprava Dřevníky Kolář</span>
-                                    <span id="shipping-cost-display" class="fw-bold">
-                                         <span id="shipping-cost-value"
-                                               th:if="${originalShippingCostNoTax != null and originalShippingCostNoTax >= 0}"
-                                               th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol} + ' (bez DPH)'">
-                                         </span>
-                                          <span id="shipping-cost-error"
-                                                th:if="${originalShippingCostNoTax == null or originalShippingCostNoTax < 0 or shippingError != null}"
-                                                th:text="${shippingError != null ? shippingError : '(Nutno přepočítat)'}"
-                                                th:classappend="${originalShippingCostNoTax != null and originalShippingCostNoTax < 0} ? 'text-danger' : (${shippingError != null} ? 'text-warning' : '')">
-                                         </span>
-                                     </span>
-                                </div>
-                            </label>
-                        </div>
+                        <div class="form-text">Cena dopravy se vypočítá na základě vaší dodací adresy.</div>
                     </div>
                     <div class="mb-4">
-                        <h4 class="mb-3">Způsob platby <span class="text-danger">*</span></h4>
-                        <div th:each="method : ${allowedPaymentMethods}" class="form-check p-3 border rounded mb-2">
-                            <input class="form-check-input" type="radio" th:field="*{paymentMethod}" th:id="'payment_' + ${method.key}" th:value="${method.key}" required>
-                            <label class="form-check-label" th:for="'payment_' + ${method.key}" th:text="${method.value}"></label>
+                        <label class="form-label">Způsob platby <span class="text-danger">*</span></label>
+                        <div th:each="method : ${allowedPaymentMethods}">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" th:id="'paymentMethod_' + ${method.key}" th:field="*{paymentMethod}" th:value="${method.key}" required>
+                                <label class="form-check-label" th:for="'paymentMethod_' + ${method.key}" th:text="${method.value}"></label>
+                            </div>
                         </div>
-                        <div th:if="${#fields.hasErrors('paymentMethod')}" class="error mt-2"><span th:errors="*{paymentMethod}">Chyba výběru platby</span></div>
+                        <div th:if="${#fields.hasErrors('paymentMethod')}" class="error"><span th:errors="*{paymentMethod}">Vyberte způsob platby</span></div>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label for="customerNote" class="form-label">Poznámka k objednávce (volitelné)</label>
-                        <textarea class="form-control" id="customerNote" th:field="*{customerNote}" rows="3" placeholder="Sem můžete napsat doplňující informace k objednávce..."></textarea>
-                        <div th:if="${#fields.hasErrors('customerNote')}" class="error mt-2"><span th:errors="*{customerNote}">Chyba poznámky</span></div>
+                        <textarea class="form-control" id="customerNote" th:field="*{customerNote}" rows="3"></textarea>
                     </div>
                 </div>
 
                 <div class="col-lg-5">
-                    <div class="card shadow-sm sticky-top order-summary-card" style="top: 20px;">
+                    <div class="card shadow-sm sticky-top order-summary-card" style="top: 76px;">
                         <div class="card-header bg-light">
                             <h4 class="my-1 fw-medium">Souhrn objednávky</h4>
                         </div>
                         <div class="card-body p-4 summary-card-body">
-                            <h6 class="mb-3 text-muted">Položky</h6>
-                            <ul class="list-group list-group-flush mb-4">
-                                <li th:each="item : ${cart != null ? cart.itemsList : null}" class="list-group-item d-flex justify-content-between lh-sm px-0">
-                                    <div>
-                                        <h6 class="my-0" th:text="${item.productName}">Název produktu</h6>
-                                        <small class="text-muted" th:text="${item.quantity} + ' ks'"></small>
-                                        <small class="text-muted d-block" style="font-size: 0.8em;">
-                                            <th:block th:if="${item.custom}">Konfigurace: Na míru</th:block>
-                                            <th:block th:unless="${item.custom}">
-                                                <span th:if="${item.selectedDesignName}" th:text="'Design: '+${item.selectedDesignName}+' '"></span>
-                                                <span th:if="${item.selectedGlazeName}" th:text="'Lazura: '+${item.selectedGlazeName}+' '"></span>
-                                                <span th:if="${item.selectedRoofColorName}" th:text="'Střecha: '+${item.selectedRoofColorName}"></span>
-                                            </th:block>
-                                            <th:block th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}">
-                                                <br/>Doplňky: <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + ' (' + ${addon.quantity} + 'ks)' + (${!iter.last} ? ', ' : '')"></span>
-                                            </th:block>
-                                        </small>
+                            <h6 class="mb-3 text-muted">Položky v košíku</h6>
+                            <ul class="list-group list-group-flush mb-4" th:if="${cart != null and cart.hasItems()}">
+                                <li th:each="item : ${cart.itemsList}" class="list-group-item d-flex justify-content-between align-items-start px-0">
+                                    <div class="me-2">
+                                        <div class="fw-medium" th:text="${item.quantity} + 'x ' + ${item.productName}"></div>
+                                        <small class="text-muted d-block item-description-details"
+                                               th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''"></small>
+                                        <div th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}" class="text-muted d-block mt-1 item-description-details">
+                                            <small>+ <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
+                                        </div>
                                     </div>
-                                    <span class="text-muted item-price"
-                                          th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithoutTax(currency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
-                                    </span>
+                                    <span class="text-nowrap" th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                 </li>
                             </ul>
+                            <p th:unless="${cart != null and cart.hasItems()}">Košík je prázdný.</p>
 
                             <h6 class="mb-3 text-muted">Cenový souhrn</h6>
                             <ul class="list-group list-group-flush mb-4">
                                 <li class="list-group-item d-flex justify-content-between px-0">
                                     <span class="summary-label">Položky celkem (bez DPH)</span>
-                                    <span class="summary-value" id="summary-subtotal" th:text="${subtotal != null ? #numbers.formatDecimal(subtotal, 1, 'WHITESPACE', 2, 'COMMA') : '---'} + ' ' + ${currencySymbol}"></span>
+                                    <span class="summary-value" id="summary-subtotal"
+                                          th:text="${#numbers.formatDecimal(subtotal, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
+                                    </span>
                                 </li>
                                 <li id="summary-coupon-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
-                                    <span class="summary-label">
-                                        Sleva na zboží
-                                        <span class="fw-medium" th:if="${validatedCoupon != null}" th:text="'(' + ${validatedCoupon.code} + ')'"></span>
-                                    </span>
-                                    <span class="summary-value" id="summary-coupon-discount" th:text="'- ' + ${#numbers.formatDecimal(couponDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                    <span class="summary-label">Sleva (<span th:text="${validatedCoupon?.code ?: cart?.appliedCouponCode}">Kód</span>)</span>
+                                    <span class="summary-value" id="summary-coupon-discount" th:text="'-' + ${#numbers.formatDecimal(couponDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                 </li>
-                                <li th:unless="${validatedCoupon != null}" th:if="${cart != null and cart.appliedCouponCode != null}" class="list-group-item d-flex justify-content-between px-0 text-danger">
-                                    <span class="summary-label">Slevový kupón</span>
-                                    <span class="summary-value"><small th:text="${cart.appliedCouponCode} + ' (neplatný)'"></small></span>
-                                </li>
-                                <li id="summary-subtotal-after-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 border-top pt-2">
+                                <li id="summary-subtotal-after-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 pt-2 mt-1 border-top">
                                     <span class="summary-label">Mezisoučet po slevě (bez DPH)</span>
-                                    <span class="summary-value fw-medium" id="summary-total-without-tax-after-discount"
-                                          th:text="${totalPriceWithoutTaxAfterDiscount != null ? #numbers.formatDecimal(totalPriceWithoutTaxAfterDiscount, 1, 'WHITESPACE', 2, 'COMMA') : '---'} + ' ' + ${currencySymbol}">
-                                    </span>
+                                    <span class="summary-value" id="summary-total-without-tax-after-discount" th:text="${#numbers.formatDecimal(totalPriceWithoutTaxAfterDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between px-0" th:classappend="${couponDiscount == null or couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) == 0} ? 'border-top pt-2' : ''">
+                                <li class="list-group-item d-flex justify-content-between px-0">
                                     <span class="summary-label">Doprava (bez DPH)</span>
                                     <span class="summary-value" id="summary-original-shipping-cost">
-                                         <span th:if="${originalShippingCostNoTax != null and originalShippingCostNoTax >= 0}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                                         <span th:if="${originalShippingCostNoTax == null or originalShippingCostNoTax < 0 or shippingError != null}"
-                                               th:text="${shippingError != null ? shippingError : '(Nutno přepočítat)'}"
-                                               th:classappend="${originalShippingCostNoTax != null and originalShippingCostNoTax < 0} ? 'text-danger' : (${shippingError != null} ? 'text-warning' : '')">
-                                         </span>
+                                        <span th:if="${originalShippingCostNoTax != null}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                        <span th:unless="${originalShippingCostNoTax != null}" class="text-warning recalculate-shipping-notice">
+                                            <span th:text="${shippingError != null ? shippingError : '(Nutno spočítat)'}"></span>
+                                        </span>
                                     </span>
                                 </li>
-                                <li id="summary-shipping-discount-row" class="list-group-item d-flex justify-content-between px-0 text-success"
-                                    th:if="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}"> <span class="summary-label">Sleva na dopravu <span th:if="${validatedCoupon != null and validatedCoupon.freeShipping}" th:text="'(' + ${validatedCoupon.code} + ')'"></span></span>
-                                    <span class="summary-value fw-medium" id="summary-shipping-discount-value" th:text="'- ' + ${#numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                <li id="summary-shipping-discount-row" th:if="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
+                                    <span class="summary-label">Sleva na dopravu</span>
+                                    <span class="summary-value" id="summary-shipping-discount-value" th:text="'-' + ${#numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                 </li>
-                                <li class="list-group-item px-0 pt-3 mt-2 border-top">
-                                    <span class="summary-label fw-medium d-block mb-1">Rozpis DPH:</span>
-                                    <div id="vat-breakdown-items">
-                                        <th:block th:if="${vatBreakdown != null and not #maps.isEmpty(vatBreakdown)}">
-                                            <div th:each="entry : ${vatBreakdown}" class="d-flex justify-content-between text-muted ps-2 mb-1 vat-breakdown-item">
-                                                <span th:text="'DPH ' + ${#numbers.formatDecimal(entry.key.multiply(new java.math.BigDecimal('100')), 1, 'DEFAULT', 0, 'POINT')} + '% (zboží)'"></span>
-                                                <span th:text="${#numbers.formatDecimal(entry.value, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                                            </div>
-                                        </th:block>
-                                        <div id="vat-breakdown-empty" th:unless="${vatBreakdown != null and not #maps.isEmpty(vatBreakdown)}" class="text-muted ps-2 vat-breakdown-item">
-                                            (DPH ze zboží 0 <th:block th:text="${currencySymbol}"/>)
-                                        </div>
+
+                                <li class="list-group-item px-0 pt-2 mt-1 border-top">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="summary-label">Celkem DPH</span>
+                                        <span class="summary-value" id="summary-total-vat"
+                                              th:text="${#numbers.formatDecimal(totalVatWithShipping, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                     </div>
-                                    <div id="vat-breakdown-shipping" class="d-flex justify-content-between text-muted ps-2 mb-1 vat-breakdown-item" th:style="${shippingTax == null or shippingTax.compareTo(T(java.math.BigDecimal).ZERO) <= 0} ? 'display: none;' : ''">
-                                        <span>DPH z dopravy</span>
-                                        <span id="summary-shipping-tax" th:text="${#numbers.formatDecimal(shippingTax ?: 0, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                    <div id="vat-breakdown-items" class="ps-2" th:if="${vatBreakdown != null and not vatBreakdown.isEmpty()}">
+                                        <small class="text-muted vat-breakdown-item d-flex justify-content-between" th:each="entry : ${vatBreakdown}">
+                                            <span th:text="'z toho DPH ' + ${#numbers.formatDecimal(entry.key.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '% (zboží)'"></span>
+                                            <span class="summary-value" th:text="${#numbers.formatDecimal(entry.value, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                        </small>
                                     </div>
-                                    <div class="d-flex justify-content-between fw-medium mt-2 border-top pt-2">
-                                        <span>Celkem DPH:</span>
-                                        <span id="summary-total-vat" th:with="
-                                                    totalItemVatCalc=${totalVat ?: T(java.math.BigDecimal).ZERO},
-                                                    finalShippingTaxCalc=${shippingTax ?: T(java.math.BigDecimal).ZERO},
-                                                    calculatedTotalVat=${totalItemVatCalc.add(finalShippingTaxCalc)}"
-                                              th:text="${#numbers.formatDecimal(calculatedTotalVat, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                    <div id="vat-breakdown-shipping" class="ps-2" th:style="${shippingTax != null and shippingTax.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '' : 'display: none;'}">
+                                        <small class="text-muted vat-breakdown-item d-flex justify-content-between">
+                                            <span>z toho DPH <th:block th:if="${shippingTaxRate != null}" th:text="${#numbers.formatDecimal(shippingTaxRate.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '%'"/> (doprava)</span>
+                                            <span class="summary-value" id="summary-shipping-tax" th:text="${shippingTax != null ? #numbers.formatDecimal(shippingTax, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : '---'}"></span>
+                                        </small>
                                     </div>
                                 </li>
+                                <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top">
+                                    <span class="summary-label">Mezisoučet celkem (s DPH)</span>
+                                    <span class="summary-value" id="summary-original-total-price"
+                                          th:text="${originalTotalPrice != null ? #numbers.formatDecimal(originalTotalPrice, 1, 'WHITESPACE', 2, 'COMMA') : '---'} + ' ' + ${currencySymbol}">
+                                    </span>
+                                </li>
+
+                                <li id="summary-rounding-row"
+                                    th:classappend="${roundingDifference == null or roundingDifference.abs().compareTo(T(java.math.BigDecimal).valueOf(0.001)) <= 0 ? 'd-none' : ''}"
+                                    class="list-group-item d-flex justify-content-between px-0 text-muted">
+                                    <span class="summary-label">Odstranění haléřů/centů</span>
+                                    <span class="summary-value" id="summary-rounding-difference"
+                                          th:text="${roundingDifference != null ? '-' + #numbers.formatDecimal(roundingDifference, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : ''}">
+                                        </span>
+                                </li>
+
                                 <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top summary-total">
                                     <span class="summary-label">Celkem k úhradě</span>
                                     <strong class="summary-value" id="summary-total-price">
-                                        <span th:if="${totalPrice != null}" th:text="${#numbers.formatDecimal(totalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                                        <span th:unless="${totalPrice != null}" class="text-warning">
-                                                 <span th:text="${shippingError != null ? shippingError : '(Nutno přepočítat)'}"></span>
+                                         <span th:if="${totalPrice != null}"
+                                               th:text="${#numbers.formatDecimal(totalPrice, 1, 'WHITESPACE', 0, 'COMMA')} + ' ' + ${currencySymbol}">
+                                         </span>
+                                        <span th:unless="${totalPrice != null}" class="text-warning fw-normal recalculate-shipping-notice">
+                                                  <span th:text="${shippingError != null ? shippingError : '(Nutno přepočítat dopravu)'}"></span>
                                              </span>
                                     </strong>
                                 </li>
@@ -489,444 +320,19 @@
                                 <div th:if="${#fields.hasErrors('agreeTerms')}" class="invalid-feedback d-block"><span th:errors="*{agreeTerms}">Musíte souhlasit s podmínkami</span></div>
                             </div>
 
+                            <div id="recalculate-shipping-notice-area" class="alert alert-warning text-center small p-2 d-none" role="alert">
+                            </div>
+
                             <button id="submit-order-button" class="w-100 btn btn-success btn-lg" type="submit"
-                                    th:disabled="${(originalShippingCostNoTax == null and shippingError != null and originalShippingCostNoTax < 0) or (cart == null or not cart.hasItems())}">
+                                    th:disabled="${(totalPrice == null) or (cart == null or not cart.hasItems())}">
                                 Odeslat objednávku
                             </button>
                         </div>
                     </div>
-                </div> </div> </form>
-    </div> </section>
+                </div> </div> </form> </div> </section>
 
 <th:block layout:fragment="javascript">
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        console.log("JS: Checkout script starting (v10 - Conditional Discounts)...");
-
-        // --- Globální proměnné a konstanty ---
-        const isUserLoggedIn = /*[[${customer != null ? true : false}]]*/ false;
-        const csrfToken = /*[[${_csrf?.token}]]*/ null;
-        const csrfHeaderName = /*[[${_csrf?.headerName}]]*/ null;
-        const calculateShippingUrl = /*[[@{/pokladna/calculate-shipping}]]*/ '/pokladna/calculate-shipping';
-        const currencySymbol = /*[[${currencySymbol}]]*/ 'Kč';
-        const shippingTaxRateValue = /*[[${shippingTaxRate}]]*/ null;
-        const shippingTaxRate = shippingTaxRateValue !== null ? parseFloat(shippingTaxRateValue.toString()) : 0.21;
-        console.log("JS: Initial shipping tax rate:", shippingTaxRate);
-        // Počáteční stav dopravy
-        let shippingCalculatedSuccessfully = /*[[${originalShippingCostNoTax != null && shippingError == null && originalShippingCostNoTax >= 0}]]*/ false;
-        const initialCartIsEmptyState = /*[[${cart == null or not cart.hasItems()}]]*/ true; // Načteme počáteční stav
-        const initialSubtotal = parseFloat(/*[[${subtotal ?: 0}]]*/ '0');
-        const initialTotalVat = parseFloat(/*[[${totalVat ?: 0}]]*/ '0');
-        const initialVatBreakdown = /*[[${vatBreakdown}]]*/ null;
-
-
-        // --- Funkce ---
-        function formatCurrency(value, symbol) {
-            if (value === null || typeof value === 'undefined' || isNaN(value)) {
-                return '---';
-            }
-            return parseFloat(value).toFixed(2).replace('.', ',') + ' ' + symbol;
-        }
-
-        function updateSummary(data) {
-            console.log("JS: Updating summary with data:", data);
-            const costDisplay = document.getElementById('shipping-cost-display');
-            const costValueSpan = document.getElementById('shipping-cost-value');
-            const costErrorSpan = document.getElementById('shipping-cost-error');
-            const summaryOriginalShippingCostEl = document.getElementById('summary-original-shipping-cost');
-            const summaryShippingTaxEl = document.getElementById('summary-shipping-tax');
-            const summaryShippingDiscountRowEl = document.getElementById('summary-shipping-discount-row');
-            const summaryShippingDiscountValueEl = document.getElementById('summary-shipping-discount-value');
-            const summaryTotalVatEl = document.getElementById('summary-total-vat');
-            const summaryTotalPriceEl = document.getElementById('summary-total-price');
-            const hiddenCostNoTaxEl = document.getElementById('hiddenShippingCostNoTax');
-            const hiddenTaxEl = document.getElementById('hiddenShippingTax');
-            const submitButtonEl = document.getElementById('submit-order-button');
-            const errorAlertEl = document.getElementById('shipping-error-alert');
-            const errorAlertTextEl = document.getElementById('shipping-error-text');
-            const vatBreakdownItemsDiv = document.getElementById('vat-breakdown-items');
-            const vatBreakdownEmptyDiv = document.getElementById('vat-breakdown-empty');
-            const vatBreakdownShippingDiv = document.getElementById('vat-breakdown-shipping');
-            // Nové elementy pro slevu na zboží
-            const summaryCouponDiscountRowEl = document.getElementById('summary-coupon-discount-row'); // Předpokládáme, že tento řádek má nyní ID
-            const summaryCouponDiscountValueEl = document.getElementById('summary-coupon-discount');
-            const summarySubtotalAfterDiscountRowEl = document.getElementById('summary-subtotal-after-discount-row');
-            const summaryTotalWithoutTaxAfterDiscountEl = document.getElementById('summary-total-without-tax-after-discount');
-
-            // Reset chyb a stavů
-            if (costDisplay) costDisplay.classList.remove('error', 'calculating');
-            if (costErrorSpan) costErrorSpan.textContent = '';
-            if (errorAlertEl) errorAlertEl.classList.add('d-none');
-            shippingCalculatedSuccessfully = false;
-
-            if (data && data.errorMessage) {
-                // ... (zpracování chyby - stejné jako dříve) ...
-                console.error("JS: Error in shipping calculation response:", data.errorMessage);
-                if (costDisplay && costErrorSpan) {
-                    costDisplay.classList.add('error');
-                    costErrorSpan.textContent = data.errorMessage;
-                }
-                if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.textContent = `Chyba: ${data.errorMessage}`;
-                if (summaryShippingTaxEl) summaryShippingTaxEl.textContent = '---';
-                if (summaryTotalVatEl) summaryTotalVatEl.textContent = '---';
-                if (summaryTotalPriceEl) summaryTotalPriceEl.textContent = '---';
-                if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = '';
-                if (hiddenTaxEl) hiddenTaxEl.value = '';
-                if (errorAlertTextEl) errorAlertTextEl.textContent = data.errorMessage;
-                if (errorAlertEl) errorAlertEl.classList.remove('d-none');
-                if (vatBreakdownShippingDiv) { vatBreakdownShippingDiv.style.display = 'none'; }
-                // Skryjeme slevy při chybě
-                if(summaryCouponDiscountRowEl) summaryCouponDiscountRowEl.style.display = 'none';
-                if(summarySubtotalAfterDiscountRowEl) summarySubtotalAfterDiscountRowEl.style.display = 'none';
-                if(summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none';
-
-
-            } else if (data && typeof data.shippingCostNoTax !== 'undefined' && data.shippingCostNoTax !== null && typeof data.shippingTax !== 'undefined' && typeof data.totalPrice !== 'undefined') {
-                console.log("JS: Received valid shipping data.");
-                const costNoTax = parseFloat(data.shippingCostNoTax);
-                const tax = parseFloat(data.shippingTax);
-                const total = parseFloat(data.totalPrice);
-                const originalCostNoTax = parseFloat(data.originalShippingCostNoTax);
-                const shippingDiscount = parseFloat(data.shippingDiscountAmount);
-                const totalVatWithShipping = parseFloat(data.totalVatWithShipping);
-                // Nově přijímané hodnoty
-                const couponDiscount = parseFloat(data.couponDiscount || 0);
-                const totalPriceWithoutTaxAfterDiscount = parseFloat(data.totalPriceWithoutTaxAfterDiscount || 0);
-
-                if (!isNaN(costNoTax) && !isNaN(tax) && !isNaN(total) && !isNaN(originalCostNoTax) && !isNaN(shippingDiscount) && !isNaN(totalVatWithShipping) && !isNaN(couponDiscount) && !isNaN(totalPriceWithoutTaxAfterDiscount)) {
-                    shippingCalculatedSuccessfully = true;
-
-                    // --- Aktualizace HTML ---
-                    // Cena dopravy nahoře
-                    if (costDisplay && costValueSpan && costErrorSpan) {
-                        costValueSpan.textContent = formatCurrency(costNoTax, data.currencySymbol) + ' (bez DPH)';
-                        costErrorSpan.textContent = '';
-                    }
-                    // Cena dopravy v souhrnu
-                    if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.textContent = formatCurrency(originalCostNoTax, data.currencySymbol);
-
-                    // Sleva na zboží
-                    if(summaryCouponDiscountRowEl && summaryCouponDiscountValueEl){
-                        if(couponDiscount > 0){
-                            // TODO: Získat kód kupónu, pokud je potřeba zobrazit
-                            summaryCouponDiscountValueEl.textContent = '- ' + formatCurrency(couponDiscount, data.currencySymbol);
-                            summaryCouponDiscountRowEl.style.display = 'flex';
-                        } else {
-                            summaryCouponDiscountRowEl.style.display = 'none';
-                            summaryCouponDiscountValueEl.textContent = '';
-                        }
-                    }
-
-                    // Mezisoučet po slevě
-                    if (summarySubtotalAfterDiscountRowEl && summaryTotalWithoutTaxAfterDiscountEl) {
-                        if (couponDiscount > 0) {
-                            summaryTotalWithoutTaxAfterDiscountEl.textContent = formatCurrency(totalPriceWithoutTaxAfterDiscount, data.currencySymbol);
-                            summarySubtotalAfterDiscountRowEl.style.display = 'flex';
-                        } else {
-                            summarySubtotalAfterDiscountRowEl.style.display = 'none';
-                        }
-                    }
-
-                    // Sleva na dopravu
-                    if(summaryShippingDiscountRowEl && summaryShippingDiscountValueEl){
-                        if(shippingDiscount > 0){
-                            // TODO: Získat kód kupónu, pokud je potřeba zobrazit
-                            summaryShippingDiscountValueEl.textContent = '- ' + formatCurrency(shippingDiscount, data.currencySymbol);
-                            summaryShippingDiscountRowEl.style.display = 'flex';
-                        } else {
-                            summaryShippingDiscountRowEl.style.display = 'none';
-                            summaryShippingDiscountValueEl.textContent = '';
-                        }
-                    }
-                    // Rozpis DPH (zůstává)
-                    if(vatBreakdownItemsDiv && vatBreakdownEmptyDiv && data.vatBreakdown){
-                        vatBreakdownItemsDiv.innerHTML = '';
-                        const rates = Object.keys(data.vatBreakdown);
-                        if(rates.length > 0){
-                            rates.sort((a, b) => parseFloat(a) - parseFloat(b)).forEach(rateKey => {
-                                const ratePercent = (parseFloat(rateKey) * 100).toFixed(0);
-                                const vatAmount = data.vatBreakdown[rateKey];
-                                const itemDiv = document.createElement('div');
-                                itemDiv.className = 'd-flex justify-content-between text-muted ps-2 mb-1 vat-breakdown-item';
-                                itemDiv.innerHTML = `<span>DPH ${ratePercent}% (zboží)</span><span>${formatCurrency(vatAmount, data.currencySymbol)}</span>`;
-                                vatBreakdownItemsDiv.appendChild(itemDiv);
-                            });
-                            vatBreakdownEmptyDiv.style.display = 'none';
-                        } else {
-                            vatBreakdownEmptyDiv.style.display = 'block';
-                        }
-                    }
-                    // DPH z dopravy (zůstává)
-                    if (vatBreakdownShippingDiv && summaryShippingTaxEl) {
-                        if (tax > 0) {
-                            summaryShippingTaxEl.textContent = formatCurrency(tax, data.currencySymbol);
-                            vatBreakdownShippingDiv.style.display = 'flex';
-                        } else {
-                            vatBreakdownShippingDiv.style.display = 'none';
-                        }
-                    }
-
-                    // Celkové DPH a Cena (zůstává)
-                    if (summaryTotalVatEl) summaryTotalVatEl.textContent = formatCurrency(totalVatWithShipping, data.currencySymbol);
-                    if (summaryTotalPriceEl) summaryTotalPriceEl.textContent = formatCurrency(total, data.currencySymbol);
-
-                    // Skrytá pole (zůstává)
-                    if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = costNoTax.toFixed(2);
-                    if (hiddenTaxEl) hiddenTaxEl.value = tax.toFixed(2);
-                    console.log("JS: Summary updated successfully.");
-
-                } else {
-                    // ... (zpracování neplatných číselných dat - stejné jako dříve) ...
-                    console.error("JS: Invalid numeric data received from shipping calculation API:", data);
-                    if (costDisplay && costErrorSpan) { costDisplay.classList.add('error'); costErrorSpan.textContent = 'Chyba: Neplatná data ze serveru.'; }
-                    if (errorAlertTextEl) errorAlertTextEl.textContent = 'Chyba: Neplatná číselná data ze serveru při výpočtu dopravy.';
-                    if (errorAlertEl) errorAlertEl.classList.remove('d-none');
-                    if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = ''; if (hiddenTaxEl) hiddenTaxEl.value = '';
-                    // Skryjeme slevy
-                    if(summaryCouponDiscountRowEl) summaryCouponDiscountRowEl.style.display = 'none';
-                    if(summarySubtotalAfterDiscountRowEl) summarySubtotalAfterDiscountRowEl.style.display = 'none';
-                    if(summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none';
-                }
-            } else {
-                // ... (zpracování neplatné odpovědi serveru - stejné jako dříve) ...
-                console.error("JS: Invalid or incomplete data received from shipping calculation API:", data);
-                if (costDisplay && costErrorSpan) { costDisplay.classList.add('error'); costErrorSpan.textContent = 'Chyba: Neplatná odpověď serveru.'; }
-                if (errorAlertTextEl) errorAlertTextEl.textContent = 'Chyba: Neplatná odpověď serveru při výpočtu dopravy.';
-                if (errorAlertEl) errorAlertEl.classList.remove('d-none');
-                if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = ''; if (hiddenTaxEl) hiddenTaxEl.value = '';
-                // Skryjeme slevy
-                if(summaryCouponDiscountRowEl) summaryCouponDiscountRowEl.style.display = 'none';
-                if(summarySubtotalAfterDiscountRowEl) summarySubtotalAfterDiscountRowEl.style.display = 'none';
-                if(summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none';
-            }
-            // Povolit/zakázat tlačítko Odeslat objednávku (zůstává)
-            if (submitButtonEl) {
-                const currentCartIsEmpty = /*[[${cart == null or not cart.hasItems()}]]*/ true;
-                submitButtonEl.disabled = !shippingCalculatedSuccessfully || currentCartIsEmpty;
-                console.log("JS: Submit button state updated. Disabled:", submitButtonEl.disabled);
-            }
-        }
-
-        function toggleDeliveryFields(checkbox, fieldsDiv) {
-            // ... (zůstává stejné) ...
-            if (!checkbox || !fieldsDiv) { return; }
-            fieldsDiv.classList.toggle('hidden', checkbox.checked);
-            resetShippingDisplay();
-            console.log("JS: Toggled delivery fields visibility. Hidden:", checkbox.checked);
-        }
-
-        function resetShippingDisplay() {
-            // ... (zůstává stejné, resetuje relevantní prvky) ...
-            console.log("JS: Resetting shipping display due to address change.");
-            const costDisplay = document.getElementById('shipping-cost-display');
-            const costValueSpan = document.getElementById('shipping-cost-value');
-            const costErrorSpan = document.getElementById('shipping-cost-error');
-            const summaryOriginalShippingCostEl = document.getElementById('summary-original-shipping-cost');
-            const summaryShippingTaxEl = document.getElementById('summary-shipping-tax');
-            const summaryShippingDiscountRowEl = document.getElementById('summary-shipping-discount-row');
-            const summaryTotalVatEl = document.getElementById('summary-total-vat');
-            const summaryTotalPriceEl = document.getElementById('summary-total-price');
-            const hiddenCostNoTaxEl = document.getElementById('hiddenShippingCostNoTax');
-            const hiddenTaxEl = document.getElementById('hiddenShippingTax');
-            const submitButtonEl = document.getElementById('submit-order-button');
-            const vatBreakdownShippingDiv = document.getElementById('vat-breakdown-shipping');
-            // Přidáno pro mezisoučet po slevě
-            const summarySubtotalAfterDiscountRowEl = document.getElementById('summary-subtotal-after-discount-row');
-
-
-            shippingCalculatedSuccessfully = false;
-            if (costDisplay) costDisplay.classList.remove('error', 'calculating');
-            if (costValueSpan) costValueSpan.textContent = '';
-            if (costErrorSpan) costErrorSpan.textContent = '(Nutno přepočítat)';
-            if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.textContent = '(Nutno přepočítat)';
-            if (summaryShippingTaxEl) summaryShippingTaxEl.textContent = '---';
-            if (summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none';
-            if (vatBreakdownShippingDiv) vatBreakdownShippingDiv.style.display = 'none';
-            if (summarySubtotalAfterDiscountRowEl) summarySubtotalAfterDiscountRowEl.style.display = 'none'; // Skrýt i mezisoučet po slevě
-            if (summaryTotalVatEl) summaryTotalVatEl.textContent = formatCurrency(initialTotalVat, currencySymbol);
-            if (summaryTotalPriceEl) summaryTotalPriceEl.textContent = '---';
-            if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = '';
-            if (hiddenTaxEl) hiddenTaxEl.value = '';
-            if (submitButtonEl) submitButtonEl.disabled = true;
-        }
-
-        // --- Event Listenery (zůstávají stejné) ---
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("JS: DOM fully loaded and parsed.");
-            // ... (celý blok listenerů zůstává stejný jako v předchozí verzi) ...
-            const calculateShippingBtn = document.getElementById('calculate-shipping-btn');
-            const addressTriggers = document.querySelectorAll('.address-trigger');
-            const useInvoiceCheckboxGuest = document.getElementById('useInvoiceAddressAsDelivery');
-            const deliveryFieldsDivGuest = document.querySelector('.guest-info .delivery-address-fields');
-            const useInvoiceCheckboxReg = document.getElementById('useInvoiceAddressAsDeliveryReg');
-            const deliveryFieldsDivReg = document.querySelector('.registered-user-info .delivery-address-fields');
-            const submitButton = document.getElementById('submit-order-button');
-            const hiddenCostNoTax = document.getElementById('hiddenShippingCostNoTax');
-            const hiddenTax = document.getElementById('hiddenShippingTax');
-
-            if (calculateShippingBtn) {
-                console.log("JS: Attaching listener to #calculate-shipping-btn");
-                calculateShippingBtn.addEventListener('click', function() {
-                    console.log("JS: #calculate-shipping-btn CLICKED");
-                    const btn = this;
-                    const btnSpinner = btn.querySelector('.spinner-border');
-                    const btnTextNode = Array.from(btn.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
-                    const originalBtnText = btnTextNode ? btnTextNode.textContent.trim() : 'Spočítat dopravu dle adresy';
-
-                    console.log("JS: Disabling button, showing spinner...");
-                    btn.disabled = true;
-                    if(btnSpinner) btnSpinner.style.display = 'inline-block';
-                    if(btnTextNode) btnTextNode.textContent = ' Počítám...';
-                    const costDisplay = document.getElementById('shipping-cost-display');
-                    if (costDisplay) costDisplay.classList.add('calculating');
-                    if (submitButton) submitButton.disabled = true;
-                    const errorAlert = document.getElementById('shipping-error-alert');
-                    if (errorAlert) errorAlert.classList.add('d-none');
-
-                    const addressData = { street: '', city: '', zipCode: '', country: '' };
-                    let useInvoiceAddr = true;
-                    let prefix = '';
-                    if (isUserLoggedIn) {
-                        prefix = 'Reg';
-                        const cb = document.getElementById('useInvoiceAddressAsDeliveryReg');
-                        useInvoiceAddr = cb ? cb.checked : true;
-                    } else {
-                        prefix = '';
-                        const cb = document.getElementById('useInvoiceAddressAsDelivery');
-                        useInvoiceAddr = cb ? cb.checked : true;
-                    }
-
-                    const streetId = useInvoiceAddr ? `invoiceStreet${prefix}` : `deliveryStreet${prefix}`;
-                    const cityId = useInvoiceAddr ? `invoiceCity${prefix}` : `deliveryCity${prefix}`;
-                    const zipId = useInvoiceAddr ? `invoiceZipCode${prefix}` : `deliveryZipCode${prefix}`;
-                    const countryId = useInvoiceAddr ? `invoiceCountry${prefix}` : `deliveryCountry${prefix}`;
-
-                    addressData.street = document.getElementById(streetId)?.value || '';
-                    addressData.city = document.getElementById(cityId)?.value || '';
-                    addressData.zipCode = document.getElementById(zipId)?.value || '';
-                    addressData.country = document.getElementById(countryId)?.value || '';
-                    console.log(`JS: Collected address data (prefix='${prefix}'):`, addressData);
-
-                    if (!addressData.street || !addressData.city || !addressData.zipCode || !addressData.country) {
-                        const errorMsg = `Pro výpočet dopravy vyplňte kompletní ${useInvoiceAddr ? 'fakturační' : 'dodací'} adresu (Ulice, Město, PSČ, Země).`;
-                        console.warn("JS: Frontend address validation failed:", errorMsg);
-                        const errorAlertText = document.getElementById('shipping-error-text');
-                        if (errorAlertText) errorAlertText.textContent = errorMsg;
-                        if (errorAlert) errorAlert.classList.remove('d-none');
-                        btn.disabled = false;
-                        if(btnSpinner) btnSpinner.style.display = 'none';
-                        if(btnTextNode) btnTextNode.textContent = originalBtnText;
-                        if (costDisplay) costDisplay.classList.remove('calculating');
-                        resetShippingDisplay();
-                        return;
-                    }
-
-                    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-                    if (csrfToken && csrfHeaderName) { headers[csrfHeaderName] = csrfToken; }
-                    console.log("JS: Sending fetch request to:", calculateShippingUrl, " Headers:", headers);
-
-                    fetch(calculateShippingUrl, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(addressData)
-                    })
-                        .then(response => {
-                            console.log("JS: Received fetch response status:", response.status);
-                            if (!response.ok) {
-                                return response.json().then(err => {
-                                    const errorData = {
-                                        errorMessage: err.errorMessage || `Chyba serveru (${response.status})`,
-                                        currencySymbol: currencySymbol,
-                                        // PŘIDÁNO: Vracíme i data pro slevy při chybě
-                                        couponDiscount: parseFloat(/*[[${couponDiscount ?: 0}]]*/ '0'),
-                                        totalPriceWithoutTaxAfterDiscount: parseFloat(/*[[${totalPriceWithoutTaxAfterDiscount ?: 0}]]*/ '0'),
-                                        vatBreakdown: initialVatBreakdown,
-                                        totalVatWithShipping: initialTotalVat
-                                    };
-                                    throw errorData;
-                                }).catch(() => {
-                                    const errorData = {
-                                        errorMessage: `Chyba serveru (${response.status})`,
-                                        currencySymbol: currencySymbol,
-                                        couponDiscount: parseFloat(/*[[${couponDiscount ?: 0}]]*/ '0'),
-                                        totalPriceWithoutTaxAfterDiscount: parseFloat(/*[[${totalPriceWithoutTaxAfterDiscount ?: 0}]]*/ '0'),
-                                        vatBreakdown: initialVatBreakdown,
-                                        totalVatWithShipping: initialTotalVat
-                                    };
-                                    throw errorData;
-                                });
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log("JS: Received data:", data);
-                            updateSummary(data);
-                        })
-                        .catch(errorData => {
-                            console.error('JS: Fetch error during shipping calculation:', errorData);
-                            updateSummary(errorData);
-                        })
-                        .finally(() => {
-                            console.log("JS: Fetch finished. Resetting button.");
-                            btn.disabled = false;
-                            if(btnSpinner) btnSpinner.style.display = 'none';
-                            if(btnTextNode) btnTextNode.textContent = originalBtnText;
-                            if (costDisplay) costDisplay.classList.remove('calculating');
-                        });
-                });
-            } else {
-                console.error("JS Error: Button #calculate-shipping-btn not found!");
-            }
-
-            if (addressTriggers.length > 0) {
-                console.log(`JS: Attaching change listeners to ${addressTriggers.length} address trigger elements.`);
-                addressTriggers.forEach(el => {
-                    el.addEventListener('change', resetShippingDisplay);
-                });
-            } else {
-                console.warn("JS Warning: No elements with class 'address-trigger' found.");
-            }
-
-            if (useInvoiceCheckboxGuest && deliveryFieldsDivGuest) {
-                console.log("JS: Attaching listener to guest address toggle checkbox.");
-                toggleDeliveryFields(useInvoiceCheckboxGuest, deliveryFieldsDivGuest);
-                useInvoiceCheckboxGuest.addEventListener('change', () => toggleDeliveryFields(useInvoiceCheckboxGuest, deliveryFieldsDivGuest));
-            } else if (!isUserLoggedIn) {
-                console.warn("JS Warning: Guest address toggle checkbox or fields div not found.");
-            }
-
-            if (useInvoiceCheckboxReg && deliveryFieldsDivReg) {
-                console.log("JS: Attaching listener to registered user address toggle checkbox.");
-                toggleDeliveryFields(useInvoiceCheckboxReg, deliveryFieldsDivReg);
-                useInvoiceCheckboxReg.addEventListener('change', () => toggleDeliveryFields(useInvoiceCheckboxReg, deliveryFieldsDivReg));
-            } else if (isUserLoggedIn) {
-                console.warn("JS Warning: Registered user address toggle checkbox or fields div not found.");
-            }
-
-            if (submitButton) {
-                submitButton.disabled = initialCartIsEmptyState || !shippingCalculatedSuccessfully;
-                console.log("JS: Initial submit button state. Disabled:", submitButton.disabled, " (CartInitiallyEmpty:", initialCartIsEmptyState, ", ShippingInitiallyValid:", shippingCalculatedSuccessfully, ")");
-            } else {
-                console.warn("JS Warning: Submit button #submit-order-button not found.");
-            }
-
-            if (hiddenCostNoTax && hiddenTax) {
-                const initialCost = /*[[${originalShippingCostNoTax}]]*/ null;
-                const initialTaxValue = /*[[${shippingTax}]]*/ null;
-                if(shippingCalculatedSuccessfully && initialCost !== null && initialTaxValue !== null){
-                    hiddenCostNoTax.value = parseFloat(initialCost).toFixed(2);
-                    hiddenTax.value = parseFloat(initialTaxValue).toFixed(2);
-                    console.log(`JS: Initial hidden fields set: cost=${hiddenCostNoTax.value}, tax=${hiddenTax.value}`);
-                } else {
-                    console.log("JS: Initial hidden fields NOT set (shipping not valid initially).");
-                }
-            } else {
-                console.warn("JS Warning: Hidden shipping input fields not found.");
-            }
-
-        }); // Konec DOMContentLoaded
-        /*]]>*/
-    </script>
+    <script th:src="@{/js/pokladna.js}"></script>
 </th:block>
 
 </body>

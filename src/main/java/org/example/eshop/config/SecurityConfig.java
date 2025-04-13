@@ -44,11 +44,14 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/webhooks/**"),
                                 new AntPathRequestMatcher("/prihlaseni"),
                                 new AntPathRequestMatcher("/registrace"),
-                                new AntPathRequestMatcher("/nastavit-menu")
+                                new AntPathRequestMatcher("/nastavit-menu"),
+                                new AntPathRequestMatcher("/pokladna/calculate-shipping")
+
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()
                         .requestMatchers(HttpMethod.POST,"/pokladna/calculate-shipping").permitAll()
+
                         .requestMatchers(
                                 new AntPathRequestMatcher("/muj-ucet/**")
                         ).authenticated()

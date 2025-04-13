@@ -339,6 +339,30 @@ public class CheckoutController implements PriceConstants {
                 finalShippingTax = BigDecimal.ZERO;
                 log.info("Overriding shipping cost to ZERO due to free shipping coupon {}.", validatedCoupon.getCode());
             }
+            // --- Krok 6.5: Výpočet finální ceny PŘED uložením objednávky ---
+            BigDecimal subtotal = sessionCart.calculateSubtotal(orderCurrency);
+            validatedCoupon = validateAndGetCoupon(sessionCart, customer, subtotal, orderCurrency); // Validujeme kupón znovu
+            BigDecimal couponDiscount = (validatedCoupon != null && !validatedCoupon.isFreeShippingOnly()) ? sessionCart.calculateDiscountAmount(orderCurrency) : BigDecimal.ZERO;
+            BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(orderCurrency);
+            BigDecimal totalPriceWithoutTaxAfterDiscount = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+
+            // Převezmeme finální vypočtené/validované ceny dopravy z kroku 6
+            BigDecimal actualShippingCostNoTax = finalShippingCostNoTax;
+            BigDecimal actualShippingTax = finalShippingTax;
+
+            // Výpočet PŮVODNÍ celkové ceny (před zaokrouhlením)
+            BigDecimal originalTotalPrice = totalPriceWithoutTaxAfterDiscount
+                    .add(actualShippingCostNoTax)
+                    .add(totalItemVat)
+                    .add(actualShippingTax)
+                    .setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+
+            // Výpočet finální ZAOKROUHLENÉ ceny, která se uloží do objednávky
+            BigDecimal roundedTotalPriceToSave = originalTotalPrice.setScale(0, RoundingMode.DOWN);
+
+            log.info("Calculating final order totals for saving: originalTotal={}, roundedTotal={}",
+                    originalTotalPrice, roundedTotalPriceToSave);
+            // --- KONEC výpočtu finální ceny ---
 
             // Krok 7: Vytvoření požadavku na objednávku
             CreateOrderRequest orderRequest = new CreateOrderRequest();
@@ -353,11 +377,20 @@ public class CheckoutController implements PriceConstants {
             List<CartItemDto> orderItemsDto = sessionCart.getItemsList().stream().map(this::mapCartItemToDto).collect(Collectors.toList());
             orderRequest.setItems(orderItemsDto);
 
-            // Krok 8: Vytvoření objednávky
+            // --- Krok 8: Vytvoření objednávky ---
             log.info("Attempting to create order with request: {}", orderRequest);
-            Order createdOrder = orderService.createOrder(orderRequest);
-            log.info("Order {} successfully created with currency {} for {}: {}", createdOrder.getOrderCode(), orderCurrency, (isGuest ? "guest" : "user"), userIdentifierForLog);
+            // OrderService.createOrder nyní MUSÍ použít PŘEDPOČÍTANOU zaokrouhlenou cenu
+            // Můžeme ji buď přidat do CreateOrderRequest, nebo upravit OrderService, aby si ji spočítal znovu
+            // -> Úprava OrderService je čistší.
+            Order createdOrder = orderService.createOrder(orderRequest); // OrderService si zaokrouhlení spočítá interně
 
+            // Ověření, že uložená cena je zaokrouhlená (pro logování/debug)
+            if (createdOrder.getTotalPrice().compareTo(roundedTotalPriceToSave) != 0) {
+                log.warn("Mismatch between calculated rounded price ({}) and saved order price ({}) for order {}",
+                        roundedTotalPriceToSave, createdOrder.getTotalPrice(), createdOrder.getOrderCode());
+            }
+
+            log.info("Order {} successfully created with currency {} for {}: {}", createdOrder.getOrderCode(), orderCurrency, (isGuest ? "guest" : "user"), userIdentifierForLog);
             // Krok 9: Vyčištění košíku a přesměrování
             sessionCart.clearCart();
             log.info("Session cart cleared for {}", userIdentifierForLog);
@@ -501,117 +534,132 @@ public class CheckoutController implements PriceConstants {
         log.debug("Preparing checkout summary model data for currency: {}", currentCurrency);
         String currencySymbol = EURO_CURRENCY.equals(currentCurrency) ? "€" : "Kč";
 
-        // Cart calculations
+        // Cart calculations (stávající kód)
         BigDecimal subtotal = sessionCart.calculateSubtotal(currentCurrency);
-        // Získáme VALIDOVANÝ kupón pro aktuální košík a zákazníka
         Coupon validatedCoupon = validateAndGetCoupon(sessionCart, customer, subtotal, currentCurrency);
         BigDecimal couponDiscount = (validatedCoupon != null && !validatedCoupon.isFreeShippingOnly())
                 ? sessionCart.calculateDiscountAmount(currentCurrency) : BigDecimal.ZERO;
         BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(currentCurrency);
         Map<BigDecimal, BigDecimal> rawVatBreakdown = sessionCart.calculateVatBreakdown(currentCurrency);
         SortedMap<BigDecimal, BigDecimal> sortedVatBreakdown = new TreeMap<>(rawVatBreakdown);
-        BigDecimal totalPriceWithoutTaxAfterDiscount = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+        BigDecimal totalPriceWithoutTaxAfterDiscount = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE);
 
-        // Shipping calculations (používáme PŘEDANÉ počáteční hodnoty)
-        BigDecimal originalShippingCostNoTaxForSummary = BigDecimal.ZERO; // Původní cena před slevou
+        // Shipping calculations (stávající kód - výpočet originalShippingCostNoTaxForSummary, finalShippingCostNoTax, finalShippingTax, shippingDiscountAmount)
+        BigDecimal originalShippingCostNoTaxForSummary = BigDecimal.ZERO;
         BigDecimal originalShippingTaxForSummary = BigDecimal.ZERO;
-        BigDecimal finalShippingCostNoTax = BigDecimal.ZERO; // Finální cena po slevě
+        BigDecimal finalShippingCostNoTax = BigDecimal.ZERO;
         BigDecimal finalShippingTax = BigDecimal.ZERO;
         BigDecimal shippingDiscountAmount = BigDecimal.ZERO;
         boolean shippingValid = (initialShippingCostNoTax != null && initialShippingCostNoTax.compareTo(BigDecimal.ZERO) >= 0 && shippingError == null);
+        BigDecimal shippingTaxRate = BigDecimal.ZERO; // Initialize rate
 
         if (shippingValid) {
-            originalShippingCostNoTaxForSummary = initialShippingCostNoTax; // Použijeme předanou hodnotu
-            BigDecimal shippingTaxRate = BigDecimal.ZERO; // Default
+            originalShippingCostNoTaxForSummary = initialShippingCostNoTax;
             try {
                 shippingTaxRate = shippingService.getShippingTaxRate();
+                if(shippingTaxRate == null || shippingTaxRate.compareTo(BigDecimal.ZERO) < 0) {
+                    log.error("Invalid shipping tax rate received from service: {}. Using fallback 0.21", shippingTaxRate);
+                    shippingTaxRate = new BigDecimal("0.21");
+                }
             } catch (Exception e) {
-                log.error("Failed to get shipping tax rate in summary: {}", e.getMessage());
+                log.error("Failed to get shipping tax rate: {}", e.getMessage());
+                shippingTaxRate = new BigDecimal("0.21"); // Fallback on error
             }
 
-            if (originalShippingCostNoTaxForSummary.compareTo(BigDecimal.ZERO) > 0 && shippingTaxRate != null && shippingTaxRate.compareTo(BigDecimal.ZERO) > 0) {
+            if (originalShippingCostNoTaxForSummary.compareTo(BigDecimal.ZERO) > 0 && shippingTaxRate.compareTo(BigDecimal.ZERO) > 0) {
                 originalShippingTaxForSummary = originalShippingCostNoTaxForSummary.multiply(shippingTaxRate).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
             }
 
-            // Zkontrolujeme kupón ZNOVU pro případnou slevu na dopravu
             if (validatedCoupon != null && validatedCoupon.isFreeShipping()) {
-                log.info("Free shipping applied during summary preparation (Coupon: {}). Orig cost: {}", validatedCoupon.getCode(), originalShippingCostNoTaxForSummary);
                 finalShippingCostNoTax = BigDecimal.ZERO;
                 finalShippingTax = BigDecimal.ZERO;
-                shippingDiscountAmount = originalShippingCostNoTaxForSummary; // Sleva je původní cena
+                shippingDiscountAmount = originalShippingCostNoTaxForSummary;
             } else {
                 finalShippingCostNoTax = originalShippingCostNoTaxForSummary;
                 finalShippingTax = originalShippingTaxForSummary;
                 shippingDiscountAmount = BigDecimal.ZERO;
             }
         } else {
-            log.debug("Shipping cost not valid or not calculated for summary. Passed Value: {}", initialShippingCostNoTax);
             shippingError = shippingError != null ? shippingError : "Doprava nebyla vypočtena.";
-            originalShippingCostNoTaxForSummary = null; // Chyba/neznámý stav
+            originalShippingCostNoTaxForSummary = null; // Indicate error/unknown
             originalShippingTaxForSummary = BigDecimal.ZERO;
             finalShippingCostNoTax = BigDecimal.ZERO;
             finalShippingTax = BigDecimal.ZERO;
             shippingDiscountAmount = BigDecimal.ZERO;
         }
 
-        // Final total price calculation
-        BigDecimal finalTotalPrice = null;
-        BigDecimal finalTotalVatWithShipping = totalItemVat.add(finalShippingTax).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+        // --- Logika zaokrouhlení (zůstává stejná) ---
+        BigDecimal originalTotalPrice = null; // Cena PŘED zaokrouhlením
+        BigDecimal roundedTotalPrice = null; // Cena PO zaokrouhlení dolů na celé číslo
+        BigDecimal roundingDifference = BigDecimal.ZERO; // Rozdíl zaokrouhlení
 
         if (shippingValid) { // Počítáme jen pokud je doprava validní
-            finalTotalPrice = totalPriceWithoutTaxAfterDiscount
-                    .add(finalShippingCostNoTax) // Použijeme finální cenu dopravy
+            // Původní celková cena (subtotal po slevě + finální doprava + DPH ze zboží + finální DPH z dopravy)
+            originalTotalPrice = totalPriceWithoutTaxAfterDiscount
+                    .add(finalShippingCostNoTax)
                     .add(totalItemVat)
-                    .add(finalShippingTax)      // Použijeme finální daň z dopravy
-                    .setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-            log.debug("Final total calculated: {}", finalTotalPrice);
-        } else {
-            log.debug("Final total cannot be calculated because shipping is invalid.");
-        }
+                    .add(finalShippingTax)
+                    .setScale(PRICE_SCALE, RoundingMode.HALF_UP); // Přesná cena
 
-        // Add attributes to model (přiřazujeme správné proměnné)
+            // Zaokrouhlení CELKOVÉ ceny DOLŮ na celé číslo
+            roundedTotalPrice = originalTotalPrice.setScale(0, RoundingMode.DOWN);
+
+            // Výpočet rozdílu zaokrouhlení
+            roundingDifference = originalTotalPrice.subtract(roundedTotalPrice).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+
+            log.debug("Rounding calculation: originalTotalPrice={}, roundedTotalPrice={}, roundingDifference={}",
+                    originalTotalPrice, roundedTotalPrice, roundingDifference);
+        } else {
+            log.debug("Rounding calculation skipped because shipping is invalid.");
+            originalTotalPrice = null;
+            roundedTotalPrice = null;
+            roundingDifference = BigDecimal.ZERO;
+        }
+        // --- KONEC LOGIKY ZAOKROUHLENÍ ---
+
+        BigDecimal finalTotalVatWithShipping = totalItemVat.add(finalShippingTax).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+
+        // Add attributes to model
         model.addAttribute("subtotal", subtotal);
         model.addAttribute("validatedCoupon", validatedCoupon);
-        model.addAttribute("couponDiscount", couponDiscount); // Sleva na zboží
-        model.addAttribute("totalPriceWithoutTaxAfterDiscount", totalPriceWithoutTaxAfterDiscount); // Mezisoučet po slevě na zboží
-        model.addAttribute("totalVat", totalItemVat); // DPH jen ze zboží
-        model.addAttribute("vatBreakdown", sortedVatBreakdown); // Rozpis DPH zboží
-        model.addAttribute("originalShippingCostNoTax", originalShippingCostNoTaxForSummary); // Původní cena dopravy (může být null při chybě)
-        model.addAttribute("originalShippingTax", originalShippingTaxForSummary);          // Původní DPH z dopravy
-        model.addAttribute("shippingDiscountAmount", shippingDiscountAmount.setScale(PRICE_SCALE, RoundingMode.HALF_UP)); // Výše slevy na dopravu
-        model.addAttribute("shippingCostNoTax", finalShippingCostNoTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP)); // Finální cena dopravy bez DPH (může být 0)
-        model.addAttribute("shippingTax", finalShippingTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP));          // Finální DPH z dopravy (může být 0)
-        model.addAttribute("totalPrice", finalTotalPrice); // Celková cena (null při chybě dopravy)
-        model.addAttribute("totalVatWithShipping", finalTotalVatWithShipping); // Celková DPH (zboží + finální doprava)
+        model.addAttribute("couponDiscount", couponDiscount);
+        model.addAttribute("totalPriceWithoutTaxAfterDiscount", totalPriceWithoutTaxAfterDiscount);
+        model.addAttribute("totalVat", totalItemVat); // DPH jen ze zboží pro rozpis
+        model.addAttribute("vatBreakdown", sortedVatBreakdown);
+        model.addAttribute("originalShippingCostNoTax", originalShippingCostNoTaxForSummary);
+        model.addAttribute("originalShippingTax", originalShippingTaxForSummary);
+        model.addAttribute("shippingDiscountAmount", shippingDiscountAmount);
+        model.addAttribute("shippingCostNoTax", finalShippingCostNoTax);
+        model.addAttribute("shippingTax", finalShippingTax);
+        model.addAttribute("totalVatWithShipping", finalTotalVatWithShipping); // Celkové DPH
+        // --- Přidání nových atributů pro zaokrouhlení ---
+        model.addAttribute("originalTotalPrice", originalTotalPrice); // Původní cena pro zobrazení
+        model.addAttribute("roundingDifference", roundingDifference); // Rozdíl
+        model.addAttribute("totalPrice", roundedTotalPrice); // Finální zaokrouhlená cena k úhradě
 
+        // Přidáme chybu dopravy, pokud existuje
         if (shippingError != null) {
             model.addAttribute("shippingError", shippingError);
         }
 
-        // Detailní log pro kontrolu
-        log.debug("Checkout summary model prepared: subtotal={}, itemDiscount={}, itemVat={}, origShipCost={}, shipDiscount={}, finalShipCost={}, finalShipTax={}, totalPrice={}, totalVatWithShip={}, shippingError='{}'",
-                subtotal, couponDiscount, totalItemVat, originalShippingCostNoTaxForSummary, shippingDiscountAmount, finalShippingCostNoTax, finalShippingTax, finalTotalPrice, finalTotalVatWithShipping, shippingError);
+        log.debug("Checkout summary model prepared: subtotal={}, itemDiscount={}, itemVat={}, origShipCost={}, shipDiscount={}, finalShipCost={}, finalShipTax={}, originalTotal={}, roundingDiff={}, finalRoundedTotal={}, totalVatWithShip={}, shippingError='{}'",
+                subtotal, couponDiscount, totalItemVat, originalShippingCostNoTaxForSummary, shippingDiscountAmount, finalShippingCostNoTax, finalShippingTax, originalTotalPrice, roundingDifference, roundedTotalPrice, finalTotalVatWithShipping, shippingError);
     }
 
+
+    // --- OPRAVENÁ Metoda prepareModelForError ---
     /**
      * Helper method to prepare the model when validation errors occur, ensuring necessary data is available for re-rendering the page.
-     *
-     * @param model                 The Spring MVC model.
-     * @param principal             The security principal (can be null for guests).
-     * @param checkoutFormWithError The CheckoutFormDataDto containing submitted data and validation errors.
-     * @param currency              The currently selected currency code.
-     * @param bindingResult         The BindingResult containing validation errors.
+     * Keeps the calculated prices (original, rounded, difference) but indicates shipping error.
      */
     private void prepareModelForError(Model model, Principal principal, CheckoutFormDataDto checkoutFormWithError, String currency, BindingResult bindingResult) {
         log.debug("Preparing model for rendering checkout page after form error. Currency: {}", currency);
         Customer customer = null;
         if (principal != null) {
             try {
-                // Fetch customer data to display alongside the erroneous form if logged in
                 customer = customerService.getCustomerByEmail(principal.getName()).orElse(null);
             } catch (Exception e) {
                 log.error("Error fetching customer {} during prepareModelForError", principal.getName(), e);
-                // Don't crash, just log the error
             }
         }
 
@@ -623,31 +671,30 @@ public class CheckoutController implements PriceConstants {
         model.addAttribute("currencySymbol", EURO_CURRENCY.equals(currency) ? "€" : "Kč");
         model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "checkoutForm", bindingResult); // Explicitly add bindingResult
 
-        // Re-evaluate summary based on current cart state
-        // Shipping should be indicated as needing recalculation after error
-        BigDecimal initialShippingCost = null;
+        // Re-evaluate summary based on current cart state, but force shipping error state
         String shippingError = "Zkontrolujte chyby ve formuláři a znovu vypočítejte dopravu.";
-        model.addAttribute("originalShippingCostNoTax", initialShippingCost); // Set to null
-        model.addAttribute("shippingError", shippingError); // Add error message
+        // Call prepareCheckoutSummaryModel to get all calculations (including potentially invalid shipping)
+        // Pass null for shipping cost to ensure shippingError is set correctly inside prepareCheckoutSummaryModel
+        prepareCheckoutSummaryModel(model, customer, checkoutFormWithError, currency, null, shippingError);
 
-        // Znovu načteme i sazbu DPH pro dopravu, aby byla dostupná v šabloně
-        BigDecimal shippingTaxRate = new BigDecimal("0.21"); // Default/Fallback
-        try {
-            shippingTaxRate = shippingService.getShippingTaxRate();
-        } catch (Exception e) {
-            log.error("Failed to get shipping tax rate in prepareModelForError: {}", e.getMessage());
-        }
-        model.addAttribute("shippingTaxRate", shippingTaxRate);
+        // *** ZDE JE KLÍČOVÁ ZMĚNA: NEODSTRAŇUJEME CENY Z MODELU ***
+        // Hodnoty originalTotalPrice, roundingDifference a totalPrice zůstávají v modelu
+        // tak, jak byly spočítány v prepareCheckoutSummaryModel (i když mohou být null, pokud shipping nebyl validní).
+        // Template a JS se postarají o správné zobrazení a deaktivaci tlačítka na základě shippingError.
 
-        // Prepare the summary part of the model again, reflecting the error state
-        prepareCheckoutSummaryModel(model, customer, checkoutFormWithError, currency, initialShippingCost, shippingError);
+        // Ensure shipping error message is present in the model
+        model.addAttribute("shippingError", shippingError);
 
-        // Add a general error message if not already present
-        if (!model.containsAttribute("checkoutError")) {
+        // Add a general error message if not already present from BindingResult
+        if (!bindingResult.hasErrors() && !model.containsAttribute("checkoutError")) {
             model.addAttribute("checkoutError", "Prosím, opravte chyby ve formuláři.");
+        } else if (bindingResult.hasErrors() && !model.containsAttribute("checkoutError")) {
+            model.addAttribute("checkoutError", "Formulář obsahuje chyby, prosím zkontrolujte zadané údaje.");
         }
-        log.debug("Model prepared for error view. BindingResult errors: {}", bindingResult.getAllErrors());
+        log.debug("Model prepared for error view. Shipping error state indicated.");
     }
+
+// Zbytek třídy CheckoutController...
 
     private boolean hasSufficientAddress(Customer customer) {
         if (customer == null) return false;

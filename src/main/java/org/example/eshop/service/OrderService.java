@@ -242,24 +242,36 @@ public class OrderService implements PriceConstants {
             order.setShippingTax(shippingTax.setScale(PRICE_SCALE, ROUNDING_MODE));
             // NOTE: If shippingDiscountAmount needs to be stored, add a field to the Order entity.
 
-            // 6. Calculating Final Totals
+           // 6. Calculating Final Totals - UPRAVENO PRO ZAOKROUHLENÍ
             log.debug("[Order Creation - Step 6] Calculating final totals for currency: {}", orderCurrency);
             try {
                 BigDecimal subTotalAfterDiscount = Optional.ofNullable(order.getSubTotalWithoutTax()).orElse(BigDecimal.ZERO)
                         .subtract(Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO));
-                // Use final (potentially zero) shipping costs
+
+                // Celková cena bez DPH (po slevě, vč. dopravy)
                 BigDecimal finalTotalWithoutTax = subTotalAfterDiscount
                         .add(Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO));
-                // Use final (potentially zero) shipping tax
+
+                // Celkové DPH (z položek + z dopravy)
                 BigDecimal finalTotalTax = Optional.ofNullable(order.getTotalItemsTax()).orElse(BigDecimal.ZERO)
                         .add(Optional.ofNullable(order.getShippingTax()).orElse(BigDecimal.ZERO));
-                BigDecimal finalTotalWithTax = finalTotalWithoutTax.add(finalTotalTax);
 
+                // Původní (přesná) celková cena s DPH
+                BigDecimal originalTotalPriceWithTax = finalTotalWithoutTax.add(finalTotalTax);
+
+                // Zaokrouhlení CELKOVÉ ceny DOLŮ na celé číslo
+                BigDecimal roundedTotalPrice = originalTotalPriceWithTax.setScale(0, RoundingMode.DOWN);
+
+                // Uložení finálních hodnot do objednávky
                 order.setTotalPriceWithoutTax(finalTotalWithoutTax.setScale(PRICE_SCALE, ROUNDING_MODE));
                 order.setTotalTax(finalTotalTax.setScale(PRICE_SCALE, ROUNDING_MODE));
-                order.setTotalPrice(finalTotalWithTax.setScale(PRICE_SCALE, ROUNDING_MODE));
-                log.debug("Final totals calculated. TotalNoTax: {}, TotalTax: {}, TotalWithTax: {}",
-                        order.getTotalPriceWithoutTax(), order.getTotalTax(), order.getTotalPrice());
+                order.setTotalPrice(roundedTotalPrice); // <-- ULOŽÍME ZAOKROUHLENOU CENU
+
+                log.debug("Final totals calculated: TotalNoTax={}, TotalTax={}, OriginalTotalWithTax={}, RoundedTotalToSave={}",
+                        order.getTotalPriceWithoutTax(), order.getTotalTax(),
+                        originalTotalPriceWithTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP), // Logujeme původní pro kontrolu
+                        order.getTotalPrice());
+
             } catch (Exception e) {
                 String orderCodeLog = order.getOrderCode() != null ? order.getOrderCode() : "(new)";
                 log.error("!!! CRITICAL ERROR calculating final totals for order {}: {}", orderCodeLog, e.getMessage(), e);
