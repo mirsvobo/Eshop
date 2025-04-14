@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 // import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // Pro pokročilé filtrování
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -37,6 +38,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> /*, Jp
      * Najde zákazníky podle kombinace emailu a stavu účtu.
      */
     Page<Customer> findByEmailContainingIgnoreCaseAndEnabled(String emailFragment, boolean enabled, Pageable pageable);
+
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
     // TODO: Přidat další metody pro filtrování podle telefonu, jména firmy atd.
     // Page<Customer> findByInvoiceCompanyNameContainingIgnoreCase(String companyNameFragment, Pageable pageable);

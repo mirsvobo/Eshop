@@ -545,7 +545,45 @@ public class OrderService implements PriceConstants {
         log.debug("Finished saving historical data for OrderItem. VariantInfo: {}", orderItem.getVariantInfo());
     }
 
+    @Transactional(readOnly = true)
+    public long countOrdersCreatedBetween(LocalDateTime start, LocalDateTime end) {
+        log.debug("Counting orders created between {} and {}", start, end);
+        try {
+            return orderRepository.countByOrderDateBetween(start, end);
+        } catch (Exception e) {
+            log.error("Error counting orders between dates: {}", e.getMessage(), e);
+            return 0L; // Vrátit 0 v případě chyby
+        }
+    }
 
+    @Transactional(readOnly = true)
+    public long countOrdersByPaymentStatus(String paymentStatus) {
+        if (!StringUtils.hasText(paymentStatus)) {
+            return 0L;
+        }
+        log.debug("Counting orders with payment status: {}", paymentStatus);
+        try {
+            return orderRepository.countByPaymentStatusIgnoreCase(paymentStatus);
+        } catch (Exception e) {
+            log.error("Error counting orders by payment status '{}': {}", paymentStatus, e.getMessage(), e);
+            return 0L;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public long countOrdersByStatusCode(String statusCode) {
+        if (!StringUtils.hasText(statusCode)) {
+            return 0L;
+        }
+        log.debug("Counting orders with status code: {}", statusCode);
+        try {
+            // Použijeme metodu z OrderRepository, kterou přidáme níže
+            return orderRepository.countByStateOfOrder_CodeIgnoreCase(statusCode);
+        } catch (Exception e) {
+            log.error("Error counting orders by status code '{}': {}", statusCode, e.getMessage(), e);
+            return 0L;
+        }
+    }
     // UPRAVENÁ METODA: Odebrán argument customDesign z volání productService
     private BigDecimal calculateBaseUnitPrice(Product product, CartItemDto itemDto, String currency) {
         if (itemDto.isCustom()) {

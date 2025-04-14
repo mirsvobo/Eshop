@@ -44,4 +44,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     // Metoda pro počítání objednávek ve stavu
     long countByStateOfOrderId(Long stateId);
     Optional<Order> findBySfProformaInvoiceIdOrSfTaxDocumentIdOrSfFinalInvoiceId(Long sfInvoiceId, Long sfInvoiceId1, Long sfInvoiceId2);
+
+    long countByOrderDateBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByPaymentStatusIgnoreCase(String paymentStatus);
+
+    long countByStateOfOrder_CodeIgnoreCase(String statusCode);
+
 }

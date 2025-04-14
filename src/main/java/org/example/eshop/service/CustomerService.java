@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -205,6 +206,27 @@ public class CustomerService {
         Customer updatedCustomer = customerRepository.save(customer);
         log.info("{} address updated successfully for customer ID: {}", addressType, customerId);
         return updatedCustomer;
+    }
+    @Transactional(readOnly = true)
+    public long countCustomersCreatedBetween(LocalDateTime start, LocalDateTime end) {
+        log.debug("Counting customers created between {} and {}", start, end);
+        try {
+            return customerRepository.countByCreatedAtBetween(start, end);
+        } catch (Exception e) {
+            log.error("Error counting customers between dates: {}", e.getMessage(), e);
+            return 0L;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public long countTotalCustomers() {
+        log.debug("Counting total customers");
+        try {
+            return customerRepository.count(); // Využívá standardní metodu JpaRepository
+        } catch (Exception e) {
+            log.error("Error counting total customers: {}", e.getMessage(), e);
+            return 0L;
+        }
     }
     private void updateInvoiceAddressFromDto(Customer customer, AddressDto dto) {
         customer.setInvoiceCompanyName(dto.getCompanyName()); customer.setInvoiceVatId(dto.getVatId()); customer.setInvoiceTaxId(dto.getTaxId());
