@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title>Správa Daňových Sazeb</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Daňové Sazby</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a th:href="@{/admin/tax-rates/new}" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-circle"></i> Vytvořit novou sazbu
+      </a>
+    </div>
+  </div>
+
+  <div th:if="${taxRates == null or #lists.isEmpty(taxRates)}" class="alert alert-info">
+    Nebyly nalezeny žádné daňové sazby.
+  </div>
+
+  <div th:unless="${taxRates == null or #lists.isEmpty(taxRates)}" class="table-responsive">
+    <table class="table table-striped table-sm table-hover">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Název</th>
+        <th class="text-end">Sazba (%)</th>
+        <th>Přenesená daňová povinnost</th>
+        <th>Akce</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="rate : ${taxRates}">
+        <td th:text="${rate.id}">1</td>
+        <td>
+          <a th:href="@{/admin/tax-rates/{id}/edit(id=${rate.id})}" th:text="${rate.name}">Název Sazby</a>
+        </td>
+        <td class="text-end" th:text="${#numbers.formatDecimal(rate.rate.multiply(100), 1, 'POINT', 2, 'COMMA') + '%'}">21.00%</td>
+        <td>
+          <span th:if="${rate.reverseCharge}" class="badge bg-info">Ano</span>
+          <span th:unless="${rate.reverseCharge}" class="badge bg-secondary">Ne</span>
+        </td>
+        <td>
+          <a th:href="@{/admin/tax-rates/{id}/edit(id=${rate.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+            <i class="bi bi-pencil-square"></i>
+          </a>
+          <form th:action="@{/admin/tax-rates/{id}/delete(id=${rate.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete smazat tuto sazbu? Smazání selže, pokud je sazba přiřazena k produktům.');">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Smazat">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</body>
+</html>

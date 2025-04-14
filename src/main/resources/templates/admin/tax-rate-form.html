@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title th:text="${pageTitle ?: 'Správa Daňové Sazby'}">Správa Daňové Sazby</title>
+  <style>
+    .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2" th:text="${pageTitle ?: 'Správa Daňové Sazby'}">Správa Daňové Sazby</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a th:href="@{/admin/tax-rates}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Zpět na přehled
+      </a>
+    </div>
+  </div>
+
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <form th:object="${taxRate}"
+        th:action="${taxRate.id == null} ? @{/admin/tax-rates} : @{/admin/tax-rates/{id}(id=${taxRate.id})}"
+        method="post" novalidate>
+
+    <input type="hidden" name="_method" th:if="${taxRate.id != null}" value="POST"/>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+          <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="rate" class="form-label">Sazba (desetinné číslo) <span class="text-danger">*</span></label>
+          <input type="number" step="0.0001" min="0" max="1" class="form-control" th:errorclass="is-invalid" id="rate" th:field="*{rate}" required placeholder="Např. 0.21 pro 21%">
+          <div class="form-text">Zadejte hodnotu jako desetinné číslo (např. 0.21 pro 21%, 0.12 pro 12%, 0 pro 0%).</div>
+          <div th:if="${#fields.hasErrors('rate')}" class="invalid-feedback" th:errors="*{rate}">Chyba sazby</div>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="reverseCharge" th:field="*{reverseCharge}">
+          <label class="form-check-label" for="reverseCharge">Přenesená daňová povinnost (Reverse Charge)</label>
+          <div class="form-text">Zaškrtněte, pokud se na produkty s touto sazbou vztahuje režim přenesené daňové povinnosti.</div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <a th:href="@{/admin/tax-rates}" class="btn btn-secondary me-2">Zrušit</a>
+          <button type="submit" class="btn btn-primary">Uložit Sazbu</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+</body>
+</html>
