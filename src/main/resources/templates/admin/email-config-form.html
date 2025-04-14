@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title th:text="${pageTitle ?: 'Správa Konfigurace Emailu'}">Správa Konfigurace Emailu</title>
+  <style>
+    .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2" th:text="${pageTitle ?: 'Správa Konfigurace Emailu'}">Správa Konfigurace Emailu</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a th:href="@{/admin/email-configs}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Zpět na přehled
+      </a>
+    </div>
+  </div>
+
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <form th:object="${emailTemplateConfig}"
+        th:action="${emailTemplateConfig.id == null} ? @{/admin/email-configs} : @{/admin/email-configs/{id}(id=${emailTemplateConfig.id})}"
+        method="post" novalidate>
+
+    <input type="hidden" name="_method" th:if="${emailTemplateConfig.id != null}" value="POST"/>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="stateCode" class="form-label">Stav objednávky <span class="text-danger">*</span></label>
+          <select class="form-select" th:errorclass="is-invalid" id="stateCode" th:field="*{stateCode}" required
+                  th:disabled="${emailTemplateConfig.id != null}"> <option value="" disabled>-- Vyberte stav --</option>
+            <option th:each="state : ${allOrderStates}"
+                    th:value="${state.code}"
+                    th:text="${state.name + ' (' + state.code + ')'}"
+                    th:selected="${emailTemplateConfig.stateCode == state.code}">
+              Stav X (KOD)
+            </option>
+          </select>
+          <div class="form-text" th:if="${emailTemplateConfig.id != null}">Kód stavu nelze po vytvoření měnit.</div>
+          <div th:if="${#fields.hasErrors('stateCode')}" class="invalid-feedback" th:errors="*{stateCode}">Chyba výběru stavu</div>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="sendEmail" th:field="*{sendEmail}">
+          <label class="form-check-label" for="sendEmail">Odesílat email zákazníkovi při tomto stavu</label>
+        </div>
+
+        <div class="mb-3">
+          <label for="templateName" class="form-label">Název Thymeleaf šablony</label>
+          <input type="text" class="form-control" th:errorclass="is-invalid" id="templateName" th:field="*{templateName}" placeholder="Např. emails/order-shipped">
+          <div class="form-text">Cesta k souboru v <code>src/main/resources/templates/</code> (bez .html).</div>
+          <div th:if="${#fields.hasErrors('templateName')}" class="invalid-feedback" th:errors="*{templateName}">Chyba názvu šablony</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="subjectTemplate" class="form-label">Vzor předmětu emailu</label>
+          <input type="text" class="form-control" th:errorclass="is-invalid" id="subjectTemplate" th:field="*{subjectTemplate}" placeholder="Např. {shopName} - Vaše objednávka č. {orderCode} byla odeslána">
+          <div class="form-text">Použitelné zástupné symboly: <code>{shopName}</code>, <code>{orderCode}</code>, <code>{stateName}</code>.</div>
+          <div th:if="${#fields.hasErrors('subjectTemplate')}" class="invalid-feedback" th:errors="*{subjectTemplate}">Chyba vzoru předmětu</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label">Popis (interní poznámka)</label>
+          <textarea class="form-control" id="description" th:field="*{description}" rows="2"></textarea>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <a th:href="@{/admin/email-configs}" class="btn btn-secondary me-2">Zrušit</a>
+          <button type="submit" class="btn btn-primary">Uložit Konfiguraci</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+</body>
+</html>

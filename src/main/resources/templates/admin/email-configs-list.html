@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa Emailových Šablon</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Konfigurace Emailových Šablon</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/email-configs/new}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle"></i> Vytvořit novou konfiguraci
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${emailConfigs == null or #lists.isEmpty(emailConfigs)}" class="alert alert-info">
+        Nebyly nalezeny žádné konfigurace emailů.
+    </div>
+
+    <div th:unless="${emailConfigs == null or #lists.isEmpty(emailConfigs)}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kód stavu</th>
+                <th>Název stavu</th>
+                <th>Odesílat email?</th>
+                <th>Název šablony</th>
+                <th>Vzor předmětu</th>
+                <th>Popis</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="config : ${emailConfigs}">
+                <td th:text="${config.id}">1</td>
+                <td>
+                    <a th:href="@{/admin/email-configs/{id}/edit(id=${config.id})}" th:text="${config.stateCode}">SHIPPED</a>
+                </td>
+                <td th:text="${orderStateNames != null ? orderStateNames[config.stateCode] : 'N/A'}">Odesláno</td>
+                <td>
+                    <span th:if="${config.sendEmail}" class="badge bg-success">Ano</span>
+                    <span th:unless="${config.sendEmail}" class="badge bg-secondary">Ne</span>
+                </td>
+                <td th:text="${config.templateName}">emails/order-shipped</td>
+                <td th:text="${#strings.abbreviate(config.subjectTemplate, 60)}">{shopName} - Obj. {orderCode}...</td>
+                <td th:text="${#strings.abbreviate(config.description, 50)}">Interní popis...</td>
+                <td>
+                    <a th:href="@{/admin/email-configs/{id}/edit(id=${config.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+</body>
+</html>
