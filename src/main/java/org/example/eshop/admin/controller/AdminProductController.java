@@ -133,29 +133,16 @@ public class AdminProductController {
         return "admin/product-form";
     }
 
-    /**
-     * Zobrazí formulář pro úpravu existujícího produktu.
-     */
     @GetMapping("/{id}/edit")
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true) // Ponecháme, pokud ProductService potřebuje
     public String showEditProductForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting edit form for product ID: {}", id);
         try {
-            Product product = productService.getProductById(id)
+            // Voláme optimalizovanou metodu service, která používá findByIdWithDetails
+            Product product = productService.getProductById(id) // Předpokládáme, že getProductById bylo upraveno
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
-            // Explicitní inicializace pro formulář (pro jistotu, i když @Transactional pomáhá)
-            Hibernate.initialize(product.getAvailableDesigns());
-            Hibernate.initialize(product.getAvailableGlazes());
-            Hibernate.initialize(product.getAvailableRoofColors());
-            Hibernate.initialize(product.getAvailableAddons());
-            Hibernate.initialize(product.getImages()); // <-- DŮLEŽITÉ pro zobrazení obrázků
-
-            if (product.getConfigurator() != null) {
-                Hibernate.initialize(product.getConfigurator());
-            }
-
-            model.addAttribute("product", product);
+            model.addAttribute("product", product); // Data jsou již načtena
             model.addAttribute("newImage", new Image());
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);

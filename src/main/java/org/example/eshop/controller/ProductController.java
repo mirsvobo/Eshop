@@ -41,62 +41,55 @@ public class ProductController {
     private AddonsService addonsService; // Předpokládám, že je stále potřeba pro detail
 
     @GetMapping("/produkty")
-    @Transactional(readOnly = true) // Pro inicializaci obrázků a slev
-    public String listProducts(Model model, @PageableDefault(size = 9, sort = "name") Pageable pageable) {
+    @Transactional(readOnly = true) // Může zůstat, pokud price calculation vyžaduje transakci
+    public String listProducts(Model model, @PageableDefault(size = 9, sort = "slug") Pageable pageable) { // Změněno řazení na slug pro konzistenci
         logger.info(">>> [ProductController] Vstupuji do listProducts. Pageable: {}", pageable);
-        String currentCurrency = currencyService.getSelectedCurrency(); // Získat aktuální měnu
-        model.addAttribute("currentCurrency", currentCurrency); // Přidat měnu do modelu
+        String currentCurrency = currencyService.getSelectedCurrency();
+        model.addAttribute("currentCurrency", currentCurrency);
 
         try {
-            Page<Product> productPage = productService.getActiveProducts(pageable);
+            // Voláme metodu, která vrací Page<Product> s již načtenými obrázky a daní
+            Page<Product> productPage = productService.getActiveProducts(pageable); // Předpokládáme, že tato metoda v service byla upravena, aby volala optimalizovanou repo metodu
             logger.info("[ProductController] ProductService.getActiveProducts vrátil stránku: TotalElements={}, TotalPages={}, Number={}, Size={}",
                     productPage.getTotalElements(), productPage.getTotalPages(), productPage.getNumber(), productPage.getSize());
 
-            // Připravíme mapu s cenami po slevě pro každý produkt
             Map<Long, Map<String, Object>> productPrices = new HashMap<>();
             for (Product product : productPage.getContent()) {
-                // Inicializace pro jistotu
-                if (product.getImages() != null) Hibernate.initialize(product.getImages());
-
-                // Výpočet ceny se slevou (pouze pro standardní produkty)
                 if (!product.isCustomisable()) {
                     Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
                     productPrices.put(product.getId(), priceInfo);
                 }
             }
-            logger.debug("[ProductController] Hibernate.initialize(images) and price calculation done for {} products.", productPage.getNumberOfElements());
+            // Logování odstraněno, protože Hibernate.initialize už nevoláme
 
             model.addAttribute("productPage", productPage);
-            model.addAttribute("productPrices", productPrices); // Předáme mapu cen do šablony
+            model.addAttribute("productPrices", productPrices);
 
         } catch (Exception e) {
             logger.error("!!! [ProductController] Chyba v listProducts: {} !!!", e.getMessage(), e);
             model.addAttribute("errorMessage", "Nepodařilo se načíst produkty.");
             model.addAttribute("productPage", Page.empty(pageable));
-            model.addAttribute("productPrices", Collections.emptyMap()); // Prázdná mapa při chybě
+            model.addAttribute("productPrices", Collections.emptyMap());
         }
         logger.info(">>> [ProductController] Opouštím listProducts. Obsah modelu před vrácením 'produkty': {}", model.asMap());
         return "produkty";
     }
 
     @GetMapping("/produkt/{slug}")
-    @Transactional(readOnly = true) // Nutné pro inicializaci LAZY kolekcí
+    @Transactional(readOnly = true) // Ponecháme, pokud productService potřebuje transakci
     public String productDetail(@PathVariable String slug, Model model) {
         logger.info(">>> [ProductController] Vstupuji do productDetail. Slug: {}", slug);
         Product product = null;
         try {
-            product = productService.getActiveProductBySlug(slug)
+            // Voláme metodu v ProductService, která používá optimalizovanou repo metodu
+            // Předpokládáme, že getActiveProductBySlug byla upravena nebo používáme novou
+            product = productService.getActiveProductBySlug(slug) // Nebo getActiveProductBySlugWithDetails(slug)
                     .orElseThrow(() -> {
                         logger.warn("[ProductController] Produkt se slugem '{}' nenalezen nebo není aktivní.", slug);
                         return new ResponseStatusException(HttpStatus.NOT_FOUND, "Produkt nebyl nalezen");
                     });
             logger.info("[ProductController] Produkt ID {} nalezen pro slug '{}'.", product.getId(), slug);
 
-            // Inicializace LAZY kolekcí
-            Hibernate.initialize(product.getImages());
-            logger.debug("[ProductController] Inicializovány obrázky pro produkt ID {}", product.getId());
-
-            // Společné atributy pro model
             model.addAttribute("product", product);
             CartItemDto cartItemDto = new CartItemDto();
             cartItemDto.setProductId(product.getId());
@@ -105,34 +98,19 @@ public class ProductController {
             if (product.isCustomisable()) {
                 // --- Custom Produkt ---
                 logger.info("[ProductController] Zpracovávám detail pro CUSTOM produkt ID {}", product.getId());
-                // Inicializace specifická pro custom
-                Hibernate.initialize(product.getConfigurator());
-                Hibernate.initialize(product.getAvailableAddons());
-                // **** NOVÉ: Inicializace atributů i pro custom ****
-                Hibernate.initialize(product.getAvailableDesigns());
-                Hibernate.initialize(product.getAvailableGlazes());
-                Hibernate.initialize(product.getAvailableRoofColors());
-                logger.debug("[ProductController] Inicializován konfigurátor, addony a atributy pro custom produkt ID {}", product.getId());
-
-                ProductConfigurator configurator = product.getConfigurator();
+                ProductConfigurator configurator = product.getConfigurator(); // Data jsou již načtena
                 if (configurator != null) {
                     model.addAttribute("configurator", configurator);
-                    // Dostupné Addony
                     List<Addon> availableAddons = product.getAvailableAddons() != null ?
                             product.getAvailableAddons().stream().filter(Addon::isActive).sorted(Comparator.comparing(Addon::getName)).collect(Collectors.toList())
                             : Collections.emptyList();
                     model.addAttribute("availableAddons", availableAddons);
 
-                    // **** NOVÉ: Přidání dostupných atributů do modelu ****
+                    // Data atributů jsou již načtena
                     model.addAttribute("availableDesigns", product.getAvailableDesigns() != null ? product.getAvailableDesigns() : Collections.emptySet());
                     model.addAttribute("availableGlazes", product.getAvailableGlazes() != null ? product.getAvailableGlazes() : Collections.emptySet());
                     model.addAttribute("availableRoofColors", product.getAvailableRoofColors() != null ? product.getAvailableRoofColors() : Collections.emptySet());
-                    logger.debug("[ProductController] Přidány atributy (Design: {}, Glaze: {}, RoofColor: {}) do modelu.",
-                            product.getAvailableDesigns() != null ? product.getAvailableDesigns().size() : 0,
-                            product.getAvailableGlazes() != null ? product.getAvailableGlazes().size() : 0,
-                            product.getAvailableRoofColors() != null ? product.getAvailableRoofColors().size() : 0);
-
-                    // Výpočet výchozí ceny (zůstává stejný - cena za min. rozměry)
+                    // ... (výpočet initialCustomPriceCZK/EUR a přidání do modelu zůstává) ...
                     BigDecimal initialCustomPriceCZK = BigDecimal.ZERO;
                     BigDecimal initialCustomPriceEUR = BigDecimal.ZERO;
                     String initialPriceError = null;
@@ -142,25 +120,20 @@ public class ProductController {
                                 "width", configurator.getMinWidth(),
                                 "height", configurator.getMinHeight()
                         );
-                        // Výpočet ceny JEN za rozměry a volitelné prvky (příčka, okap...)
-                        // Design/Lazura/Barva se zde pro výchozí cenu nezohledňuje
                         initialCustomPriceCZK = productService.calculateDynamicProductPrice(product, minDimensions, null, false, false, false, "CZK");
                         initialCustomPriceEUR = productService.calculateDynamicProductPrice(product, minDimensions, null, false, false, false, "EUR");
-
-                        // Nastavení výchozích rozměrů pro formulář
                         Map<String, BigDecimal> initialDims = new HashMap<>();
                         initialDims.put("length", configurator.getMinLength());
                         initialDims.put("width", configurator.getMinWidth());
                         initialDims.put("height", configurator.getMinHeight());
                         cartItemDto.setCustomDimensions(initialDims);
-
                         logger.debug("[ProductController] Výchozí JEDNOTKOVÉ ceny (bez atributů) pro custom produkt: CZK={}, EUR={}", initialCustomPriceCZK, initialCustomPriceEUR);
                     } catch (Exception e) {
                         logger.error("[ProductController] Chyba při výpočtu výchozí ceny pro custom produkt ID {}: {}", product.getId(), e.getMessage(), e);
                         initialPriceError = "Nepodařilo se vypočítat výchozí cenu: " + e.getMessage();
                     }
-                    model.addAttribute("initialCustomPriceCZK", initialCustomPriceCZK); // Toto je cena bez příplatků za atributy
-                    model.addAttribute("initialCustomPriceEUR", initialCustomPriceEUR); // Toto je cena bez příplatků za atributy
+                    model.addAttribute("initialCustomPriceCZK", initialCustomPriceCZK);
+                    model.addAttribute("initialCustomPriceEUR", initialCustomPriceEUR);
                     model.addAttribute("initialCustomPriceError", initialPriceError);
 
                 } else {
@@ -174,17 +147,9 @@ public class ProductController {
             } else {
                 // --- Standardní produkt ---
                 logger.info("[ProductController] Zpracovávám detail pro STANDARD produkt ID {}", product.getId());
-                // Inicializace atributů (zůstává)
-                Hibernate.initialize(product.getAvailableDesigns());
-                Hibernate.initialize(product.getAvailableGlazes());
-                Hibernate.initialize(product.getAvailableRoofColors());
-
-                // --- VÝPOČET CENY SE SLEVOU ---
+                // Atributy jsou již načteny
                 Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currencyService.getSelectedCurrency());
-                model.addAttribute("priceInfo", priceInfo); // Přidáme informace o ceně do modelu
-                // --- KONEC VÝPOČTU ---
-
-                // Původní kód pro atributy a DTO
+                model.addAttribute("priceInfo", priceInfo);
                 Set<Design> designs = product.getAvailableDesigns();
                 Set<Glaze> glazes = product.getAvailableGlazes();
                 Set<RoofColor> roofColors = product.getAvailableRoofColors();
@@ -203,8 +168,6 @@ public class ProductController {
             return "redirect:/produkty?error";
         }
     }
-
-    // V src/main/java/org/example/eshop/controller/ProductController.java
 
     @PostMapping("/api/product/calculate-price")
     @ResponseBody

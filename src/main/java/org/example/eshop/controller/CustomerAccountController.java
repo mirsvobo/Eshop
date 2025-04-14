@@ -129,23 +129,22 @@ public class CustomerAccountController {
         return "muj-ucet/objednavky";
     }
 
-    // V src/main/java/org/example/eshop/controller/CustomerAccountController.java
-
     @GetMapping("/objednavky/{orderCode}")
-    @Transactional() // Přidáme transakci pro LAZY loading
+    @Transactional() // Ponecháme, pokud OrderService potřebuje
     public String viewOrderDetail(@PathVariable String orderCode,
                                   Model model,
                                   Principal principal,
                                   RedirectAttributes redirectAttributes) {
         Customer loggedInCustomer = null;
         try {
+            // ... (kód pro získání zákazníka a základní kontroly) ...
             if (principal == null) { throw new IllegalStateException("Uživatel není přihlášen."); }
             String userEmail = principal.getName();
             loggedInCustomer = customerService.getCustomerByEmail(userEmail)
                     .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen. Email: " + userEmail));
-
             log.debug("Customer {} (ID: {}) viewing order detail for CODE: {}", loggedInCustomer.getEmail(), loggedInCustomer.getId(), orderCode);
 
+            // Voláme optimalizovanou metodu service, která používá findFullDetailByOrderCode
             Order order = orderService.findOrderByCode(orderCode)
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka s kódem '" + orderCode + "' nenalezena."));
 
@@ -153,20 +152,7 @@ public class CustomerAccountController {
                 throw new SecurityException("K této objednávce nemáte přístup.");
             }
 
-            // ***** ZAČÁTEK ZMĚNY: Explicitní inicializace *****
-            Hibernate.initialize(order.getCustomer()); // <--- PŘIDÁNO TOTO
-            Hibernate.initialize(order.getStateOfOrder()); // Pokud je LAZY
-            Hibernate.initialize(order.getOrderItems()); // Pokud je LAZY
-            if (order.getOrderItems() != null) {
-                order.getOrderItems().forEach(item -> {
-                    Hibernate.initialize(item.getProduct()); // Pokud je LAZY
-                    Hibernate.initialize(item.getSelectedAddons()); // Pokud je LAZY
-                });
-            }
-            Hibernate.initialize(order.getAppliedCoupon()); // Pokud je LAZY
-            // ***** KONEC ZMĚNY *****
-
-            model.addAttribute("order", order);
+            model.addAttribute("order", order); // Data jsou již načtena
             log.info("Order detail for CODE {} loaded successfully for customer {}", orderCode, loggedInCustomer.getEmail());
             return "muj-ucet/objednavka-detail";
 

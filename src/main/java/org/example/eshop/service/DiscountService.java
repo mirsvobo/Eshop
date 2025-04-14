@@ -38,8 +38,8 @@ public class DiscountService implements PriceConstants {
 
     @Transactional(readOnly = true)
     public Optional<Discount> getDiscountById(Long id) {
-        log.debug("Fetching discount by ID: {}", id);
-        return discountRepository.findById(id);
+        log.debug("Fetching discount by ID with products: {}", id);
+        return discountRepository.findWithProductsById(id); // NOVÉ
     }
 
     /**

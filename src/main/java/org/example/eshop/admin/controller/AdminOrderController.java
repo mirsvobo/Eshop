@@ -142,33 +142,16 @@ public class AdminOrderController {
         }
         return "admin/orders-list";
     }
-
-
-    // V src/main/java/org/example/eshop/admin/controller/AdminOrderController.java
-
     @GetMapping("/{id}")
-    @Transactional(readOnly = true) // Ponecháme transakci pro LAZY loading
+    @Transactional(readOnly = true) // Transakce může zůstat, pokud OrderService potřebuje
     public String viewOrderDetail(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting admin order detail view for ID: {}", id);
         try {
+            // Voláme optimalizovanou metodu service, která používá findFullDetailById
             Order order = orderService.findOrderById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka s ID " + id + " nenalezena."));
 
-            // ***** ZAČÁTEK ZMĚNY: Explicitní inicializace LAZY asociací *****
-            Hibernate.initialize(order.getCustomer()); // <--- PŘIDÁNO TOTO
-            Hibernate.initialize(order.getStateOfOrder());
-            Hibernate.initialize(order.getOrderItems());
-            if (order.getOrderItems() != null) {
-                order.getOrderItems().forEach(item -> {
-                    Hibernate.initialize(item.getProduct()); // Pokud je LAZY
-                    Hibernate.initialize(item.getSelectedAddons());
-                });
-            }
-            Hibernate.initialize(order.getAppliedCoupon()); // Pokud je LAZY
-            // ***** KONEC ZMĚNY *****
-
-
-            model.addAttribute("order", order);
+            model.addAttribute("order", order); // Data jsou již načtena
             List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
             model.addAttribute("allOrderStates", allStates);
             model.addAttribute("superFakturaBaseUrl", this.superFakturaBaseUrl);
@@ -186,9 +169,7 @@ public class AdminOrderController {
         }
         return "admin/order-detail";
     }
-    /**
-     * Změní stav objednávky.
-     */
+
     @PostMapping("/{id}/update-state")
     public String updateOrderState(@PathVariable Long id,
                                    @RequestParam Long newStateId,

@@ -173,12 +173,14 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
+    // V ProductService.java
     @Transactional(readOnly = true)
     public Optional<Product> getProductById(Long id){
-        logger.info(">>> [ProductService] Vstupuji do getProductById. ID: {}", id);
+        logger.info(">>> [ProductService] Vstupuji do getProductById (with details). ID: {}", id);
         Optional<Product> result = Optional.empty();
         try {
-            result = productRepository.findById(id);
+            //result = productRepository.findById(id); // PŮVODNÍ
+            result = productRepository.findByIdWithDetails(id); // NOVÉ - Načte rovnou detaily
             logger.info("[ProductService] getProductById: Produkt ID {} {}.", id, result.isPresent() ? "nalezen" : "nenalezen");
         } catch (Exception e) {
             logger.error("!!! [ProductService] Chyba v getProductById (ID: {}): {} !!!", id, e.getMessage(), e);

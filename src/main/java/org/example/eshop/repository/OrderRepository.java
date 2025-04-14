@@ -7,6 +7,7 @@ import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderState;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query; // <-- PŘIDAT IMPORT
@@ -51,4 +52,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     long countByStateOfOrder_CodeIgnoreCase(String statusCode);
 
+    @EntityGraph(value = "Order.fetchFullDetail")
+    Optional<Order> findFullDetailByOrderCode(String orderCode);
+    @EntityGraph(value = "Order.fetchFullDetail")
+    Optional<Order> findFullDetailById(Long id);
 }

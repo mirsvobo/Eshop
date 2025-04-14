@@ -1,47 +1,61 @@
 package org.example.eshop.repository;
 
 import org.example.eshop.model.Product;
-import org.springframework.data.domain.Page; // Import Page
-import org.springframework.data.domain.Pageable; // Import Pageable
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List; // Import List
-import java.util.Optional; // Import Optional
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    /**
-     * Najde produkt podle jeho unikátního slugu (bez ohledu na velikost písmen).
-     * @param slug Slug produktu.
-     * @return Optional obsahující produkt, pokud byl nalezen.
-     */
     Optional<Product> findBySlugIgnoreCase(String slug);
 
-    /**
-     * Najde aktivní produkt podle jeho unikátního slugu (bez ohledu na velikost písmen).
-     * Použitelné pro zobrazení detailu produktu v e-shopu.
-     * @param slug Slug produktu.
-     * @return Optional obsahující aktivní produkt, pokud byl nalezen.
-     */
+    // Původní zůstává
     Optional<Product> findByActiveTrueAndSlugIgnoreCase(String slug);
-
-    /**
-     * Vrátí stránkovaný seznam všech aktivních produktů.
-     * @param pageable Informace o stránkování (číslo stránky, velikost, řazení).
-     * @return Stránka s aktivními produkty.
-     */
     Page<Product> findByActiveTrue(Pageable pageable);
-
-    /**
-     * Vrátí seznam všech aktivních produktů (např. pro sitemapu nebo jednoduchý výpis).
-     * @return Seznam aktivních produktů.
-     */
     List<Product> findByActiveTrue();
-
     boolean existsBySlugIgnoreCase(String newSlug);
 
-    // Případně metody pro vyhledávání podle názvu, kategorie atd.
-    // Page<Product> findByActiveTrueAndNameContainingIgnoreCase(String name, Pageable pageable);
+    // --- NOVÉ METODY s EntityGraph ---
+
+    /**
+     * Najde aktivní produkty se základními detaily pro seznam (obrázky, daň, slevy).
+     */
+    @EntityGraph(attributePaths = {"images", "taxRate", "discounts"})
+    Page<Product> findByActiveTrueOrderBySlugAsc(Pageable pageable);
+
+    /**
+     * Najde aktivní produkty se základními detaily pro seznam (obrázky, daň, slevy) - verze pro List.
+     */
+    @EntityGraph(attributePaths = {"images", "taxRate", "discounts"})
+    List<Product> findAllByActiveTrue();
+
+    /**
+     * Najde aktivní produkt podle slugu se všemi potřebnými detaily pro frontend zobrazení.
+     */
+    // --- PŘIDÁNA ANOTACE @Query a @Param ---
+    @Query("SELECT p FROM Product p WHERE p.active = true AND lower(p.slug) = lower(:slug)")
+    @EntityGraph(attributePaths = { // EntityGraph zůstává
+            "taxRate", "images", "availableDesigns", "availableGlazes",
+            "availableRoofColors", "availableAddons", "configurator", "discounts"
+    })
+    Optional<Product> findActiveBySlugWithDetails(@Param("slug") String slug); // Přidáno @Param
+
+    /**
+     * Najde produkt podle ID se všemi potřebnými detaily pro admin formulář.
+     * Načítá i neaktivní produkty.
+     */
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    @EntityGraph(attributePaths = {
+            "taxRate", "images", "availableDesigns", "availableGlazes",
+            "availableRoofColors", "availableAddons", "configurator", "discounts"
+    })
+    Optional<Product> findByIdWithDetails(@Param("id") Long id);
 }

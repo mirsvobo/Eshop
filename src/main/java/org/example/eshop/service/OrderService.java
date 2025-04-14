@@ -546,6 +546,19 @@ public class OrderService implements PriceConstants {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Order> findOrderById(Long id) {
+        log.debug("Finding order by ID with full details: {}", id);
+        return orderRepository.findFullDetailById(id); // NOVÉ
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Order> findOrderByCode(String orderCode) {
+        if (!StringUtils.hasText(orderCode)) return Optional.empty();
+        log.debug("Finding order by code with full details: {}", orderCode.trim());
+        return orderRepository.findFullDetailByOrderCode(orderCode.trim()); // NOVÉ
+    }
+
+    @Transactional(readOnly = true)
     public long countOrdersCreatedBetween(LocalDateTime start, LocalDateTime end) {
         log.debug("Counting orders created between {} and {}", start, end);
         try {
@@ -740,18 +753,6 @@ public class OrderService implements PriceConstants {
 
     // --- Metody pro čtení a aktualizaci stavů (zůstávají stejné) ---
 
-    @Transactional(readOnly = true)
-    public Optional<Order> findOrderById(Long id) {
-        log.debug("Finding order by ID: {}", id);
-        return orderRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Order> findOrderByCode(String orderCode) {
-        if (!StringUtils.hasText(orderCode)) return Optional.empty();
-        log.debug("Finding order by code: {}", orderCode.trim());
-        return orderRepository.findByOrderCode(orderCode.trim());
-    }
 
     @Transactional(readOnly = true)
     public List<Order> findAllOrdersByCustomerId(Long customerId) {

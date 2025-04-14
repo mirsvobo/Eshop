@@ -14,7 +14,25 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "CustomerOrders") // Explicitní název tabulky
+@Table(name = "CustomerOrders")
+@NamedEntityGraph(
+        name = "Order.fetchFullDetail",
+        attributeNodes = {
+                @NamedAttributeNode("customer"),
+                @NamedAttributeNode("stateOfOrder"),
+                @NamedAttributeNode("appliedCoupon"),
+                @NamedAttributeNode(value = "orderItems", subgraph = "orderItemsGraph")
+        },
+        subgraphs = {
+                @NamedSubgraph( // Definice subgraphu pro položky
+                        name = "orderItemsGraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("product") // Načteme produkt v položce
+                                // ODEBRÁNO: @NamedAttributeNode("selectedAddons") <-- TOTO JSME ODEBRALI
+                        }
+                )
+        }
+)
 public class Order {
 
     @Id

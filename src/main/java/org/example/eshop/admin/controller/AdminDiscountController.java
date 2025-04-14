@@ -128,16 +128,18 @@ public class AdminDiscountController {
     }
 
     @GetMapping("/{id}/edit")
-    @Transactional(readOnly = true) // Pro načtení produktů v rámci session
+    // Odstraněno: @Transactional(readOnly = true)
     public String showEditDiscountForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting edit form for discount ID: {}", id);
         try {
-            Discount discount = discountService.getDiscountById(id)
+            // Voláme optimalizovanou metodu service, která používá findWithProductsById
+            Discount discount = discountService.getDiscountById(id) // Předpokládáme, že getDiscountById bylo upraveno
                     .orElseThrow(() -> new EntityNotFoundException("Sleva s ID " + id + " nenalezena."));
+
             model.addAttribute("discount", discount);
             loadAllProducts(model);
             model.addAttribute("pageTitle", "Upravit slevu: " + discount.getName());
-            // ID přiřazených produktů pro předvyplnění multiselectu
+            // Produkty jsou již načteny v objektu discount
             model.addAttribute("selectedProductIds", discount.getProducts().stream().map(Product::getId).collect(Collectors.toSet()));
             return "admin/discount-form";
         } catch (EntityNotFoundException e) {
@@ -150,6 +152,7 @@ public class AdminDiscountController {
             return "redirect:/admin/discounts";
         }
     }
+
 
     @PostMapping("/{id}")
     public String updateDiscount(@PathVariable Long id,
