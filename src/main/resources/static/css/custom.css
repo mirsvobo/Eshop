@@ -1,5 +1,5 @@
 /* src/main/resources/static/css/custom.css */
-/* Verze: 2025-04-14 - Aplikovány změny pro fullscreen hero a větší prvky + nový obrázek */
+/* Verze: 2025-04-14 - Aplikovány změny pro fullscreen hero, větší prvky, nový obrázek, upravený navbar brand */
 
 /* Definice vlastních CSS proměnných inspirovaných originálem a Bootstrapem */
 :root {
@@ -32,7 +32,28 @@
 
 .navbar-brand {
     font-weight: 600;
-    font-size: 1.15rem; /* Mírně zvětšit brand */
+    font-size: 1.1rem; /* Mírně menší na mobilu */
+    /* display: flex a align-items: center jsou nastaveny v HTML, není třeba opakovat */
+    padding-top: 0.25rem; /* Standardní padding na mobilu */
+    padding-bottom: 0.25rem;
+    margin-right: auto; /* Zajistí, že brand bude vlevo */
+    text-decoration: none; /* Odstranění podtržení odkazu */
+    white-space: nowrap; /* Zabrání zalomení názvu */
+}
+
+/* Základní styl pro logo (Mobile-First) */
+.navbar-logo-img {
+    height: 50px; /* Menší výška loga pro mobilní navbar */
+    width: auto;
+    object-fit: contain;
+    vertical-align: middle; /* Pro jistotu */
+    margin-right: 0.5rem; /* Mezera mezi logem a textem */
+}
+
+/* Základní styl pro text (Mobile-First) */
+.navbar-brand-text {
+    /* Vertikální centrování řeší align-items-center na rodiči */
+    line-height: 1.2; /* Může pomoci s přesným zarovnáním */
 }
 
 /* Sjednocení vzhledu navigačních odkazů */
@@ -385,3 +406,4 @@ main {
         margin-top: 0; /* Na mobilu bez negativního marginu */
     }
 }
+

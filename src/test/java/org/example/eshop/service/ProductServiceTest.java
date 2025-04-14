@@ -18,7 +18,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType; // <-- Import pro MediaType
+import org.springframework.mock.web.MockMultipartFile; // <-- Přidáno pro testy uploadu
+import org.springframework.web.multipart.MultipartFile; // <-- Přidáno pro testy uploadu
 
+import java.io.IOException; // <-- Přidáno pro testy uploadu
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -32,6 +36,8 @@ class ProductServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private ImageRepository imageRepository;
     @Mock private TaxRateRepository taxRateRepository;
+    @Mock private DiscountService discountService; // Mock pro DiscountService
+    @Mock private FileStorageService fileStorageService; // Mock pro FileStorageService
 
     @InjectMocks private ProductService productService;
 
@@ -41,11 +47,18 @@ class ProductServiceTest {
     private TaxRate standardTaxRate;
     private TaxRate reducedTaxRate;
     private ProductConfigurator configurator;
+    private Image image1;
 
     @BeforeEach
     void setUp() {
         standardTaxRate = new TaxRate(1L, "Standard 21%", new BigDecimal("0.21"), false, null);
         reducedTaxRate = new TaxRate(2L, "Reduced 12%", new BigDecimal("0.12"), false, null);
+
+        image1 = new Image();
+        image1.setId(50L);
+        image1.setUrl("/uploads/products/img1.jpg");
+        image1.setAltText("Obrázek 1");
+        image1.setDisplayOrder(0);
 
         standardProduct = new Product();
         standardProduct.setId(1L);
@@ -56,6 +69,8 @@ class ProductServiceTest {
         standardProduct.setTaxRate(standardTaxRate);
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00"));
         standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
+        standardProduct.setImages(new ArrayList<>(List.of(image1)));
+        image1.setProduct(standardProduct);
 
         customProduct = new Product();
         customProduct.setId(2L);
@@ -64,6 +79,7 @@ class ProductServiceTest {
         customProduct.setActive(true);
         customProduct.setCustomisable(true);
         customProduct.setTaxRate(standardTaxRate);
+        customProduct.setImages(new ArrayList<>());
 
         configurator = new ProductConfigurator();
         configurator.setId(customProduct.getId());
@@ -81,13 +97,21 @@ class ProductServiceTest {
         configurator.setDesignPriceEUR(new BigDecimal("4.00"));
         customProduct.setConfigurator(configurator);
 
-
         inactiveProduct = new Product();
         inactiveProduct.setId(3L);
         inactiveProduct.setName("Neaktivní Produkt");
         inactiveProduct.setSlug("neaktivni-produkt");
         inactiveProduct.setActive(false);
         inactiveProduct.setTaxRate(standardTaxRate);
+        inactiveProduct.setImages(new ArrayList<>());
+
+        // Lenient mockování
+        lenient().when(productRepository.findById(1L)).thenReturn(Optional.of(standardProduct));
+        lenient().when(productRepository.findById(2L)).thenReturn(Optional.of(customProduct));
+        lenient().when(productRepository.findById(3L)).thenReturn(Optional.of(inactiveProduct));
+        lenient().when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        lenient().when(imageRepository.findById(50L)).thenReturn(Optional.of(image1));
+        lenient().when(imageRepository.findById(999L)).thenReturn(Optional.empty());
     }
 
     // --- Testy Načítání ---
@@ -149,6 +173,9 @@ class ProductServiceTest {
                 "width", new BigDecimal("100"),
                 "height", new BigDecimal("180")
         );
+        // Očekávaná cena = (180*8) + (200*10) + (100*5) + 100 (design) + (100*3) (příčka) + 500 (okap) + 2000 (domek)
+        //                 = 1440    + 2000    + 500     + 100          + 300                + 500           + 2000
+        //                 = 6840.00
         BigDecimal expectedPrice = new BigDecimal("6840.00");
         BigDecimal calculatedPrice = productService.calculateDynamicProductPrice(
                 customProduct, dimensions, "Nějaký Design", true, true, true, "CZK"
@@ -161,7 +188,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vrátí 0 pro záporný výsledek (CZK)")
     void calculateDynamicProductPrice_NegativeResultBecomesZero_CZK() {
-        customProduct.getConfigurator().setPricePerCmLengthCZK(new BigDecimal("-100"));
+        customProduct.getConfigurator().setPricePerCmLengthCZK(new BigDecimal("-100")); // Make price negative
         Map<String, BigDecimal> dimensions = Map.of(
                 "length", new BigDecimal("200"),
                 "width", new BigDecimal("100"),
@@ -175,7 +202,6 @@ class ProductServiceTest {
         assertNotNull(calculatedPrice);
         assertEquals(0, BigDecimal.ZERO.compareTo(calculatedPrice), "Záporná vypočtená cena by měla být 0");
     }
-
 
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro neaktivní produkt")
@@ -191,8 +217,8 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro produkt bez konfigurátoru")
     void calculateDynamicProductPrice_ThrowsForMissingConfigurator() {
-        standardProduct.setCustomisable(true);
-        standardProduct.setConfigurator(null);
+        standardProduct.setCustomisable(true); // Make it customisable
+        standardProduct.setConfigurator(null); // Ensure no configurator
         Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180"));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -204,19 +230,19 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro chybějící rozměry")
     void calculateDynamicProductPrice_ThrowsForMissingDimensions() {
-        Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100"));
+        Map<String, BigDecimal> dimensions = Map.of("length", new BigDecimal("200"), "width", new BigDecimal("100")); // Height is missing
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             productService.calculateDynamicProductPrice(customProduct, dimensions, null, false, false, false, "CZK");
         });
-        assertTrue(exception.getMessage().contains("Missing dimensions"));
+        assertTrue(exception.getMessage().contains("Missing one or more dimensions"));
     }
 
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro rozměry mimo limity")
     void calculateDynamicProductPrice_ThrowsForDimensionOutOfBounds() {
         Map<String, BigDecimal> dimensions = Map.of(
-                "length", new BigDecimal("600"),
+                "length", new BigDecimal("600"), // Too long
                 "width", new BigDecimal("100"),
                 "height", new BigDecimal("180")
         );
@@ -230,15 +256,14 @@ class ProductServiceTest {
     @Test
     @DisplayName("calculateDynamicProductPrice vyhodí výjimku pro chybějící cenu v konfigurátoru")
     void calculateDynamicProductPrice_ThrowsForMissingConfigPrice() {
-        customProduct.getConfigurator().setPricePerCmLengthCZK(null);
+        customProduct.getConfigurator().setPricePerCmLengthCZK(null); // Remove a required price
         Map<String, BigDecimal> dimensions = Map.of( "length", new BigDecimal("200"), "width", new BigDecimal("100"), "height", new BigDecimal("180") );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
             productService.calculateDynamicProductPrice(customProduct, dimensions, null, false, false, false, "CZK");
         });
-        assertTrue(exception.getMessage().contains("Price config (per cm) missing"));
+        assertTrue(exception.getMessage().contains("price configuration 'Length Price/cm' missing"));
     }
-
 
     // --- Testy CRUD ---
 
@@ -333,7 +358,7 @@ class ProductServiceTest {
     void deleteProduct_ThrowsForNonExistingId() {
         when(productRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> {
+        assertThrows(EntityNotFoundException.class, () -> {
             productService.deleteProduct(999L);
         });
         verify(productRepository, never()).save(any());
@@ -352,16 +377,18 @@ class ProductServiceTest {
         TaxRate rateRef = new TaxRate(); rateRef.setId(2L);
         updatedData.setTaxRate(rateRef);
 
-        Product existingProduct = new Product();
-        existingProduct.setId(productId);
-        existingProduct.setName("Standard Dřevník");
-        existingProduct.setSlug("standard-drevnik");
-        existingProduct.setTaxRate(standardTaxRate);
+        // Klonujeme existingProduct pro předání do metody updateProduct,
+        // aby nedošlo k modifikaci stejné instance, která se pak ověřuje
+        Product existingProductClone = new Product();
+        existingProductClone.setId(productId);
+        existingProductClone.setName("Standard Dřevník");
+        existingProductClone.setSlug("standard-drevnik");
+        existingProductClone.setTaxRate(standardTaxRate);
 
         when(taxRateRepository.findById(2L)).thenReturn(Optional.of(reducedTaxRate));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<Product> resultOpt = productService.updateProduct(productId, updatedData, existingProduct);
+        Optional<Product> resultOpt = productService.updateProduct(productId, updatedData, existingProductClone);
 
         assertTrue(resultOpt.isPresent());
         Product savedProduct = resultOpt.get();
@@ -373,37 +400,9 @@ class ProductServiceTest {
         assertTrue(savedProduct.isActive());
 
         verify(taxRateRepository).findById(2L);
-        verify(productRepository).save(existingProduct);
+        verify(productRepository).save(existingProductClone); // Ověřujeme, že se uložila upravená existující entita
     }
 
-    @Test
-    @DisplayName("updateProduct vrátí empty Optional pro neexistující ID")
-    void updateProduct_NotFound() {
-        long nonExistentId = 999L;
-        Product updatedData = new Product();
-        updatedData.setName("Nezáleží");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
-        updatedData.setTaxRate(rateRef);
-
-        // --- OPRAVA: Odebrání zbytečného when(...) ---
-        // Toto mockování bylo označeno jako zbytečné, protože findById selže dříve
-        // when(productRepository.findById(nonExistentId)).thenReturn(Optional.empty());
-        // --- KONEC OPRAVY ---
-
-        // TENTO TEST NEPŘÍMO OVĚŘUJE LOGIKU CONTROLLERU, KTERÁ BY MĚLA ZABRÁNIT
-        // VOLÁNÍ updateProduct, POKUD PRODUKT NEEXISTUJE.
-        // Samotná metoda updateProduct(id, data, existing) by očekávala non-null existing.
-        // Zde pouze ověříme, že se nic neuloží, pokud by logika selhala.
-
-        // Pokud by hypoteticky došlo k volání s null 'existingProduct':
-        // assertThrows(NullPointerException.class, () -> { // Nebo jiná vhodná exception
-        //     productService.updateProduct(nonExistentId, updatedData, null);
-        // });
-
-        // Ověříme, že se nic neuložilo a ani se nehledala sazba
-        verify(productRepository, never()).save(any());
-        verify(taxRateRepository, never()).findById(anyLong());
-    }
 
     @Test
     @DisplayName("updateProduct vyhodí výjimku při změně slugu na existující")
@@ -425,6 +424,9 @@ class ProductServiceTest {
         conflictingProduct.setId(50L);
         conflictingProduct.setSlug("existujici-slug");
 
+        // Mock pro tax rate (pro případ, že by se měnila)
+        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
+        // Mock pro nalezení konfliktního slugu
         when(productRepository.findBySlugIgnoreCase("existujici-slug")).thenReturn(Optional.of(conflictingProduct));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -444,14 +446,14 @@ class ProductServiceTest {
         Product updatedData = new Product();
         updatedData.setName("Název");
         updatedData.setSlug("standard-drevnik");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(999L);
+        TaxRate rateRef = new TaxRate(); rateRef.setId(999L); // Neexistující ID
         updatedData.setTaxRate(rateRef);
 
         Product existingProduct = new Product();
         existingProduct.setId(productId);
         existingProduct.setName("Standard Dřevník");
         existingProduct.setSlug("standard-drevnik");
-        existingProduct.setTaxRate(standardTaxRate);
+        existingProduct.setTaxRate(standardTaxRate); // Původní sazba
 
         when(taxRateRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -469,86 +471,140 @@ class ProductServiceTest {
     // --- Testy Správy Obrázků ---
 
     @Test
-    @DisplayName("addProductImage úspěšně přidá obrázek k produktu")
-    void addProductImage_Success() {
+    @DisplayName("[addImageToProduct] Úspěšně přidá obrázek pomocí MultipartFile")
+    void addImageToProduct_MultipartFile_Success() throws IOException {
         long productId = 1L;
-        Image newImage = new Image();
-        newImage.setUrl("/images/new.jpg");
-        newImage.setAltText("Nový obrázek");
-        newImage.setDisplayOrder(1);
+        String originalFileName = "test.jpg";
+        String storedFileName = "unique-id.jpg";
+        String storedFileUrl = "/uploads/products/" + storedFileName;
+        String altText = "Test Alt";
+        String titleText = "Test Title";
+        Integer displayOrder = 1;
+        MockMultipartFile mockFile = new MockMultipartFile("file", originalFileName, MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
 
+        // Mock findById pro nalezení produktu
         when(productRepository.findById(productId)).thenReturn(Optional.of(standardProduct));
+        // Mock uložení souboru
+        when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
+        // Mock uložení entity Image
         when(imageRepository.save(any(Image.class))).thenAnswer(invocation -> {
             Image img = invocation.getArgument(0);
-            img.setId(100L);
+            img.setId(101L); // Simulace ID z DB
             assertEquals(standardProduct, img.getProduct());
+            assertEquals(storedFileUrl, img.getUrl());
+            assertEquals(altText, img.getAltText());
+            assertEquals(titleText, img.getTitleText());
+            assertEquals(displayOrder, img.getDisplayOrder());
             return img;
         });
 
-        Image savedImage = productService.addProductImage(productId, newImage);
+        Image savedImage = productService.addImageToProduct(productId, mockFile, altText, titleText, displayOrder);
 
         assertNotNull(savedImage);
-        assertEquals(100L, savedImage.getId());
-        assertEquals("/images/new.jpg", savedImage.getUrl());
-        assertEquals(standardProduct, savedImage.getProduct());
+        assertEquals(101L, savedImage.getId());
+        assertEquals(storedFileUrl, savedImage.getUrl());
 
         verify(productRepository).findById(productId);
-        verify(imageRepository).save(newImage);
+        verify(fileStorageService).storeFile(mockFile, "products");
+        verify(imageRepository).save(any(Image.class));
     }
 
     @Test
-    @DisplayName("addProductImage vyhodí výjimku pro neexistující produkt ID")
-    void addProductImage_ProductNotFound() {
-        long nonExistentProductId = 999L;
-        Image newImage = new Image();
-        newImage.setUrl("/image.jpg");
+    @DisplayName("[addImageToProduct] Vyhodí chybu, pokud selže uložení souboru")
+    void addImageToProduct_MultipartFile_StorageError() throws IOException {
+        long productId = 1L;
+        MockMultipartFile mockFile = new MockMultipartFile("file", "error.jpg", MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
+        String exceptionMessage = "Disk is full";
 
+        // Není třeba mockovat findById, protože k chybě dojde dříve
+        when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenThrow(new IOException(exceptionMessage));
+
+        IOException thrownException = assertThrows(IOException.class, () -> {
+            productService.addImageToProduct(productId, mockFile, "Alt", "Title", 0);
+        });
+
+        assertTrue(thrownException.getMessage().contains(exceptionMessage));
+        // Ověříme, že save obrázku se nevolalo
+        verify(imageRepository, never()).save(any(Image.class));
+        // Ověříme, že produkt se také nehledal (chyba nastala dříve)
+        verify(productRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    @DisplayName("[addImageToProduct] Vyhodí chybu pro neexistující produkt ID (MultipartFile)")
+    void addImageToProduct_MultipartFile_ProductNotFound() throws IOException {
+        long nonExistentProductId = 999L;
+        MockMultipartFile mockFile = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
+        String storedFileUrl = "/uploads/products/some.jpg";
+
+        // Mock fileStorageService, protože se volá jako první
+        when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
+        // Mock findById, aby vrátil empty
         when(productRepository.findById(nonExistentProductId)).thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-            productService.addProductImage(nonExistentProductId, newImage);
+            productService.addImageToProduct(nonExistentProductId, mockFile, "Alt", "Title", 0);
         });
+
         assertTrue(exception.getMessage().contains("Product not found"));
+        // Ověříme, že se obě metody volaly
+        verify(fileStorageService).storeFile(mockFile, "products");
+        verify(productRepository).findById(nonExistentProductId);
+        // Ověříme, že se save obrázku nevolalo
         verify(imageRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("addProductImage vyhodí výjimku pro neplatný obrázek (chybí URL)")
-    void addProductImage_InvalidImageData() {
+    @DisplayName("[addImageToProduct] Vyhodí chybu pro prázdný soubor (MultipartFile)")
+    void addImageToProduct_MultipartFile_EmptyFile() throws IOException {
         long productId = 1L;
-        Image invalidImage = new Image();
-        invalidImage.setAltText("Chybný");
-
-        when(productRepository.findById(productId)).thenReturn(Optional.of(standardProduct));
+        MockMultipartFile emptyFile = new MockMultipartFile("file", "empty.txt", MediaType.TEXT_PLAIN_VALUE, new byte[0]);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            productService.addProductImage(productId, invalidImage);
+            productService.addImageToProduct(productId, emptyFile, "Alt", "Title", 0);
         });
-        assertTrue(exception.getMessage().contains("Image or URL missing"));
+
+        assertTrue(exception.getMessage().contains("empty image file"));
+        verify(fileStorageService, never()).storeFile(any(), anyString());
         verify(imageRepository, never()).save(any());
+        verify(productRepository, never()).findById(anyLong());
     }
 
     @Test
-    @DisplayName("deleteImage úspěšně smaže obrázek")
-    void deleteImage_Success() {
+    @DisplayName("[deleteImage] Úspěšně smaže obrázek (entitu i soubor)")
+    void deleteImage_Success_DeletesEntityAndFile() throws IOException {
         long imageId = 50L;
-        Image existingImage = new Image();
-        existingImage.setId(imageId);
-        existingImage.setUrl("/stary.jpg");
-        existingImage.setProduct(standardProduct);
+        String fileUrl = image1.getUrl();
+        // imageRepository.findById mockováno v setUp()
 
-        when(imageRepository.findById(imageId)).thenReturn(Optional.of(existingImage));
-        doNothing().when(imageRepository).delete(any(Image.class));
+        doNothing().when(imageRepository).delete(image1);
+        doNothing().when(fileStorageService).deleteFile(fileUrl);
 
         productService.deleteImage(imageId);
 
         verify(imageRepository).findById(imageId);
-        verify(imageRepository).delete(existingImage);
+        verify(imageRepository).delete(image1);
+        verify(fileStorageService).deleteFile(fileUrl);
     }
 
     @Test
-    @DisplayName("deleteImage vyhodí výjimku pro neexistující ID obrázku")
-    void deleteImage_NotFound() {
+    @DisplayName("[deleteImage] Smaže entitu, ale nevolá deleteFile, pokud URL chybí")
+    void deleteImage_Success_NoUrlSkipFileDelete() throws IOException {
+        long imageId = 50L;
+        image1.setUrl(null); // Odebrání URL
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(image1));
+        doNothing().when(imageRepository).delete(image1);
+
+        productService.deleteImage(imageId);
+
+        verify(imageRepository).findById(imageId);
+        verify(imageRepository).delete(image1);
+        verify(fileStorageService, never()).deleteFile(anyString());
+    }
+
+    @Test
+    @DisplayName("[deleteImage] Vyhodí výjimku pro neexistující ID obrázku")
+    void deleteImage_NotFound() throws IOException {
         long nonExistentImageId = 999L;
         when(imageRepository.findById(nonExistentImageId)).thenReturn(Optional.empty());
 
@@ -557,6 +613,30 @@ class ProductServiceTest {
         });
         assertTrue(exception.getMessage().contains("Image not found"));
         verify(imageRepository, never()).delete(any());
+        verify(fileStorageService, never()).deleteFile(anyString());
+    }
+
+    @Test
+    @DisplayName("[deleteImage] Zpracuje chybu při mazání souboru, ale entitu smaže")
+    void deleteImage_FileDeleteError_EntityStillDeleted() throws IOException {
+        long imageId = 50L;
+        String fileUrl = image1.getUrl();
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(image1));
+        doNothing().when(imageRepository).delete(image1);
+        // Simulace chyby při mazání souboru
+        doThrow(new IOException("Permission denied")).when(fileStorageService).deleteFile(fileUrl);
+
+        // Očekáváme, že service metoda vyhodí RuntimeException, která zabalí IOException
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            productService.deleteImage(imageId);
+        });
+        assertTrue(exception.getMessage().contains("Failed to delete image"));
+        assertTrue(exception.getCause() instanceof IOException);
+
+        // Ověříme, že se pokusilo smazat obojí
+        verify(imageRepository).findById(imageId);
+        verify(imageRepository).delete(image1); // Entita se stále smaže (v rámci transakce)
+        verify(fileStorageService).deleteFile(fileUrl); // Pokus o smazání souboru proběhl
     }
 
     // --- Testy Generování Slugu ---

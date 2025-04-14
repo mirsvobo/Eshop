@@ -6,10 +6,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.model.*; // Model importy
-import org.example.eshop.repository.AddonsRepository;
-import org.example.eshop.repository.DesignRepository;
-import org.example.eshop.repository.GlazeRepository;
-import org.example.eshop.repository.RoofColorRepository;
+import org.example.eshop.repository.*;
 import org.example.eshop.service.*; // Service importy
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
@@ -27,13 +24,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections;
-import java.util.HashSet; // <-- Zajištěn import
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -49,6 +44,7 @@ public class AdminProductController {
     private final GlazeRepository glazeRepository;
     private final RoofColorRepository roofColorRepository;
     private final AddonsRepository addonsRepository;
+    private final ImageRepository imageRepository;
 
     @Autowired
     public AdminProductController(ProductService productService,
@@ -56,13 +52,14 @@ public class AdminProductController {
                                   DesignRepository designRepository,
                                   GlazeRepository glazeRepository,
                                   RoofColorRepository roofColorRepository,
-                                  AddonsRepository addonsRepository) {
+                                  AddonsRepository addonsRepository, ImageRepository imageRepository) {
         this.productService = productService;
         this.taxRateService = taxRateService;
         this.designRepository = designRepository;
         this.glazeRepository = glazeRepository;
         this.roofColorRepository = roofColorRepository;
         this.addonsRepository = addonsRepository;
+        this.imageRepository = imageRepository;
     }
 
     @ModelAttribute("currentUri")
@@ -152,11 +149,14 @@ public class AdminProductController {
             Hibernate.initialize(product.getAvailableGlazes());
             Hibernate.initialize(product.getAvailableRoofColors());
             Hibernate.initialize(product.getAvailableAddons());
+            Hibernate.initialize(product.getImages()); // <-- DŮLEŽITÉ pro zobrazení obrázků
+
             if (product.getConfigurator() != null) {
                 Hibernate.initialize(product.getConfigurator());
             }
 
             model.addAttribute("product", product);
+            model.addAttribute("newImage", new Image());
             addCommonFormAttributes(model);
             addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Upravit produkt: " + product.getName());
@@ -171,7 +171,116 @@ public class AdminProductController {
             return "redirect:/admin/products";
         }
     }
+    @PostMapping("/{productId}/images/upload")
+    public String uploadProductImage(@PathVariable Long productId,
+                                     @RequestParam("imageFile") MultipartFile imageFile,
+                                     @RequestParam(required = false) String altText,
+                                     @RequestParam(required = false) String titleText,
+                                     @RequestParam(required = false) Integer displayOrder,
+                                     RedirectAttributes redirectAttributes) {
+        log.info("Attempting to upload image for product ID: {}", productId);
+        if (imageFile.isEmpty()) {
+            redirectAttributes.addFlashAttribute("imageError", "Nebyl vybrán žádný soubor k nahrání.");
+            return "redirect:/admin/products/" + productId + "/edit";
+        }
 
+        try {
+            productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder);
+            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek byl úspěšně nahrán.");
+            log.info("Image uploaded successfully for product ID: {}", productId);
+        } catch (IOException e) {
+            log.error("Failed to store image file for product ID {}: {}", productId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Chyba při ukládání souboru: " + e.getMessage());
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot upload image. Product not found: ID={}", productId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Produkt nenalezen."); // Obecná chyba, přesměrujeme na seznam
+            return "redirect:/admin/products";
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid argument during image upload for product ID {}: {}", productId, e.getMessage());
+            redirectAttributes.addFlashAttribute("imageError", "Chyba nahrávání: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error uploading image for product ID {}: {}", productId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Při nahrávání obrázku nastala neočekávaná chyba.");
+        }
+
+        return "redirect:/admin/products/" + productId + "/edit";
+    }
+
+    /**
+     * Smaže existující obrázek produktu.
+     */
+    @PostMapping("/images/{imageId}/delete")
+    public String deleteProductImage(@PathVariable Long imageId, RedirectAttributes redirectAttributes) {
+        log.warn("Attempting to DELETE image ID: {}", imageId);
+        Long productId = null;
+        try {
+            // Získáme ID produktu PŘED smazáním obrázku pro správné přesměrování
+            Optional<Image> imageOpt = imageRepository.findById(imageId); // Použijeme ImageRepository
+            if (imageOpt.isPresent() && imageOpt.get().getProduct() != null) {
+                productId = imageOpt.get().getProduct().getId();
+            }
+
+            productService.deleteImage(imageId);
+            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek byl úspěšně smazán.");
+            log.info("Image ID {} deleted successfully.", imageId);
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot delete image. Image not found: ID={}", imageId, e);
+            redirectAttributes.addFlashAttribute("imageError", e.getMessage());
+            // Pokud obrázek nebyl nalezen, nevíme ID produktu, přesměrujeme obecně
+            return "redirect:/admin/products";
+        } catch (Exception e) {
+            log.error("Error deleting image ID {}: {}", imageId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Při mazání obrázku nastala chyba: " + e.getMessage());
+        }
+        // Přesměrujeme zpět na editaci produktu, ke kterému obrázek patřil (pokud známe ID)
+        return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
+    }
+
+    // Metoda pro aktualizaci pořadí obrázků (pokud bude potřeba)
+    @PostMapping("/images/update-order")
+    @Transactional
+    public String updateImageOrder(@RequestParam Map<String, String> params, RedirectAttributes redirectAttributes) {
+        Long productId = null; // Budeme potřebovat ID produktu pro přesměrování
+        log.info("Attempting to update image display order. Params: {}", params);
+        try {
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                if (entry.getKey().startsWith("displayOrder_")) {
+                    Long imageId = Long.parseLong(entry.getKey().substring("displayOrder_".length()));
+                    Integer order = null;
+                    try {
+                        order = Integer.parseInt(entry.getValue());
+                        if (order < 0) order = 0; // Zajistit nezáporné pořadí
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid display order value '{}' for image ID {}. Skipping.", entry.getValue(), imageId);
+                        continue; // Přeskočit neplatné hodnoty
+                    }
+
+                    Image image = imageRepository.findById(imageId)
+                            .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
+                    if (productId == null && image.getProduct() != null) {
+                        productId = image.getProduct().getId(); // Získáme ID produktu z prvního obrázku
+                    }
+                    if (!Objects.equals(image.getDisplayOrder(), order)) {
+                        image.setDisplayOrder(order);
+                        imageRepository.save(image);
+                        log.debug("Updated display order for image ID {} to {}", imageId, order);
+                    }
+                }
+            }
+            redirectAttributes.addFlashAttribute("imageSuccess", "Pořadí obrázků bylo aktualizováno.");
+            log.info("Image display order update process finished.");
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot update image order. Image not found.", e);
+            redirectAttributes.addFlashAttribute("imageError", e.getMessage());
+            return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
+        } catch (Exception e) {
+            log.error("Error updating image order: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Při aktualizaci pořadí obrázků nastala chyba.");
+        }
+        return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
+    }
 
     /**
      * Zpracuje vytvoření nového produktu (včetně asociací).

@@ -5,9 +5,55 @@
 <head>
   <title th:text="${pageTitle ?: 'Správa Produktu'}">Správa Produktu</title>
   <style>
+    /* Základní styly */
     .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
     .assoc-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: .25rem; background-color: #f8f9fa; }
     .configurator-section { background-color: #f8f9fa; }
+
+    /* Styly pro správu obrázků */
+    .image-management-section { margin-top: 1.5rem; }
+    .image-list { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; padding: 0; margin-bottom: 1.5rem;}
+    .image-list li {
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      background-color: #fff;
+      text-align: center;
+      width: 160px; /* Trochu širší pro inputy */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .image-list img {
+      max-width: 100px;
+      max-height: 100px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 0.5rem auto;
+      border: 1px solid #eee;
+    }
+    .image-list .image-details {
+      font-size: 0.8em;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+      word-wrap: break-word; /* Zalomení dlouhého textu */
+      flex-grow: 1; /* Aby zabral místo */
+    }
+    .image-list .actions {
+      margin-top: auto; /* Odsune akce dolů */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 5px; /* Mezera mezi prvky */
+    }
+    .image-list .actions .order-input {
+      width: 60px; /* Pevná šířka pro pořadí */
+      flex-shrink: 0; /* Zabrání smrštění */
+    }
+    .image-list .actions .delete-btn {
+      flex-shrink: 0; /* Zabrání smrštění */
+    }
+    .upload-form .form-text { margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -22,17 +68,17 @@
     </div>
   </div>
 
-  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-    <span th:text="${errorMessage}"></span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-
   <form th:object="${product}"
         th:action="${product.id == null} ? @{/admin/products} : @{/admin/products/{id}(id=${product.id})}"
-        method="post" novalidate>
+        method="post" novalidate id="mainProductForm">
 
     <input type="hidden" name="_method" th:if="${product.id != null}" value="POST"/>
+    <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
 
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+      <span th:text="${errorMessage}"></span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
     <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger alert-dismissible fade show" role="alert">
       <span>Chyby ve formuláři:</span>
       <ul>
@@ -40,6 +86,7 @@
       </ul>
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
+
     <div class="row">
       <div class="col-md-8">
         <div class="card mb-4">
@@ -224,7 +271,6 @@
             <div class="col-md-6"><label for="configMinHeight" class="form-label">Min výška</label><input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMinHeight" th:field="*{configurator.minHeight}"><div th:if="${#fields.hasErrors('configurator.minHeight')}" class="invalid-feedback" th:errors="*{configurator.minHeight}"></div></div>
             <div class="col-md-6"><label for="configMaxHeight" class="form-label">Max výška</label><input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configMaxHeight" th:field="*{configurator.maxHeight}"><div th:if="${#fields.hasErrors('configurator.maxHeight')}" class="invalid-feedback" th:errors="*{configurator.maxHeight}"></div></div>
           </div>
-
           <hr>
           <h6 class="card-subtitle my-2 text-muted">Ceny za rozměry (za cm)</h6>
           <div class="row g-3 mb-3">
@@ -239,7 +285,6 @@
             <div class="col-md-6"><label for="configPriceCmHeightCZK" class="form-label">Cena/cm výšky (CZK)</label><input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightCZK" th:field="*{configurator.pricePerCmHeightCZK}"><div th:if="${#fields.hasErrors('configurator.pricePerCmHeightCZK')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightCZK}"></div></div>
             <div class="col-md-6"><label for="configPriceCmHeightEUR" class="form-label">Cena/cm výšky (EUR)</label><input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configPriceCmHeightEUR" th:field="*{configurator.pricePerCmHeightEUR}"><div th:if="${#fields.hasErrors('configurator.pricePerCmHeightEUR')}" class="invalid-feedback" th:errors="*{configurator.pricePerCmHeightEUR}"></div></div>
           </div>
-
           <hr>
           <h6 class="card-subtitle my-2 text-muted">Ceny za volitelné prvky</h6>
           <div class="row g-3 mb-3">
@@ -259,12 +304,85 @@
             <div class="col-md-6"><label for="configShedPriceEUR" class="form-label">Pevná cena za zahr. domek (EUR)</label><input type="number" step="0.01" class="form-control form-control-sm" th:errorclass="is-invalid" id="configShedPriceEUR" th:field="*{configurator.shedPriceEUR}"><div th:if="${#fields.hasErrors('configurator.shedPriceEUR')}" class="invalid-feedback" th:errors="*{configurator.shedPriceEUR}"></div></div>
           </div>
         </div>
-      </div> </div> </div> <div class="mt-4 d-flex justify-content-end">
+      </div>
+
+    </div> </div> <div class="mt-4 d-flex justify-content-end">
     <a th:href="@{/admin/products}" class="btn btn-secondary me-2">Zrušit</a>
     <button type="submit" class="btn btn-primary">Uložit Produkt</button>
   </div>
-  </form>
 
+  </form> <div class="card mb-4 image-management-section" th:if="${product.id != null}">
+  <div class="card-header">Správa obrázků</div>
+  <div class="card-body">
+
+    <h5>Existující obrázky</h5>
+    <div th:if="${imageSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+      <span th:text="${imageSuccess}"></span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${imageError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+      <span th:text="${imageError}"></span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <form th:if="${product.images != null and not #lists.isEmpty(product.images)}"
+          th:action="@{/admin/products/images/update-order}" method="post" id="update-image-order-form">
+      <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+
+      <ul class="image-list">
+        <li th:each="img : ${product.images}">
+          <img th:src="${img.url}" th:alt="${img.altText ?: 'Obrázek produktu'}" />
+          <div class="image-details" th:title="${'Alt: ' + (img.altText ?: '') + '\nTitle: ' + (img.titleText ?: '')}">
+            <span th:text="${#strings.abbreviate(img.altText, 20) ?: '(bez alt)'}"></span>
+          </div>
+          <div class="actions">
+            <input type="number" class="form-control form-control-sm order-input"
+                   th:name="|displayOrder_${img.id}|" th:value="${img.displayOrder ?: 0}" min="0" title="Pořadí zobrazení">
+
+            <form th:action="@{/admin/products/images/{imageId}/delete(imageId=${img.id})}" method="post" class="d-inline delete-btn" onsubmit="return confirm('Opravdu chcete smazat tento obrázek?');">
+              <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Smazat obrázek">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </div>
+        </li>
+      </ul>
+      <button type="submit" class="btn btn-sm btn-secondary mb-3">Aktualizovat pořadí</button>
+    </form>
+    <p th:if="${product.images == null or #lists.isEmpty(product.images)}" class="text-muted">
+      K tomuto produktu zatím nebyly přidány žádné obrázky.
+    </p>
+
+    <hr>
+
+    <h5>Nahrát nový obrázek</h5>
+    <form th:action="@{/admin/products/{productId}/images/upload(productId=${product.id})}"
+          method="post" enctype="multipart/form-data" class="upload-form">
+      <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+
+      <div class="mb-3">
+        <label for="imageFile" class="form-label">Vybrat soubor <span class="text-danger">*</span></label>
+        <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/jpeg, image/png, image/webp, image/gif" required>
+        <div class="form-text">Povolené formáty: JPG, PNG, WEBP, GIF. Max. velikost: 10MB.</div>
+      </div>
+      <div class="mb-3">
+        <label for="altText" class="form-label">Alternativní text (Alt)</label>
+        <input type="text" class="form-control" id="altText" name="altText" placeholder="Krátký popis obrázku pro SEO">
+      </div>
+      <div class="mb-3">
+        <label for="titleText" class="form-label">Titulek obrázku (Title)</label>
+        <input type="text" class="form-control" id="titleText" name="titleText" placeholder="Text, který se zobrazí při najetí myši">
+      </div>
+      <div class="mb-3">
+        <label for="displayOrder" class="form-label">Pořadí zobrazení</label>
+        <input type="number" class="form-control" id="displayOrder" name="displayOrder" min="0" placeholder="0 (hlavní), 1, 2...">
+        <div class="form-text">Nižší číslo se zobrazí dříve. Pokud nevyplníte, přidá se na konec.</div>
+      </div>
+      <button type="submit" class="btn btn-success">Nahrát obrázek</button>
+    </form>
+  </div>
+</div>
 </section>
 
 </body>

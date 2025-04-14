@@ -15,7 +15,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.util.*; // Import pro Set, Map atd.
@@ -27,6 +29,7 @@ import static org.example.eshop.service.CustomerService.log;
 public class ProductService implements PriceConstants {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
+    @Autowired private FileStorageService fileStorageService; // <-- Přidat novou závislost
 
     // Konstanty pro generování slugu
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
@@ -450,51 +453,7 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím deleteProduct (soft delete). ID: {}", id);
     }
 
-    // --- Správa obrázků ---
-    @Transactional
-    public Image addProductImage(Long productId, Image image) {
-        logger.info(">>> [ProductService] Vstupuji do addProductImage. Product ID: {}", productId);
-        Image savedImage = null;
-        try {
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId));
-            if (image == null || !StringUtils.hasText(image.getUrl())) {
-                throw new IllegalArgumentException("Image or URL missing.");
-            }
-            if (image.getDisplayOrder() == null || image.getDisplayOrder() < 0) {
-                image.setDisplayOrder(product.getImages() != null ? product.getImages().size() : 0); // Přidat na konec
-            }
-            image.setProduct(product); // Asociace PŘED uložením
-            savedImage = imageRepository.save(image);
-            // Není třeba explicitně přidávat do kolekce produktu, pokud je CascadeType.ALL/PERSIST
-            // product.getImages().add(savedImage); -> způsobilo by dvojí uložení nebo chybu
-            logger.info("[ProductService] Obrázek uložen (ID: {}) a přiřazen k produktu ID: {}", savedImage.getId(), productId);
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v addProductImage pro Produkt ID {}: {} !!!", productId, e.getMessage(), e);
-            throw e;
-        }
-        logger.info(">>> [ProductService] Opouštím addProductImage. Product ID: {}", productId);
-        return savedImage;
-    }
 
-    @Transactional
-    public void deleteImage(Long imageId) {
-        logger.info(">>> [ProductService] Vstupuji do deleteImage. Image ID: {}", imageId);
-        try {
-            // Není třeba explicitně hledat, deleteById stačí a vyhodí chybu, pokud neexistuje
-            // Image image = imageRepository.findById(imageId)
-            //        .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
-            if (!imageRepository.existsById(imageId)) {
-                throw new EntityNotFoundException("Image not found: " + imageId);
-            }
-            imageRepository.deleteById(imageId); // Smaže obrázek, orphanRemoval v Product by mělo stačit
-            logger.info("[ProductService] Obrázek ID {} smazán.", imageId);
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v deleteImage pro ID {}: {} !!!", imageId, e.getMessage(), e);
-            throw e;
-        }
-        logger.info(">>> [ProductService] Opouštím deleteImage. Image ID: {}", imageId);
-    }
 
     // --- Výpočet ceny produktu "Na míru" ---
     @Transactional(readOnly = true)
@@ -656,5 +615,134 @@ public class ProductService implements PriceConstants {
         // Logování vygenerovaného slugu může být užitečné pro debugging
         logger.trace("Generated slug '{}' from input '{}'", slug, input);
         return slug;
+    }
+    /**
+     * Uloží nahraný soubor, vytvoří Image entitu a přiřadí ji k produktu.
+     *
+     * @param productId ID produktu.
+     * @param file Nahraný soubor.
+     * @param altText Alternativní text obrázku.
+     * @param titleText Titulek obrázku.
+     * @param displayOrder Pořadí zobrazení.
+     * @return Vytvořená a uložená Image entita.
+     * @throws IOException Pokud dojde k chybě při ukládání souboru.
+     * @throws EntityNotFoundException Pokud produkt s daným ID neexistuje.
+     * @throws IllegalArgumentException Pokud je soubor neplatný.
+     */
+    @Transactional
+    public Image addImageToProduct(Long productId, MultipartFile file, String altText, String titleText, Integer displayOrder) throws IOException {
+        logger.info(">>> [ProductService] Attempting to add image to product ID: {}", productId);
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Cannot add an empty image file.");
+        }
+
+        // Uložení souboru pomocí FileStorageService
+        String fileUrl = fileStorageService.storeFile(file, "products"); // Ukládáme do podadresáře "products"
+
+        // Vytvoření nové Image entity
+        Image newImage = new Image();
+        newImage.setUrl(fileUrl);
+        newImage.setAltText(altText);
+        newImage.setTitleText(titleText);
+        newImage.setDisplayOrder(displayOrder != null ? displayOrder : 0); // Default na 0 pokud není zadáno
+
+        // Zavolání stávající metody pro přiřazení k produktu a uložení entity Image
+        Image savedImage = addProductImage(productId, newImage); // Tato metoda již loguje
+        logger.info(">>> [ProductService] Image successfully added and associated with product ID: {}", productId);
+        return savedImage;
+    }
+
+    // Stávající metoda addProductImage (zůstává pro použití novou metodou)
+    @Transactional
+    public Image addProductImage(Long productId, Image image) {
+        logger.info(">>> [ProductService] Vstupuji do addProductImage (Image entity). Product ID: {}", productId);
+        Image savedImage = null;
+        try {
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId));
+            if (image == null || !StringUtils.hasText(image.getUrl())) {
+                throw new IllegalArgumentException("Image or URL missing.");
+            }
+            // --- ZMĚNA: Výpočet displayOrder, pokud není nastaveno ---
+            if (image.getDisplayOrder() == null) {
+                // Najdeme maximální displayOrder pro daný produkt a přičteme 1
+                int maxOrder = product.getImages().stream()
+                        .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
+                        .max()
+                        .orElse(-1); // Pokud nejsou žádné obrázky, max je -1
+                image.setDisplayOrder(maxOrder + 1);
+                logger.debug("Calculated next displayOrder: {}", image.getDisplayOrder());
+            }
+            // --- KONEC ZMĚNY ---
+
+            image.setProduct(product); // Asociace PŘED uložením
+            savedImage = imageRepository.save(image);
+
+            // --- DŮLEŽITÉ: Aktualizace kolekce v Product entitě (pokud není řízeno JPA automaticky) ---
+            // Někdy je potřeba explicitně přidat, záleží na konfiguraci Cascade a Fetch
+            // if (product.getImages() == null) {
+            //     product.setImages(new ArrayList<>());
+            // }
+            // if (!product.getImages().contains(savedImage)) { // Zabráníme duplicitám, pokud by JPA přidalo samo
+            //     product.getImages().add(savedImage);
+            //     productRepository.save(product); // Uložíme i produkt pro aktualizaci kolekce
+            //     logger.debug("Explicitly added image to product's image collection.");
+            // }
+            // Pokud používáte CascadeType.ALL a orphanRemoval=true na @OneToMany v Product,
+            // toto explicitní přidávání a ukládání produktu by nemělo být nutné.
+
+            logger.info("[ProductService] Obrázek (Image entity) uložen (ID: {}) a přiřazen k produktu ID: {}", savedImage.getId(), productId);
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v addProductImage (Image entity) pro Produkt ID {}: {} !!!", productId, e.getMessage(), e);
+            throw e;
+        }
+        logger.info(">>> [ProductService] Opouštím addProductImage (Image entity). Product ID: {}", productId);
+        return savedImage;
+    }
+
+    /**
+     * Smaže obrázek produktu.
+     * Zahrnuje i smazání fyzického souboru.
+     * @param imageId ID obrázku ke smazání.
+     */
+    @Transactional
+    public void deleteImage(Long imageId) {
+        logger.warn(">>> [ProductService] Attempting to DELETE image ID: {}", imageId);
+        try {
+            Image image = imageRepository.findById(imageId)
+                    .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
+
+            String fileUrl = image.getUrl(); // Získáme URL před smazáním entity
+
+            // Smazání entity z DB (orphanRemoval by měl fungovat, pokud je nastaven v Product)
+            imageRepository.delete(image);
+            // Alternativně, pokud není orphanRemoval, museli bychom najít produkt a odebrat z kolekce:
+            // Product product = image.getProduct();
+            // if (product != null) {
+            //     product.getImages().remove(image);
+            //     image.setProduct(null); // Odebrat vazbu
+            //     imageRepository.delete(image); // Pak smazat obrázek
+            //     productRepository.save(product); // Uložit produkt
+            // } else {
+            //     imageRepository.delete(image); // Smazat jen obrázek, pokud nemá produkt
+            // }
+
+            log.info("[ProductService] Image entity ID {} deleted from database.", imageId);
+
+            // Smazání souboru (pokud máme URL)
+            if (StringUtils.hasText(fileUrl)) {
+                fileStorageService.deleteFile(fileUrl);
+            } else {
+                log.warn("Cannot delete physical file for image ID {}: URL is missing.", imageId);
+            }
+
+        } catch (EntityNotFoundException e) {
+            logger.error("!!! [ProductService] Image ID {} not found for deletion.", imageId);
+            throw e; // Necháme projít výjimku
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Error deleting image ID {}: {} !!!", imageId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete image " + imageId, e); // Obecná chyba
+        }
+        logger.info(">>> [ProductService] Image deletion process finished for ID: {}", imageId);
     }
 }
