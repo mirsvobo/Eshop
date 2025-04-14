@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async; // <-- PŘIDAT IMPORT
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
 
     private static final Logger log = LoggerFactory.getLogger(SuperFakturaInvoiceService.class);
 
+    // ... (ostatní fieldy a konstanty zůstávají stejné) ...
     @Value("${superfaktura.api.email}")
     private String sfApiEmail;
     @Value("${superfaktura.api.key}")
@@ -57,7 +59,6 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
     private static final String INVOICES_ENDPOINT_CREATE = "/invoices/create.json";
     private static final String INVOICES_ENDPOINT_SEND_EMAIL_ACTION = "/invoices/send";
     private static final String INVOICES_ENDPOINT_MARK_AS_SENT = "/invoices/mark_as_sent";
-    // Endpoint pro označení platby (přijímá ID faktury v URL)
     private static final String INVOICES_ENDPOINT_PAY_PATTERN = "/invoice_payments/add/invoice_id:%d.json";
     private static final String INVOICES_ENDPOINT_PDF_WITH_TOKEN_PATTERN = "/invoices/pdf/%d/token:%s";
 
@@ -66,23 +67,29 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
     private static final int PROFORMA_DUE_DAYS = 7;
     private static final int FINAL_DUE_DAYS = 14;
     private static final Long TAX_DOCUMENT_SEQUENCE_ID = 342836L; // ID číselné řady pro DDKP (ověřit!)
-    private static final String PAYMENT_STATUS_PAID = "PAID"; // Přidáno pro interní použití
+    private static final String PAYMENT_STATUS_PAID = "PAID";
 
     // --- Implementace metod InvoiceService ---
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRES_NEW) // Spustí se v nové transakci
+    @Async // <-- PŘIDÁNA ANOTACE
     public void generateProformaInvoice(Order order) {
+        // Reload je důležitý pro asynchronní metody, abychom měli čerstvá data
         Order freshOrder = reloadOrder(order.getId());
-        log.info("Attempting to generate SuperFaktura PROFORMA invoice for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
-        if (!isValidForInvoice(freshOrder))
-            throw new IllegalStateException("Order " + freshOrder.getOrderCode() + " is not valid for proforma generation.");
+        log.info("ASYNC: Attempting to generate SuperFaktura PROFORMA invoice for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
+        // ... (zbytek logiky metody zůstává stejný) ...
+        if (!isValidForInvoice(freshOrder)) {
+            log.error("ASYNC: Order {} is not valid for proforma generation.", freshOrder.getOrderCode());
+            // V @Async metodě bychom neměli házet výjimku, která by nebyla zachycena, raději jen logovat
+            return;
+        }
         if (freshOrder.getDepositAmount() == null || freshOrder.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Proforma requested for order {} without deposit. Skipping.", freshOrder.getOrderCode());
+            log.warn("ASYNC: Proforma requested for order {} without deposit. Skipping.", freshOrder.getOrderCode());
             return;
         }
         if (freshOrder.getSfProformaInvoiceId() != null) {
-            log.warn("Proforma already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfProformaInvoiceId());
+            log.warn("ASYNC: Proforma already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfProformaInvoiceId());
             return;
         }
 
@@ -93,96 +100,37 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
                 Long sfInvoiceId = responseData.get("Invoice").get("id").asLong();
                 String sfInvoiceNumber = getInvoiceNumberFromResponse(responseData);
                 String pdfUrl = getPdfDownloadUrlFromResponse(responseData, sfInvoiceId);
-                log.info("Parsed Proforma Invoice response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
-                freshOrder.setSfProformaInvoiceId(sfInvoiceId);
-                freshOrder.setProformaInvoiceNumber(sfInvoiceNumber);
-                freshOrder.setSfProformaPdfUrl(pdfUrl);
-                orderRepository.save(freshOrder);
-                log.info("Order {} updated with Proforma Invoice details.", freshOrder.getOrderCode());
+                log.info("ASYNC: Parsed Proforma Invoice response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
+
+                // Aktualizace objednávky v nové transakci
+                updateOrderWithInvoiceData(freshOrder.getId(), sfInvoiceId, sfInvoiceNumber, pdfUrl, "proforma");
+
             } else {
-                throw new RuntimeException("Failed to parse Proforma Invoice ID from SF response for order " + freshOrder.getOrderCode());
+                log.error("ASYNC: Failed to parse Proforma Invoice ID from SF response for order {}", freshOrder.getOrderCode());
             }
-        } catch (RuntimeException e) {
-            log.error("Failed to generate Proforma Invoice for order {}: {}", freshOrder.getOrderCode(), e.getMessage(), e);
-            throw e;
+        } catch (Exception e) { // Chytáme obecnější Exception
+            log.error("ASYNC: Failed to generate Proforma Invoice for order {}: {}", freshOrder.getOrderCode(), e.getMessage(), e);
+            // Zde neodhazujeme výjimku dále, aby neovlivnila volající proces
         }
-    }
-    // Nová pomocná metoda
-    private List<Map<String, Object>> buildStandardInvoiceItemsWithRounding(Order order) {
-        // 1. Získat standardní položky a dopravu (jako v původní buildStandardInvoiceItems)
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (OrderItem oi : order.getOrderItems()) {
-            Map<String, Object> item = new HashMap<>();
-            String n = StringUtils.hasText(oi.getProductName()) ? oi.getProductName() : "Položka " + (oi.getProduct() != null ? oi.getProduct().getId() : "N/A");
-            if (StringUtils.hasText(oi.getVariantInfo()) && !oi.getVariantInfo().equalsIgnoreCase("Produkt na míru"))
-                n += " (" + oi.getVariantInfo() + ")";
-            item.put("name", n);
-            item.put("description", buildItemDescription(oi)); // Můžeš zjednodušit, pokud popis není třeba
-            item.put("quantity", oi.getCount());
-            item.put("unit", "ks");
-            item.put("unit_price", Optional.ofNullable(oi.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO));
-            BigDecimal t = Optional.ofNullable(oi.getTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-            item.put("tax", t);
-            item.put("sku", oi.getSku());
-            item.put("currency", order.getCurrency());
-            if (oi.isReverseCharge()) item.put("transfer_tax_liability", 1);
-            items.add(item);
-        }
-        if (order.getShippingCostWithoutTax() != null && order.getShippingCostWithoutTax().compareTo(BigDecimal.ZERO) > 0) {
-            Map<String, Object> si = new HashMap<>();
-            si.put("name", "Doprava");
-            si.put("quantity", 1);
-            si.put("unit", "ks");
-            si.put("unit_price", order.getShippingCostWithoutTax());
-            BigDecimal st = Optional.ofNullable(order.getShippingTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-            si.put("tax", st);
-            si.put("currency", order.getCurrency());
-            items.add(si);
-        }
-
-        // 2. Vypočítat rozdíl zaokrouhlení
-        BigDecimal originalTotal = order.getOriginalTotalPrice();
-        BigDecimal roundedTotal = order.getTotalPrice();
-
-        if (originalTotal != null && roundedTotal != null && originalTotal.compareTo(roundedTotal) != 0) {
-            BigDecimal roundingDifference = originalTotal.subtract(roundedTotal).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-            log.debug("Calculating rounding difference for order {}: Original={}, Rounded={}, Difference={}",
-                    order.getOrderCode(), originalTotal, roundedTotal, roundingDifference);
-
-            if (roundingDifference.compareTo(BigDecimal.ZERO) != 0) {
-                Map<String, Object> roundingItem = new HashMap<>();
-                roundingItem.put("name", "Zaokrouhlení");
-                roundingItem.put("quantity", 1);
-                roundingItem.put("unit", ""); // Jednotka může být prázdná
-                // Cena za jednotku je záporná hodnota rozdílu
-                roundingItem.put("unit_price", roundingDifference.negate());
-                // Daň pro zaokrouhlení - obvykle 0%, ale ověř si u účetní!
-                roundingItem.put("tax", BigDecimal.ZERO.setScale(2));
-                roundingItem.put("currency", order.getCurrency());
-                items.add(roundingItem);
-                log.info("Added rounding item to SF payload for order {}: Amount={}", order.getOrderCode(), roundingItem.get("unit_price"));
-            }
-        } else {
-            log.debug("No rounding difference detected or original price missing for order {}. Original: {}, Rounded: {}",
-                    order.getOrderCode(), originalTotal, roundedTotal);
-        }
-
-        return items;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async // <-- PŘIDÁNA ANOTACE
     public void generateTaxDocumentForDeposit(Order order) {
         Order freshOrder = reloadOrder(order.getId());
-        log.info("Attempting to generate SuperFaktura TAX DOCUMENT for paid deposit for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
-        if (!isValidForInvoice(freshOrder))
-            throw new IllegalStateException("Order " + freshOrder.getOrderCode() + " is not valid for Tax Document generation.");
+        log.info("ASYNC: Attempting to generate SuperFaktura TAX DOCUMENT for paid deposit for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
+        // ... (zbytek logiky metody zůstává stejný) ...
+        if (!isValidForInvoice(freshOrder)) {
+            log.error("ASYNC: Order {} is not valid for Tax Document generation.", freshOrder.getOrderCode());
+            return;
+        }
         if (freshOrder.getDepositAmount() == null || freshOrder.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0 || freshOrder.getDepositPaidDate() == null) {
-            log.warn("Tax Document requested for order {} but deposit/paid date missing. Skipping.", freshOrder.getOrderCode());
+            log.warn("ASYNC: Tax Document requested for order {} but deposit/paid date missing. Skipping.", freshOrder.getOrderCode());
             return;
         }
         if (freshOrder.getSfTaxDocumentId() != null) {
-            log.warn("Tax Document already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfTaxDocumentId());
+            log.warn("ASYNC: Tax Document already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfTaxDocumentId());
             return;
         }
 
@@ -193,35 +141,37 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
                 Long sfInvoiceId = responseData.get("Invoice").get("id").asLong();
                 String sfInvoiceNumber = getInvoiceNumberFromResponse(responseData);
                 String pdfUrl = getPdfDownloadUrlFromResponse(responseData, sfInvoiceId);
-                log.info("Parsed Tax Document response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
-                freshOrder.setSfTaxDocumentId(sfInvoiceId);
-                freshOrder.setTaxDocumentNumber(sfInvoiceNumber);
-                freshOrder.setSfTaxDocumentPdfUrl(pdfUrl);
-                orderRepository.save(freshOrder);
-                log.info("Order {} updated with Tax Document details.", freshOrder.getOrderCode());
+                log.info("ASYNC: Parsed Tax Document response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
+
+                // Aktualizace objednávky v nové transakci
+                updateOrderWithInvoiceData(freshOrder.getId(), sfInvoiceId, sfInvoiceNumber, pdfUrl, "tax_document");
+
             } else {
-                throw new RuntimeException("Failed to parse Tax Document ID from SF response for order " + freshOrder.getOrderCode());
+                log.error("ASYNC: Failed to parse Tax Document ID from SF response for order {}", freshOrder.getOrderCode());
             }
-        } catch (RuntimeException e) {
-            log.error("Failed to generate Tax Document for order {}: {}", freshOrder.getOrderCode(), e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("ASYNC: Failed to generate Tax Document for order {}: {}", freshOrder.getOrderCode(), e.getMessage(), e);
         }
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async // <-- PŘIDÁNA ANOTACE
     public void generateFinalInvoice(Order order) {
         Order freshOrder = reloadOrder(order.getId());
-        log.info("Attempting to generate SuperFaktura FINAL invoice for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
-        if (!isValidForInvoice(freshOrder))
-            throw new IllegalStateException("Order " + freshOrder.getOrderCode() + " is not valid for final invoice generation.");
+        log.info("ASYNC: Attempting to generate SuperFaktura FINAL invoice for order: {}. Order currency: {}", freshOrder.getOrderCode(), freshOrder.getCurrency());
+        // ... (zbytek logiky metody zůstává stejný) ...
+        if (!isValidForInvoice(freshOrder)) {
+            log.error("ASYNC: Order {} is not valid for final invoice generation.", freshOrder.getOrderCode());
+            return;
+        }
         if (freshOrder.isFinalInvoiceGenerated() || freshOrder.getSfFinalInvoiceId() != null) {
-            log.warn("Final invoice already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfFinalInvoiceId());
+            log.warn("ASYNC: Final invoice already generated for order {}. SF ID: {}", freshOrder.getOrderCode(), freshOrder.getSfFinalInvoiceId());
             return;
         }
         if (freshOrder.getDepositAmount() != null && freshOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0 && freshOrder.getDepositPaidDate() == null) {
-            log.error("Cannot generate final invoice for order {} because deposit is not paid.", freshOrder.getOrderCode());
-            throw new IllegalStateException("Deposit must be paid before generating final invoice for order " + freshOrder.getOrderCode());
+            log.error("ASYNC: Cannot generate final invoice for order {} because deposit is not paid.", freshOrder.getOrderCode());
+            return; // V asynchronní metodě neodhazujeme výjimku
         }
 
         Map<String, Object> payload = buildFinalInvoicePayload(freshOrder);
@@ -231,27 +181,27 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
                 Long sfInvoiceId = responseData.get("Invoice").get("id").asLong();
                 String sfInvoiceNumber = getInvoiceNumberFromResponse(responseData);
                 String pdfUrl = getPdfDownloadUrlFromResponse(responseData, sfInvoiceId);
-                log.info("Parsed Final Invoice response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
-                freshOrder.setSfFinalInvoiceId(sfInvoiceId);
-                freshOrder.setFinalInvoiceNumber(sfInvoiceNumber);
-                freshOrder.setSfFinalInvoicePdfUrl(pdfUrl);
-                freshOrder.setFinalInvoiceGenerated(true);
-                orderRepository.save(freshOrder);
-                log.info("Order {} updated with Final Invoice details.", freshOrder.getOrderCode());
+                log.info("ASYNC: Parsed Final Invoice response for order {}: ID={}, Number={}, PDF URL={}", freshOrder.getOrderCode(), sfInvoiceId, sfInvoiceNumber, pdfUrl);
+
+                // Aktualizace objednávky v nové transakci
+                updateOrderWithInvoiceData(freshOrder.getId(), sfInvoiceId, sfInvoiceNumber, pdfUrl, "final");
+
             } else {
-                throw new RuntimeException("Failed to parse Final Invoice ID from SF response for order " + freshOrder.getOrderCode());
+                log.error("ASYNC: Failed to parse Final Invoice ID from SF response for order {}", freshOrder.getOrderCode());
             }
-        } catch (RuntimeException e) {
-            log.error("Failed to generate Final Invoice for order {}: {}", freshOrder.getOrderCode(), e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            log.error("ASYNC: Failed to generate Final Invoice for order {}: {}", freshOrder.getOrderCode(), e.getMessage(), e);
         }
     }
 
     // --- Další Veřejné Metody ---
 
+    @Async // <-- PŘIDÁNA ANOTACE
     public void sendInvoiceByEmail(Long sfInvoiceId, String customerEmail, String invoiceType, String orderCode) {
         if (sfInvoiceId == null || sfInvoiceId <= 0 || !StringUtils.hasText(customerEmail)) {
-            throw new IllegalArgumentException("Invalid invoice ID or customer email for sending.");
+            log.error("ASYNC: Invalid invoice ID or customer email for sending. SF ID: {}, Email: {}", sfInvoiceId, customerEmail);
+            // V @Async metodě neodhazujeme výjimku
+            return;
         }
         String endpoint = INVOICES_ENDPOINT_SEND_EMAIL_ACTION;
         Map<String, Object> payload = new HashMap<>();
@@ -260,20 +210,22 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         emailData.put("to", customerEmail);
         payload.put("Email", emailData);
         try {
-            log.trace("Sending email payload to {}: {}", endpoint, objectMapper.writeValueAsString(payload));
+            log.trace("ASYNC: Sending email payload to {}: {}", endpoint, objectMapper.writeValueAsString(payload));
+            // Volání API, chyby jsou logovány uvnitř callSuperfakturaApi
             callSuperfakturaApi(endpoint, HttpMethod.POST, payload, orderCode, "Send Email " + invoiceType);
-            log.info("Successfully requested sending of {} (SF ID: {}) for order {} to {}", invoiceType, sfInvoiceId, orderCode, customerEmail);
+            log.info("ASYNC: Successfully requested sending of {} (SF ID: {}) for order {} to {}", invoiceType, sfInvoiceId, orderCode, customerEmail);
         } catch (JsonProcessingException e) {
-            log.error("Error serializing email payload for SF ID {}: {}", sfInvoiceId, e.getMessage());
-            throw new RuntimeException("Internal error creating email request payload.", e);
-        } catch (RuntimeException e) {
-            throw new RuntimeException("Error sending " + invoiceType + " via SF API for order " + orderCode + ": " + e.getMessage(), e);
+            log.error("ASYNC: Error serializing email payload for SF ID {}: {}", sfInvoiceId, e.getMessage());
+        } catch (Exception e) { // Zachytáváme obecnější Exception
+            log.error("ASYNC: Error sending {} via SF API for order {}: {}", invoiceType, orderCode, e.getMessage(), e);
         }
     }
 
+    @Async // <-- PŘIDÁNA ANOTACE
     public void markInvoiceAsSent(Long sfInvoiceId, String customerEmail, String subject) {
         if (sfInvoiceId == null || sfInvoiceId <= 0) {
-            throw new IllegalArgumentException("Invalid invoice ID for marking as sent.");
+            log.error("ASYNC: Invalid invoice ID for marking as sent: {}", sfInvoiceId);
+            return;
         }
         String endpoint = INVOICES_ENDPOINT_MARK_AS_SENT;
         Map<String, Object> payload = new HashMap<>();
@@ -283,63 +235,86 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         emailData.put("subject", StringUtils.hasText(subject) ? subject : "Faktura odeslána");
         payload.put("InvoiceEmail", emailData);
         try {
-            log.trace("Marking as sent payload to {}: {}", endpoint, objectMapper.writeValueAsString(payload));
+            log.trace("ASYNC: Marking as sent payload to {}: {}", endpoint, objectMapper.writeValueAsString(payload));
             callSuperfakturaApi(endpoint, HttpMethod.POST, payload, "N/A", "Mark As Sent");
-            log.info("Successfully marked invoice {} as sent to {}", sfInvoiceId, customerEmail);
+            log.info("ASYNC: Successfully marked invoice {} as sent to {}", sfInvoiceId, customerEmail);
         } catch (JsonProcessingException e) {
-            log.error("Error serializing mark as sent payload for SF ID {}: {}", sfInvoiceId, e.getMessage());
-            throw new RuntimeException("Internal error creating mark as sent request payload.", e);
-        } catch (RuntimeException e) {
-            log.error("Failed to mark invoice {} as sent: {}", sfInvoiceId, e.getMessage(), e);
-            throw new RuntimeException("Error marking invoice " + sfInvoiceId + " as sent via SF API: " + e.getMessage(), e);
+            log.error("ASYNC: Error serializing mark as sent payload for SF ID {}: {}", sfInvoiceId, e.getMessage());
+        } catch (Exception e) {
+            log.error("ASYNC: Failed to mark invoice {} as sent: {}", sfInvoiceId, e.getMessage(), e);
         }
     }
 
-    /**
-     * Označí fakturu v SuperFaktuře jako zaplacenou. Volá endpoint /invoice_payments/add/invoice_id:{id}.json.
-     *
-     * @param sfInvoiceId   ID faktury v SuperFaktuře.
-     * @param amount        Zaplacená částka.
-     * @param paymentDate   Datum platby.
-     * @param sfPaymentType Kód typu platby dle SuperFaktury ("transfer", "cash", "card", ...).
-     * @param orderCode     Kód objednávky (pro logování).
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async // <-- PŘIDÁNA ANOTACE
+    @Transactional(propagation = Propagation.REQUIRES_NEW) // Spustí se v nové transakci
     public void markInvoiceAsPaidInSF(Long sfInvoiceId, BigDecimal amount, LocalDate paymentDate, String sfPaymentType, String orderCode) {
         if (sfInvoiceId == null || sfInvoiceId <= 0 || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || paymentDate == null) {
-            log.error("Invalid parameters for marking invoice as paid in SF. SF Invoice ID: {}, Amount: {}, Date: {}", sfInvoiceId, amount, paymentDate);
-            throw new IllegalArgumentException("Invalid parameters for marking invoice as paid.");
+            log.error("ASYNC: Invalid parameters for marking invoice as paid in SF. SF Invoice ID: {}, Amount: {}, Date: {}", sfInvoiceId, amount, paymentDate);
+            return;
         }
 
         String endpoint = String.format(INVOICES_ENDPOINT_PAY_PATTERN, sfInvoiceId);
         String requestType = "Mark Invoice Paid";
-        log.info("Attempting to mark invoice SF ID {} as paid for order {} via API. Amount: {}, Date: {}, Type: {}", sfInvoiceId, orderCode, amount, paymentDate, sfPaymentType);
+        log.info("ASYNC: Attempting to mark invoice SF ID {} as paid for order {} via API. Amount: {}, Date: {}, Type: {}", sfInvoiceId, orderCode, amount, paymentDate, sfPaymentType);
 
         Map<String, Object> payload = new HashMap<>();
         Map<String, Object> paymentData = new HashMap<>();
         paymentData.put("invoice_id", sfInvoiceId);
         paymentData.put("payment_type", sfPaymentType != null ? sfPaymentType : "transfer");
         paymentData.put("amount", amount.setScale(PRICE_SCALE, ROUNDING_MODE));
-        paymentData.put("currency", findInvoiceCurrency(sfInvoiceId, orderCode)); // Zjistíme měnu
+        paymentData.put("currency", findInvoiceCurrency(sfInvoiceId, orderCode));
         paymentData.put("date", paymentDate.format(DATE_FORMATTER));
 
         payload.put("InvoicePayment", paymentData);
 
         try {
-            // Nepotřebujeme zpracovávat odpověď, pokud API vrací jen potvrzení
             callSuperfakturaApi(endpoint, HttpMethod.POST, payload, orderCode, requestType);
-            log.info("Successfully requested marking invoice SF ID {} as paid for order {}", sfInvoiceId, orderCode);
-        } catch (RuntimeException e) {
-            // Logujeme, ale nehážeme dál, aby neovlivnila commit v našem systému
-            log.error("Failed to mark invoice SF ID {} as paid for order {}: {}", sfInvoiceId, orderCode, e.getMessage(), e);
-            // Můžeme zde zvážit přidání interní poznámky k objednávce
-            // orderService.addInternalNote(orderId, "Nepodařilo se označit platbu v SuperFaktuře: " + e.getMessage());
+            log.info("ASYNC: Successfully requested marking invoice SF ID {} as paid for order {}", sfInvoiceId, orderCode);
+        } catch (Exception e) {
+            log.error("ASYNC: Failed to mark invoice SF ID {} as paid for order {}: {}", sfInvoiceId, orderCode, e.getMessage(), e);
         }
     }
 
     // --- Pomocné metody ---
 
-    // Znovu načte objednávku a inicializuje potřebné kolekce
+    // Metoda pro aktualizaci objednávky po úspěšném volání API (spouští se v nové transakci)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void updateOrderWithInvoiceData(Long orderId, Long sfInvoiceId, String sfInvoiceNumber, String pdfUrl, String invoiceType) {
+        log.debug("ASYNC - updateOrderWithInvoiceData: Updating order ID {} for invoice type '{}'", orderId, invoiceType);
+        Order orderToUpdate = orderRepository.findById(orderId).orElse(null);
+        if (orderToUpdate == null) {
+            log.error("ASYNC - updateOrderWithInvoiceData: Order ID {} not found for update!", orderId);
+            return;
+        }
+
+        switch (invoiceType) {
+            case "proforma":
+                orderToUpdate.setSfProformaInvoiceId(sfInvoiceId);
+                orderToUpdate.setProformaInvoiceNumber(sfInvoiceNumber);
+                orderToUpdate.setSfProformaPdfUrl(pdfUrl);
+                break;
+            case "tax_document":
+                orderToUpdate.setSfTaxDocumentId(sfInvoiceId);
+                orderToUpdate.setTaxDocumentNumber(sfInvoiceNumber);
+                orderToUpdate.setSfTaxDocumentPdfUrl(pdfUrl);
+                break;
+            case "final":
+                orderToUpdate.setSfFinalInvoiceId(sfInvoiceId);
+                orderToUpdate.setFinalInvoiceNumber(sfInvoiceNumber);
+                orderToUpdate.setSfFinalInvoicePdfUrl(pdfUrl);
+                orderToUpdate.setFinalInvoiceGenerated(true);
+                break;
+            default:
+                log.warn("ASYNC - updateOrderWithInvoiceData: Unknown invoice type '{}' for order ID {}", invoiceType, orderId);
+                return;
+        }
+        orderRepository.save(orderToUpdate);
+        log.info("ASYNC - updateOrderWithInvoiceData: Order ID {} updated successfully with {} details.", orderId, invoiceType);
+    }
+
+
+    // Metoda reloadOrder a ostatní pomocné metody (build*Payload, callSuperfakturaApi, etc.) zůstávají stejné
+    // ... (vložte sem nezměněný kód pomocných metod) ...
     private Order reloadOrder(Long orderId) {
         return orderRepository.findById(orderId).map(order -> {
             Hibernate.initialize(order.getCustomer());
@@ -606,66 +581,6 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         return d;
     }
 
-    private List<Map<String, Object>> buildStandardInvoiceItems(Order order) {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (OrderItem oi : order.getOrderItems()) {
-            Map<String, Object> item = new HashMap<>();
-            String n = StringUtils.hasText(oi.getProductName()) ? oi.getProductName() : "Položka " + (oi.getProduct() != null ? oi.getProduct().getId() : "N/A");
-            if (StringUtils.hasText(oi.getVariantInfo()) && !oi.getVariantInfo().equalsIgnoreCase("Produkt na míru"))
-                n += " (" + oi.getVariantInfo() + ")";
-            item.put("name", n);
-            item.put("description", buildItemDescription(oi));
-            item.put("quantity", oi.getCount());
-            item.put("unit", "ks");
-            item.put("unit_price", Optional.ofNullable(oi.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO));
-            BigDecimal t = Optional.ofNullable(oi.getTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-            item.put("tax", t);
-            item.put("sku", oi.getSku());
-            item.put("currency", order.getCurrency());
-            if (oi.isReverseCharge()) item.put("transfer_tax_liability", 1);
-            items.add(item);
-        }
-        if (order.getShippingCostWithoutTax() != null && order.getShippingCostWithoutTax().compareTo(BigDecimal.ZERO) > 0) {
-            Map<String, Object> si = new HashMap<>();
-            si.put("name", "Doprava");
-            si.put("quantity", 1);
-            si.put("unit", "ks");
-            si.put("unit_price", order.getShippingCostWithoutTax());
-            BigDecimal st = Optional.ofNullable(order.getShippingTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-            si.put("tax", st);
-            si.put("currency", order.getCurrency());
-            items.add(si);
-        }
-        return items;
-    }
-
-    private Map<String, Object> buildDepositInvoiceItem(Order order, String itemName, BigDecimal amountWithTax) {
-        Map<String, Object> i = new HashMap<>();
-        i.put("name", itemName);
-        i.put("quantity", 1);
-        i.put("unit", "ks");
-        BigDecimal rate = calculateAverageTaxRate(order.getOrderItems());
-        BigDecimal amountNoTax = BigDecimal.ZERO;
-        if (BigDecimal.ONE.add(rate).compareTo(BigDecimal.ZERO) != 0)
-            amountNoTax = Optional.ofNullable(amountWithTax).orElse(BigDecimal.ZERO).divide(BigDecimal.ONE.add(rate), PRICE_SCALE, ROUNDING_MODE);
-        else amountNoTax = Optional.ofNullable(amountWithTax).orElse(BigDecimal.ZERO);
-        BigDecimal taxPct = rate.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
-        i.put("unit_price", amountNoTax);
-        i.put("tax", taxPct);
-        i.put("currency", order.getCurrency());
-        if (itemName.startsWith("Záloha"))
-            i.put("description", "Záloha 50% z " + Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE) + " " + order.getCurrency());
-        return i;
-    }
-
-    private Map<String, Object> buildFullPayload(Map<String, Object> invoiceData, Map<String, Object> clientData, List<Map<String, Object>> items) {
-        Map<String, Object> p = new HashMap<>();
-        p.put("Invoice", invoiceData);
-        p.put("Client", clientData);
-        p.put("InvoiceItem", items);
-        return p;
-    }
-
     // Metoda mapCustomerToClientData s přidanou měnou
     private Map<String, Object> mapCustomerToClientData(Order order) {
         Customer customer = order.getCustomer();
@@ -843,4 +758,101 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         }
         return true;
     }
+    // Nová pomocná metoda
+    private List<Map<String, Object>> buildStandardInvoiceItemsWithRounding(Order order) {
+        // 1. Získat standardní položky a dopravu (jako v původní buildStandardInvoiceItems)
+        List<Map<String, Object>> items = new ArrayList<>();
+        if (order.getOrderItems() != null) { // Ošetření null
+            for (OrderItem oi : order.getOrderItems()) {
+                if (oi == null) continue; // Přeskočit null položky
+                Map<String, Object> item = new HashMap<>();
+                String n = StringUtils.hasText(oi.getProductName()) ? oi.getProductName() : "Položka " + (oi.getProduct() != null ? oi.getProduct().getId() : "N/A");
+                if (StringUtils.hasText(oi.getVariantInfo()) && !oi.getVariantInfo().equalsIgnoreCase("Produkt na míru"))
+                    n += " (" + oi.getVariantInfo() + ")";
+                item.put("name", n);
+                item.put("description", buildItemDescription(oi)); // Můžeš zjednodušit, pokud popis není třeba
+                item.put("quantity", oi.getCount());
+                item.put("unit", "ks");
+                item.put("unit_price", Optional.ofNullable(oi.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO));
+                BigDecimal t = Optional.ofNullable(oi.getTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+                item.put("tax", t);
+                item.put("sku", oi.getSku());
+                item.put("currency", order.getCurrency());
+                if (oi.isReverseCharge()) item.put("transfer_tax_liability", 1);
+                items.add(item);
+            }
+        }
+        if (order.getShippingCostWithoutTax() != null && order.getShippingCostWithoutTax().compareTo(BigDecimal.ZERO) > 0) {
+            Map<String, Object> si = new HashMap<>();
+            si.put("name", "Doprava");
+            si.put("quantity", 1);
+            si.put("unit", "ks");
+            si.put("unit_price", order.getShippingCostWithoutTax());
+            BigDecimal st = Optional.ofNullable(order.getShippingTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+            si.put("tax", st);
+            si.put("currency", order.getCurrency());
+            items.add(si);
+        }
+
+        // 2. Vypočítat rozdíl zaokrouhlení
+        BigDecimal originalTotal = order.getOriginalTotalPrice();
+        BigDecimal roundedTotal = order.getTotalPrice();
+
+        if (originalTotal != null && roundedTotal != null && originalTotal.compareTo(roundedTotal) != 0) {
+            BigDecimal roundingDifference = originalTotal.subtract(roundedTotal).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+            log.debug("Calculating rounding difference for order {}: Original={}, Rounded={}, Difference={}",
+                    order.getOrderCode(), originalTotal, roundedTotal, roundingDifference);
+
+            if (roundingDifference.compareTo(BigDecimal.ZERO) != 0) {
+                Map<String, Object> roundingItem = new HashMap<>();
+                roundingItem.put("name", "Zaokrouhlení");
+                roundingItem.put("quantity", 1);
+                roundingItem.put("unit", ""); // Jednotka může být prázdná
+                // Cena za jednotku je záporná hodnota rozdílu
+                roundingItem.put("unit_price", roundingDifference.negate());
+                // Daň pro zaokrouhlení - obvykle 0%, ale ověř si u účetní!
+                roundingItem.put("tax", BigDecimal.ZERO.setScale(2));
+                roundingItem.put("currency", order.getCurrency());
+                items.add(roundingItem);
+                log.info("Added rounding item to SF payload for order {}: Amount={}", order.getOrderCode(), roundingItem.get("unit_price"));
+            }
+        } else {
+            log.debug("No rounding difference detected or original price missing for order {}. Original: {}, Rounded: {}",
+                    order.getOrderCode(), originalTotal, roundedTotal);
+        }
+
+        return items;
+    }
+    private Map<String, Object> buildDepositInvoiceItem(Order order, String itemName, BigDecimal amountWithTax) {
+        Map<String, Object> i = new HashMap<>();
+        i.put("name", itemName);
+        i.put("quantity", 1);
+        i.put("unit", "ks");
+        BigDecimal rate = calculateAverageTaxRate(order.getOrderItems());
+        BigDecimal amountNoTax = BigDecimal.ZERO;
+        // Ošetření dělení nulou, pokud by sazba byla -1 (-100%)
+        BigDecimal divisor = BigDecimal.ONE.add(rate);
+        if (divisor.compareTo(BigDecimal.ZERO) != 0) {
+            amountNoTax = Optional.ofNullable(amountWithTax).orElse(BigDecimal.ZERO)
+                    .divide(divisor, PRICE_SCALE, ROUNDING_MODE);
+        } else {
+            log.warn("Cannot calculate amount without tax for deposit item in order {}: effective tax rate is -100%. Setting amount without tax to amount with tax.", order.getOrderCode());
+            amountNoTax = Optional.ofNullable(amountWithTax).orElse(BigDecimal.ZERO); // Fallback - cena bez DPH = cena s DPH
+        }
+        BigDecimal taxPct = rate.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+        i.put("unit_price", amountNoTax);
+        i.put("tax", taxPct);
+        i.put("currency", order.getCurrency());
+        if (itemName.startsWith("Záloha"))
+            i.put("description", "Záloha 50% z " + Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE) + " " + order.getCurrency());
+        return i;
+    }
+    private Map<String, Object> buildFullPayload(Map<String, Object> invoiceData, Map<String, Object> clientData, List<Map<String, Object>> items) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("Invoice", invoiceData);
+        p.put("Client", clientData);
+        p.put("InvoiceItem", items);
+        return p;
+    }
+
 }
