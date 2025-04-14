@@ -2,6 +2,7 @@ package org.example.eshop.controller;
 
 import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.model.*; // Import všech modelů
+import org.example.eshop.service.CurrencyService;
 import org.example.eshop.service.ProductService;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CustomPriceRequestDto;
@@ -33,34 +34,48 @@ public class ProductController {
     private static final Logger logger = LoggerFactory.getLogger(ProductController.class); // <-- PŘEJMENOVÁNO NA logger pro konzistenci
 
     @Autowired
+    CurrencyService currencyService;
+    @Autowired
     private ProductService productService;
     @Autowired
     private AddonsService addonsService; // Předpokládám, že je stále potřeba pro detail
 
     @GetMapping("/produkty")
-    @Transactional(readOnly = true) // Pro inicializaci obrázků v seznamu
+    @Transactional(readOnly = true) // Pro inicializaci obrázků a slev
     public String listProducts(Model model, @PageableDefault(size = 9, sort = "name") Pageable pageable) {
-        // log.info("Requesting product list page - Page: {}, Size: {}, Sort: {}", pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort()); // Původní log
-        logger.info(">>> [ProductController] Vstupuji do listProducts. Pageable: {}", pageable); // <-- NOVÝ LOG
+        logger.info(">>> [ProductController] Vstupuji do listProducts. Pageable: {}", pageable);
+        String currentCurrency = currencyService.getSelectedCurrency(); // Získat aktuální měnu
+        model.addAttribute("currentCurrency", currentCurrency); // Přidat měnu do modelu
+
         try {
             Page<Product> productPage = productService.getActiveProducts(pageable);
-            // Logování výsledku ze service
             logger.info("[ProductController] ProductService.getActiveProducts vrátil stránku: TotalElements={}, TotalPages={}, Number={}, Size={}",
                     productPage.getTotalElements(), productPage.getTotalPages(), productPage.getNumber(), productPage.getSize());
 
-            // Původní inicializace obrázků
-            productPage.getContent().forEach(p -> Hibernate.initialize(p.getImages()));
-            logger.debug("[ProductController] Hibernate.initialize(images) dokončeno pro {} produktů na stránce.", productPage.getNumberOfElements());
+            // Připravíme mapu s cenami po slevě pro každý produkt
+            Map<Long, Map<String, Object>> productPrices = new HashMap<>();
+            for (Product product : productPage.getContent()) {
+                // Inicializace pro jistotu
+                if (product.getImages() != null) Hibernate.initialize(product.getImages());
+
+                // Výpočet ceny se slevou (pouze pro standardní produkty)
+                if (!product.isCustomisable()) {
+                    Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
+                    productPrices.put(product.getId(), priceInfo);
+                }
+            }
+            logger.debug("[ProductController] Hibernate.initialize(images) and price calculation done for {} products.", productPage.getNumberOfElements());
 
             model.addAttribute("productPage", productPage);
-            // log.debug("Found {} active products for page {}", productPage.getNumberOfElements(), pageable.getPageNumber()); // Původní log
+            model.addAttribute("productPrices", productPrices); // Předáme mapu cen do šablony
+
         } catch (Exception e) {
-            // log.error("Error fetching active products for page {}", pageable, e); // Původní log
-            logger.error("!!! [ProductController] Chyba v listProducts při načítání produktů: {} !!!", e.getMessage(), e); // <-- NOVÝ LOG
+            logger.error("!!! [ProductController] Chyba v listProducts: {} !!!", e.getMessage(), e);
             model.addAttribute("errorMessage", "Nepodařilo se načíst produkty.");
-            model.addAttribute("productPage", Page.empty(pageable)); // Přidání prázdné stránky i při chybě
+            model.addAttribute("productPage", Page.empty(pageable));
+            model.addAttribute("productPrices", Collections.emptyMap()); // Prázdná mapa při chybě
         }
-        logger.info(">>> [ProductController] Opouštím listProducts. Obsah modelu před vrácením 'produkty': {}", model.asMap()); // <-- NOVÝ LOG
+        logger.info(">>> [ProductController] Opouštím listProducts. Obsah modelu před vrácením 'produkty': {}", model.asMap());
         return "produkty";
     }
 
@@ -157,26 +172,28 @@ public class ProductController {
                 return "produkt-detail-custom";
 
             } else {
-                // --- Standardní produkt (zůstává stejné) ---
+                // --- Standardní produkt ---
                 logger.info("[ProductController] Zpracovávám detail pro STANDARD produkt ID {}", product.getId());
-                // Inicializace atributů
+                // Inicializace atributů (zůstává)
                 Hibernate.initialize(product.getAvailableDesigns());
                 Hibernate.initialize(product.getAvailableGlazes());
                 Hibernate.initialize(product.getAvailableRoofColors());
-                logger.debug("[ProductController] Inicializovány designy, lazury a barvy střech pro standardní produkt ID {}", product.getId());
 
+                // --- VÝPOČET CENY SE SLEVOU ---
+                Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currencyService.getSelectedCurrency());
+                model.addAttribute("priceInfo", priceInfo); // Přidáme informace o ceně do modelu
+                // --- KONEC VÝPOČTU ---
+
+                // Původní kód pro atributy a DTO
                 Set<Design> designs = product.getAvailableDesigns();
                 Set<Glaze> glazes = product.getAvailableGlazes();
                 Set<RoofColor> roofColors = product.getAvailableRoofColors();
-
-                model.addAttribute("basePriceCZK", product.getBasePriceCZK());
-                model.addAttribute("basePriceEUR", product.getBasePriceEUR());
                 model.addAttribute("availableDesigns", designs != null ? designs : Collections.emptySet());
                 model.addAttribute("availableGlazes", glazes != null ? glazes : Collections.emptySet());
                 model.addAttribute("availableRoofColors", roofColors != null ? roofColors : Collections.emptySet());
-
                 model.addAttribute("cartItemDto", cartItemDto);
-                logger.info(">>> [ProductController] Opouštím productDetail. Obsah modelu před vrácením 'produkt-detail-standard': {}", model.asMap());
+
+                logger.info(">>> [ProductController] Opouštím productDetail (STANDARD). Model: {}", model.asMap());
                 return "produkt-detail-standard";
             }
         } catch (ResponseStatusException e) {

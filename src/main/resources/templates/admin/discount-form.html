@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title th:text="${pageTitle ?: 'Správa Slevy'}">Správa Slevy</title>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+  <style>
+    .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    .value-fields-section { display: none; }
+    .value-fields-section.active { display: block; }
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice { background-color: #0d6efd; color: white; border: none;}
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove { color: rgba(255, 255, 255, 0.7); border-right: 1px solid rgba(255, 255, 255, 0.3); }
+    .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove:hover { color: white; }
+  </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2" th:text="${pageTitle ?: 'Správa Slevy'}">Správa Slevy</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+      <a th:href="@{/admin/discounts}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Zpět na přehled
+      </a>
+    </div>
+  </div>
+
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <form th:object="${discount}"
+        th:action="${discount.id == null} ? @{/admin/discounts} : @{/admin/discounts/{id}(id=${discount.id})}"
+        method="post" novalidate>
+
+    <input type="hidden" name="_method" th:if="${discount.id != null}" value="POST"/>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+          <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label">Popis (interní)</label>
+          <textarea class="form-control" id="description" th:field="*{description}" rows="2"></textarea>
+        </div>
+
+        <hr>
+        <h6>Typ a Hodnota Slevy</h6>
+
+        <div class="mb-3">
+          <label class="form-label">Typ slevy:</label><br/>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="isPercentage" id="radioFixed" value="false" th:field="*{percentage}" onclick="toggleValueFields()">
+            <label class="form-check-label" for="radioFixed">Pevná částka</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="isPercentage" id="radioPercentage" value="true" th:field="*{percentage}" onclick="toggleValueFields()">
+            <label class="form-check-label" for="radioPercentage">Procentuální</label>
+          </div>
+        </div>
+
+        <div id="value-fields">
+          <div id="value-fixed-group" class="value-fields-section" th:classappend="*{!percentage ? 'active' : ''}">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="valueCZK" class="form-label">Pevná částka CZK (bez DPH)</label>
+                <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="valueCZK" th:field="*{valueCZK}" placeholder="Např. 200.00">
+                <div th:if="${#fields.hasErrors('valueCZK')}" class="invalid-feedback" th:errors="*{valueCZK}"></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="valueEUR" class="form-label">Pevná částka EUR (bez DPH)</label>
+                <input type="number" step="0.01" min="0" class="form-control" th:errorclass="is-invalid" id="valueEUR" th:field="*{valueEUR}" placeholder="Např. 8.00">
+                <div th:if="${#fields.hasErrors('valueEUR')}" class="invalid-feedback" th:errors="*{valueEUR}"></div>
+              </div>
+            </div>
+            <div class="form-text">Vyplňte alespoň jednu kladnou hodnotu, pokud je sleva typu "Pevná částka".</div>
+          </div>
+          <div id="value-percentage-group" class="value-fields-section" th:classappend="*{percentage ? 'active' : ''}">
+            <div class="mb-3">
+              <label for="value" class="form-label">Hodnota (%)</label>
+              <input type="number" step="0.01" min="0" max="100" class="form-control" th:errorclass="is-invalid" id="value" th:field="*{value}" placeholder="Např. 10.00 pro 10%">
+              <div th:if="${#fields.hasErrors('value')}" class="invalid-feedback" th:errors="*{value}"></div>
+              <div class="form-text">Zadejte hodnotu mezi 0 a 100.</div>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+        <h6>Platnost a Přiřazení</h6>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="validFrom" class="form-label">Platnost od <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" th:errorclass="is-invalid" id="validFrom" th:field="*{validFrom}" required>
+            <div th:if="${#fields.hasErrors('validFrom')}" class="invalid-feedback" th:errors="*{validFrom}"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="validTo" class="form-label">Platnost do <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" th:errorclass="is-invalid" id="validTo" th:field="*{validTo}" required>
+            <div th:if="${#fields.hasErrors('validTo')}" class="invalid-feedback" th:errors="*{validTo}"></div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="productIds" class="form-label">Platí pro produkty</label>
+          <select class="form-select" id="productIds" name="productIds" multiple="multiple" data-placeholder="Vyberte produkty..."
+                  th:attr="data-selected-ids=${selectedProductIds}">
+            <option th:each="product : ${allProducts}"
+                    th:value="${product.id}"
+                    th:text="${product.name + ' (ID: ' + product.id + ')'}"
+                    th:selected="${selectedProductIds != null and selectedProductIds.contains(product.id)}">
+              Produkt X
+            </option>
+          </select>
+          <div class="form-text">Nechte prázdné, pokud má sleva platit pro všechny produkty.</div>
+          <div th:if="${#fields.hasErrors('products')}" class="error" th:errors="*{products}"></div>
+        </div>
+
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+          <label class="form-check-label" for="active">Aktivní</label>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <a th:href="@{/admin/discounts}" class="btn btn-secondary me-2">Zrušit</a>
+          <button type="submit" class="btn btn-primary">Uložit Slevu</button>
+        </div>
+
+      </div>
+    </div>
+  </form>
+</section>
+
+<th:block layout:fragment="javascript">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    function toggleValueFields() {
+      const isPercentageChecked = document.getElementById('radioPercentage')?.checked ?? false;
+      const percentageGroup = document.getElementById('value-percentage-group');
+      const fixedGroup = document.getElementById('value-fixed-group');
+
+      if (percentageGroup && fixedGroup) {
+        percentageGroup.style.display = isPercentageChecked ? 'block' : 'none';
+        fixedGroup.style.display = !isPercentageChecked ? 'block' : 'none';
+        percentageGroup.classList.toggle('active', isPercentageChecked);
+        fixedGroup.classList.toggle('active', !isPercentageChecked);
+      }
+    }
+
+    $(document).ready(function() {
+      // Initialize Select2
+      $('#productIds').select2({
+        theme: "bootstrap-5",
+        width: '100%',
+        placeholder: $(this).data('placeholder'),
+        closeOnSelect: false,
+        allowClear: true
+      });
+
+      // Initialize radio button logic
+      document.querySelectorAll('input[name="isPercentage"]').forEach(radio => {
+        radio.addEventListener('change', toggleValueFields);
+      });
+      // Call initially to set the correct fields visibility
+      toggleValueFields();
+    });
+  </script>
+</th:block>
+
+</body>
+</html>

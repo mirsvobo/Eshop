@@ -9,9 +9,11 @@ import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort; // Přidán import pro Sort
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils; // Přidán import pro StringUtils
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,21 +21,24 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class DiscountService implements PriceConstants { // Implementace pro konstanty
+public class DiscountService implements PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(DiscountService.class);
 
     @Autowired private DiscountRepository discountRepository;
-    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductRepository productRepository; // Pro načítání produktů
 
-    // --- Čtecí metody ---
+    // --- Čtecí metody (Upraveno a doplněno) ---
     @Transactional(readOnly = true)
     public List<Discount> getAllDiscounts() {
-        return discountRepository.findAll();
+        log.debug("Fetching all discounts for CMS list");
+        // Můžeme přidat řazení, např. podle data vytvoření nebo názvu
+        return discountRepository.findAll(Sort.by("name"));
     }
 
     @Transactional(readOnly = true)
     public Optional<Discount> getDiscountById(Long id) {
+        log.debug("Fetching discount by ID: {}", id);
         return discountRepository.findById(id);
     }
 
@@ -50,7 +55,10 @@ public class DiscountService implements PriceConstants { // Implementace pro kon
         LocalDateTime now = LocalDateTime.now();
         Long productId = product.getId();
 
-        // TODO: Optimalizovat načítání slev (např. vlastním dotazem v repozitáři)
+        // Optimalizovanější přístup (příklad - vyžaduje úpravu repository):
+        // return discountRepository.findActiveApplicableDiscountsForProduct(productId, now);
+
+        // Původní (méně efektivní) přístup:
         List<Discount> potentialDiscounts = discountRepository.findAll().stream()
                 .filter(Discount::isActive)
                 .filter(d -> d.getValidFrom() != null && d.getValidTo() != null)
@@ -108,11 +116,13 @@ public class DiscountService implements PriceConstants { // Implementace pro kon
                     BigDecimal value = EURO_CURRENCY.equals(currency) ? d.getValueEUR() : d.getValueCZK();
                     return value != null && value.compareTo(BigDecimal.ZERO) > 0;
                 })
-                .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? d.getValueEUR() : d.getValueCZK()));
+                .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? Optional.ofNullable(d.getValueEUR()).orElse(BigDecimal.ZERO) : Optional.ofNullable(d.getValueCZK()).orElse(BigDecimal.ZERO)));
+
 
         if (bestFixedDiscount.isPresent()) {
             Discount discount = bestFixedDiscount.get();
             BigDecimal discountValue = EURO_CURRENCY.equals(currency) ? discount.getValueEUR() : discount.getValueCZK();
+            if (discountValue == null) return price; // Pojistka
             log.debug("Applying fixed discount '{}' ({} {}) to price {} {} for product '{}'", discount.getName(), discountValue, currency, price, currency, product.getName());
             BigDecimal discountedPrice = price.subtract(discountValue);
             discountedPrice = discountedPrice.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : discountedPrice;
@@ -120,18 +130,19 @@ public class DiscountService implements PriceConstants { // Implementace pro kon
         } else {
             return price;
         }
-        // TODO: Rozhodnout, jak kombinovat procentuální a fixní slevy.
+        // TODO: Rozhodnout, jak kombinovat procentuální a fixní slevy. Nyní se aplikují nezávisle.
     }
 
     // --- CRUD operace (pro CMS) ---
     @Transactional
-    public Discount createDiscount(Discount discount) {
+    public Discount createDiscount(Discount discount, Set<Long> productIds) {
         log.info("Creating new discount: {}", discount.getName());
-        validateDiscountDates(discount);
-        validateDiscountValues(discount); // Validace cen
+        validateDiscount(discount); // Validace dat slevy
 
-        Set<Product> products = loadAndAssignProducts(discount.getProducts());
+        // Zpracování přiřazených produktů
+        Set<Product> products = loadAndAssignProducts(productIds);
         discount.setProducts(products);
+        discount.setActive(true); // Nová sleva je defaultně aktivní
 
         Discount savedDiscount = discountRepository.save(discount);
         log.info("Discount {} created successfully with ID: {}", savedDiscount.getName(), savedDiscount.getId());
@@ -139,72 +150,78 @@ public class DiscountService implements PriceConstants { // Implementace pro kon
     }
 
     @Transactional
-    public Optional<Discount> updateDiscount(Long id, Discount discountData) {
+    public Object updateDiscount(Long id, Discount discountData, Set<Long> productIds) {
         log.info("Updating discount ID: {}", id);
-        validateDiscountDates(discountData);
-        validateDiscountValues(discountData); // Validace cen
+        validateDiscount(discountData); // Validace dat z formuláře
 
-        return discountRepository.findById(id).map(existingDiscount -> { // Použití map()
+        return discountRepository.findById(id).map(existingDiscount -> {
+            // Aktualizace základních polí
             existingDiscount.setName(discountData.getName());
             existingDiscount.setDescription(discountData.getDescription());
             existingDiscount.setPercentage(discountData.isPercentage());
-            // Nastavení hodnot podle typu
-            if (discountData.isPercentage()) {
-                existingDiscount.setValue(discountData.getValue());
-                existingDiscount.setValueCZK(null);
-                existingDiscount.setValueEUR(null);
-            } else {
-                existingDiscount.setValue(null);
-                existingDiscount.setValueCZK(discountData.getValueCZK());
-                existingDiscount.setValueEUR(discountData.getValueEUR());
-            }
+            existingDiscount.setValue(discountData.getValue());
+            existingDiscount.setValueCZK(discountData.getValueCZK());
+            existingDiscount.setValueEUR(discountData.getValueEUR());
             existingDiscount.setValidFrom(discountData.getValidFrom());
             existingDiscount.setValidTo(discountData.getValidTo());
             existingDiscount.setActive(discountData.isActive());
 
             // Aktualizace přiřazených produktů
-            Set<Product> productsToAssign = loadAndAssignProducts(discountData.getProducts());
-            Iterator<Product> iterator = existingDiscount.getProducts().iterator();
-            while (iterator.hasNext()) {
-                if (!productsToAssign.contains(iterator.next())) iterator.remove();
-            }
-            productsToAssign.forEach(p -> {
-                if (!existingDiscount.getProducts().contains(p)) existingDiscount.getProducts().add(p);
+            Set<Product> productsToAssign = loadAndAssignProducts(productIds);
+
+            // Odebrání produktů, které už nemají být přiřazeny
+            existingDiscount.getProducts().removeIf(product -> !productsToAssign.contains(product));
+
+            // Přidání nových produktů
+            productsToAssign.forEach(product -> {
+                if (!existingDiscount.getProducts().contains(product)) {
+                    existingDiscount.getProducts().add(product);
+                }
             });
 
             Discount updatedDiscount = discountRepository.save(existingDiscount);
             log.info("Discount {} (ID: {}) updated successfully.", updatedDiscount.getName(), updatedDiscount.getId());
-            return updatedDiscount; // Vrátit přímo Discount
+            return Optional.of(updatedDiscount); // Vrátíme Optional<Discount>
         });
     }
 
     @Transactional
     public void deleteDiscount(Long id) {
-        log.warn("Attempting to delete discount with ID: {}", id);
+        log.warn("Attempting to deactivate (soft delete) discount with ID: {}", id);
         Discount discount = discountRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Discount with id " + id + " not found for deletion."));
-        // Označení jako neaktivní
-        discount.setActive(false);
-        discountRepository.save(discount);
-        log.warn("Discount {} (ID: {}) marked as inactive instead of hard delete.", discount.getName(), id);
-        // Tvrdé smazání nedoporučeno
+        if (discount.isActive()) {
+            discount.setActive(false);
+            discountRepository.save(discount);
+            log.info("Discount {} (ID: {}) marked as inactive.", discount.getName(), id);
+        } else {
+            log.info("Discount {} (ID: {}) is already inactive.", discount.getName(), id);
+        }
+        // Tvrdé smazání nedoporučeno kvůli možné historii
     }
 
     // --- Pomocné metody ---
-    private void validateDiscountDates(Discount discount) {
-        if (discount.getValidFrom() == null || discount.getValidTo() == null) throw new IllegalArgumentException("Discount validity dates cannot be null.");
-        if (discount.getValidTo().isBefore(discount.getValidFrom())) throw new IllegalArgumentException("'validTo' cannot be before 'validFrom'.");
+    private void validateDiscount(Discount discount) {
+        if (discount == null) throw new IllegalArgumentException("Discount data cannot be null.");
+        if (!StringUtils.hasText(discount.getName())) throw new IllegalArgumentException("Discount name cannot be empty.");
+        validateDiscountDates(discount);
+        validateDiscountValues(discount);
     }
 
-    private Set<Product> loadAndAssignProducts(Set<Product> productsFromDto) {
-        if (CollectionUtils.isEmpty(productsFromDto)) return new HashSet<>();
-        Set<Long> productIds = productsFromDto.stream().map(Product::getId).filter(Objects::nonNull).collect(Collectors.toSet());
-        if (productIds.isEmpty()) return new HashSet<>();
+    private void validateDiscountDates(Discount discount) {
+        if (discount.getValidFrom() == null || discount.getValidTo() == null) throw new IllegalArgumentException("Discount validity dates (From, To) cannot be null.");
+        if (discount.getValidTo().isBefore(discount.getValidFrom())) throw new IllegalArgumentException("'Valid To' date cannot be before 'Valid From' date.");
+    }
+
+    private Set<Product> loadAndAssignProducts(Set<Long> productIds) {
+        if (CollectionUtils.isEmpty(productIds)) return new HashSet<>();
         List<Product> foundProducts = productRepository.findAllById(productIds);
         if (foundProducts.size() != productIds.size()) {
             Set<Long> foundIds = foundProducts.stream().map(Product::getId).collect(Collectors.toSet());
             productIds.removeAll(foundIds);
             log.warn("Some products were not found when assigning to discount: IDs {}", productIds);
+            // Můžeme zde vyhodit výjimku nebo jen logovat podle potřeby
+            // throw new EntityNotFoundException("One or more products not found: " + productIds);
         }
         return new HashSet<>(foundProducts);
     }
@@ -214,17 +231,23 @@ public class DiscountService implements PriceConstants { // Implementace pro kon
             if (discount.getValue() == null || discount.getValue().compareTo(BigDecimal.ZERO) <= 0 || discount.getValue().compareTo(new BigDecimal("100")) > 0) {
                 throw new IllegalArgumentException("Percentage discount value must be > 0 and <= 100.");
             }
+            // Normalizace - vynulovat fixní hodnoty
+            discount.setValueCZK(null);
+            discount.setValueEUR(null);
         } else {
             boolean czkValid = discount.getValueCZK() != null && discount.getValueCZK().compareTo(BigDecimal.ZERO) > 0;
             boolean eurValid = discount.getValueEUR() != null && discount.getValueEUR().compareTo(BigDecimal.ZERO) > 0;
             if (!czkValid && !eurValid) {
                 throw new IllegalArgumentException("Fixed discount must have a positive value for at least one currency (CZK or EUR).");
             }
-            // Zajistit, že nepoužité ceny jsou null
+            // Kontrola záporných hodnot
+            if (discount.getValueCZK() != null && discount.getValueCZK().signum() < 0) throw new IllegalArgumentException("Fixed amount CZK cannot be negative.");
+            if (discount.getValueEUR() != null && discount.getValueEUR().signum() < 0) throw new IllegalArgumentException("Fixed amount EUR cannot be negative.");
+
+            // Normalizace - vynulovat procento a nepoužité/nulové fixní ceny
+            discount.setValue(null);
             if (!czkValid) discount.setValueCZK(null);
             if (!eurValid) discount.setValueEUR(null);
         }
-        // Zajistit, že nepoužité pole value je null
-        if (!discount.isPercentage()) discount.setValue(null);
     }
 }

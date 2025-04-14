@@ -5,7 +5,27 @@
 <head>
     <title th:text="${product.name}"></title>
     <th:block layout:fragment="css">
-        <style> .product-image { max-height: 400px; object-fit: contain; } </style>
+        <style>
+            .product-image { max-height: 400px; object-fit: contain; }
+            /* Přidáno pro cenu */
+            .price-container-detail {
+                /* Můžete přidat specifické styly pro detail, pokud je třeba */
+            }
+            .original-price-detail {
+                font-size: 1.1em; /* Trochu větší než v listu */
+                color: #6c757d;
+                text-decoration: line-through;
+                margin-right: 0.75rem; /* Mezera mezi cenami */
+            }
+            .final-price-detail {
+                font-size: 1.8em; /* Větší finální cena */
+            }
+            .discount-badge-detail {
+                font-size: 0.8em; /* Větší badge */
+                vertical-align: middle;
+                margin-left: 0.5rem;
+            }
+        </style>
     </th:block>
 </head>
 <body>
@@ -31,19 +51,28 @@
                 <h1 th:text="${product.name}">Název Produktu</h1>
                 <p class="lead text-muted" th:if="${product.description != null}" th:text="${product.description}">Krátký popis produktu.</p>
 
-                <div class="my-3">
-                     <span class="h3 fw-bold text-primary">
-                         <span th:if="${product != null and (product.basePriceCZK != null or product.basePriceEUR != null)}"
-                               th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
-                               Cena
+                <div class="my-3 price-container-detail">
+                    <div th:if="${priceInfo != null}">
+                        <small class="original-price-detail"
+                               th:if="${priceInfo.discountedPrice != null}"
+                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
+                        </small>
+                        <span class="h3 fw-bold text-primary final-price-detail">
+                             <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
+                             </span>
                          </span>
-                         <span th:unless="${product != null and (product.basePriceCZK != null or product.basePriceEUR != null)}">
-                             Cena na dotaz
+                        <span th:if="${priceInfo.discountApplied != null}"
+                              class="badge bg-danger discount-badge-detail"
+                              th:title="${priceInfo.discountApplied.name}">
+                               SLEVA
                          </span>
-                     </span>
-                    <span class="text-muted ms-1">(bez DPH)</span>
+                        <span class="text-muted ms-1">(bez DPH)</span>
+                    </div>
+                    <div th:unless="${priceInfo != null}">
+                        <span class="h3 fw-bold text-primary">Cena na dotaz</span>
+                        <span class="text-muted ms-1">(bez DPH)</span>
+                    </div>
                 </div>
-
                 <hr>
 
                 <form th:action="@{/kosik/pridat}" method="post" th:object="${cartItemDto}">
@@ -55,8 +84,11 @@
                         <select class="form-select" id="designSelect" th:field="*{selectedDesignId}" required>
                             <option value="" disabled selected>-- Vyberte design --</option>
                             <option th:each="design : ${availableDesigns}"
-                                    th:value="${design.id}" th:text="${design.name}"></option>
+                                    th:value="${design.id}"
+                                    th:text="|${design.name} ${ (design.priceSurchargeCZK != null and design.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? design.priceSurchargeEUR : design.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
+                            </option>
                         </select>
+                        <div th:if="${#fields.hasErrors('selectedDesignId')}" class="error">Vyberte prosím design.</div>
                     </div>
 
                     <div class="mb-3" th:if="${availableGlazes != null and not #lists.isEmpty(availableGlazes)}">
@@ -68,6 +100,7 @@
                                     th:text="|${glaze.name} ${ (glaze.priceSurchargeCZK != null and glaze.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? glaze.priceSurchargeEUR : glaze.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
                             </option>
                         </select>
+                        <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="error">Vyberte prosím lazuru.</div>
                     </div>
 
                     <div class="mb-3" th:if="${availableRoofColors != null and not #lists.isEmpty(availableRoofColors)}">
@@ -79,6 +112,7 @@
                                     th:text="|${color.name} ${ (color.priceSurchargeCZK != null and color.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? color.priceSurchargeEUR : color.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
                             </option>
                         </select>
+                        <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="error">Vyberte prosím barvu střechy.</div>
                     </div>
 
                     <div class="row align-items-center mb-3">

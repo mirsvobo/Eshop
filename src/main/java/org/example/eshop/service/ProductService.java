@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,6 +38,7 @@ public class ProductService implements PriceConstants {
     @Autowired private ProductRepository productRepository;
     @Autowired private ImageRepository imageRepository;
     @Autowired private TaxRateRepository taxRateRepository;
+    @Autowired private DiscountService discountService;
 
     // --- Metody pro čtení produktů ---
 
@@ -54,7 +56,92 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím getAllProducts(Pageable) <<<");
         return result;
     }
+    /**
+     * Vrátí seznam všech produktů (např. pro výběr ve formulářích).
+     * @return Seznam všech produktů.
+     */
+    @Transactional(readOnly = true)
+    public List<Product> getAllProductsList() {
+        logger.info(">>> [ProductService] Vstupuji do getAllProductsList <<<");
+        List<Product> result = Collections.emptyList();
+        try {
+            // Voláme findAll() bez Pageable, vrátí List
+            result = productRepository.findAll(Sort.by("name")); // Řadíme podle jména pro konzistenci
+            logger.info("[ProductService] getAllProductsList: Načteno {} produktů.", (result != null ? result.size() : "NULL"));
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getAllProductsList: {} !!!", e.getMessage(), e);
+        }
+        logger.info(">>> [ProductService] Opouštím getAllProductsList <<<");
+        return result;
+    }
+    /**
+     * Vypočítá finální prodejní cenu produktu s ohledem na aktivní slevy.
+     *
+     * @param product Produkt, pro který se počítá cena.
+     * @param currency Měna ("CZK" nebo "EUR").
+     * @return Mapa obsahující "originalPrice" (původní cena bez slevy),
+     * "discountedPrice" (cena po slevě) a "discountApplied" (objekt aplikované slevy, pokud existuje).
+     * Vrací ceny bez DPH.
+     */
+    @Transactional(readOnly = true) // Potřeba pro načtení slev
+    public Map<String, Object> calculateFinalProductPrice(Product product, String currency) {
+        Map<String, Object> priceInfo = new HashMap<>();
+        if (product == null || product.isCustomisable()) {
+            // Pro custom produkt vracíme null, cena se počítá dynamicky
+            priceInfo.put("originalPrice", null);
+            priceInfo.put("discountedPrice", null);
+            priceInfo.put("discountApplied", null);
+            return priceInfo;
+        }
 
+        BigDecimal originalPrice = EURO_CURRENCY.equals(currency) ? product.getBasePriceEUR() : product.getBasePriceCZK();
+        originalPrice = (originalPrice != null) ? originalPrice.setScale(PRICE_SCALE, ROUNDING_MODE) : null; // Zajistit škálu
+
+        BigDecimal finalPrice = originalPrice;
+        Discount appliedDiscount = null;
+
+        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            // 1. Zkusíme procentuální slevu
+            BigDecimal priceAfterPercentage = discountService.applyBestPercentageDiscount(originalPrice, product);
+
+            // 2. Zkusíme fixní slevu (TODO: Rozhodnout, zda aplikovat na původní nebo již % sníženou cenu)
+            // Prozatím aplikujeme na PŮVODNÍ cenu a vybereme VĚTŠÍ slevu
+            BigDecimal priceAfterFixed = discountService.applyBestFixedDiscount(originalPrice, product, currency);
+
+            // Porovnání a výběr nejlepší ceny (nejnižší)
+            if (priceAfterPercentage != null && priceAfterPercentage.compareTo(originalPrice) < 0 &&
+                    (priceAfterFixed == null || priceAfterPercentage.compareTo(priceAfterFixed) <= 0)) {
+                finalPrice = priceAfterPercentage;
+                // Najdeme znovu nejlepší % slevu pro informaci
+                appliedDiscount = discountService.findActiveDiscountsForProduct(product).stream()
+                        .filter(Discount::isPercentage)
+                        .filter(d -> d.getValue() != null && d.getValue().compareTo(BigDecimal.ZERO) > 0)
+                        .max(Comparator.comparing(Discount::getValue))
+                        .orElse(null);
+
+            } else if (priceAfterFixed != null && priceAfterFixed.compareTo(originalPrice) < 0) {
+                finalPrice = priceAfterFixed;
+                // Najdeme znovu nejlepší fixní slevu pro informaci
+                appliedDiscount = discountService.findActiveDiscountsForProduct(product).stream()
+                        .filter(d -> !d.isPercentage())
+                        .filter(d -> {
+                            BigDecimal val = EURO_CURRENCY.equals(currency) ? d.getValueEUR() : d.getValueCZK();
+                            return val != null && val.compareTo(BigDecimal.ZERO) > 0;
+                        })
+                        .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? Optional.ofNullable(d.getValueEUR()).orElse(BigDecimal.ZERO) : Optional.ofNullable(d.getValueCZK()).orElse(BigDecimal.ZERO)))
+                        .orElse(null);
+            }
+        }
+
+        priceInfo.put("originalPrice", originalPrice);
+        priceInfo.put("discountedPrice", (finalPrice != null && finalPrice.compareTo(originalPrice) < 0) ? finalPrice : null); // Zobrazíme jen pokud je sleva
+        priceInfo.put("discountApplied", appliedDiscount);
+
+        log.debug("Calculated final price for product ID {} in {}: Original={}, Discounted={}, Discount={}",
+                product.getId(), currency, originalPrice, priceInfo.get("discountedPrice"), appliedDiscount != null ? appliedDiscount.getName() : "None");
+
+        return priceInfo;
+    }
     @Transactional(readOnly = true)
     public Page<Product> getActiveProducts(Pageable pageable) {
         logger.info(">>> [ProductService] Vstupuji do getActiveProducts(Pageable: {}) <<<", pageable);
