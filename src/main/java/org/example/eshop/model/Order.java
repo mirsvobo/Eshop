@@ -21,6 +21,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal originalTotalPrice; // Původní celková cena s DPH PŘED zaokrouhlením dolů
+
     @Column(nullable = false, length = 3)
     private String currency = "CZK"; // Výchozí měna
 

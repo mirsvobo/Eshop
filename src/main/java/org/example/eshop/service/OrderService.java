@@ -267,6 +267,19 @@ public class OrderService implements PriceConstants {
                 order.setTotalTax(finalTotalTax.setScale(PRICE_SCALE, ROUNDING_MODE));
                 order.setTotalPrice(roundedTotalPrice); // <-- ULOŽÍME ZAOKROUHLENOU CENU
 
+                originalTotalPriceWithTax = finalTotalWithoutTax.add(finalTotalTax);
+                roundedTotalPrice = originalTotalPriceWithTax.setScale(0, RoundingMode.DOWN);
+
+                order.setTotalPriceWithoutTax(finalTotalWithoutTax.setScale(PRICE_SCALE, ROUNDING_MODE));
+                order.setTotalTax(finalTotalTax.setScale(PRICE_SCALE, ROUNDING_MODE));
+                order.setTotalPrice(roundedTotalPrice); // Uložíme ZAOKROUHLENOU cenu
+                order.setOriginalTotalPrice(originalTotalPriceWithTax.setScale(PRICE_SCALE, ROUNDING_MODE)); // <<< ULOŽÍME PŮVODNÍ PŘESNOU CENU
+
+                log.debug("Final totals calculated: TotalNoTax={}, TotalTax={}, OriginalTotalWithTax={}, RoundedTotalToSave={}",
+                        order.getTotalPriceWithoutTax(), order.getTotalTax(),
+                        order.getOriginalTotalPrice(), // Logujeme původní
+                        order.getTotalPrice());        // Logujeme zaokrouhlenou
+
                 log.debug("Final totals calculated: TotalNoTax={}, TotalTax={}, OriginalTotalWithTax={}, RoundedTotalToSave={}",
                         order.getTotalPriceWithoutTax(), order.getTotalTax(),
                         originalTotalPriceWithTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP), // Logujeme původní pro kontrolu
@@ -277,6 +290,7 @@ public class OrderService implements PriceConstants {
                 log.error("!!! CRITICAL ERROR calculating final totals for order {}: {}", orderCodeLog, e.getMessage(), e);
                 throw new RuntimeException("Failed to calculate final totals: " + e.getMessage(), e);
             }
+
 
             // 7. Processing Payment Status and Deposit
             log.debug("[Order Creation - Step 7] Determining payment status/deposit for currency: {}", orderCurrency);

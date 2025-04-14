@@ -107,6 +107,68 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
             throw e;
         }
     }
+    // Nová pomocná metoda
+    private List<Map<String, Object>> buildStandardInvoiceItemsWithRounding(Order order) {
+        // 1. Získat standardní položky a dopravu (jako v původní buildStandardInvoiceItems)
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (OrderItem oi : order.getOrderItems()) {
+            Map<String, Object> item = new HashMap<>();
+            String n = StringUtils.hasText(oi.getProductName()) ? oi.getProductName() : "Položka " + (oi.getProduct() != null ? oi.getProduct().getId() : "N/A");
+            if (StringUtils.hasText(oi.getVariantInfo()) && !oi.getVariantInfo().equalsIgnoreCase("Produkt na míru"))
+                n += " (" + oi.getVariantInfo() + ")";
+            item.put("name", n);
+            item.put("description", buildItemDescription(oi)); // Můžeš zjednodušit, pokud popis není třeba
+            item.put("quantity", oi.getCount());
+            item.put("unit", "ks");
+            item.put("unit_price", Optional.ofNullable(oi.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO));
+            BigDecimal t = Optional.ofNullable(oi.getTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+            item.put("tax", t);
+            item.put("sku", oi.getSku());
+            item.put("currency", order.getCurrency());
+            if (oi.isReverseCharge()) item.put("transfer_tax_liability", 1);
+            items.add(item);
+        }
+        if (order.getShippingCostWithoutTax() != null && order.getShippingCostWithoutTax().compareTo(BigDecimal.ZERO) > 0) {
+            Map<String, Object> si = new HashMap<>();
+            si.put("name", "Doprava");
+            si.put("quantity", 1);
+            si.put("unit", "ks");
+            si.put("unit_price", order.getShippingCostWithoutTax());
+            BigDecimal st = Optional.ofNullable(order.getShippingTaxRate()).orElse(BigDecimal.ZERO).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+            si.put("tax", st);
+            si.put("currency", order.getCurrency());
+            items.add(si);
+        }
+
+        // 2. Vypočítat rozdíl zaokrouhlení
+        BigDecimal originalTotal = order.getOriginalTotalPrice();
+        BigDecimal roundedTotal = order.getTotalPrice();
+
+        if (originalTotal != null && roundedTotal != null && originalTotal.compareTo(roundedTotal) != 0) {
+            BigDecimal roundingDifference = originalTotal.subtract(roundedTotal).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+            log.debug("Calculating rounding difference for order {}: Original={}, Rounded={}, Difference={}",
+                    order.getOrderCode(), originalTotal, roundedTotal, roundingDifference);
+
+            if (roundingDifference.compareTo(BigDecimal.ZERO) != 0) {
+                Map<String, Object> roundingItem = new HashMap<>();
+                roundingItem.put("name", "Zaokrouhlení");
+                roundingItem.put("quantity", 1);
+                roundingItem.put("unit", ""); // Jednotka může být prázdná
+                // Cena za jednotku je záporná hodnota rozdílu
+                roundingItem.put("unit_price", roundingDifference.negate());
+                // Daň pro zaokrouhlení - obvykle 0%, ale ověř si u účetní!
+                roundingItem.put("tax", BigDecimal.ZERO.setScale(2));
+                roundingItem.put("currency", order.getCurrency());
+                items.add(roundingItem);
+                log.info("Added rounding item to SF payload for order {}: Amount={}", order.getOrderCode(), roundingItem.get("unit_price"));
+            }
+        } else {
+            log.debug("No rounding difference detected or original price missing for order {}. Original: {}, Rounded: {}",
+                    order.getOrderCode(), originalTotal, roundedTotal);
+        }
+
+        return items;
+    }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -503,20 +565,32 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
             log.warn("Linking final invoice using Proforma ID (if available), but Tax Document ID {} also exists for order {}.", order.getSfTaxDocumentId(), order.getOrderCode());
         }
         invoiceData.put("note", note.trim());
-        List<Map<String, Object>> items = buildStandardInvoiceItems(order);
+
+        // *** ZMĚNA: Použití nové metody pro položky včetně zaokrouhlení ***
+        List<Map<String, Object>> itemsWithRounding = buildStandardInvoiceItemsWithRounding(order);
+
+        // Sleva (discount_amount se aplikuje na celkovou částku PŘED DPH dle SF dokumentace)
         if (order.getCouponDiscountAmount() != null && order.getCouponDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-            invoiceData.put("discount_amount", order.getCouponDiscountAmount());
+            // Přepočet na procenta nebo přidání jako položka?
+            // API umožňuje `discount` (procenta) a `discount_amount` (pevná částka před DPH).
+            // Použijeme discount_amount, protože to máme uložené.
+            invoiceData.put("discount_amount", order.getCouponDiscountAmount().setScale(PRICE_SCALE, ROUNDING_MODE));
             String discountNote = " Aplikována sleva z kupónu: " + (StringUtils.hasText(order.getAppliedCouponCode()) ? order.getAppliedCouponCode() : "") + " (-" + order.getCouponDiscountAmount().setScale(PRICE_SCALE, ROUNDING_MODE) + " " + order.getCurrency() + " bez DPH).";
             invoiceData.put("note", (invoiceData.get("note") != null ? invoiceData.get("note") : "") + discountNote);
         }
+
+        // Platba (already_paid)
         if ((order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) && PAYMENT_STATUS_PAID.equals(order.getPaymentStatus()) && order.getPaymentDate() != null) {
-            invoiceData.put("already_paid", order.getTotalPrice());
+            // Pokud NEBYLA záloha A JE zaplaceno, nastavíme already_paid na celkovou (zaokrouhlenou) cenu
+            invoiceData.put("already_paid", order.getTotalPrice()); // Použijeme finální zaokrouhlenou cenu
             invoiceData.put("paid_date", order.getPaymentDate().toLocalDate().format(DATE_FORMATTER));
-            log.info("Setting 'already_paid' to total amount and 'paid_date' for final invoice {} (no deposit scenario)", order.getOrderCode());
+            log.info("Setting 'already_paid' to total rounded price ({}) and 'paid_date' for final invoice {} (no deposit scenario)", order.getTotalPrice(), order.getOrderCode());
         } else {
-            log.info("Not setting 'already_paid' for final invoice {}. Relying on SF deduction via linked proforma_id.", order.getOrderCode());
+            // Pokud byla záloha, spoléháme na SF, že ji odečte díky proforma_id
+            log.info("Not setting 'already_paid' for final invoice {}. Relying on SF deduction via linked proforma_id or payment status.", order.getOrderCode());
         }
-        return buildFullPayload(invoiceData, mapCustomerToClientData(order), items);
+
+        return buildFullPayload(invoiceData, mapCustomerToClientData(order), itemsWithRounding);
     }
 
     private Map<String, Object> buildBaseInvoiceData(Order order) {
