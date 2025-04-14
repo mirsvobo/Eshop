@@ -547,15 +547,17 @@ public class OrderService implements PriceConstants {
 
     @Transactional(readOnly = true)
     public Optional<Order> findOrderById(Long id) {
-        log.debug("Finding order by ID with full details: {}", id);
-        return orderRepository.findFullDetailById(id); // NOVÉ
+        log.debug("Finding order by ID with full details using new repo method: {}", id);
+        // Volání NOVÉ repository metody
+        return orderRepository.findFullDetailById(id);
     }
 
     @Transactional(readOnly = true)
     public Optional<Order> findOrderByCode(String orderCode) {
         if (!StringUtils.hasText(orderCode)) return Optional.empty();
-        log.debug("Finding order by code with full details: {}", orderCode.trim());
-        return orderRepository.findFullDetailByOrderCode(orderCode.trim()); // NOVÉ
+        log.debug("Finding order by code with full details using new repo method: {}", orderCode.trim());
+        // Volání NOVÉ repository metody
+        return orderRepository.findFullDetailByOrderCode(orderCode.trim());
     }
 
     @Transactional(readOnly = true)

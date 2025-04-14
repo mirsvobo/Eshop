@@ -38,37 +38,35 @@ public class DiscountService implements PriceConstants {
 
     @Transactional(readOnly = true)
     public Optional<Discount> getDiscountById(Long id) {
-        log.debug("Fetching discount by ID with products: {}", id);
-        return discountRepository.findWithProductsById(id); // NOVÉ
+        log.debug("Fetching discount by ID with products using new repo method: {}", id);
+        // Volání NOVÉ repository metody
+        return discountRepository.findWithProductsById(id);
     }
 
-    /**
-     * Najde aktuálně aktivní slevy aplikovatelné na specifický produkt.
-     * Kontroluje aktivitu slevy a její časovou platnost.
-     * Zohledňuje slevy přiřazené přímo k produktu A slevy bez přiřazených produktů (globální).
-     * @param product Produkt, pro který se hledají slevy.
-     * @return Seznam aktivních a platných slev pro daný produkt.
-     */
     @Transactional(readOnly = true)
     public List<Discount> findActiveDiscountsForProduct(Product product) {
         if (product == null) return Collections.emptyList();
         LocalDateTime now = LocalDateTime.now();
         Long productId = product.getId();
+        log.debug("Finding active discounts for product ID: {} at time: {}", productId, now);
 
-        // Optimalizovanější přístup (příklad - vyžaduje úpravu repository):
-        // return discountRepository.findActiveApplicableDiscountsForProduct(productId, now);
+        // Volání NOVÉ repository metody
+        List<Discount> potentialDiscounts = discountRepository.findAllActiveAndPotentiallyApplicable(now);
+        log.debug("Found {} potentially applicable active discounts.", potentialDiscounts.size());
 
-        // Původní (méně efektivní) přístup:
-        List<Discount> potentialDiscounts = discountRepository.findAll().stream()
-                .filter(Discount::isActive)
-                .filter(d -> d.getValidFrom() != null && d.getValidTo() != null)
-                .filter(d -> !now.isBefore(d.getValidFrom()) && !now.isAfter(d.getValidTo()))
-                .toList();
-
-        return potentialDiscounts.stream()
-                .filter(discount -> CollectionUtils.isEmpty(discount.getProducts()) ||
-                        discount.getProducts().stream().anyMatch(p -> p.getId().equals(productId)))
+        // Filtrujeme ty, které jsou buď globální, nebo přiřazené k danému produktu
+        List<Discount> applicableDiscounts = potentialDiscounts.stream()
+                .filter(discount -> {
+                    boolean isGlobal = discount.getProducts() == null || discount.getProducts().isEmpty();
+                    boolean isForThisProduct = !isGlobal && discount.getProducts().stream().anyMatch(p -> p.getId().equals(productId));
+                    // Logování pro debugování filtru
+                    // log.trace("Checking discount ID: {}, Name: '{}'. Is Global: {}, Is For This Product: {}", discount.getId(), discount.getName(), isGlobal, isForThisProduct);
+                    return isGlobal || isForThisProduct;
+                })
                 .collect(Collectors.toList());
+
+        log.debug("Found {} discounts applicable to product ID {}", applicableDiscounts.size(), productId);
+        return applicableDiscounts;
     }
 
     /**

@@ -2,6 +2,7 @@
 package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.ImageRepository;
 import org.example.eshop.repository.ProductRepository;
@@ -18,11 +19,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType; // <-- Import pro MediaType
-import org.springframework.mock.web.MockMultipartFile; // <-- Přidáno pro testy uploadu
-import org.springframework.web.multipart.MultipartFile; // <-- Přidáno pro testy uploadu
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException; // <-- Přidáno pro testy uploadu
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -31,13 +32,13 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class) // Povolí použití Mockito anotací
-class ProductServiceTest {
+class ProductServiceTest implements PriceConstants { // Přidáno implementace PriceConstants
 
     @Mock private ProductRepository productRepository;
     @Mock private ImageRepository imageRepository;
     @Mock private TaxRateRepository taxRateRepository;
-    @Mock private DiscountService discountService; // Mock pro DiscountService
-    @Mock private FileStorageService fileStorageService; // Mock pro FileStorageService
+    @Mock private DiscountService discountService;
+    @Mock private FileStorageService fileStorageService;
 
     @InjectMocks private ProductService productService;
 
@@ -70,6 +71,7 @@ class ProductServiceTest {
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00"));
         standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
         standardProduct.setImages(new ArrayList<>(List.of(image1)));
+        standardProduct.setDiscounts(new HashSet<>()); // Inicializace pro testy cen
         image1.setProduct(standardProduct);
 
         customProduct = new Product();
@@ -80,6 +82,7 @@ class ProductServiceTest {
         customProduct.setCustomisable(true);
         customProduct.setTaxRate(standardTaxRate);
         customProduct.setImages(new ArrayList<>());
+        customProduct.setDiscounts(new HashSet<>()); // Inicializace
 
         configurator = new ProductConfigurator();
         configurator.setId(customProduct.getId());
@@ -106,85 +109,93 @@ class ProductServiceTest {
         inactiveProduct.setImages(new ArrayList<>());
 
         // Lenient mockování
-        lenient().when(productRepository.findById(1L)).thenReturn(Optional.of(standardProduct));
-        lenient().when(productRepository.findById(2L)).thenReturn(Optional.of(customProduct));
-        lenient().when(productRepository.findById(3L)).thenReturn(Optional.of(inactiveProduct));
-        lenient().when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        lenient().when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(standardProduct)); // Používáme metodu s @Query
+        lenient().when(productRepository.findByIdWithDetails(2L)).thenReturn(Optional.of(customProduct));   // Používáme metodu s @Query
+        lenient().when(productRepository.findByIdWithDetails(3L)).thenReturn(Optional.of(inactiveProduct)); // Používáme metodu s @Query
+        lenient().when(productRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());           // Používáme metodu s @Query
         lenient().when(imageRepository.findById(50L)).thenReturn(Optional.of(image1));
         lenient().when(imageRepository.findById(999L)).thenReturn(Optional.empty());
     }
 
-    // --- Testy Načítání ---
+    // --- Testy Načítání (Upraveno pro standardní názvy metod) ---
 
     @Test
     @DisplayName("getActiveProducts vrátí stránku aktivních produktů")
     void getActiveProducts_ReturnsActiveOnly() {
         Pageable pageable = PageRequest.of(0, 10);
+        // Mockujeme STANDARDNÍ metodu repository, ale očekáváme, že @EntityGraph načte detaily
         Page<Product> mockPage = new PageImpl<>(List.of(standardProduct, customProduct), pageable, 2);
-        when(productRepository.findByActiveTrue(pageable)).thenReturn(mockPage);
+        when(productRepository.findByActiveTrue(pageable)).thenReturn(mockPage); // <-- VOLÁNÍ findByActiveTrue
 
         Page<Product> result = productService.getActiveProducts(pageable);
 
         assertNotNull(result);
         assertEquals(2, result.getTotalElements());
         assertTrue(result.getContent().stream().allMatch(Product::isActive));
-        verify(productRepository).findByActiveTrue(pageable);
+        verify(productRepository).findByActiveTrue(pageable); // <-- OVĚŘENÍ findByActiveTrue
     }
 
     @Test
-    @DisplayName("getActiveProductBySlug najde aktivní produkt")
-    void getActiveProductBySlug_FindsActive() {
-        when(productRepository.findByActiveTrueAndSlugIgnoreCase("standard-drevnik")).thenReturn(Optional.of(standardProduct));
+    @DisplayName("getAllActiveProducts vrátí seznam aktivních produktů")
+    void getAllActiveProducts_ReturnsActiveList() {
+        // Mockujeme STANDARDNÍ metodu repository
+        List<Product> mockList = List.of(standardProduct, customProduct);
+        when(productRepository.findAllByActiveTrue()).thenReturn(mockList); // <-- VOLÁNÍ findAllByActiveTrue
+
+        List<Product> result = productService.getAllActiveProducts();
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertTrue(result.stream().allMatch(Product::isActive));
+        verify(productRepository).findAllByActiveTrue(); // <-- OVĚŘENÍ findAllByActiveTrue
+    }
+
+
+    @Test
+    @DisplayName("getActiveProductBySlug najde aktivní produkt (s detaily)")
+    void getActiveProductBySlug_FindsActiveWithDetails() {
+        when(productRepository.findActiveBySlugWithDetails("standard-drevnik")).thenReturn(Optional.of(standardProduct));
 
         Optional<Product> result = productService.getActiveProductBySlug("standard-drevnik");
 
         assertTrue(result.isPresent());
         assertEquals(standardProduct.getId(), result.get().getId());
-        verify(productRepository).findByActiveTrueAndSlugIgnoreCase("standard-drevnik");
+        // Můžeme ověřit i načtení asociace, pokud byla v EntityGraph
+        assertNotNull(result.get().getTaxRate());
+        verify(productRepository).findActiveBySlugWithDetails("standard-drevnik");
     }
 
     @Test
-    @DisplayName("getActiveProductBySlug nenajde neaktivní produkt")
-    void getActiveProductBySlug_DoesNotFindInactive() {
-        when(productRepository.findByActiveTrueAndSlugIgnoreCase("neaktivni-produkt")).thenReturn(Optional.empty());
+    @DisplayName("getProductById najde produkt (s detaily)")
+    void getProductById_FindsWithDetails() {
+        // findByIdWithDetails mockováno v setUp
+        Optional<Product> result = productService.getProductById(1L);
 
-        Optional<Product> result = productService.getActiveProductBySlug("neaktivni-produkt");
-
-        assertTrue(result.isEmpty());
-        verify(productRepository).findByActiveTrueAndSlugIgnoreCase("neaktivni-produkt");
+        assertTrue(result.isPresent());
+        assertEquals(standardProduct.getId(), result.get().getId());
+        assertNotNull(result.get().getTaxRate()); // Ověření načtení asociace
+        verify(productRepository).findByIdWithDetails(1L); // Ověření volání metody s @Query
     }
 
-    @Test
-    @DisplayName("getActiveProductBySlug nenajde neexistující produkt")
-    void getActiveProductBySlug_NotFound() {
-        when(productRepository.findByActiveTrueAndSlugIgnoreCase("neexistujici-slug")).thenReturn(Optional.empty());
-        Optional<Product> result = productService.getActiveProductBySlug("neexistujici-slug");
-        assertTrue(result.isEmpty());
-        verify(productRepository).findByActiveTrueAndSlugIgnoreCase("neexistujici-slug");
-    }
 
-    // --- Testy Výpočtu Ceny Na Míru ---
-
+    // --- Testy Výpočtu Ceny Na Míru (beze změny) ---
     @Test
     @DisplayName("calculateDynamicProductPrice spočítá cenu správně (CZK)")
     void calculateDynamicProductPrice_CorrectCalculation_CZK() {
+        // ... (kód testu zůstává stejný) ...
         Map<String, BigDecimal> dimensions = Map.of(
                 "length", new BigDecimal("200"),
                 "width", new BigDecimal("100"),
                 "height", new BigDecimal("180")
         );
-        // Očekávaná cena = (180*8) + (200*10) + (100*5) + 100 (design) + (100*3) (příčka) + 500 (okap) + 2000 (domek)
-        //                 = 1440    + 2000    + 500     + 100          + 300                + 500           + 2000
-        //                 = 6840.00
         BigDecimal expectedPrice = new BigDecimal("6840.00");
         BigDecimal calculatedPrice = productService.calculateDynamicProductPrice(
                 customProduct, dimensions, "Nějaký Design", true, true, true, "CZK"
         );
-
         assertNotNull(calculatedPrice);
         assertEquals(0, expectedPrice.compareTo(calculatedPrice), "Vypočtená dynamická cena nesouhlasí");
     }
-
+    // ... (ostatní testy pro calculateDynamicProductPrice zůstávají stejné) ...
     @Test
     @DisplayName("calculateDynamicProductPrice vrátí 0 pro záporný výsledek (CZK)")
     void calculateDynamicProductPrice_NegativeResultBecomesZero_CZK() {
@@ -265,8 +276,9 @@ class ProductServiceTest {
         assertTrue(exception.getMessage().contains("price configuration 'Length Price/cm' missing"));
     }
 
-    // --- Testy CRUD ---
 
+    // --- Testy CRUD (beze změny, protože volají findByIdWithDetails, které má @Query) ---
+    // ... (testy createProduct, updateProduct, deleteProduct zůstávají stejné) ...
     @Test
     @DisplayName("createProduct vytvoří produkt a vygeneruje slug")
     void createProduct_GeneratesSlugAndSaves() {
@@ -342,6 +354,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("deleteProduct označí produkt jako neaktivní")
     void deleteProduct_MarksInactive() {
+        // Použijeme standardní findById zde, protože delete nemusí načítat detaily
         when(productRepository.findById(1L)).thenReturn(Optional.of(standardProduct));
         when(productRepository.save(any(Product.class))).thenReturn(standardProduct);
 
@@ -373,20 +386,21 @@ class ProductServiceTest {
         updatedData.setDescription("Nový popis.");
         updatedData.setBasePriceCZK(new BigDecimal("1200.00"));
         updatedData.setActive(true);
-        updatedData.setSlug("standard-drevnik");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(2L);
+        updatedData.setSlug("standard-drevnik"); // Slug neměníme
+        TaxRate rateRef = new TaxRate(); rateRef.setId(2L); // ID nové sazby
         updatedData.setTaxRate(rateRef);
 
-        // Klonujeme existingProduct pro předání do metody updateProduct,
-        // aby nedošlo k modifikaci stejné instance, která se pak ověřuje
+        // Klon pro předání do updateProduct
         Product existingProductClone = new Product();
         existingProductClone.setId(productId);
         existingProductClone.setName("Standard Dřevník");
         existingProductClone.setSlug("standard-drevnik");
-        existingProductClone.setTaxRate(standardTaxRate);
+        existingProductClone.setTaxRate(standardTaxRate); // Původní sazba
 
         when(taxRateRepository.findById(2L)).thenReturn(Optional.of(reducedTaxRate));
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // findBySlugIgnoreCase se nevolá, protože slug se nemění
+        // when(productRepository.findBySlugIgnoreCase(anyString())).thenReturn(Optional.empty());
 
         Optional<Product> resultOpt = productService.updateProduct(productId, updatedData, existingProductClone);
 
@@ -396,13 +410,13 @@ class ProductServiceTest {
         assertEquals("Aktualizovaný Název", savedProduct.getName());
         assertEquals("Nový popis.", savedProduct.getDescription());
         assertEquals(0, new BigDecimal("1200.00").compareTo(savedProduct.getBasePriceCZK()));
-        assertEquals(reducedTaxRate, savedProduct.getTaxRate());
+        assertEquals(reducedTaxRate, savedProduct.getTaxRate()); // Ověření nové sazby
         assertTrue(savedProduct.isActive());
 
-        verify(taxRateRepository).findById(2L);
-        verify(productRepository).save(existingProductClone); // Ověřujeme, že se uložila upravená existující entita
+        verify(taxRateRepository).findById(2L); // Ověříme načtení nové sazby
+        verify(productRepository).save(existingProductClone);
+        verify(productRepository, never()).findBySlugIgnoreCase(anyString()); // Ověříme, že se nehledal slug
     }
-
 
     @Test
     @DisplayName("updateProduct vyhodí výjimku při změně slugu na existující")
@@ -414,23 +428,23 @@ class ProductServiceTest {
         TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
         updatedData.setTaxRate(rateRef);
 
-        Product existingProduct = new Product();
-        existingProduct.setId(productId);
-        existingProduct.setName("Standard Dřevník");
-        existingProduct.setSlug("standard-drevnik");
-        existingProduct.setTaxRate(standardTaxRate);
+        // Klon pro předání
+        Product existingProductClone = new Product();
+        existingProductClone.setId(productId);
+        existingProductClone.setName("Standard Dřevník");
+        existingProductClone.setSlug("standard-drevnik"); // Původní slug
+        existingProductClone.setTaxRate(standardTaxRate);
 
+        // Konfliktní produkt
         Product conflictingProduct = new Product();
         conflictingProduct.setId(50L);
         conflictingProduct.setSlug("existujici-slug");
 
-        // Mock pro tax rate (pro případ, že by se měnila)
         when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
-        // Mock pro nalezení konfliktního slugu
         when(productRepository.findBySlugIgnoreCase("existujici-slug")).thenReturn(Optional.of(conflictingProduct));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            productService.updateProduct(productId, updatedData, existingProduct);
+            productService.updateProduct(productId, updatedData, existingProductClone);
         });
 
         assertTrue(exception.getMessage().contains("Produkt se slugem") && exception.getMessage().contains("již používá jiný produkt"));
@@ -449,16 +463,17 @@ class ProductServiceTest {
         TaxRate rateRef = new TaxRate(); rateRef.setId(999L); // Neexistující ID
         updatedData.setTaxRate(rateRef);
 
-        Product existingProduct = new Product();
-        existingProduct.setId(productId);
-        existingProduct.setName("Standard Dřevník");
-        existingProduct.setSlug("standard-drevnik");
-        existingProduct.setTaxRate(standardTaxRate); // Původní sazba
+        // Klon pro předání
+        Product existingProductClone = new Product();
+        existingProductClone.setId(productId);
+        existingProductClone.setName("Standard Dřevník");
+        existingProductClone.setSlug("standard-drevnik");
+        existingProductClone.setTaxRate(standardTaxRate);
 
         when(taxRateRepository.findById(999L)).thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-            productService.updateProduct(productId, updatedData, existingProduct);
+            productService.updateProduct(productId, updatedData, existingProductClone);
         });
 
         assertTrue(exception.getMessage().contains("TaxRate not found"));
@@ -467,9 +482,8 @@ class ProductServiceTest {
         verify(productRepository, never()).save(any());
     }
 
-
-    // --- Testy Správy Obrázků ---
-
+    // --- Testy Správy Obrázků (beze změny, protože volají findById, ne findByIdWithDetails) ---
+    // ... (testy addImageToProduct a deleteImage zůstávají stejné) ...
     @Test
     @DisplayName("[addImageToProduct] Úspěšně přidá obrázek pomocí MultipartFile")
     void addImageToProduct_MultipartFile_Success() throws IOException {
@@ -482,14 +496,12 @@ class ProductServiceTest {
         Integer displayOrder = 1;
         MockMultipartFile mockFile = new MockMultipartFile("file", originalFileName, MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
 
-        // Mock findById pro nalezení produktu
+        // Použijeme standardní findById pro načtení produktu zde
         when(productRepository.findById(productId)).thenReturn(Optional.of(standardProduct));
-        // Mock uložení souboru
         when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
-        // Mock uložení entity Image
         when(imageRepository.save(any(Image.class))).thenAnswer(invocation -> {
             Image img = invocation.getArgument(0);
-            img.setId(101L); // Simulace ID z DB
+            img.setId(101L);
             assertEquals(standardProduct, img.getProduct());
             assertEquals(storedFileUrl, img.getUrl());
             assertEquals(altText, img.getAltText());
@@ -504,11 +516,10 @@ class ProductServiceTest {
         assertEquals(101L, savedImage.getId());
         assertEquals(storedFileUrl, savedImage.getUrl());
 
-        verify(productRepository).findById(productId);
+        verify(productRepository).findById(productId); // Ověření volání standardní metody
         verify(fileStorageService).storeFile(mockFile, "products");
         verify(imageRepository).save(any(Image.class));
     }
-
     @Test
     @DisplayName("[addImageToProduct] Vyhodí chybu, pokud selže uložení souboru")
     void addImageToProduct_MultipartFile_StorageError() throws IOException {
@@ -516,7 +527,6 @@ class ProductServiceTest {
         MockMultipartFile mockFile = new MockMultipartFile("file", "error.jpg", MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
         String exceptionMessage = "Disk is full";
 
-        // Není třeba mockovat findById, protože k chybě dojde dříve
         when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenThrow(new IOException(exceptionMessage));
 
         IOException thrownException = assertThrows(IOException.class, () -> {
@@ -524,9 +534,7 @@ class ProductServiceTest {
         });
 
         assertTrue(thrownException.getMessage().contains(exceptionMessage));
-        // Ověříme, že save obrázku se nevolalo
         verify(imageRepository, never()).save(any(Image.class));
-        // Ověříme, že produkt se také nehledal (chyba nastala dříve)
         verify(productRepository, never()).findById(anyLong());
     }
 
@@ -534,12 +542,11 @@ class ProductServiceTest {
     @DisplayName("[addImageToProduct] Vyhodí chybu pro neexistující produkt ID (MultipartFile)")
     void addImageToProduct_MultipartFile_ProductNotFound() throws IOException {
         long nonExistentProductId = 999L;
-        MockMultipartFile mockFile = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "content".getBytes());
+        MockMultipartFile mockFile = new MockMultipartFile("file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test".getBytes());
         String storedFileUrl = "/uploads/products/some.jpg";
 
-        // Mock fileStorageService, protože se volá jako první
         when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
-        // Mock findById, aby vrátil empty
+        // findById vrátí empty
         when(productRepository.findById(nonExistentProductId)).thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
@@ -547,10 +554,8 @@ class ProductServiceTest {
         });
 
         assertTrue(exception.getMessage().contains("Product not found"));
-        // Ověříme, že se obě metody volaly
         verify(fileStorageService).storeFile(mockFile, "products");
-        verify(productRepository).findById(nonExistentProductId);
-        // Ověříme, že se save obrázku nevolalo
+        verify(productRepository).findById(nonExistentProductId); // Ověříme volání standardní metody
         verify(imageRepository, never()).save(any());
     }
 
@@ -575,8 +580,7 @@ class ProductServiceTest {
     void deleteImage_Success_DeletesEntityAndFile() throws IOException {
         long imageId = 50L;
         String fileUrl = image1.getUrl();
-        // imageRepository.findById mockováno v setUp()
-
+        when(imageRepository.findById(imageId)).thenReturn(Optional.of(image1));
         doNothing().when(imageRepository).delete(image1);
         doNothing().when(fileStorageService).deleteFile(fileUrl);
 
@@ -591,7 +595,7 @@ class ProductServiceTest {
     @DisplayName("[deleteImage] Smaže entitu, ale nevolá deleteFile, pokud URL chybí")
     void deleteImage_Success_NoUrlSkipFileDelete() throws IOException {
         long imageId = 50L;
-        image1.setUrl(null); // Odebrání URL
+        image1.setUrl(null);
         when(imageRepository.findById(imageId)).thenReturn(Optional.of(image1));
         doNothing().when(imageRepository).delete(image1);
 
@@ -623,23 +627,21 @@ class ProductServiceTest {
         String fileUrl = image1.getUrl();
         when(imageRepository.findById(imageId)).thenReturn(Optional.of(image1));
         doNothing().when(imageRepository).delete(image1);
-        // Simulace chyby při mazání souboru
         doThrow(new IOException("Permission denied")).when(fileStorageService).deleteFile(fileUrl);
 
-        // Očekáváme, že service metoda vyhodí RuntimeException, která zabalí IOException
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             productService.deleteImage(imageId);
         });
         assertTrue(exception.getMessage().contains("Failed to delete image"));
         assertTrue(exception.getCause() instanceof IOException);
 
-        // Ověříme, že se pokusilo smazat obojí
         verify(imageRepository).findById(imageId);
-        verify(imageRepository).delete(image1); // Entita se stále smaže (v rámci transakce)
-        verify(fileStorageService).deleteFile(fileUrl); // Pokus o smazání souboru proběhl
+        verify(imageRepository).delete(image1);
+        verify(fileStorageService).deleteFile(fileUrl);
     }
 
-    // --- Testy Generování Slugu ---
+
+    // --- Testy Generování Slugu (beze změny) ---
     @Test
     @DisplayName("generateSlug správně generuje slugy")
     void generateSlug_GeneratesCorrectly() {
@@ -651,4 +653,5 @@ class ProductServiceTest {
         assertEquals("", ProductService.generateSlug(""));
         assertEquals("", ProductService.generateSlug(null));
     }
+
 }

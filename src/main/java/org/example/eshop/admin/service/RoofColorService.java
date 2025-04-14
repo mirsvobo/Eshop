@@ -83,11 +83,12 @@ public class RoofColorService {
     @Transactional
     public void deleteRoofColor(Long id) {
         log.warn("Attempting to deactivate (soft delete) roof color with ID: {}", id);
-        RoofColor color = roofColorRepository.findById(id)
+        // Volání NOVÉ repository metody
+        RoofColor color = roofColorRepository.findByIdWithProducts(id)
                 .orElseThrow(() -> new EntityNotFoundException("RoofColor with ID " + id + " not found."));
 
+        // Kontrola použití (produkty jsou již načteny)
         boolean isUsed = color.getProducts() != null && !color.getProducts().isEmpty();
-        // boolean isUsed = productRepository.countByAvailableRoofColorsContains(color) > 0; // Efektivnější
 
         if (isUsed) {
             log.error("Cannot deactivate roof color '{}' (ID: {}) because it is assigned to products.", color.getName(), id);

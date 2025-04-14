@@ -85,11 +85,12 @@ public class GlazeService {
     @Transactional
     public void deleteGlaze(Long id) {
         log.warn("Attempting to deactivate (soft delete) glaze with ID: {}", id);
-        Glaze glaze = glazeRepository.findById(id)
+        // Volání NOVÉ repository metody
+        Glaze glaze = glazeRepository.findByIdWithProducts(id)
                 .orElseThrow(() -> new EntityNotFoundException("Glaze with ID " + id + " not found."));
 
+        // Kontrola použití (produkty jsou již načteny)
         boolean isUsed = glaze.getProducts() != null && !glaze.getProducts().isEmpty();
-        // boolean isUsed = productRepository.countByAvailableGlazesContains(glaze) > 0; // Efektivnější
 
         if (isUsed) {
             log.error("Cannot deactivate glaze '{}' (ID: {}) because it is assigned to products.", glaze.getName(), id);

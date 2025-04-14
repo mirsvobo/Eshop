@@ -43,7 +43,66 @@ public class ProductService implements PriceConstants {
     @Autowired private TaxRateRepository taxRateRepository;
     @Autowired private DiscountService discountService;
 
-    // --- Metody pro čtení produktů ---
+    @Transactional(readOnly = true)
+    public Page<Product> getActiveProducts(Pageable pageable) {
+        logger.info(">>> [ProductService] Vstupuji do getActiveProducts(Pageable: {}) using standard repo method <<<", pageable);
+        Page<Product> result = Page.empty(pageable);
+        try {
+            // Volání STANDARDNÍ repository metody (s EntityGraph)
+            result = productRepository.findByActiveTrue(pageable);
+            logger.info("[ProductService] getActiveProducts(Pageable): Načtena stránka s {} aktivními produkty (with details).", result.getTotalElements());
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getActiveProducts(Pageable): {} !!!", e.getMessage(), e);
+        }
+        logger.info(">>> [ProductService] Opouštím getActiveProducts(Pageable) <<<");
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Product> getAllActiveProducts() {
+        logger.info(">>> [ProductService] Vstupuji do getAllActiveProducts (List) using standard repo method <<<");
+        List<Product> result = Collections.emptyList();
+        try {
+            // Volání STANDARDNÍ repository metody (s EntityGraph)
+            result = productRepository.findAllByActiveTrue();
+            logger.info("[ProductService] getAllActiveProducts (List): Načteno {} aktivních produktů (with details).", (result != null ? result.size() : "NULL"));
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getAllActiveProducts (List): {} !!!", e.getMessage(), e);
+        }
+        logger.info(">>> [ProductService] Opouštím getAllActiveProducts (List) <<<");
+        return result;
+    }
+
+
+    @Transactional(readOnly = true)
+    public Optional<Product> getActiveProductBySlug(String slug) {
+        logger.info(">>> [ProductService] Vstupuji do getActiveProductBySlug using new repo method. Slug: {}", slug);
+        Optional<Product> result = Optional.empty();
+        try {
+            // Volání NOVÉ repository metody
+            result = productRepository.findActiveBySlugWithDetails(slug);
+            logger.info("[ProductService] getActiveProductBySlug: Aktivní produkt se slugem '{}' {}.", slug, result.isPresent() ? "nalezen (with details)" : "nenalezen");
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getActiveProductBySlug (Slug: {}): {} !!!", slug, e.getMessage(), e);
+        }
+        logger.info(">>> [ProductService] Opouštím getActiveProductBySlug (Slug: {}) <<<", slug);
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Product> getProductById(Long id){
+        logger.info(">>> [ProductService] Vstupuji do getProductById (with details) using new repo method. ID: {}", id);
+        Optional<Product> result = Optional.empty();
+        try {
+            // Volání NOVÉ repository metody
+            result = productRepository.findByIdWithDetails(id);
+            logger.info("[ProductService] getProductById: Produkt ID {} {}.", id, result.isPresent() ? "nalezen (with details)" : "nenalezen");
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getProductById (ID: {}): {} !!!", id, e.getMessage(), e);
+        }
+        logger.info(">>> [ProductService] Opouštím getProductById (ID: {}) <<<", id);
+        return result;
+    }
 
     @Transactional(readOnly = true)
     public Page<Product> getAllProducts(Pageable pageable) {
@@ -145,65 +204,7 @@ public class ProductService implements PriceConstants {
 
         return priceInfo;
     }
-    @Transactional(readOnly = true)
-    public Page<Product> getActiveProducts(Pageable pageable) {
-        logger.info(">>> [ProductService] Vstupuji do getActiveProducts(Pageable: {}) <<<", pageable);
-        Page<Product> result = Page.empty(pageable);
-        try {
-            result = productRepository.findByActiveTrue(pageable);
-            logger.info("[ProductService] getActiveProducts(Pageable): Načtena stránka s {} aktivními produkty.", result.getNumberOfElements());
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v getActiveProducts(Pageable): {} !!!", e.getMessage(), e);
-        }
-        logger.info(">>> [ProductService] Opouštím getActiveProducts(Pageable) <<<");
-        return result;
-    }
 
-    @Transactional(readOnly = true)
-    public List<Product> getAllActiveProducts() {
-        logger.info(">>> [ProductService] Vstupuji do getAllActiveProducts (List) <<<");
-        List<Product> result = Collections.emptyList();
-        try {
-            result = productRepository.findByActiveTrue();
-            logger.info("[ProductService] getAllActiveProducts (List): Načteno {} aktivních produktů.", (result != null ? result.size() : "NULL"));
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v getAllActiveProducts (List): {} !!!", e.getMessage(), e);
-        }
-        logger.info(">>> [ProductService] Opouštím getAllActiveProducts (List) <<<");
-        return result;
-    }
-
-    // V ProductService.java
-    @Transactional(readOnly = true)
-    public Optional<Product> getProductById(Long id){
-        logger.info(">>> [ProductService] Vstupuji do getProductById (with details). ID: {}", id);
-        Optional<Product> result = Optional.empty();
-        try {
-            //result = productRepository.findById(id); // PŮVODNÍ
-            result = productRepository.findByIdWithDetails(id); // NOVÉ - Načte rovnou detaily
-            logger.info("[ProductService] getProductById: Produkt ID {} {}.", id, result.isPresent() ? "nalezen" : "nenalezen");
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v getProductById (ID: {}): {} !!!", id, e.getMessage(), e);
-        }
-        logger.info(">>> [ProductService] Opouštím getProductById (ID: {}) <<<", id);
-        return result;
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Product> getActiveProductBySlug(String slug) {
-        logger.info(">>> [ProductService] Vstupuji do getActiveProductBySlug. Slug: {}", slug);
-        Optional<Product> result = Optional.empty();
-        try {
-            result = productRepository.findByActiveTrueAndSlugIgnoreCase(slug);
-            logger.info("[ProductService] getActiveProductBySlug: Aktivní produkt se slugem '{}' {}.", slug, result.isPresent() ? "nalezen" : "nenalezen");
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v getActiveProductBySlug (Slug: {}): {} !!!", slug, e.getMessage(), e);
-        }
-        logger.info(">>> [ProductService] Opouštím getActiveProductBySlug (Slug: {}) <<<", slug);
-        return result;
-    }
-
-    // --- Metody pro CRUD operace (pro CMS) ---
 
     @Transactional
     public Product createProduct(Product product) {

@@ -82,13 +82,13 @@ public class DesignService {
         return updatedDesign;
     }
 
-    @Transactional
     public void deleteDesign(Long id) {
         log.warn("Attempting to deactivate (soft delete) design with ID: {}", id);
-        Design design = designRepository.findById(id)
+        // Volání NOVÉ repository metody
+        Design design = designRepository.findByIdWithProducts(id)
                 .orElseThrow(() -> new EntityNotFoundException("Design with ID " + id + " not found."));
 
-        // Kontrola použití (zůstává stejná)
+        // Kontrola použití (produkty jsou již načteny)
         boolean isUsed = design.getProducts() != null && !design.getProducts().isEmpty();
 
         if (isUsed) {
