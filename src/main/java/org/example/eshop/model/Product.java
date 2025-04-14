@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import java.math.BigDecimal;
 import java.util.List; // Může být potřeba pro Images
 import java.util.Set;   // Pro ManyToMany relace je vhodnější Set
@@ -11,6 +13,8 @@ import java.util.Set;   // Pro ManyToMany relace je vhodnější Set
 @Getter
 @Setter
 @Entity
+@Cacheable
+@org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

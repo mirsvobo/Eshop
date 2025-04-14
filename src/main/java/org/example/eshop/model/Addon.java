@@ -3,12 +3,17 @@ package org.example.eshop.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import java.math.BigDecimal;
 import java.util.Set;
 
 @Setter
 @Getter
 @Entity
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Addon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

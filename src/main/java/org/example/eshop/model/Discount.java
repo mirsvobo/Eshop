@@ -3,6 +3,9 @@ package org.example.eshop.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -10,6 +13,8 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class Discount {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

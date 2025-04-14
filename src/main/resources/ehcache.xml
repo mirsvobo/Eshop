@@ -1,0 +1,38 @@
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.ehcache.org/v3"
+        xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd">
+
+    <cache-template name="defaultEntityCache">
+        <expiry>
+            <ttl unit="days">1</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">200</heap>
+        </resources>
+    </cache-template>
+
+    <cache-template name="shortLivedCache">
+        <expiry>
+            <ttl unit="minutes">5</ttl>
+        </expiry>
+        <resources>
+            <heap unit="entries">100</heap>
+        </resources>
+    </cache-template>
+
+    <cache alias="org.example.eshop.model.TaxRate" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.OrderState" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.Design" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.Glaze" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.RoofColor" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.Addon" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.EmailTemplateConfig" uses-template="defaultEntityCache"/>
+
+    <cache alias="org.example.eshop.model.Product" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.ProductConfigurator" uses-template="defaultEntityCache"/>
+
+
+    <cache alias="org.example.eshop.model.Coupon" uses-template="shortLivedCache"/>
+    <cache alias="org.example.eshop.model.Discount" uses-template="shortLivedCache"/>
+
+</config>

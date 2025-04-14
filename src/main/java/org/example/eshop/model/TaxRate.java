@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor; // Přidat NoArgsConstructor
 import lombok.Setter;
 import lombok.AllArgsConstructor; // Přidat AllArgsConstructor
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
 @NoArgsConstructor // Lombok vygeneruje konstruktor bez argumentů (potřeba pro JPA)
 @AllArgsConstructor // Lombok vygeneruje konstruktor se všemi argumenty
 public class TaxRate {
