@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title>Správa Stavů Objednávek</title>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Stavy Objednávek</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/order-states/new}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-circle"></i> Vytvořit nový stav
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${orderStates == null or #lists.isEmpty(orderStates)}" class="alert alert-info">
+        Nebyly nalezeny žádné stavy objednávek.
+    </div>
+
+    <div th:unless="${orderStates == null or #lists.isEmpty(orderStates)}" class="table-responsive">
+        <table class="table table-striped table-sm table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kód</th>
+                <th>Název</th>
+                <th>Popis</th>
+                <th class="text-center">Pořadí</th>
+                <th class="text-center">Finální stav</th>
+                <th>Akce</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="state : ${orderStates}">
+                <td th:text="${state.id}">1</td>
+                <td th:text="${state.code}">NEW</td>
+                <td>
+                    <a th:href="@{/admin/order-states/{id}/edit(id=${state.id})}" th:text="${state.name}">Nová</a>
+                </td>
+                <td th:text="${#strings.abbreviate(state.description, 80)}">Krátký popis...</td>
+                <td class="text-center" th:text="${state.displayOrder}">10</td>
+                <td class="text-center">
+                    <span th:if="${state.finalState}" class="badge bg-success">Ano</span>
+                    <span th:unless="${state.finalState}" class="badge bg-secondary">Ne</span>
+                </td>
+                <td>
+                    <a th:href="@{/admin/order-states/{id}/edit(id=${state.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <form th:action="@{/admin/order-states/{id}/delete(id=${state.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete smazat tento stav? Smazání selže, pokud je stav přiřazen k objednávkám.');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Smazat">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+</body>
+</html>

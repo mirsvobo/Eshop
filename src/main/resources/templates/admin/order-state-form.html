@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+    <title th:text="${pageTitle ?: 'Správa Stavu Objednávky'}">Správa Stavu Objednávky</title>
+    <style>
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2" th:text="${pageTitle ?: 'Správa Stavu Objednávky'}">Správa Stavu Objednávky</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a th:href="@{/admin/order-states}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zpět na přehled
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <form th:object="${orderState}"
+          th:action="${orderState.id == null} ? @{/admin/order-states} : @{/admin/order-states/{id}(id=${orderState.id})}"
+          method="post" novalidate>
+
+        <input type="hidden" name="_method" th:if="${orderState.id != null}" value="POST"/>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="code" class="form-label">Kód <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control text-uppercase" th:errorclass="is-invalid" id="code" th:field="*{code}" required placeholder="Např. PROCESSING">
+                        <div class="form-text">Unikátní identifikátor (velká písmena, bez diakritiky).</div>
+                        <div th:if="${#fields.hasErrors('code')}" class="invalid-feedback" th:errors="*{code}">Chyba kódu</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required placeholder="Např. Zpracovává se">
+                        <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Popis (interní)</label>
+                    <textarea class="form-control" id="description" th:field="*{description}" rows="2"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="displayOrder" class="form-label">Pořadí zobrazení</label>
+                        <input type="number" class="form-control" th:errorclass="is-invalid" id="displayOrder" th:field="*{displayOrder}" placeholder="Např. 10">
+                        <div class="form-text">Nižší číslo = vyšší priorita v seznamu.</div>
+                        <div th:if="${#fields.hasErrors('displayOrder')}" class="invalid-feedback" th:errors="*{displayOrder}">Chyba pořadí</div>
+                    </div>
+                    <div class="col-md-6 mb-3 align-self-center">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="isFinalState" th:field="*{finalState}">
+                            <label class="form-check-label" for="isFinalState">Finální stav</label>
+                            <div class="form-text">Označte, pokud tento stav ukončuje životní cyklus objednávky (např. Doručeno, Zrušeno).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <a th:href="@{/admin/order-states}" class="btn btn-secondary me-2">Zrušit</a>
+                    <button type="submit" class="btn btn-primary">Uložit Stav</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>
+
+</body>
+</html>
