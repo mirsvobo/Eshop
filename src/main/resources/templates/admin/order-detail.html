@@ -123,8 +123,8 @@
                         <button type="submit" class="btn btn-sm btn-info">Vystavit DAŇ. DOKLAD</button>
                     </form>
                     <form th:action="@{/admin/orders/{id}/generate-final(id=${order.id})}" method="post" class="d-inline"
-                          th:if="${!order.finalInvoiceGenerated and order.sfFinalInvoiceId == null and (order.paymentStatus == 'PAID' or order.paymentMethod == 'CASH_ON_DELIVERY' or (order.paymentStatus == 'DEPOSIT_PAID' and order.depositAmount != null)) }">
-                        <button type="submit" class="btn btn-sm btn-success">Vystavit FINÁLNÍ</button>
+                          th:if="${!order.finalInvoiceGenerated and order.sfFinalInvoiceId == null and (order.paymentMethod == 'CASH_ON_DELIVERY' or order.paymentMethod == 'BANK_TRANSFER' or (order.paymentStatus == 'DEPOSIT_PAID' and order.depositAmount != null)) }">
+                        <button type="submit" class="btn btn-sm btn-success">Vystavit FAKTURU</button>
                     </form>
                 </div>
 
