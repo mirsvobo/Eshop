@@ -10,11 +10,9 @@
             <heap unit="entries">200</heap>
         </resources>
     </cache-template>
-
     <cache-template name="shortLivedCache">
         <expiry>
-            <ttl unit="minutes">5</ttl>
-        </expiry>
+            <ttl unit="minutes">15</ttl> </expiry>
         <resources>
             <heap unit="entries">100</heap>
         </resources>
@@ -27,12 +25,18 @@
     <cache alias="org.example.eshop.model.RoofColor" uses-template="defaultEntityCache"/>
     <cache alias="org.example.eshop.model.Addon" uses-template="defaultEntityCache"/>
     <cache alias="org.example.eshop.model.EmailTemplateConfig" uses-template="defaultEntityCache"/>
-
     <cache alias="org.example.eshop.model.Product" uses-template="defaultEntityCache"/>
     <cache alias="org.example.eshop.model.ProductConfigurator" uses-template="defaultEntityCache"/>
-
-
     <cache alias="org.example.eshop.model.Coupon" uses-template="shortLivedCache"/>
     <cache alias="org.example.eshop.model.Discount" uses-template="shortLivedCache"/>
-
+    <cache alias="activeProductsList" uses-template="shortLivedCache"/>
+    <cache alias="activeProductsPage" uses-template="shortLivedCache"/>
+    <cache alias="productBySlug" uses-template="shortLivedCache"/>
+    <cache alias="sortedOrderStates" uses-template="defaultEntityCache"/>
+    <cache alias="allTaxRates" uses-template="defaultEntityCache"/>
+    <cache alias="couponByCode" uses-template="shortLivedCache"/>
+    <cache alias="allDesigns" uses-template="defaultEntityCache"/>
+    <cache alias="allGlazes" uses-template="defaultEntityCache"/>
+    <cache alias="allRoofColors" uses-template="defaultEntityCache"/>
+    <cache alias="allActiveAddons" uses-template="defaultEntityCache"/>
 </config>

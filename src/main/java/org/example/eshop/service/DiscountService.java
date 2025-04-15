@@ -8,6 +8,9 @@ import org.example.eshop.repository.DiscountRepository;
 import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort; // Přidán import pro Sort
 import org.springframework.stereotype.Service;
@@ -28,14 +31,14 @@ public class DiscountService implements PriceConstants {
     @Autowired private DiscountRepository discountRepository;
     @Autowired private ProductRepository productRepository; // Pro načítání produktů
 
-    // --- Čtecí metody (Upraveno a doplněno) ---
+    @Cacheable("allDiscounts")
     @Transactional(readOnly = true)
     public List<Discount> getAllDiscounts() {
         log.debug("Fetching all discounts for CMS list");
         // Můžeme přidat řazení, např. podle data vytvoření nebo názvu
         return discountRepository.findAll(Sort.by("name"));
     }
-
+    @Cacheable(value = "discountById", key = "#id", unless="#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Discount> getDiscountById(Long id) {
         log.debug("Fetching discount by ID with products using new repo method: {}", id);
@@ -131,7 +134,10 @@ public class DiscountService implements PriceConstants {
         // TODO: Rozhodnout, jak kombinovat procentuální a fixní slevy. Nyní se aplikují nezávisle.
     }
 
-    // --- CRUD operace (pro CMS) ---
+    @Caching(evict = {
+            @CacheEvict(value = "allDiscounts", allEntries = true)
+            // Pokud cachuješ detail: @CacheEvict(value = "discountById", key = "#result.id", condition="#result != null")
+    })
     @Transactional
     public Discount createDiscount(Discount discount, Set<Long> productIds) {
         log.info("Creating new discount: {}", discount.getName());
@@ -146,7 +152,10 @@ public class DiscountService implements PriceConstants {
         log.info("Discount {} created successfully with ID: {}", savedDiscount.getName(), savedDiscount.getId());
         return savedDiscount;
     }
-
+    @Caching(evict = {
+            @CacheEvict(value = "allDiscounts", allEntries = true),
+            @CacheEvict(value = "discountById", key = "#id")
+    })
     @Transactional
     public Object updateDiscount(Long id, Discount discountData, Set<Long> productIds) {
         log.info("Updating discount ID: {}", id);
@@ -182,7 +191,10 @@ public class DiscountService implements PriceConstants {
             return Optional.of(updatedDiscount); // Vrátíme Optional<Discount>
         });
     }
-
+    @Caching(evict = {
+            @CacheEvict(value = "allDiscounts", allEntries = true),
+            @CacheEvict(value = "discountById", key = "#id")
+    })
     @Transactional
     public void deleteDiscount(Long id) {
         log.warn("Attempting to deactivate (soft delete) discount with ID: {}", id);

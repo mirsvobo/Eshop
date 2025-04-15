@@ -5,6 +5,9 @@ import org.example.eshop.model.TaxRate;
 import org.example.eshop.repository.ProductRepository; // Pro kontrolu závislostí
 import org.example.eshop.repository.TaxRateRepository;
 import org.slf4j.Logger;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,6 +32,7 @@ public class TaxRateService {
      * Vrátí seznam všech daňových sazeb.
      * @return Seznam TaxRate.
      */
+    @Cacheable("allTaxRates")
     @Transactional(readOnly = true)
     public List<TaxRate> getAllTaxRates() {
         log.debug("Fetching all tax rates");
@@ -51,6 +55,9 @@ public class TaxRateService {
      * @param taxRate Objekt sazby k vytvoření.
      * @return Uložená sazba.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "allTaxRates", allEntries = true)
+    })
     @Transactional
     public TaxRate createTaxRate(TaxRate taxRate) {
         if (!StringUtils.hasText(taxRate.getName())) {
@@ -75,6 +82,9 @@ public class TaxRateService {
      * @param taxRateData Objekt s novými daty.
      * @return Optional s aktualizovanou sazbou.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "allTaxRates", allEntries = true)
+    })
     @Transactional
     public Object updateTaxRate(Long taxRateId, TaxRate taxRateData) {
         log.info("Updating tax rate with ID: {}", taxRateId);
@@ -113,6 +123,9 @@ public class TaxRateService {
      * @throws EntityNotFoundException pokud sazba neexistuje.
      * @throws IllegalStateException pokud je sazba přiřazena k nějakým produktům.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "allTaxRates", allEntries = true)
+    })
     @Transactional
     public void deleteTaxRate(Long taxRateId) {
         log.warn("Attempting to delete tax rate with ID: {}", taxRateId);

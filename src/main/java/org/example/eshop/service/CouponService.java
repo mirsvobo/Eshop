@@ -12,6 +12,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,7 +44,7 @@ public class CouponService {
         log.debug("Fetching coupon by ID: {}", id);
         return couponRepository.findById(id);
     }
-
+    @Cacheable(value = "couponByCode", key = "T(String).valueOf(#code).trim().toUpperCase()", unless="#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Coupon> findByCode(String code) {
         if (!StringUtils.hasText(code)) {
@@ -218,7 +222,12 @@ public class CouponService {
         log.info("Coupon '{}' (ID: {}) created successfully via CMS.", savedCoupon.getCode(), savedCoupon.getId());
         return savedCoupon;
     }
-
+    @Caching(
+            put = { @CachePut(value = "couponByCode", key = "#result.code", condition="#result != null") },
+            evict = { @CacheEvict(value = "couponByCode", key = "#existingCoupon.code",
+                    condition = "#existingCoupon != null and #couponData.code != null and !#existingCoupon.code.equalsIgnoreCase(#couponData.code.trim().toUpperCase())",
+                    beforeInvocation = true)
+            })
     @Transactional
     public Coupon updateCoupon(Long id, Coupon couponData) {
         log.info("Updating coupon with ID: {} via CMS", id);
@@ -260,7 +269,7 @@ public class CouponService {
         log.info("Coupon '{}' (ID: {}) updated successfully via CMS.", updatedCoupon.getCode(), updatedCoupon.getId());
         return updatedCoupon;
     }
-
+    @CacheEvict(value = "couponByCode", key = "#couponToDeactivate.code", condition="#couponToDeactivate != null")
     @Transactional
     public void deactivateCoupon(Long id) {
         log.warn("Attempting to deactivate coupon with ID: {} via CMS", id);

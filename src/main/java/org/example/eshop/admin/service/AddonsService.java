@@ -19,6 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 
 @Service
 public class AddonsService {
@@ -30,7 +33,7 @@ public class AddonsService {
     // ProductRepository zde prozatím nepotřebujeme
 
     // --- Metody pro čtení (zůstávají) ---
-
+    @Cacheable("allActiveAddons") // Použijeme cache definovanou v ehcache.xml
     @Transactional(readOnly = true)
     public List<Addon> getAllAddons() {
         log.debug("Fetching all addons");
@@ -68,7 +71,10 @@ public class AddonsService {
 
 
     // --- Metody pro CRUD (pro CMS) - NOVÉ ---
-
+    @Caching(evict = {
+            @CacheEvict(value = "allActiveAddons", allEntries = true)
+            // Můžeš přidat invalidaci i pro jiné cache, pokud addony ovlivňují např. produktovou cache
+    })
     @Transactional
     public Addon createAddon(Addon addon) {
         log.info("Creating new addon: Name='{}', SKU='{}'", addon.getName(), addon.getSku());
@@ -100,10 +106,10 @@ public class AddonsService {
         return addonsRepository.save(addon);
     }
 
-    // V src/main/java/org/example/eshop/service/AddonsService.java
-
-    // V src/main/java/org/example/eshop/service/AddonsService.java
-
+    @Caching(evict = {
+            @CacheEvict(value = "allActiveAddons", allEntries = true)
+            // Můžeš přidat @CacheEvict(value = "addonById", key = "#id") pokud bys cachoval i jednotlivě
+    })
     @Transactional
     public Addon updateAddon(Long id, Addon addonData) {
         log.info("Updating addon with ID: {}", id);
@@ -144,7 +150,10 @@ public class AddonsService {
         log.info("Addon '{}' (ID: {}) updated successfully.", updatedAddon.getName(), updatedAddon.getId());
         return updatedAddon; // Vrátíme uložený Addon
     }
-
+    @Caching(evict = {
+            @CacheEvict(value = "allActiveAddons", allEntries = true)
+            // @CacheEvict(value = "addonById", key = "#id")
+    })
     @Transactional
     public void deleteAddon(Long id) {
         log.warn("Attempting to deactivate (soft delete) addon with ID: {}", id);

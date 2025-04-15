@@ -11,6 +11,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +32,7 @@ public class OrderStateService {
      * Pro použití v CMS (např. v select boxu).
      * @return Seznam OrderState.
      */
+    @Cacheable("sortedOrderStates")
     @Transactional(readOnly = true)
     public List<OrderState> getAllOrderStatesSorted(){
         log.debug("Fetching all order states sorted by displayOrder");
@@ -66,6 +70,11 @@ public class OrderStateService {
      * @param orderState Objekt stavu k vytvoření.
      * @return Uložený stav.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "sortedOrderStates", allEntries = true),
+            // Pokud by OrderState měl vlastní detail cache podle ID
+            // @CacheEvict(value = "orderStateDetails", key = "#result.id", condition="#result != null")
+    })
     @Transactional
     public OrderState createOrderState(OrderState orderState){
         if (!StringUtils.hasText(orderState.getCode()) || !StringUtils.hasText(orderState.getName())) {
@@ -95,6 +104,11 @@ public class OrderStateService {
      * @param orderStateData Objekt s novými daty.
      * @return Optional s aktualizovaným stavem.
      */
+    // Návratový typ Optional<Object> obsahující Optional<OrderState>
+    @Caching(evict = {
+            @CacheEvict(value = "sortedOrderStates", allEntries = true)
+            // @CacheEvict(value = "orderStateDetails", key = "#id") // Invalidujeme podle ID
+    })
     @Transactional
     public Object updateOrderState(Long id, OrderState orderStateData){
         log.info("Updating order state with ID: {}", id);
@@ -134,6 +148,10 @@ public class OrderStateService {
      * @throws EntityNotFoundException pokud stav neexistuje.
      * @throws IllegalStateException pokud existují objednávky v tomto stavu.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "sortedOrderStates", allEntries = true)
+            // @CacheEvict(value = "orderStateDetails", key = "#id")
+    })
     @Transactional
     public void deleteOrderStateById(Long id){
         log.warn("Attempting to delete order state with ID: {}", id);

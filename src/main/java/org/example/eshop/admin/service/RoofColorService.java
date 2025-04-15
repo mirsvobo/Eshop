@@ -11,6 +11,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,6 +27,7 @@ public class RoofColorService {
     @Autowired private RoofColorRepository roofColorRepository;
     @Autowired private ProductRepository productRepository; // Pro kontrolu použití
 
+    @Cacheable("allRoofColors")
     @Transactional(readOnly = true)
     public List<RoofColor> getAllRoofColorsSortedByName() {
         log.debug("Fetching all roof colors sorted by name");
@@ -36,6 +40,9 @@ public class RoofColorService {
         return roofColorRepository.findById(id);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allRoofColors", allEntries = true)
+    })
     @Transactional
     public RoofColor createRoofColor(RoofColor roofColor) {
         log.info("Creating new roof color: {}", roofColor.getName());
@@ -50,6 +57,10 @@ public class RoofColorService {
         return roofColorRepository.save(roofColor);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allRoofColors", allEntries = true)
+            // @CacheEvict(value = "roofColorById", key = "#id")
+    })
     @Transactional
     public RoofColor updateRoofColor(Long id, RoofColor roofColorData) {
         log.info("Updating roof color with ID: {}", id);
@@ -80,6 +91,10 @@ public class RoofColorService {
         return updatedColor;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allRoofColors", allEntries = true)
+            // @CacheEvict(value = "roofColorById", key = "#id")
+    })
     @Transactional
     public void deleteRoofColor(Long id) {
         log.warn("Attempting to deactivate (soft delete) roof color with ID: {}", id);

@@ -11,6 +11,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal; // <-- Přidat import
 import java.util.Collections;
@@ -26,6 +29,7 @@ public class DesignService {
     @Autowired private DesignRepository designRepository;
     @Autowired private ProductRepository productRepository;
 
+    @Cacheable("allDesigns") // Název cache z ehcache.xml
     @Transactional(readOnly = true)
     public List<Design> getAllDesignsSortedByName() {
         log.debug("Fetching all designs sorted by name");
@@ -38,6 +42,10 @@ public class DesignService {
         return designRepository.findById(id);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allDesigns", allEntries = true)
+            // Případná invalidace dalších cache
+    })
     @Transactional
     public Design createDesign(Design design) {
         log.info("Creating new design: {}", design.getName());
@@ -52,6 +60,10 @@ public class DesignService {
         return designRepository.save(design);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allDesigns", allEntries = true)
+            // @CacheEvict(value = "designById", key = "#id")
+    })
     @Transactional
     public Design updateDesign(Long id, Design designData) {
         log.info("Updating design with ID: {}", id);
@@ -82,6 +94,11 @@ public class DesignService {
         return updatedDesign;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allDesigns", allEntries = true)
+            // @CacheEvict(value = "designById", key = "#id")
+    })
+    @Transactional
     public void deleteDesign(Long id) {
         log.warn("Attempting to deactivate (soft delete) design with ID: {}", id);
         // Volání NOVÉ repository metody

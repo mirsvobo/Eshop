@@ -11,6 +11,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,6 +27,7 @@ public class GlazeService {
     @Autowired private GlazeRepository glazeRepository;
     @Autowired private ProductRepository productRepository; // Pro kontrolu použití
 
+    @Cacheable("allGlazes")
     @Transactional(readOnly = true)
     public List<Glaze> getAllGlazesSortedByName() {
         log.debug("Fetching all glazes sorted by name");
@@ -35,7 +39,9 @@ public class GlazeService {
         log.debug("Fetching glaze by ID: {}", id);
         return glazeRepository.findById(id);
     }
-
+    @Caching(evict = {
+            @CacheEvict(value = "allGlazes", allEntries = true)
+    })
     @Transactional
     public Glaze createGlaze(Glaze glaze) {
         log.info("Creating new glaze: {}", glaze.getName());
@@ -51,6 +57,10 @@ public class GlazeService {
         return glazeRepository.save(glaze);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allGlazes", allEntries = true)
+            // @CacheEvict(value = "glazeById", key = "#id")
+    })
     @Transactional
     public Glaze updateGlaze(Long id, Glaze glazeData) {
         log.info("Updating glaze with ID: {}", id);
@@ -82,6 +92,10 @@ public class GlazeService {
         return updatedGlaze;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "allGlazes", allEntries = true)
+            // @CacheEvict(value = "glazeById", key = "#id")
+    })
     @Transactional
     public void deleteGlaze(Long id) {
         log.warn("Attempting to deactivate (soft delete) glaze with ID: {}", id);

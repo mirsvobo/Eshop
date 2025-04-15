@@ -16,7 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.cache.CacheManager; // Potřeba pro manuální invalidaci
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut; // Import CachePut
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.Normalizer;
@@ -24,6 +28,7 @@ import java.util.*; // Import pro Set, Map atd.
 import java.util.regex.Pattern;
 
 import static org.example.eshop.service.CustomerService.log;
+
 
 @Service
 public class ProductService implements PriceConstants {
@@ -43,6 +48,7 @@ public class ProductService implements PriceConstants {
     @Autowired private TaxRateRepository taxRateRepository;
     @Autowired private DiscountService discountService;
 
+    @Cacheable(value = "activeProductsPage", key = "#pageable.toString()")
     @Transactional(readOnly = true)
     public Page<Product> getActiveProducts(Pageable pageable) {
         logger.info(">>> [ProductService] Vstupuji do getActiveProducts(Pageable: {}) using standard repo method <<<", pageable);
@@ -57,7 +63,7 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím getActiveProducts(Pageable) <<<");
         return result;
     }
-
+    @Cacheable("activeProductsList")
     @Transactional(readOnly = true)
     public List<Product> getAllActiveProducts() {
         logger.info(">>> [ProductService] Vstupuji do getAllActiveProducts (List) using standard repo method <<<");
@@ -73,7 +79,7 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-
+    @Cacheable(value = "productBySlug", key = "T(String).valueOf(#slug).toLowerCase()", unless="#result == null or !#result.isPresent()") // Klíč jako lower-case slug
     @Transactional(readOnly = true)
     public Optional<Product> getActiveProductBySlug(String slug) {
         logger.info(">>> [ProductService] Vstupuji do getActiveProductBySlug using new repo method. Slug: {}", slug);
@@ -88,7 +94,7 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím getActiveProductBySlug (Slug: {}) <<<", slug);
         return result;
     }
-
+    @Cacheable(value = "productBySlug", key = "T(String).valueOf(#slug).toLowerCase()", unless="#result == null or !#result.isPresent()") // Klíč jako lower-case slug
     @Transactional(readOnly = true)
     public Optional<Product> getProductById(Long id){
         logger.info(">>> [ProductService] Vstupuji do getProductById (with details) using new repo method. ID: {}", id);
@@ -122,6 +128,7 @@ public class ProductService implements PriceConstants {
      * Vrátí seznam všech produktů (např. pro výběr ve formulářích).
      * @return Seznam všech produktů.
      */
+    @Cacheable("allProductsList")
     @Transactional(readOnly = true)
     public List<Product> getAllProductsList() {
         logger.info(">>> [ProductService] Vstupuji do getAllProductsList <<<");
@@ -205,7 +212,11 @@ public class ProductService implements PriceConstants {
         return priceInfo;
     }
 
-
+    @Caching(evict = {
+            @CacheEvict(value = "activeProductsPage", allEntries = true),
+            @CacheEvict(value = "activeProductsList", allEntries = true),
+            @CacheEvict(value = "allProductsList", allEntries = true)
+    })
     @Transactional
     public Product createProduct(Product product) {
         logger.info(">>> [ProductService] Vstupuji do createProduct. Název: {}", product.getName());
@@ -269,7 +280,22 @@ public class ProductService implements PriceConstants {
         }
         return savedProduct;
     }
-
+    @Caching(
+            put = {
+                    // Aktualizuj detail produktu podle ID
+                    @CachePut(value = "productDetails", key = "#result.get().id", condition="#result.present")
+            },
+            evict = {
+                    @CacheEvict(value = "activeProductsPage", allEntries = true),
+                    @CacheEvict(value = "activeProductsList", allEntries = true),
+                    @CacheEvict(value = "allProductsList", allEntries = true),
+                    // Zde smažeme *starý* slug z cache, pokud se slug změnil. Nový se načte při příštím požadavku.
+                    @CacheEvict(value = "productBySlug", key = "#productToUpdate.slug",
+                            condition="#productData.slug != null and #productToUpdate.slug != null and !#productToUpdate.slug.equalsIgnoreCase(#productData.slug.trim())"),
+                    // A smažeme i *nový* slug pro jistotu (pokud by se změnila i aktivita)
+                    @CacheEvict(value = "productBySlug", key = "T(String).valueOf(#productData.slug).trim().toLowerCase()", condition="#productData.slug != null")
+            }
+    )
     @Transactional
     public Optional<Product> updateProduct(Long id, Product productData, Product productToUpdate) {
         logger.info(">>> [ProductService] Vstupuji do updateProduct (s přednačtenou entitou). ID: {}", id);
@@ -432,7 +458,13 @@ public class ProductService implements PriceConstants {
         }
     }
 
-
+    @Caching(evict = {
+            @CacheEvict(value = "activeProductsPage", allEntries = true),
+            @CacheEvict(value = "activeProductsList", allEntries = true),
+            @CacheEvict(value = "allProductsList", allEntries = true),
+            @CacheEvict(value = "productDetails", key = "#id")
+            // Invalidaci 'productBySlug' provedeme manuálně níže
+    })
     @Transactional
     public void deleteProduct(Long id) {
         logger.info(">>> [ProductService] Vstupuji do deleteProduct (soft delete). ID: {}", id);
@@ -632,6 +664,14 @@ public class ProductService implements PriceConstants {
      * @throws EntityNotFoundException Pokud produkt s daným ID neexistuje.
      * @throws IllegalArgumentException Pokud je soubor neplatný.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "activeProductsPage", allEntries = true),
+            @CacheEvict(value = "activeProductsList", allEntries = true),
+            @CacheEvict(value = "allProductsList", allEntries = true),
+            @CacheEvict(value = "productDetails", key = "#productId"),
+            // Invalidujeme podle slugu získaného z DB nebo cache
+            @CacheEvict(value = "productBySlug", key = "#{#root.target.getProductSlug(#productId)}", condition="#productId != null")
+    })
     @Transactional
     public Image addImageToProduct(Long productId, MultipartFile file, String altText, String titleText, Integer displayOrder) throws IOException {
         logger.info(">>> [ProductService] Attempting to add image to product ID: {}", productId);
@@ -708,6 +748,12 @@ public class ProductService implements PriceConstants {
      * Zahrnuje i smazání fyzického souboru.
      * @param imageId ID obrázku ke smazání.
      */
+    @Caching(evict = {
+            @CacheEvict(value = "activeProductsPage", allEntries = true),
+            @CacheEvict(value = "activeProductsList", allEntries = true),
+            @CacheEvict(value = "allProductsList", allEntries = true)
+            // Manuální invalidace pro detail a slug níže
+    })
     @Transactional
     public void deleteImage(Long imageId) {
         logger.warn(">>> [ProductService] Attempting to DELETE image ID: {}", imageId);
