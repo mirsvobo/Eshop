@@ -1,6 +1,7 @@
 package org.example.eshop.controller; // Balíček musí být admin.controller
 
 import jakarta.persistence.EntityNotFoundException;
+import org.example.eshop.admin.controller.AdminProductController;
 import org.example.eshop.config.SecurityTestConfig; // Import SecurityTestConfig
 import org.example.eshop.model.*;
 import org.example.eshop.repository.*;
