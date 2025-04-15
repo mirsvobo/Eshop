@@ -54,7 +54,7 @@
                 <img th:if="*{images != null and not #lists.isEmpty(images)}" th:src="*{images[0].url}" th:alt="*{name}" id="mainProductImage" class="main-image img-fluid shadow-sm" />
                 <img th:unless="*{images != null and not #lists.isEmpty(images)}" th:src="@{/images/placeholder-custom.png}" alt="Produkt na míru - Ilustrační obrázek" class="main-image img-fluid shadow-sm"/>
                 <div class="product-thumbnails mt-3" th:if="*{images != null and #lists.size(images) > 1}">
-                    <img th:each="img, iter : *{images}" th:src="${img.url}" th:alt="*{name + ' - náhled ' + (iter.index + 1)}" th:classappend="${iter.index == 0} ? 'active'" th:data-img-url="${img.url}" onclick="changeMainImage(this)"/>
+                    th:src="${img.url}" th:alt="|*{name} - náhled ${iter.index + 1}|"
                 </div>
             </div>
 
