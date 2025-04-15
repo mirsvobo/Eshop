@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Table(name = "coupon", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_coupon_code", columnList = "code", unique = true)})
 public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

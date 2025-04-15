@@ -15,6 +15,9 @@ import java.util.Set;   // Pro ManyToMany relace je vhodnější Set
 @Entity
 @Cacheable
 @org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Table(name = "product", indexes = { // Přidána anotace @Table s definicí indexů
+        @Index(name = "idx_product_slug", columnList = "slug", unique = true),
+        @Index(name = "idx_product_active", columnList = "active")})
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

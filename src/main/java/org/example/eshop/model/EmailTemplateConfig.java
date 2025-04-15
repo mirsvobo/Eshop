@@ -7,6 +7,9 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
+@Table(name = "email_template_config", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_emailconfig_statecode", columnList = "stateCode", unique = true)
+})
 // Tabulka pro konfiguraci emailových notifikací pro jednotlivé stavy objednávky
 public class EmailTemplateConfig {
 

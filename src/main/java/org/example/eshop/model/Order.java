@@ -14,7 +14,13 @@ import java.util.UUID;
 @Getter
 @Setter
 @Entity
-@Table(name = "CustomerOrders")
+@Table(name = "CustomerOrders", indexes = { // Přidána anotace @Table s definicí indexů
+        @Index(name = "idx_order_code", columnList = "orderCode", unique = true),
+        @Index(name = "idx_order_customer_id", columnList = "customer_id"),
+        @Index(name = "idx_order_order_date", columnList = "orderDate"),
+        @Index(name = "idx_order_state_id", columnList = "order_state_id"),
+        @Index(name = "idx_order_payment_status", columnList = "paymentStatus")
+})
 @NamedEntityGraph(
         name = "Order.fetchFullDetail",
         attributeNodes = {

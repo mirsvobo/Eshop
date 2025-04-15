@@ -9,6 +9,9 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Table(name = "order_item", indexes = { // Správný název tabulky a index
+        @Index(name = "idx_orderitem_order_id", columnList = "order_id")
+})
 public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

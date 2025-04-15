@@ -16,6 +16,9 @@ import java.util.List;
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
+@Table(name = "tax_rate", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_taxrate_name", columnList = "name", unique = true)
+})
 @NoArgsConstructor // Lombok vygeneruje konstruktor bez argumentů (potřeba pro JPA)
 @AllArgsConstructor // Lombok vygeneruje konstruktor se všemi argumenty
 public class TaxRate {

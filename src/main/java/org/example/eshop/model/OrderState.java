@@ -13,6 +13,10 @@ import java.util.List;
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
+@Table(name = "order_state", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_orderstate_code", columnList = "code", unique = true),
+        @Index(name = "idx_orderstate_displayorder", columnList = "displayOrder")
+})
 public class OrderState {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

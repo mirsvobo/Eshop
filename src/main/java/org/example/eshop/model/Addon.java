@@ -14,6 +14,10 @@ import java.util.Set;
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Table(name = "addon", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_addon_name", columnList = "name", unique = true),
+        @Index(name = "idx_addon_sku", columnList = "sku", unique = true)
+})
 public class Addon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

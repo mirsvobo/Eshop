@@ -15,6 +15,9 @@ import java.util.Set;
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Table(name = "discount", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_discount_active_dates", columnList = "active, validFrom, validTo") // Složený index
+})
 public class Discount {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

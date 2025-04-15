@@ -11,6 +11,10 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
+@Table(name = "customer", indexes = { // Přidána anotace @Table s definicí indexů
+        @Index(name = "idx_customer_email", columnList = "email", unique = true),
+        @Index(name = "idx_customer_enabled", columnList = "enabled"),
+        @Index(name = "idx_customer_lastname", columnList = "lastName")})
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

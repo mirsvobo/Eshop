@@ -14,6 +14,9 @@ import java.util.Set;
 @Setter
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Table(name = "glaze", indexes = { // Přidána anotace @Table
+        @Index(name = "idx_glaze_name", columnList = "name", unique = true)
+})
 public class Glaze {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
