@@ -142,6 +142,15 @@ public class AdminProductController {
             Product product = productService.getProductById(id) // Předpokládáme, že getProductById bylo upraveno
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
+            // DEBUG LOG:
+            log.debug("Product ID: {}, Images loaded: {}", product.getId(), product.getImages() != null ? product.getImages().size() : "null");
+            if (product.getImages() != null) {
+                for (Image img : product.getImages()) {
+                    log.debug("  Image ID: {}, URL: {}", img.getId(), img.getUrl());
+                    // Pokud chceš vidět hash kód objektu pro ověření identity:
+                    // log.debug("    Image Object HashCode: {}", System.identityHashCode(img));
+                }
+            }
             model.addAttribute("product", product); // Data jsou již načtena
             model.addAttribute("newImage", new Image());
             addCommonFormAttributes(model);

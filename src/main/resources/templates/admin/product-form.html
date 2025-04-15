@@ -330,7 +330,7 @@
       <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
 
       <ul class="image-list">
-        <li th:each="img : ${product.images}">
+        <li th:each="img : ${product.getImagesOrdered()}">
           <img th:src="${img.url}" th:alt="${img.altText ?: 'Obrázek produktu'}" />
           <div class="image-details" th:title="${'Alt: ' + (img.altText ?: '') + '\nTitle: ' + (img.titleText ?: '')}">
             <span th:text="${#strings.abbreviate(img.altText, 20) ?: '(bez alt)'}"></span>

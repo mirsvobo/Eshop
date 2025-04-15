@@ -201,7 +201,9 @@ public class CartController implements PriceConstants {
             cartItem.setProductId(product.getId());
             cartItem.setProductName(product.getName());
             cartItem.setProductSlug(product.getSlug());
-            cartItem.setImageUrl(product.getImages() != null && !product.getImages().isEmpty() ? product.getImages().get(0).getUrl() : "/images/placeholder.png");
+            // OPRAVENÝ KÓD v CartController.java (metoda addToCart)
+            List<Image> orderedImages = product.getImagesOrdered(); // Použijeme novou metodu vracející seřazený List
+            cartItem.setImageUrl(!orderedImages.isEmpty() ? orderedImages.getFirst().getUrl() : "/images/placeholder.png");
             cartItem.setQuantity(cartItemDto.getQuantity());
             cartItem.setCustom(cartItemDto.isCustom());
 

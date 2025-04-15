@@ -1,4 +1,4 @@
-package org.example.eshop.admin.controller; // Balíček musí být admin.controller
+package org.example.eshop.controller; // Balíček musí být admin.controller
 
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.config.SecurityTestConfig; // Import SecurityTestConfig
@@ -81,7 +81,7 @@ class AdminProductControllerTest {
         product1.setAvailableGlazes(new HashSet<>(Set.of(glaze1)));
         product1.setAvailableRoofColors(new HashSet<>(Set.of(roofColor1)));
         product1.setAvailableAddons(new HashSet<>());
-        product1.setImages(new ArrayList<>(List.of(image1))); // <-- Přiřazení obrázku
+        product1.setImages(new HashSet<>(List.of(image1))); // <-- Přiřazení obrázku
         image1.setProduct(product1); // <-- Obousměrná vazba
 
         testConfigurator = new ProductConfigurator(); // Vytvoříme konfigurátor
@@ -108,7 +108,7 @@ class AdminProductControllerTest {
         product2.setAvailableAddons(new HashSet<>(Set.of(addon1)));
         product2.setConfigurator(testConfigurator); // Přiřadíme konfigurátor
         testConfigurator.setProduct(product2); // Obousměrná vazba
-        product2.setImages(new ArrayList<>()); // Prázdný seznam obrázků
+        product2.setImages(new HashSet<>()); // Prázdný seznam obrázků
 
         // Lenient mockování (zůstává a přidáváme pro imageRepository)
         lenient().when(currencyService.getSelectedCurrency()).thenReturn("CZK");

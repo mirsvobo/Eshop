@@ -55,7 +55,7 @@
             <h2 class="mb-5">Proč si vybrat dřevník od nás?</h2>
             <div class="row">
                 <div class="col-md-4 mb-4 mb-md-0 advantage-item"> <i class="bi bi-rulers"></i> <h5 class="fw-bold">Výroba na míru</h5> <p class="text-muted">Přizpůsobíme rozměry, barvu i doplňky přesně vašim potřebám a prostoru.</p> </div>
-                <div class="col-md-4 mb-4 mb-md-0 advantage-item"> <i class="bi bi-shield-check"></i> <h5 class="fw-bold">Bezúdržbové materiály</h5> <p class="text-muted">Používáme certifikované a odolné materiály pro dlouhou životnost.</p> </div>
+                <div class="col-md-4 mb-4 mb-md-0 advantage-item"> <i class="bi bi-shield-check"></i> <h5 class="fw-bold">Bezúdržbové provedení</h5> <p class="text-muted">Používáme certifikované a odolné materiály pro dlouhou životnost.</p> </div>
                 <div class="col-md-4 advantage-item"> <i class="bi bi-truck"></i> <h5 class="fw-bold">Odborné sestavení zdarma</h5> <p class="text-muted">Zajistíme bezpečné usazení i odbornou montáž vašeho nového dřevníku. To vše <b>zdarma</b>.</p> </div>
             </div>
         </div>
@@ -106,7 +106,7 @@
                     <div class="card h-100 shadow-sm">
                         <a th:href="@{/produkty}">
                             <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}"
-                                 th:alt="${product.name}" class="card-img-top" style="height: 220px; object-fit: cover;" loading="lazy"/>
+                                 th:alt="${product.name}" class="card-img-top" style="height: 250px; object-fit: contain;" loading="lazy"/>
                         </a>
                         <div class="card-body">
                             <h5 class="card-title" th:text="${product.name}">Název varianty</h5>
@@ -151,24 +151,5 @@
             </div>
         </div>
     </section>
-
-    <div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title" id="galleryModalLabel">Ukázka realizace</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body p-0"> <div id="galleryCarousel" class="carousel slide"> <div class="carousel-inner">
-                    <div class="carousel-item active"><img src="/images/realizace/1-full.webp" class="d-block w-100" alt="Dokončená realizace dřevníku - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/2-full.webp" class="d-block w-100" alt="Dokončená realizace dřevníku - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/3-full.webp" class="d-block w-100" alt="Realizace upraveného dřevníku velikosti XL - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/4-full.webp" class="d-block w-100" alt="Dřevník XXL s okapem - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/5-full.webp" class="d-block w-100" alt="Kompletovaný dřevník naplněný dřívím - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/6.webp" class="d-block w-100" alt="Kompletovaný dřevník XXL naplněný dřívím - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/7.webp" class="d-block w-100" alt="Realizace dřevníku L naplněný dřívím - detailní pohled"></div>
-                    <div class="carousel-item"><img src="/images/realizace/8.webp" class="d-block w-100" alt="Moderní design dřevníku - detailní pohled"></div>
-                </div><button class="carousel-control-prev" type="button" data-bs-target="#galleryCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Předchozí</span></button><button class="carousel-control-next" type="button" data-bs-target="#galleryCarousel" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Další</span></button> </div> </div>
-            </div>
-        </div>
-    </div>
-
 </section> </body>
 </html>
