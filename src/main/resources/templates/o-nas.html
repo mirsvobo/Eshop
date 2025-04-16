@@ -3,15 +3,112 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>O nás</title>
+    <title>O nás - Dřevníky Kolář</title>
+    <meta name="description"
+          content="Zjistěte více o firmě Dřevníky Kolář, naší historii, hodnotách a procesu výroby kvalitních dřevníků na míru i standardních modelů."
+          layout:fragment="meta-description"/>
 </head>
 <body>
+
 <section layout:fragment="content">
     <div class="container mt-5 mb-5">
-        <h1>O nás</h1>
-        <hr class="mb-4">
-        <p>Jsme rodinná firma zabývající se výrobou kvalitních dřevníků...</p>
+
+        <div class="about-hero rounded">
+            <h1 class="display-4 fw-bold">O nás</h1>
+            <p class="lead">Vyrábíme kvalitní dřevníky na míru s důrazem na detail a dlouhou životnost.</p>
+        </div>
+
+        <div class="row mb-5 align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <h2>Náš příběh</h2>
+                <hr class="border-primary border-2 opacity-75 mb-3" style="width: 50px;">
+                <p>
+                    <strong>VYPLŇTE TEXT:</strong> Zde popište historii vaší firmy... Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.
+                </p>
+                <p>
+                    <strong>VYPLŇTE TEXT:</strong> Pokračujte v příběhu... Cras mattis consectetur purus sit amet fermentum. Cum sociis natoque penatibus et magnis dis parturient montes.
+                </p>
+            </div>
+            <div class="col-md-6 text-center">
+                <img th:src="@{/images/o-nas-pribeh.webp}" class="img-fluid rounded shadow-sm" alt="Historie firmy nebo dílna" loading="lazy">
+            </div>
+        </div>
+
+        <div class="row mb-5 bg-light py-5 rounded">
+            <div class="col-12 text-center mb-4">
+                <h2>Naše hodnoty</h2>
+            </div>
+            <div class="col-md-4 text-center icon-box mb-4 mb-md-0">
+                <i class="bi bi-tools"></i>
+                <h5 class="fw-bold">Kvalitní řemeslo</h5>
+                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Dbáme na precizní zpracování a výběr kvalitních materiálů.</p>
+            </div>
+            <div class="col-md-4 text-center icon-box mb-4 mb-md-0">
+                <i class="bi bi-person-check-fill"></i>
+                <h5 class="fw-bold">Individuální přístup</h5>
+                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Každému zákazníkovi se věnujeme osobně a hledáme nejlepší řešení.</p>
+            </div>
+            <div class="col-md-4 text-center icon-box">
+                <i class="bi bi-shield-fill-check"></i>
+                <h5 class="fw-bold">Spolehlivost a servis</h5>
+                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Dodržujeme termíny a poskytujeme záruční i pozáruční servis.</p>
+            </div>
+        </div>
+
+        <div class="row mb-5 timeline-section">
+            <div class="col-12 text-center mb-4"> <h2>Jak probíhá výroba vašeho dřevníku</h2>
+            </div>
+            <div class="col-12 timeline-wrapper">
+                <div class="timeline-line d-none d-md-block"></div>
+                <div class="timeline-line d-md-none"></div>
+
+                <div class="timeline-steps">
+                    <div class="timeline-step">
+                        <div class="icon">
+                            <i class="bi bi-receipt-cutoff"></i>
+                        </div>
+                        <div class="step-label">Přijetí objednávky</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="icon">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div class="step-label">Zpracování a Plánování</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="icon">
+                            <i class="bi bi-hammer"></i>
+                        </div>
+                        <div class="step-label">Výroba</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="icon">
+                            <i class="bi bi-brightness-high-fill"></i>
+                        </div>
+                        <div class="step-label">Žárové zinkování</div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="icon">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <div class="step-label">Ustrojení a Montáž u vás</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-5">
+            <h2>Máte dotaz nebo zájem o dřevník?</h2>
+            <p class="lead mb-4">Neváhejte nás kontaktovat nebo si prohlédněte naši nabídku.</p>
+            <a th:href="@{/produkty}" class="btn btn-primary btn-lg me-2">
+                <i class="bi bi-grid-3x3-gap-fill me-1"></i> Zobrazit produkty
+            </a>
+            <a href="/#kontaktni-udaje" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-telephone-fill me-1"></i> Kontaktovat nás
+            </a>
+        </div>
+
     </div>
 </section>
+
 </body>
 </html>
