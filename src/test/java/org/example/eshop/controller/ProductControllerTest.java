@@ -63,7 +63,7 @@ class ProductControllerTest {
         standardProduct.setId(1L); standardProduct.setName("Standard Dřevník"); standardProduct.setSlug("standard-drevnik");
         standardProduct.setActive(true); standardProduct.setCustomisable(false); standardProduct.setTaxRate(standardTaxRate);
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00")); standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
-        standardProduct.setImages(List.of(new Image())); standardProduct.setAvailableDesigns(Set.of(new Design()));
+        standardProduct.setImages(Set.of(new Image())); standardProduct.setAvailableDesigns(Set.of(new Design()));
         standardProduct.setAvailableGlazes(Set.of(new Glaze())); standardProduct.setAvailableRoofColors(Set.of(new RoofColor()));
 
         customProduct = new Product();

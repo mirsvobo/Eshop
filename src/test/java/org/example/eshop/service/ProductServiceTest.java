@@ -70,7 +70,7 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         standardProduct.setTaxRate(standardTaxRate);
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00"));
         standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
-        standardProduct.setImages(new ArrayList<>(List.of(image1)));
+        standardProduct.setImages(new HashSet<>(List.of(image1)));
         standardProduct.setDiscounts(new HashSet<>()); // Inicializace pro testy cen
         image1.setProduct(standardProduct);
 
@@ -81,7 +81,7 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         customProduct.setActive(true);
         customProduct.setCustomisable(true);
         customProduct.setTaxRate(standardTaxRate);
-        customProduct.setImages(new ArrayList<>());
+        customProduct.setImages(new HashSet<>());
         customProduct.setDiscounts(new HashSet<>()); // Inicializace
 
         configurator = new ProductConfigurator();
@@ -106,7 +106,7 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         inactiveProduct.setSlug("neaktivni-produkt");
         inactiveProduct.setActive(false);
         inactiveProduct.setTaxRate(standardTaxRate);
-        inactiveProduct.setImages(new ArrayList<>());
+        inactiveProduct.setImages(new HashSet<>());
 
         // Lenient mockování
         lenient().when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(standardProduct)); // Používáme metodu s @Query

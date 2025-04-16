@@ -98,7 +98,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         testProduct.setTaxRate(testTaxRate);
         testProduct.setBasePriceCZK(new BigDecimal("100.00"));
         testProduct.setBasePriceEUR(new BigDecimal("4.00"));
-        testProduct.setImages(List.of(new Image()));
+        testProduct.setImages(Set.of(new Image()));
         testProduct.setAvailableDesigns(Set.of(testDesign));
         testProduct.setAvailableGlazes(Set.of(testGlaze));
         testProduct.setAvailableRoofColors(Set.of(testRoofColor));
