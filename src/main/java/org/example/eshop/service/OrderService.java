@@ -381,94 +381,124 @@ public class OrderService implements PriceConstants {
     }
 
 
-    // ... (processCartItem a ostatní pomocné metody zůstávají stejné) ...
+    // *** VÝRAZNĚ UPRAVENO: processCartItem ***
     private OrderItem processCartItem(CartItemDto itemDto, Order order, String currency) {
-        log.debug("Starting processCartItem for Product ID: {}", itemDto.getProductId());
-        // --- Fetching Product and Tax Rate ---
-        Product product = productRepository.findById(itemDto.getProductId())
-                .orElseThrow(() -> new EntityNotFoundException("Product not found: " + itemDto.getProductId()));
-        if (!product.isActive()) throw new IllegalArgumentException("Product '" + product.getName() + "' is inactive.");
-        TaxRate taxRate = product.getTaxRate();
-        if (taxRate == null || taxRate.getRate() == null) {
-            log.error("!!! Product {} is missing valid TaxRate!", product.getId());
-            throw new IllegalStateException("Product " + product.getId() + " invalid TaxRate.");
+        log.debug("Starting processCartItem for Product ID: {}, TaxRate ID: {}", itemDto.getProductId(), itemDto.getSelectedTaxRateId());
+        Product product = productRepository.findByIdWithDetails(itemDto.getProductId()) // Načteme s detaily včetně asociací
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Produkt nenalezen: " + itemDto.getProductId()));
+        if (!product.isActive()) throw new IllegalArgumentException("Produkt '" + product.getName() + "' není aktivní a nelze jej objednat.");
+
+        // --- Načtení a validace vybrané TaxRate ---
+        if (itemDto.getSelectedTaxRateId() == null) {
+            // Tato chyba by měla být zachycena už v CartController, ale pro jistotu
+            throw new IllegalArgumentException("Chybí ID vybrané daňové sazby pro produkt: " + product.getName());
         }
-        BigDecimal itemTaxRateValue = taxRate.getRate();
+        TaxRate selectedTaxRate = taxRateRepository.findById(itemDto.getSelectedTaxRateId())
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Daňová sazba nenalezena: ID " + itemDto.getSelectedTaxRateId()));
+
+        // Ověření, zda je vybraná sazba povolena pro produkt
+        // Předpokládáme, že product byl načten s findByIdWithDetails, takže má availableTaxRates
+        java.util.Set<TaxRate> availableRates = product.getAvailableTaxRates();
+        if (availableRates == null || availableRates.isEmpty()) { // Pojistka
+            log.error("Produkt ID {} nemá definované žádné povolené daňové sazby!", product.getId());
+            throw new IllegalStateException("Konfigurační chyba: Produktu '" + product.getName() + "' chybí přiřazení daňových sazeb.");
+        }
+        if (!availableRates.contains(selectedTaxRate)) {
+            log.error("Selected TaxRate ID {} ('{}') is not available for Product ID {}", selectedTaxRate.getId(), selectedTaxRate.getName(), product.getId());
+            throw new IllegalArgumentException("Vybraná daňová sazba '" + selectedTaxRate.getName() + "' není pro produkt '" + product.getName() + "' povolena.");
+        }
+        log.debug("Selected Tax Rate ID {} ('{}', Rate: {}, RC: {}) validated for Product ID {}",
+                selectedTaxRate.getId(), selectedTaxRate.getName(), selectedTaxRate.getRate(), selectedTaxRate.isReverseCharge(), product.getId());
+        // --- Konec načtení a validace TaxRate ---
 
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
-        orderItem.setProduct(product);
+        orderItem.setProduct(product); // Reference na produkt
         orderItem.setCount(itemDto.getQuantity());
         orderItem.setCustomConfigured(itemDto.isCustom());
-        orderItem.setTaxRate(itemTaxRateValue);
-        orderItem.setReverseCharge(taxRate.isReverseCharge());
 
-        // --- Calculate Surcharges (Safe) ---
-        Design selectedDesign = null;
-        Glaze selectedGlaze = null;
-        RoofColor selectedRoofColor = null;
-        BigDecimal surcharge = BigDecimal.ZERO;
-        if (!itemDto.isCustom()) {
-            if (itemDto.getSelectedDesignId() == null || itemDto.getSelectedGlazeId() == null || itemDto.getSelectedRoofColorId() == null) {
-                throw new IllegalArgumentException("Missing attribute selection for standard product item.");
-            }
-            selectedDesign = designRepository.findById(itemDto.getSelectedDesignId()).orElseThrow(() -> new IllegalArgumentException("Design not found: " + itemDto.getSelectedDesignId()));
-            selectedGlaze = glazeRepository.findById(itemDto.getSelectedGlazeId()).orElseThrow(() -> new IllegalArgumentException("Glaze not found: " + itemDto.getSelectedGlazeId()));
-            selectedRoofColor = roofColorRepository.findById(itemDto.getSelectedRoofColorId()).orElseThrow(() -> new IllegalArgumentException("RoofColor not found: " + itemDto.getSelectedRoofColorId()));
-            BigDecimal surchargeCZK = Optional.ofNullable(selectedGlaze.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO).add(Optional.ofNullable(selectedRoofColor.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO));
-            BigDecimal surchargeEUR = Optional.ofNullable(selectedGlaze.getPriceSurchargeEUR()).orElse(BigDecimal.ZERO).add(Optional.ofNullable(selectedRoofColor.getPriceSurchargeEUR()).orElse(BigDecimal.ZERO));
-            surcharge = EURO_CURRENCY.equals(currency) ? surchargeEUR : surchargeCZK;
-        }
-        log.debug("Surcharge calculated: {}", surcharge);
+        // --- Uložení vybrané sazby DPH do OrderItem ---
+        orderItem.setTaxRate(selectedTaxRate.getRate()); // Hodnota 0.xx
+        orderItem.setReverseCharge(selectedTaxRate.isReverseCharge()); // boolean
+        orderItem.setSelectedTaxRateId(selectedTaxRate.getId()); // ID pro referenci
+        orderItem.setSelectedTaxRateName(selectedTaxRate.getName()); // Název pro referenci/zobrazení
+        // --- Konec uložení sazby DPH ---
 
-        // --- Save Historical Data ---
+        // Načtení vybraných atributů (Design, Glaze, RoofColor)
+        Design selectedDesign = null; Glaze selectedGlaze = null; RoofColor selectedRoofColor = null;
+        java.math.BigDecimal attributeSurcharge = java.math.BigDecimal.ZERO;
+
+        // Předpokládáme, že ID atributů jsou v DTO validní (NotNull anotace)
+        selectedDesign = designRepository.findById(itemDto.getSelectedDesignId())
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Design nenalezen: ID " + itemDto.getSelectedDesignId()));
+        selectedGlaze = glazeRepository.findById(itemDto.getSelectedGlazeId())
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Lazura nenalezena: ID " + itemDto.getSelectedGlazeId()));
+        selectedRoofColor = roofColorRepository.findById(itemDto.getSelectedRoofColorId())
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Barva střechy nenalezena: ID " + itemDto.getSelectedRoofColorId()));
+
+        // Výpočet příplatků za atributy podle měny objednávky
+        java.math.BigDecimal surchargeCZK = (java.util.Optional.ofNullable(selectedDesign.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO))
+                .add(java.util.Optional.ofNullable(selectedGlaze.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO))
+                .add(java.util.Optional.ofNullable(selectedRoofColor.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO));
+        java.math.BigDecimal surchargeEUR = (java.util.Optional.ofNullable(selectedDesign.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO))
+                .add(java.util.Optional.ofNullable(selectedGlaze.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO))
+                .add(java.util.Optional.ofNullable(selectedRoofColor.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO));
+        attributeSurcharge = EURO_CURRENCY.equals(currency) ? surchargeEUR : surchargeCZK;
+        log.debug("Attribute surcharge calculated for currency {}: {}", currency, attributeSurcharge);
+
+        // Uložení historických dat (název produktu, SKU, varianty, atd.)
         saveHistoricalItemData(orderItem, product, itemDto, selectedDesign, selectedGlaze, selectedRoofColor);
 
-        // --- Calculate Prices (Ensure Non-Null Intermediate Steps) ---
-        BigDecimal baseUnitPriceNoTaxRaw = calculateBaseUnitPrice(product, itemDto, currency);
-        BigDecimal baseUnitPriceNoTax = Optional.ofNullable(baseUnitPriceNoTaxRaw).orElse(BigDecimal.ZERO);
-        log.debug("Base Unit Price (No Tax, Raw): {}", baseUnitPriceNoTax);
+        // Výpočet základní jednotkové ceny bez DPH (závisí na custom/standard)
+        java.math.BigDecimal baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency);
+        log.debug("Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
 
-        BigDecimal unitPriceAfterDiscountNoTax = Optional.ofNullable(discountService.applyBestPercentageDiscount(baseUnitPriceNoTax, product)).orElse(baseUnitPriceNoTax);
-        log.debug("Unit Price After Discount: {}", unitPriceAfterDiscountNoTax);
+        // Aplikace nejlepší procentuální slevy PŘÍMO NA PRODUKT (pokud existuje)
+        // Sleva z kupónu se aplikuje až na celkový subtotal objednávky
+        java.math.BigDecimal unitPriceAfterDiscountNoTax = java.util.Optional.ofNullable(discountService.applyBestPercentageDiscount(baseUnitPriceNoTax, product))
+                .orElse(baseUnitPriceNoTax);
+        if (unitPriceAfterDiscountNoTax.compareTo(baseUnitPriceNoTax) != 0) {
+            log.debug("Unit Price after Product Discount applied: {}", unitPriceAfterDiscountNoTax);
+        } else {
+            log.trace("No applicable product discount for product ID {}", product.getId());
+        }
 
-        BigDecimal totalFixedAddonsPriceNoTax = Optional.ofNullable(itemDto.isCustom() ? processAndCalculateAddons(orderItem, itemDto, currency) : BigDecimal.ZERO).orElse(BigDecimal.ZERO);
-        log.debug("Total Fixed Addons Price: {}", totalFixedAddonsPriceNoTax);
+        // Zpracování Addonů a výpočet jejich celkové ceny bez DPH (pouze pro custom)
+        java.math.BigDecimal totalFixedAddonsPriceNoTax = java.math.BigDecimal.ZERO;
+        if (itemDto.isCustom()) {
+            totalFixedAddonsPriceNoTax = processAndCalculateAddons(orderItem, itemDto, currency);
+            log.debug("Total Fixed Addons Price (No Tax, Currency: {}): {}", currency, totalFixedAddonsPriceNoTax);
+        }
 
-        BigDecimal finalUnitPriceNoTax = Optional.ofNullable(unitPriceAfterDiscountNoTax).orElse(BigDecimal.ZERO)
-                .add(Optional.ofNullable(surcharge).orElse(BigDecimal.ZERO))
-                .add(Optional.ofNullable(totalFixedAddonsPriceNoTax).orElse(BigDecimal.ZERO));
-        log.debug("Final Unit Price (No Tax): {}", finalUnitPriceNoTax);
+        // Finální jednotková cena bez DPH = (Základ po slevě) + Příplatky_Atributů + Cena_Addonů
+        java.math.BigDecimal finalUnitPriceNoTax = unitPriceAfterDiscountNoTax
+                .add(attributeSurcharge)
+                .add(totalFixedAddonsPriceNoTax);
+        log.debug("Final Unit Price (No Tax, Currency: {}): {}", currency, finalUnitPriceNoTax);
 
-        // --- Calculate Taxes (Ensure Non-Null) ---
-        BigDecimal unitTaxAmount = finalUnitPriceNoTax.multiply(itemTaxRateValue).setScale(PRICE_SCALE, ROUNDING_MODE);
-        unitTaxAmount = Optional.ofNullable(unitTaxAmount).orElse(BigDecimal.ZERO);
-        log.debug("Unit Tax Amount: {}", unitTaxAmount);
+        // Výpočet DPH z finální jednotkové ceny bez DPH (použije sazbu z orderItem.getTaxRate())
+        java.math.BigDecimal unitTaxAmount = finalUnitPriceNoTax
+                .multiply(orderItem.getTaxRate()) // Použije sazbu 0.xx uloženou v OrderItem
+                .setScale(PRICE_SCALE, ROUNDING_MODE);
+        log.debug("Unit Tax Amount calculated using rate {}: {}", orderItem.getTaxRate(), unitTaxAmount);
 
-        BigDecimal unitPriceWithTax = finalUnitPriceNoTax.add(unitTaxAmount);
-        unitPriceWithTax = Optional.ofNullable(unitPriceWithTax).orElse(BigDecimal.ZERO);
+        // Jednotková cena s DPH
+        java.math.BigDecimal unitPriceWithTax = finalUnitPriceNoTax.add(unitTaxAmount);
         log.debug("Unit Price With Tax: {}", unitPriceWithTax);
 
-        // --- Set Values on OrderItem ---
+        // Nastavení vypočtených cen na OrderItem (zaokrouhleno)
         orderItem.setUnitPriceWithoutTax(finalUnitPriceNoTax.setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setUnitTaxAmount(unitTaxAmount.setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setUnitPriceWithTax(unitPriceWithTax.setScale(PRICE_SCALE, ROUNDING_MODE));
 
-        // --- Calculate Totals ---
-        BigDecimal quantity = BigDecimal.valueOf(itemDto.getQuantity());
-        BigDecimal calculatedTotalPriceWithoutTax = Optional.ofNullable(orderItem.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO).multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE);
-        BigDecimal calculatedTotalTaxAmount = Optional.ofNullable(orderItem.getUnitTaxAmount()).orElse(BigDecimal.ZERO).multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE);
-        BigDecimal calculatedTotalPriceWithTax = Optional.ofNullable(orderItem.getUnitPriceWithTax()).orElse(BigDecimal.ZERO).multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE);
+        // Výpočet celkových cen pro řádek (cena * množství)
+        java.math.BigDecimal quantity = java.math.BigDecimal.valueOf(itemDto.getQuantity());
+        orderItem.setTotalPriceWithoutTax(orderItem.getUnitPriceWithoutTax().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
+        orderItem.setTotalTaxAmount(orderItem.getUnitTaxAmount().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
+        orderItem.setTotalPriceWithTax(orderItem.getUnitPriceWithTax().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
 
-        log.debug("Calculated Totals: TotalPriceWithoutTax={}, TotalTaxAmount={}, TotalPriceWithTax={}",
-                calculatedTotalPriceWithoutTax, calculatedTotalTaxAmount, calculatedTotalPriceWithTax);
-
-        orderItem.setTotalPriceWithoutTax(calculatedTotalPriceWithoutTax);
-        orderItem.setTotalTaxAmount(calculatedTotalTaxAmount);
-        orderItem.setTotalPriceWithTax(calculatedTotalPriceWithTax);
-
-        log.debug("Final OrderItem state before return: PriceNoTax={}, TaxAmount={}",
-                orderItem.getTotalPriceWithoutTax(), orderItem.getTotalTaxAmount());
+        log.info("Finished processCartItem for Product ID: {}. Total Price w/o Tax: {}, Total Tax: {}, Selected Rate ID: {}",
+                itemDto.getProductId(), orderItem.getTotalPriceWithoutTax(), orderItem.getTotalTaxAmount(), orderItem.getSelectedTaxRateId());
 
         return orderItem;
     }

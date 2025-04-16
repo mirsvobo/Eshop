@@ -3,6 +3,8 @@ package org.example.eshop.service;
 
 import org.example.eshop.model.CartItem;
 import org.example.eshop.model.Coupon;
+// OPRAVA: Import TaxRate
+import org.example.eshop.model.TaxRate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,19 +22,32 @@ import static org.junit.jupiter.api.Assertions.*;
 class CartTest {
 
     private Cart cart;
+    // OPRAVA: Přidány testovací sazby
+    private TaxRate taxRate21;
+    private TaxRate taxRate10;
+    private TaxRate taxRate0;
 
-    // Pomocná metoda pro vytvoření CartItem pro testování
-    // Očekává taxRate jako řetězec např. "0.21" pro 21%
-    private CartItem createTestItem(String itemId, Long productId, int quantity, String priceCZK, String priceEUR, String taxRate) {
+    // OPRAVA: createTestItem nyní přijímá TaxRate objekt
+    private CartItem createTestItem(String itemId, Long productId, int quantity, String priceCZK, String priceEUR, TaxRate taxRate) {
         CartItem item = new CartItem();
         item.setCartItemId(itemId);
         item.setProductId(productId);
         item.setProductName("Test Product " + productId);
         item.setQuantity(quantity);
-        item.setCustom(false); // Defaultně standardní produkt pro testy
+        item.setCustom(false);
         if (priceCZK != null) item.setUnitPriceCZK(new BigDecimal(priceCZK));
         if (priceEUR != null) item.setUnitPriceEUR(new BigDecimal(priceEUR));
-        if (taxRate != null) item.setTaxRatePercent(new BigDecimal(taxRate)); // Uložíme sazbu jako BigDecimal
+        // OPRAVA: Nastavení nových polí z TaxRate objektu
+        if (taxRate != null) {
+            item.setSelectedTaxRateId(taxRate.getId());
+            item.setSelectedTaxRateValue(taxRate.getRate());
+            item.setSelectedIsReverseCharge(taxRate.isReverseCharge());
+        } else {
+            // Fallback, pokud by sazba byla null (nemělo by nastat u reálných dat)
+            item.setSelectedTaxRateId(null);
+            item.setSelectedTaxRateValue(BigDecimal.ZERO);
+            item.setSelectedIsReverseCharge(false);
+        }
         return item;
     }
 
@@ -45,7 +60,6 @@ class CartTest {
         if (value != null) coupon.setValue(new BigDecimal(value));
         if (valueCZK != null) coupon.setValueCZK(new BigDecimal(valueCZK));
         if (valueEUR != null) coupon.setValueEUR(new BigDecimal(valueEUR));
-        // Nastavíme výchozí platná data, aby neovlivňovala testy výpočtů
         coupon.setStartDate(java.time.LocalDateTime.now().minusDays(1));
         coupon.setExpirationDate(java.time.LocalDateTime.now().plusDays(1));
         return coupon;
@@ -54,6 +68,11 @@ class CartTest {
     @BeforeEach
     void setUp() {
         cart = new Cart(); // Vytvoříme nový čistý košík před každým testem
+
+        // OPRAVA: Inicializace testovacích sazeb
+        taxRate21 = new TaxRate(); taxRate21.setId(1L); taxRate21.setRate(new BigDecimal("0.21")); taxRate21.setReverseCharge(false);
+        taxRate10 = new TaxRate(); taxRate10.setId(2L); taxRate10.setRate(new BigDecimal("0.10")); taxRate10.setReverseCharge(false);
+        taxRate0 = new TaxRate(); taxRate0.setId(3L); taxRate0.setRate(new BigDecimal("0.00")); taxRate0.setReverseCharge(false);
     }
 
     // --- Testy Základních Operací ---
@@ -61,108 +80,112 @@ class CartTest {
     @Test
     @DisplayName("Přidání nové položky do prázdného košíku")
     void addItem_NewItem_ShouldAdd() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
+        // OPRAVA: Používáme taxRate21 objekt
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
 
-        assertEquals(1, cart.getItemCount(), "Počet unikátních položek by měl být 1");
-        assertEquals(1, cart.getTotalQuantity(), "Celkové množství by mělo být 1");
-        assertTrue(cart.getItems().containsKey("P10-S"), "Košík by měl obsahovat klíč položky");
-        assertEquals(item1, cart.getItems().get("P10-S"), "Položka v košíku by měla být ta přidaná");
-        assertTrue(cart.hasItems(), "Košík by neměl být prázdný");
+        assertEquals(1, cart.getItemCount());
+        assertEquals(1, cart.getTotalQuantity());
+        assertTrue(cart.getItems().containsKey("P10-T1-S"));
+        assertEquals(item1, cart.getItems().get("P10-T1-S"));
+        assertTrue(cart.hasItems());
     }
 
     @Test
     @DisplayName("Přidání stejné položky (stejný cartItemId) navýší množství")
     void addItem_ExistingItem_ShouldIncreaseQuantity() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
-        // Položka se stejným ID, ale jiným počátečním množstvím (simuluje další přidání)
-        CartItem item2 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21");
+        // OPRAVA: Používáme taxRate21 objekt
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
+        CartItem item2 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Stejné ID a sazba
 
         cart.addItem(item1);
-        cart.addItem(item2); // Přidáme znovu stejnou položku
+        cart.addItem(item2);
 
-        assertEquals(1, cart.getItemCount(), "Košík by měl stále obsahovat 1 unikátní položku");
-        assertEquals(3, cart.getTotalQuantity(), "Celkové množství by mělo být součtem (1+2=3)");
-        assertNotNull(cart.getItems().get("P10-S"), "Položka by měla v košíku existovat");
-        assertEquals(3, cart.getItems().get("P10-S").getQuantity(), "Množství položky by mělo být aktualizováno na 3");
+        assertEquals(1, cart.getItemCount());
+        assertEquals(3, cart.getTotalQuantity());
+        assertNotNull(cart.getItems().get("P10-T1-S"));
+        assertEquals(3, cart.getItems().get("P10-T1-S").getQuantity());
+        // Ověříme, že i sazba zůstala správná
+        assertEquals(taxRate21.getId(), cart.getItems().get("P10-T1-S").getSelectedTaxRateId());
+        assertEquals(0, taxRate21.getRate().compareTo(cart.getItems().get("P10-T1-S").getSelectedTaxRateValue()));
     }
 
     @Test
     @DisplayName("Odebrání existující položky z košíku")
     void removeItem_ExistingItem_ShouldRemove() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
-        assertTrue(cart.hasItems(), "Košík by měl obsahovat položku před odebráním");
+        assertTrue(cart.hasItems());
 
-        cart.removeItem("P10-S");
+        cart.removeItem("P10-T1-S");
 
-        assertEquals(0, cart.getItemCount(), "Počet položek by měl být 0");
-        assertFalse(cart.getItems().containsKey("P10-S"), "Košík by neměl obsahovat klíč odebrané položky");
-        assertFalse(cart.hasItems(), "Košík by měl být prázdný");
+        assertEquals(0, cart.getItemCount());
+        assertFalse(cart.getItems().containsKey("P10-T1-S"));
+        assertFalse(cart.hasItems());
     }
 
     @Test
     @DisplayName("Odebrání neexistující položky nic nezmění")
     void removeItem_NonExistingItem_ShouldDoNothing() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
         int initialCount = cart.getItemCount();
 
-        cart.removeItem("NEEXISTUJICI_ID"); // Pokus o odebrání neexistující
+        cart.removeItem("NEEXISTUJICI_ID");
 
-        assertEquals(initialCount, cart.getItemCount(), "Počet položek by se neměl změnit");
-        assertTrue(cart.getItems().containsKey("P10-S"), "Původní položka by měla zůstat");
+        assertEquals(initialCount, cart.getItemCount());
+        assertTrue(cart.getItems().containsKey("P10-T1-S"));
     }
 
     @Test
     @DisplayName("Aktualizace množství existující položky na kladnou hodnotu")
     void updateQuantity_Positive_ShouldUpdate() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
 
-        cart.updateQuantity("P10-S", 5);
+        cart.updateQuantity("P10-T1-S", 5);
 
-        assertEquals(1, cart.getItemCount(), "Stále by měla být jedna unikátní položka");
-        assertNotNull(cart.getItems().get("P10-S"), "Položka by měla existovat");
-        assertEquals(5, cart.getItems().get("P10-S").getQuantity(), "Množství by mělo být 5");
+        assertEquals(1, cart.getItemCount());
+        assertNotNull(cart.getItems().get("P10-T1-S"));
+        assertEquals(5, cart.getItems().get("P10-T1-S").getQuantity());
     }
 
     @Test
     @DisplayName("Aktualizace množství existující položky na nulu ji odebere")
     void updateQuantity_Zero_ShouldRemove() {
-        CartItem item1 = createTestItem("P10-S", 10L, 3, "100.00", "4.00", "0.21");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 3, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
 
-        cart.updateQuantity("P10-S", 0);
+        cart.updateQuantity("P10-T1-S", 0);
 
-        assertEquals(0, cart.getItemCount(), "Počet položek by měl být 0");
-        assertFalse(cart.getItems().containsKey("P10-S"), "Položka by měla být odebrána");
+        assertEquals(0, cart.getItemCount());
+        assertFalse(cart.getItems().containsKey("P10-T1-S"));
     }
 
     @Test
     @DisplayName("Aktualizace množství neexistující položky nic neudělá")
     void updateQuantity_NonExisting_ShouldDoNothing() {
         cart.updateQuantity("NEEXISTUJICI_ID", 5);
-        assertEquals(0, cart.getItemCount(), "Košík by měl zůstat prázdný");
+        assertEquals(0, cart.getItemCount());
     }
 
     @Test
     @DisplayName("Vyčištění košíku")
     void clearCart_ShouldRemoveAllItems() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "500.00", "20.00", "0.10");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "500.00", "20.00", taxRate10); // Jiná sazba
         cart.addItem(item1);
         cart.addItem(item2);
         Coupon coupon = createTestCoupon("TEST", true, "5", null, null);
-        cart.applyCoupon(coupon, "TEST"); // Přidáme i kupón
+        cart.applyCoupon(coupon, "TEST");
 
         cart.clearCart();
 
-        assertEquals(0, cart.getItemCount(), "Počet položek by měl být 0");
-        assertTrue(cart.getItems().isEmpty(), "Mapa položek by měla být prázdná");
-        assertNull(cart.getAppliedCoupon(), "Kupón by měl být odstraněn");
-        assertNull(cart.getAppliedCouponCode(), "Kód kupónu by měl být odstraněn");
-        assertFalse(cart.hasItems(), "Košík by měl být prázdný");
+        assertEquals(0, cart.getItemCount());
+        assertTrue(cart.getItems().isEmpty());
+        assertNull(cart.getAppliedCoupon());
+        assertNull(cart.getAppliedCouponCode());
+        assertFalse(cart.hasItems());
     }
 
     // --- Testy Výpočtů ---
@@ -170,46 +193,43 @@ class CartTest {
     @Test
     @DisplayName("Výpočet mezisoučtu (Subtotal) v CZK pro více položek")
     void calculateSubtotal_CZK_MultipleItems() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // 2 * 100 = 200.00
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "550.50", "22.00", "0.21"); // 1 * 550.50 = 550.50
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // 2 * 100 = 200.00
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "550.50", "22.00", taxRate10); // 1 * 550.50 = 550.50
         cart.addItem(item1);
         cart.addItem(item2);
 
-        // Očekáváno: 200.00 + 550.50 = 750.50
-        assertEquals(0, new BigDecimal("750.50").compareTo(cart.calculateSubtotal("CZK")), "Mezisoučet v CZK nesouhlasí");
+        assertEquals(0, new BigDecimal("750.50").compareTo(cart.calculateSubtotal("CZK")));
     }
 
     @Test
     @DisplayName("Výpočet mezisoučtu (Subtotal) v EUR pro více položek")
     void calculateSubtotal_EUR_MultipleItems() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.15", "0.21"); // 2 * 4.15 = 8.30
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "550.50", "22.80", "0.21"); // 1 * 22.80 = 22.80
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.15", taxRate21); // 2 * 4.15 = 8.30
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "550.50", "22.80", taxRate10); // 1 * 22.80 = 22.80
         cart.addItem(item1);
         cart.addItem(item2);
 
-        // Očekáváno: 8.30 + 22.80 = 31.10
-        assertEquals(0, new BigDecimal("31.10").compareTo(cart.calculateSubtotal("EUR")), "Mezisoučet v EUR nesouhlasí");
+        assertEquals(0, new BigDecimal("31.10").compareTo(cart.calculateSubtotal("EUR")));
     }
 
     @Test
     @DisplayName("Výpočet mezisoučtu pro prázdný košík")
     void calculateSubtotal_EmptyCart_ShouldBeZero() {
-        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateSubtotal("CZK")), "Mezisoučet prázdného košíku CZK má být 0");
-        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateSubtotal("EUR")), "Mezisoučet prázdného košíku EUR má být 0");
+        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateSubtotal("CZK")));
+        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateSubtotal("EUR")));
     }
 
     @Test
     @DisplayName("Výpočet celkového DPH (Total VAT) v CZK s různými sazbami")
     void calculateTotalVatAmount_CZK_MixedRates() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 200.00, VAT: 200 * 0.21 = 42.00
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "500.00", "20.00", "0.10"); // Sub: 500.00, VAT: 500 * 0.10 = 50.00
-        CartItem item3 = createTestItem("P30-Z", 30L, 1, "10.00", "0.40", "0.00");  // Sub:  10.00, VAT: 10 * 0.00 =  0.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 200.00, VAT: 200 * 0.21 = 42.00
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "500.00", "20.00", taxRate10); // Sub: 500.00, VAT: 500 * 0.10 = 50.00
+        CartItem item3 = createTestItem("P30-T3-Z", 30L, 1, "10.00", "0.40", taxRate0);  // Sub:  10.00, VAT: 10 * 0.00 =  0.00
         cart.addItem(item1);
         cart.addItem(item2);
         cart.addItem(item3);
 
-        // Očekáváno: 42.00 + 50.00 + 0.00 = 92.00
-        assertEquals(0, new BigDecimal("92.00").compareTo(cart.calculateTotalVatAmount("CZK")), "Celkové DPH nesouhlasí");
+        assertEquals(0, new BigDecimal("92.00").compareTo(cart.calculateTotalVatAmount("CZK")));
     }
 
     @Test
@@ -222,56 +242,59 @@ class CartTest {
     @Test
     @DisplayName("Výpočet rozpisu DPH (VAT Breakdown) v CZK s různými sazbami")
     void calculateVatBreakdown_CZK_MixedRates() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 200.00, VAT 21%: 42.00
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "500.00", "20.00", "0.10"); // Sub: 500.00, VAT 10%: 50.00
-        CartItem item3 = createTestItem("P30-S", 30L, 3, "50.00", "2.00", "0.21");  // Sub: 150.00, VAT 21%: 31.50
-        CartItem item4 = createTestItem("P40-Z", 40L, 1, "20.00", "0.80", "0.00");  // Sub:  20.00, VAT 0%:   0.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 200.00, VAT 21%: 42.00
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "500.00", "20.00", taxRate10); // Sub: 500.00, VAT 10%: 50.00
+        CartItem item3 = createTestItem("P30-T1-S", 30L, 3, "50.00", "2.00", taxRate21);  // Sub: 150.00, VAT 21%: 31.50
+        CartItem item4 = createTestItem("P40-T3-Z", 40L, 1, "20.00", "0.80", taxRate0);  // Sub:  20.00, VAT 0%:   0.00
         cart.addItem(item1);
         cart.addItem(item2);
         cart.addItem(item3);
         cart.addItem(item4);
 
         Map<BigDecimal, BigDecimal> breakdown = cart.calculateVatBreakdown("CZK");
-        // Očekáváme 3 sazby: 0.00, 0.10, 0.21
-        assertEquals(3, breakdown.size(), "Měly by být 3 sazby DPH v rozpisu");
+        assertEquals(3, breakdown.size());
 
-        // Klíč je sazba (např. 0.10), Hodnota je celkové DPH pro tuto sazbu
-        // Porovnáváme klíče a hodnoty zaokrouhlené na 2 místa pro konzistenci
-        assertEquals(0, new BigDecimal("0.00").compareTo(breakdown.getOrDefault(new BigDecimal("0.00").setScale(2), BigDecimal.valueOf(-1))), "Rozpis DPH 0% nesouhlasí");
-        assertEquals(0, new BigDecimal("50.00").compareTo(breakdown.getOrDefault(new BigDecimal("0.10").setScale(2), BigDecimal.valueOf(-1))), "Rozpis DPH 10% nesouhlasí");
-        assertEquals(0, new BigDecimal("73.50").compareTo(breakdown.getOrDefault(new BigDecimal("0.21").setScale(2), BigDecimal.valueOf(-1))), "Rozpis DPH 21% nesouhlasí (42.00 + 31.50)");
+        // Klíč je hodnota sazby zaokrouhlená na 2 místa
+        BigDecimal rateKey0 = new BigDecimal("0.00").setScale(2, RoundingMode.HALF_UP);
+        BigDecimal rateKey10 = new BigDecimal("0.10").setScale(2, RoundingMode.HALF_UP);
+        BigDecimal rateKey21 = new BigDecimal("0.21").setScale(2, RoundingMode.HALF_UP);
+
+        assertEquals(0, new BigDecimal("0.00").compareTo(breakdown.getOrDefault(rateKey0, BigDecimal.valueOf(-1))));
+        assertEquals(0, new BigDecimal("50.00").compareTo(breakdown.getOrDefault(rateKey10, BigDecimal.valueOf(-1))));
+        assertEquals(0, new BigDecimal("73.50").compareTo(breakdown.getOrDefault(rateKey21, BigDecimal.valueOf(-1)))); // 42.00 + 31.50
     }
 
     @Test
     @DisplayName("Výpočet rozpisu DPH pro prázdný košík")
     void calculateVatBreakdown_EmptyCart_ShouldBeEmptyMap() {
-        assertTrue(cart.calculateVatBreakdown("CZK").isEmpty(), "Rozpis DPH prázdného košíku CZK má být prázdná mapa");
-        assertTrue(cart.calculateVatBreakdown("EUR").isEmpty(), "Rozpis DPH prázdného košíku EUR má být prázdná mapa");
+        assertTrue(cart.calculateVatBreakdown("CZK").isEmpty());
+        assertTrue(cart.calculateVatBreakdown("EUR").isEmpty());
     }
 
 
     @Test
     @DisplayName("Výpočet celkové ceny před dopravou (TotalPriceBeforeShipping) v CZK")
     void calculateTotalPriceBeforeShipping_CZK_NoDiscount() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 200.00, VAT: 42.00 => Total: 242.00
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "500.00", "20.00", "0.10"); // Sub: 500.00, VAT: 50.00 => Total: 550.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 200.00, VAT: 42.00 => Total: 242.00
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "500.00", "20.00", taxRate10); // Sub: 500.00, VAT: 50.00 => Total: 550.00
         cart.addItem(item1);
         cart.addItem(item2);
 
         // Očekáváno: Subtotal(700.00) + TotalVAT(92.00) = 792.00
-        assertEquals(0, new BigDecimal("792.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")), "Celková cena před dopravou CZK nesouhlasí");
+        // Metoda calculateTotalPriceBeforeShipping POČÍTÁ S DPH
+        assertEquals(0, new BigDecimal("792.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")));
     }
 
     @Test
     @DisplayName("Výpočet celkové ceny před dopravou (TotalPriceBeforeShipping) v EUR")
     void calculateTotalPriceBeforeShipping_EUR_NoDiscount() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 8.00, VAT: 1.68 => Total: 9.68
-        CartItem item2 = createTestItem("P20-C", 20L, 1, "500.00", "20.00", "0.10"); // Sub: 20.00, VAT: 2.00 => Total: 22.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 8.00, VAT: 1.68 => Total: 9.68
+        CartItem item2 = createTestItem("P20-T2-C", 20L, 1, "500.00", "20.00", taxRate10); // Sub: 20.00, VAT: 2.00 => Total: 22.00
         cart.addItem(item1);
         cart.addItem(item2);
 
         // Očekáváno: Subtotal(28.00) + TotalVAT(3.68) = 31.68
-        assertEquals(0, new BigDecimal("31.68").compareTo(cart.calculateTotalPriceBeforeShipping("EUR")), "Celková cena před dopravou EUR nesouhlasí");
+        assertEquals(0, new BigDecimal("31.68").compareTo(cart.calculateTotalPriceBeforeShipping("EUR")));
     }
 
     @Test
@@ -287,82 +310,86 @@ class CartTest {
     @Test
     @DisplayName("Použití procentuálního kupónu ovlivní cenu před dopravou")
     void calculateTotalPriceBeforeShipping_PercentageCoupon_CZK() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 200.00, VAT: 42.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 200.00, VAT: 42.00
         cart.addItem(item1);
         Coupon coupon = createTestCoupon("SLEVA10", true, "10.00", null, null); // 10%
         cart.applyCoupon(coupon, "SLEVA10");
 
-        // Subtotal after discount = 200.00 * (1 - 0.10) = 180.00
-        // Total VAT = 42.00 (VAT se počítá z původní ceny před slevou kupónem)
-        // Expected Total Price Before Shipping = 180.00 + 42.00 = 222.00
-        assertEquals(0, new BigDecimal("222.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")), "Cena před dopravou s % slevou nesouhlasí");
-        assertEquals(0, new BigDecimal("180.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")), "Cena bez DPH po slevě nesouhlasí");
+        // Subtotal = 200.00
+        // Discount = 200.00 * 0.10 = 20.00
+        // Total VAT = 42.00 (nemění se)
+        // Expected Total Price Before Shipping = (Subtotal - Discount) + Total VAT = (200.00 - 20.00) + 42.00 = 180.00 + 42.00 = 222.00
+        assertEquals(0, new BigDecimal("222.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")));
+        // Total Price Without Tax After Discount = Subtotal - Discount = 200.00 - 20.00 = 180.00
+        assertEquals(0, new BigDecimal("180.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")));
     }
 
     @Test
     @DisplayName("Použití fixního kupónu CZK ovlivní cenu před dopravou")
     void calculateTotalPriceBeforeShipping_FixedCoupon_CZK() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 200.00, VAT: 42.00
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 200.00, VAT: 42.00
         cart.addItem(item1);
         Coupon coupon = createTestCoupon("SLEVA50", false, null, "50.00", "2.00"); // 50 CZK
         cart.applyCoupon(coupon, "SLEVA50");
 
-        // Subtotal after discount = 200.00 - 50.00 = 150.00
+        // Subtotal = 200.00
+        // Discount = 50.00
         // Total VAT = 42.00
-        // Expected Total Price Before Shipping = 150.00 + 42.00 = 192.00
-        assertEquals(0, new BigDecimal("192.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")), "Cena před dopravou s fixní slevou CZK nesouhlasí");
-        assertEquals(0, new BigDecimal("150.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")), "Cena bez DPH po slevě nesouhlasí");
+        // Expected Total Price Before Shipping = (200.00 - 50.00) + 42.00 = 150.00 + 42.00 = 192.00
+        assertEquals(0, new BigDecimal("192.00").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")));
+        // Total Price Without Tax After Discount = 200.00 - 50.00 = 150.00
+        assertEquals(0, new BigDecimal("150.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")));
     }
 
     @Test
     @DisplayName("Použití fixního kupónu EUR ovlivní cenu před dopravou")
     void calculateTotalPriceBeforeShipping_FixedCoupon_EUR() {
-        CartItem item1 = createTestItem("P10-S", 10L, 2, "100.00", "4.00", "0.21"); // Sub: 8.00 EUR, VAT: 1.68 EUR
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 2, "100.00", "4.00", taxRate21); // Sub: 8.00 EUR, VAT: 1.68 EUR
         cart.addItem(item1);
         Coupon coupon = createTestCoupon("SLEVA2EUR", false, null, "50.00", "2.00"); // 2 EUR
         cart.applyCoupon(coupon, "SLEVA2EUR");
 
-        // Subtotal after discount = 8.00 - 2.00 = 6.00
+        // Subtotal = 8.00
+        // Discount = 2.00
         // Total VAT = 1.68
-        // Expected Total Price Before Shipping = 6.00 + 1.68 = 7.68
-        assertEquals(0, new BigDecimal("7.68").compareTo(cart.calculateTotalPriceBeforeShipping("EUR")), "Cena před dopravou s fixní slevou EUR nesouhlasí");
-        assertEquals(0, new BigDecimal("6.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("EUR")), "Cena bez DPH po slevě nesouhlasí");
+        // Expected Total Price Before Shipping = (8.00 - 2.00) + 1.68 = 6.00 + 1.68 = 7.68
+        assertEquals(0, new BigDecimal("7.68").compareTo(cart.calculateTotalPriceBeforeShipping("EUR")));
+        // Total Price Without Tax After Discount = 8.00 - 2.00 = 6.00
+        assertEquals(0, new BigDecimal("6.00").compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("EUR")));
     }
 
     @Test
     @DisplayName("Fixní kupón vyšší než mezisoučet sleví maximálně na nulu")
     void calculateDiscountAmount_FixedCouponHigherThanSubtotal() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "30.00", "1.20", "0.21"); // Sub: 30.00 CZK
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "30.00", "1.20", taxRate21); // Sub: 30.00 CZK, VAT: 6.30
         cart.addItem(item1);
         Coupon coupon = createTestCoupon("SLEVA50", false, null, "50.00", "2.00"); // 50 CZK
         cart.applyCoupon(coupon, "SLEVA50");
 
-        // Očekávaná sleva je omezena mezisoučtem
-        assertEquals(0, new BigDecimal("30.00").compareTo(cart.calculateDiscountAmount("CZK")), "Sleva by měla být omezena na mezisoučet");
-        // Očekávaná cena po slevě (bez DPH) by měla být nula
-        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")), "Cena bez DPH po slevě by měla být 0");
-        // Očekávaná cena před dopravou (s DPH) = (30-30) + (30*0.21) = 0 + 6.30 = 6.30
-        assertEquals(0, new BigDecimal("6.30").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")), "Cena před dopravou s vysokou fixní slevou nesouhlasí");
+        // Discount = min(50.00, 30.00) = 30.00
+        assertEquals(0, new BigDecimal("30.00").compareTo(cart.calculateDiscountAmount("CZK")));
+        // Total Price Without Tax After Discount = 30.00 - 30.00 = 0.00
+        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateTotalPriceWithoutTaxAfterDiscount("CZK")));
+        // Total Price Before Shipping = (30.00 - 30.00) + 6.30 = 0.00 + 6.30 = 6.30
+        assertEquals(0, new BigDecimal("6.30").compareTo(cart.calculateTotalPriceBeforeShipping("CZK")));
     }
 
     @Test
     @DisplayName("Odebrání kupónu")
     void removeCoupon_ShouldClearCouponData() {
-        CartItem item1 = createTestItem("P10-S", 10L, 1, "100.00", "4.00", "0.21");
+        CartItem item1 = createTestItem("P10-T1-S", 10L, 1, "100.00", "4.00", taxRate21);
         cart.addItem(item1);
         Coupon coupon = createTestCoupon("TEST", true, "5", null, null);
         cart.applyCoupon(coupon, "TEST");
-        assertNotNull(cart.getAppliedCoupon(), "Kupón by měl být aplikován");
-        assertNotNull(cart.getAppliedCouponCode(), "Kód kupónu by měl být uložen");
-        // Ověříme, že sleva není 0
-        assertTrue(cart.calculateDiscountAmount("CZK").compareTo(BigDecimal.ZERO) > 0, "Sleva by neměla být 0");
+        assertNotNull(cart.getAppliedCoupon());
+        assertNotNull(cart.getAppliedCouponCode());
+        assertTrue(cart.calculateDiscountAmount("CZK").compareTo(BigDecimal.ZERO) > 0);
 
         cart.removeCoupon();
 
-        assertNull(cart.getAppliedCoupon(), "Kupón by měl být null po odebrání");
-        assertNull(cart.getAppliedCouponCode(), "Kód kupónu by měl být null po odebrání");
-        // Ověříme, že sleva je nyní 0
-        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateDiscountAmount("CZK")), "Sleva by měla být 0 po odebrání kupónu");
+        assertNull(cart.getAppliedCoupon());
+        assertNull(cart.getAppliedCouponCode());
+        assertEquals(0, BigDecimal.ZERO.compareTo(cart.calculateDiscountAmount("CZK")));
     }
 
 }

@@ -51,8 +51,13 @@ public class OrderItem {
     // --- Množství a ceny ---
     @Column(nullable = false) private Integer count;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal unitPriceWithoutTax;
-    @Column(nullable = false, precision = 5, scale = 4) private BigDecimal taxRate;
-    @Column(nullable = false) private boolean isReverseCharge;
+    // *** UPRAVENO: Pole pro uloženou sazbu a příznak RC ***
+    @Column(nullable = false, precision = 5, scale = 4) private BigDecimal taxRate; // Hodnota vybrané sazby
+    @Column(nullable = false) private boolean isReverseCharge; // Příznak RC vybrané sazby
+
+    // *** NOVÉ: Nepovinná pole pro referenci a historii ***
+    @Column(nullable = true) private Long selectedTaxRateId; // ID vybrané TaxRate entity
+    @Column(nullable = true, length = 100) private String selectedTaxRateName; // Název vybrané sazby pro info
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal unitTaxAmount;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal unitPriceWithTax;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal totalPriceWithoutTax;

@@ -2,7 +2,7 @@ package org.example.eshop.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.eshop.config.PriceConstants; // Assuming PriceConstants defines scale and rounding
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.AddonDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,14 +10,14 @@ import org.slf4j.LoggerFactory;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.math.RoundingMode; // Import RoundingMode
+import java.math.RoundingMode;
 import java.util.*;
 
 @Getter
 @Setter
-public class CartItem implements Serializable, PriceConstants { // Implement PriceConstants if needed for scale/rounding
+public class CartItem implements Serializable, PriceConstants {
     @Serial
-    private static final long serialVersionUID = 2L; // Zvýšena verze kvůli změně
+    private static final long serialVersionUID = 3L; // Zvýšena verze kvůli změně DPH
     private static final Logger log = LoggerFactory.getLogger(CartItem.class);
 
     private String cartItemId;
@@ -28,51 +28,39 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
     private int quantity;
     private boolean isCustom;
 
-    private BigDecimal length;  // Délka
-    private BigDecimal width;   // Hloubka (šířka)
+    private BigDecimal length;
+    private BigDecimal width;
     private BigDecimal height;
 
-    // --- Atributy ID (pro standardní i custom) ---
     private Long selectedDesignId;
     private Long selectedGlazeId;
     private Long selectedRoofColorId;
 
-    // --- PŘIDÁNA POLE PRO JMÉNA (pro zobrazení/historii) ---
     private String selectedDesignName;
     private String selectedGlazeName;
     private String selectedRoofColorName;
-    // -----------------------------------------------------
 
-    // --- Custom Konfigurace ---
+    // *** ZMĚNA: Pole pro DPH ***
+    private Long selectedTaxRateId;       // ID vybrané sazby z formuláře
+    private BigDecimal selectedTaxRateValue;  // Hodnota (např. 0.21) vybrané sazby
+    private boolean selectedIsReverseCharge; // Příznak RC vybrané sazby
+    // Původní: private BigDecimal taxRatePercent;
+
     private Map<String, BigDecimal> customDimensions;
-    // ODEBRÁNO: private String customGlaze;
-    // ODEBRÁNO: private String customRoofColor;
     private String customRoofOverstep;
-    // ODEBRÁNO: private String customDesign;
     private boolean customHasDivider;
     private boolean customHasGutter;
     private boolean customHasGardenShed;
 
     private List<AddonDto> selectedAddons;
 
-    // Ceny
     private BigDecimal unitPriceCZK;
     private BigDecimal unitPriceEUR;
-    private BigDecimal taxRatePercent;
 
-    // **** PŘIDÁNO POLE PRO DETAILNÍ POPIS ****
     private String variantInfo;
-    // ****************************************
 
     public CartItem() {}
 
-    // --- Methods for Price Calculation ---
-
-    /**
-     * Calculates the total price for this line item (unit price * quantity) without VAT.
-     * @param currency The currency code ("CZK" or "EUR").
-     * @return Total price for the line without VAT, or BigDecimal.ZERO if price is missing.
-     */
     public BigDecimal getTotalLinePriceWithoutTax(String currency) {
         BigDecimal unitPrice = EURO_CURRENCY.equals(currency) ? unitPriceEUR : unitPriceCZK;
         if (unitPrice == null || quantity <= 0) {
@@ -82,58 +70,50 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
         return unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(PRICE_SCALE, ROUNDING_MODE);
     }
 
-    /**
-     * Calculates the VAT amount for this line item.
-     * Assumes taxRatePercent stores the rate as a decimal (e.g., 0.21).
-     * Includes DEBUG logging.
-     * @param currency The currency code ("CZK" or "EUR").
-     * @return VAT amount for the line, or BigDecimal.ZERO if price or tax rate is missing/zero.
-     */
-    // @Override // <-- ODSTRANĚNO
+    // *** UPRAVENO: Používá selectedTaxRateValue ***
     public BigDecimal getVatAmount(String currency) {
         BigDecimal linePriceWithoutTax = getTotalLinePriceWithoutTax(currency);
+        BigDecimal effectiveTaxRate = selectedTaxRateValue; // Použijeme uloženou hodnotu
 
-        log.trace("DEBUG_VAT (CartItem {}): Calculating VAT. linePriceWithoutTax={}, stored taxRatePercent={}",
-                this.cartItemId, linePriceWithoutTax, this.taxRatePercent);
+        log.trace("DEBUG_VAT (CartItem {}): Calculating VAT. linePriceWithoutTax={}, selectedTaxRateValue={}",
+                this.cartItemId, linePriceWithoutTax, effectiveTaxRate);
 
-        // Return ZERO if rate is null/zero or base price is zero
-        if (taxRatePercent == null || taxRatePercent.compareTo(BigDecimal.ZERO) <= 0 || linePriceWithoutTax.compareTo(BigDecimal.ZERO) == 0) {
+        if (effectiveTaxRate == null || effectiveTaxRate.compareTo(BigDecimal.ZERO) <= 0 || linePriceWithoutTax.compareTo(BigDecimal.ZERO) == 0) {
             log.trace("DEBUG_VAT (CartItem {}): Returning ZERO VAT due to zero rate/price.", this.cartItemId);
             return BigDecimal.ZERO;
         }
 
-        // Násobíme přímo, protože taxRatePercent je již 0.21 (ne 21.00)
-        BigDecimal calculatedVat = linePriceWithoutTax.multiply(taxRatePercent).setScale(PRICE_SCALE, ROUNDING_MODE);
-
+        BigDecimal calculatedVat = linePriceWithoutTax.multiply(effectiveTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
         log.trace("DEBUG_VAT (CartItem {}): Calculated VAT amount = {}", this.cartItemId, calculatedVat);
-
         return calculatedVat;
     }
 
-    /**
-     * Calculates the total price for this line item (unit price * quantity) including VAT.
-     * @param currency The currency code ("CZK" or "EUR").
-     * @return Total price for the line including VAT.
-     */
     public BigDecimal getTotalLinePriceWithTax(String currency) {
         return getTotalLinePriceWithoutTax(currency).add(getVatAmount(currency));
     }
 
-
-    // --- Static method for generating ID (remains the same) ---
+    // *** UPRAVENO: Nepoužívá taxRatePercent, ale selectedTaxRateId ***
     public static String generateCartItemId(Long productId, boolean isCustom,
                                             Long selectedDesignId, String selectedDesignName,
                                             Long selectedGlazeId, String selectedGlazeName,
                                             Long selectedRoofColorId, String selectedRoofColorName,
                                             Map<String, BigDecimal> customDimensions,
-                                            String customGlaze, String customRoofColor,
-                                            String customRoofOverstep, String customDesignAttr,
+                                            Long selectedTaxRateId, // <-- NOVÝ PARAMETR
+                                            String customRoofOverstep,
                                             boolean customHasDivider, boolean customHasGutter,
                                             boolean customHasGardenShed, List<AddonDto> selectedAddons) {
 
         StringBuilder sb = new StringBuilder("P").append(productId);
+        // Přidáme ID vybrané sazby DPH
+        if (selectedTaxRateId != null) {
+            sb.append("-T").append(selectedTaxRateId);
+        } else {
+            sb.append("-Tnull"); // Pokud by sazba nebyla vybrána (nemělo by nastat)
+        }
+
         if (isCustom) {
             sb.append("-C");
+            // Dimenze
             if (customDimensions != null && !customDimensions.isEmpty()) {
                 List<String> sortedKeys = customDimensions.keySet().stream().sorted().toList();
                 sb.append("-DIMS[");
@@ -143,13 +123,16 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
                 }
                 sb.append("]");
             }
-            if (customGlaze != null) sb.append("-G").append(customGlaze.hashCode());
-            if (customRoofColor != null) sb.append("-RC").append(customRoofColor.hashCode());
+            // Atributy (použijeme ID)
+            if (selectedDesignId != null) sb.append("-D").append(selectedDesignId);
+            if (selectedGlazeId != null) sb.append("-G").append(selectedGlazeId);
+            if (selectedRoofColorId != null) sb.append("-RC").append(selectedRoofColorId);
+            // Ostatní custom prvky
             if (customRoofOverstep != null) sb.append("-RO").append(customRoofOverstep.hashCode());
-            if (customDesignAttr != null) sb.append("-CD").append(customDesignAttr.hashCode());
             if (customHasDivider) sb.append("-Di");
             if (customHasGutter) sb.append("-Gu");
             if (customHasGardenShed) sb.append("-Sh");
+            // Addony
             if (selectedAddons != null && !selectedAddons.isEmpty()) {
                 List<AddonDto> sortedAddons = selectedAddons.stream()
                         .filter(Objects::nonNull)
@@ -161,7 +144,7 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
                 }
                 sb.append("]");
             }
-        } else {
+        } else { // Standardní produkt
             sb.append("-S");
             if (selectedDesignId != null) sb.append("-D").append(selectedDesignId);
             if (selectedGlazeId != null) sb.append("-G").append(selectedGlazeId);
@@ -169,6 +152,7 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
         }
         return sb.toString();
     }
+
 
     @Override
     public boolean equals(Object o) {
@@ -185,12 +169,11 @@ public class CartItem implements Serializable, PriceConstants { // Implement Pri
 
     @Override
     public String toString() {
-        // Můžete upravit, jaké informace chcete v toString vidět
         return "CartItem{" +
                 "cartItemId='" + cartItemId + '\'' +
                 ", productId=" + productId +
                 ", quantity=" + quantity +
-                ", taxRatePercent=" + taxRatePercent +
+                ", selectedTaxRateId=" + selectedTaxRateId + // Přidáno pro info
                 '}';
     }
 }

@@ -11,6 +11,8 @@ import org.example.eshop.model.*;
 import org.example.eshop.repository.DesignRepository;
 import org.example.eshop.repository.GlazeRepository;
 import org.example.eshop.repository.RoofColorRepository;
+// OPRAVA: Import TaxRateRepository
+import org.example.eshop.repository.TaxRateRepository;
 import org.example.eshop.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -68,6 +70,8 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
     @MockBean private GlazeRepository glazeRepository;
     @MockBean private RoofColorRepository roofColorRepository;
     @MockBean private TaxRateService taxRateService;
+    // OPRAVA: Mockujeme i TaxRateRepository
+    @MockBean private TaxRateRepository taxRateRepository;
     @MockBean private CurrencyService currencyService; // Mockujeme i CurrencyService
 
     // --- Testovací data (deklarace) ---
@@ -84,7 +88,13 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
     @BeforeEach
     void setUp() {
         // --- Inicializace testovacích dat ---
-        testTaxRate = new TaxRate(1L, "21%", new BigDecimal("0.21"), false, null);
+        // OPRAVA: Konstruktor TaxRate dle modelu
+        testTaxRate = new TaxRate();
+        testTaxRate.setId(1L);
+        testTaxRate.setName("21%");
+        testTaxRate.setRate(new BigDecimal("0.21"));
+        testTaxRate.setReverseCharge(false);
+
         testDesign = new Design(); testDesign.setId(10L); testDesign.setName("Test Design");
         testGlaze = new Glaze(); testGlaze.setId(20L); testGlaze.setName("Test Glaze"); testGlaze.setPriceSurchargeCZK(BigDecimal.ZERO); testGlaze.setPriceSurchargeEUR(BigDecimal.ZERO);
         testRoofColor = new RoofColor(); testRoofColor.setId(30L); testRoofColor.setName("Test RoofColor"); testRoofColor.setPriceSurchargeCZK(BigDecimal.ZERO); testRoofColor.setPriceSurchargeEUR(BigDecimal.ZERO);
@@ -95,10 +105,12 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         testProduct.setSlug("test-produkt");
         testProduct.setActive(true);
         testProduct.setCustomisable(false);
-        testProduct.setTaxRate(testTaxRate);
+        // OPRAVA: Používáme setAvailableTaxRates
+        testProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(testTaxRate)));
         testProduct.setBasePriceCZK(new BigDecimal("100.00"));
         testProduct.setBasePriceEUR(new BigDecimal("4.00"));
-        testProduct.setImages(Set.of(new Image()));
+        Image productImage = new Image(); productImage.setUrl("/test.jpg");
+        testProduct.setImages(Set.of(productImage)); // Set s jedním obrázkem
         testProduct.setAvailableDesigns(Set.of(testDesign));
         testProduct.setAvailableGlazes(Set.of(testGlaze));
         testProduct.setAvailableRoofColors(Set.of(testRoofColor));
@@ -108,16 +120,21 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         inactiveProduct.setName("Neaktivní Produkt");
         inactiveProduct.setSlug("neaktivni-produkt");
         inactiveProduct.setActive(false); // Důležité - je neaktivní
-        inactiveProduct.setTaxRate(testTaxRate);
+        // OPRAVA: Používáme setAvailableTaxRates
+        inactiveProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(testTaxRate)));
 
         testCartItem = new CartItem();
-        testCartItem.setCartItemId("P1-S-D10-G20-RC30");
+        // ID se generuje, nastavíme ho až v testu addToCart, pokud je potřeba
+        testCartItem.setCartItemId("P1-T1-S-D10-G20-RC30"); // Příklad ID s TaxRate
         testCartItem.setProductId(1L);
         testCartItem.setProductName("Test Produkt");
         testCartItem.setQuantity(1);
         testCartItem.setUnitPriceCZK(new BigDecimal("100.00"));
         testCartItem.setUnitPriceEUR(new BigDecimal("4.00"));
-        testCartItem.setTaxRatePercent(new BigDecimal("0.21"));
+        // OPRAVA: Nastavení nových polí pro DPH
+        testCartItem.setSelectedTaxRateId(testTaxRate.getId());
+        testCartItem.setSelectedTaxRateValue(testTaxRate.getRate());
+        testCartItem.setSelectedIsReverseCharge(testTaxRate.isReverseCharge());
 
         testCoupon = new Coupon();
         testCoupon.setId(5L);
@@ -143,6 +160,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         lenient().when(sessionCart.getItemCount()).thenReturn(1);
         lenient().when(sessionCart.calculateSubtotal(anyString())).thenReturn(new BigDecimal("100.00"));
         lenient().when(sessionCart.calculateDiscountAmount(anyString())).thenReturn(BigDecimal.ZERO);
+        // OPRAVA: Mockování metody, která používá nová pole v CartItem
         lenient().when(sessionCart.calculateTotalVatAmount(anyString())).thenReturn(new BigDecimal("21.00"));
         lenient().when(sessionCart.calculateVatBreakdown(anyString())).thenReturn(Map.of(new BigDecimal("0.21").setScale(2, RoundingMode.HALF_UP), new BigDecimal("21.00")));
         lenient().when(sessionCart.calculateTotalPriceBeforeShipping(anyString())).thenReturn(new BigDecimal("121.00"));
@@ -156,8 +174,6 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
     @Test
     @DisplayName("GET /kosik - Zobrazí košík s položkami")
     void viewCart_WithItems_ShouldReturnCartView() throws Exception {
-        // Mockování je nastaveno v @BeforeEach a lenient()
-
         mockMvc.perform(MockMvcRequestBuilders.get("/kosik"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("kosik"))
@@ -166,19 +182,15 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                 .andExpect(model().attribute("currentCurrency", is("CZK")))
                 .andExpect(model().attribute("subtotal", comparesEqualTo(new BigDecimal("100.00"))));
 
-        // Upravené ověření - očekáváme 2 volání CurrencyService (Controller + Advice)
-        verify(currencyService, times(2)).getSelectedCurrency(); // <-- OPRAVENO
-        // Ověření ostatních volání (mělo by odpovídat logice v controlleru)
-        // Počet volání hasItems závisí na implementaci controlleru A šablony, přizpůsobit dle potřeby
-        verify(sessionCart, atLeastOnce()).hasItems(); // Kontrolujeme, že se volá alespoň jednou
+        verify(currencyService, times(2)).getSelectedCurrency();
+        verify(sessionCart, atLeastOnce()).hasItems();
         verify(sessionCart).calculateSubtotal("CZK");
         verify(sessionCart).calculateDiscountAmount("CZK");
-        verify(sessionCart).calculateTotalVatAmount("CZK");
-        verify(sessionCart).calculateVatBreakdown("CZK");
+        verify(sessionCart).calculateTotalVatAmount("CZK"); // Ověření volání upravené metody
+        verify(sessionCart).calculateVatBreakdown("CZK");   // Ověření volání upravené metody
         verify(sessionCart).calculateTotalPriceBeforeShipping("CZK");
         verify(sessionCart).calculateTotalPriceWithoutTaxAfterDiscount("CZK");
-        // verify(sessionCart).getItemCount(); // Záleží, zda je voláno přímo v controlleru
-        verify(sessionCart).getAppliedCoupon(); // Voláno v controlleru
+        verify(sessionCart).getAppliedCoupon();
     }
 
     @Test
@@ -187,7 +199,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         when(sessionCart.hasItems()).thenReturn(false);
         when(sessionCart.getItemsList()).thenReturn(Collections.emptyList());
         when(sessionCart.getItemCount()).thenReturn(0);
-        when(currencyService.getSelectedCurrency()).thenReturn("CZK"); // Mock currency service
+        when(currencyService.getSelectedCurrency()).thenReturn("CZK");
 
         mockMvc.perform(MockMvcRequestBuilders.get("/kosik"))
                 .andExpect(status().isOk())
@@ -195,13 +207,9 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                 .andExpect(model().attribute("cart", is(sessionCart)))
                 .andExpect(content().string(containsString("Váš košík je prázdný")));
 
-        // Upravené ověření - očekáváme počet volání hasItems dle implementace
-        // Pokud controller volá hasItems() 1x a šablona také (např. v hlavním if), bude to 2x
-        // Pokud šablona volá vícekrát, bude to více. Zvolíme atLeastOnce() pro flexibilitu.
-        verify(sessionCart, atLeastOnce()).hasItems(); // <-- ZMĚNĚNO na atLeastOnce()
-        // Ověříme i volání currency service (je volána i pro prázdný košík)
-        verify(currencyService, times(2)).getSelectedCurrency(); // Controller + Advice
-        verify(sessionCart, never()).calculateSubtotal(anyString()); // Subtotal se nepočítá
+        verify(sessionCart, atLeastOnce()).hasItems();
+        verify(currencyService, times(2)).getSelectedCurrency();
+        verify(sessionCart, never()).calculateSubtotal(anyString());
     }
 
 
@@ -213,11 +221,14 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         long designId = 10L;
         long glazeId = 20L;
         long roofColorId = 30L;
+        long taxRateId = testTaxRate.getId(); // ID sazby z formuláře
 
-        when(productService.getProductById(productId)).thenReturn(Optional.of(testProduct));
+        when(productService.getProductById(productId)).thenReturn(Optional.of(testProduct)); // Produkt má testTaxRate v availableTaxRates
         when(designRepository.findById(designId)).thenReturn(Optional.of(testDesign));
         when(glazeRepository.findById(glazeId)).thenReturn(Optional.of(testGlaze));
         when(roofColorRepository.findById(roofColorId)).thenReturn(Optional.of(testRoofColor));
+        // OPRAVA: Mockujeme TaxRateRepository pro načtení sazby v controlleru
+        when(taxRateRepository.findById(taxRateId)).thenReturn(Optional.of(testTaxRate));
         doNothing().when(sessionCart).addItem(any(CartItem.class));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/kosik/pridat")
@@ -228,6 +239,8 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                                 .param("selectedDesignId", String.valueOf(designId))
                                 .param("selectedGlazeId", String.valueOf(glazeId))
                                 .param("selectedRoofColorId", String.valueOf(roofColorId))
+                                // OPRAVA: Posíláme ID sazby daně
+                                .param("selectedTaxRateId", String.valueOf(taxRateId))
                         // .with(csrf()) // Odstraněno
                 )
                 .andExpect(status().is3xxRedirection())
@@ -245,8 +258,15 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         assertEquals(glazeId, addedItem.getSelectedGlazeId());
         assertEquals(roofColorId, addedItem.getSelectedRoofColorId());
         assertNotNull(addedItem.getUnitPriceCZK());
-        assertNotNull(addedItem.getTaxRatePercent());
-        assertNotNull(addedItem.getCartItemId());
+        // OPRAVA: Ověření nových polí pro DPH
+        assertNotNull(addedItem.getSelectedTaxRateId());
+        assertNotNull(addedItem.getSelectedTaxRateValue());
+        assertEquals(taxRateId, addedItem.getSelectedTaxRateId());
+        assertEquals(0, testTaxRate.getRate().compareTo(addedItem.getSelectedTaxRateValue())); // Porovnání BigDecimal
+        assertNotNull(addedItem.getCartItemId()); // ID by mělo být vygenerováno
+
+        // Ověříme volání TaxRateRepository
+        verify(taxRateRepository).findById(taxRateId);
     }
 
     @Test
@@ -263,14 +283,17 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                                 .param("selectedDesignId", "10")
                                 .param("selectedGlazeId", "20")
                                 .param("selectedRoofColorId", "30")
+                                .param("selectedTaxRateId", "1") // Posíláme ID, i když produkt neexistuje
                         // .with(csrf()) // Odstraněno
                 )
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/produkty")) // Nebo jiná URL podle logiky controlleru
+                // Redirect by měl být spíše na /produkty nebo "/"
+                .andExpect(redirectedUrl("/produkty"))
                 .andExpect(flash().attributeExists("cartError"))
                 .andExpect(flash().attribute("cartError", containsString("Produkt nenalezen")));
 
         verify(sessionCart, never()).addItem(any());
+        verify(taxRateRepository, never()).findById(anyLong()); // Sazba se nehledá, pokud není produkt
     }
 
     @Test
@@ -284,9 +307,10 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                                 .param("productId", String.valueOf(inactiveProductId))
                                 .param("quantity", "1")
                                 .param("custom", "false")
-                                .param("selectedDesignId", "10") // Placeholder IDs
+                                .param("selectedDesignId", "10")
                                 .param("selectedGlazeId", "20")
                                 .param("selectedRoofColorId", "30")
+                                .param("selectedTaxRateId", "1") // Posíláme ID
                         // .with(csrf()) // Odstraněno
                 )
                 .andExpect(status().is3xxRedirection())
@@ -295,7 +319,40 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
                 .andExpect(flash().attribute("cartError", containsString("není momentálně dostupný")));
 
         verify(sessionCart, never()).addItem(any());
+        verify(taxRateRepository, never()).findById(anyLong()); // Sazba se nehledá
     }
+
+    @Test
+    @DisplayName("POST /kosik/pridat - Chyba (nepovolená sazba DPH pro produkt)")
+    void addToCart_TaxRateNotAllowed_ShouldRedirectWithError() throws Exception {
+        long productId = 1L;
+        int quantity = 1;
+        long taxRateId = 99L; // Neexistující nebo nepovolené ID sazby
+        TaxRate disallowedTaxRate = new TaxRate(); disallowedTaxRate.setId(taxRateId); disallowedTaxRate.setName("Disallowed"); disallowedTaxRate.setRate(BigDecimal.TEN);
+
+        when(productService.getProductById(productId)).thenReturn(Optional.of(testProduct)); // testProduct má jen testTaxRate(ID 1) povolenou
+        when(taxRateRepository.findById(taxRateId)).thenReturn(Optional.of(disallowedTaxRate)); // Sazba existuje, ale není v testProduct.availableTaxRates
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/kosik/pridat")
+                                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                                .param("productId", String.valueOf(productId))
+                                .param("quantity", String.valueOf(quantity))
+                                .param("custom", "false")
+                                .param("selectedDesignId", "10")
+                                .param("selectedGlazeId", "20")
+                                .param("selectedRoofColorId", "30")
+                                .param("selectedTaxRateId", String.valueOf(taxRateId))
+                        // .with(csrf())
+                )
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/produkt/" + testProduct.getSlug()))
+                .andExpect(flash().attributeExists("cartError"))
+                .andExpect(flash().attribute("cartError", containsString("není pro tento produkt povolena")));
+
+        verify(sessionCart, never()).addItem(any());
+        verify(taxRateRepository).findById(taxRateId);
+    }
+
 
     @Test
     @DisplayName("POST /kosik/aktualizovat - Úspěšně aktualizuje množství")
@@ -335,9 +392,6 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         verify(sessionCart).removeItem(cartItemId);
     }
 
-    // Soubor: src/test/java/org/example/eshop/controller/CartControllerTest.java
-// Metoda: applyCoupon_ValidCoupon_Success
-
     @Test
     @DisplayName("POST /kosik/pouzit-kupon - Úspěšně aplikuje platný kupón")
     @WithMockUser // Potřeba pro Principal
@@ -351,7 +405,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         when(sessionCart.calculateSubtotal(anyString())).thenReturn(subtotal);
         doNothing().when(sessionCart).applyCoupon(testCoupon, couponCode);
         when(customerService.getCustomerByEmail(anyString())).thenReturn(Optional.of(new Customer()));
-        when(currencyService.getSelectedCurrency()).thenReturn("CZK"); // Mock currency
+        when(currencyService.getSelectedCurrency()).thenReturn("CZK");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/kosik/pouzit-kupon")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -367,11 +421,8 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         verify(couponService).checkMinimumOrderValue(eq(testCoupon), eq(subtotal), eq("CZK"));
         verify(couponService).checkCustomerUsageLimit(any(), eq(testCoupon));
         verify(sessionCart).applyCoupon(testCoupon, couponCode);
-        // Ověření volání měny - nyní očekáváme 2 volání
-        verify(currencyService, times(2)).getSelectedCurrency(); // <-- OPRAVENO
+        verify(currencyService, times(2)).getSelectedCurrency();
     }
-
-// Metoda: applyCoupon_MinOrderValueNotMet_ShouldShowMessage
 
     @Test
     @DisplayName("POST /kosik/pouzit-kupon - Chyba (nesplněna minimální hodnota)")
@@ -392,7 +443,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         when(couponService.getMinimumValueString(minCoupon, "CZK")).thenReturn("500,00 Kč");
         when(sessionCart.calculateSubtotal("CZK")).thenReturn(subtotal);
         doNothing().when(sessionCart).setAttemptedCouponCode(couponCode);
-        when(currencyService.getSelectedCurrency()).thenReturn("CZK"); // Mock currency
+        when(currencyService.getSelectedCurrency()).thenReturn("CZK");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/kosik/pouzit-kupon")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -409,8 +460,7 @@ class CartControllerTest implements PriceConstants { // Implementace pro konstan
         verify(couponService).checkMinimumOrderValue(eq(minCoupon), eq(subtotal), eq("CZK"));
         verify(sessionCart, never()).applyCoupon(any(), any());
         verify(sessionCart).setAttemptedCouponCode(couponCode);
-        // Ověření volání měny - nyní očekáváme 2 volání
-        verify(currencyService, times(2)).getSelectedCurrency(); // <-- OPRAVENO
+        verify(currencyService, times(2)).getSelectedCurrency();
     }
 
     @Test

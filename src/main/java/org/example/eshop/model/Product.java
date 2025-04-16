@@ -2,6 +2,7 @@ package org.example.eshop.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -30,7 +31,9 @@ public class Product {
 
     @Column(precision = 10, scale = 2) private BigDecimal basePriceCZK;
     @Column(precision = 10, scale = 2) private BigDecimal basePriceEUR;
-
+    // *** NOVÉ POLE pro krátký popis ***
+    @Column(length = 500) // Omezení délky krátkého popisu
+    private String shortDescription;
     @Column(length = 100) private String model; // Informativní popis
     @Column(length = 100) private String material;
     @Column(precision = 10, scale = 2) private BigDecimal height;
@@ -64,7 +67,13 @@ public class Product {
     @Column(nullable = false) private boolean customisable = false;
     @Column(nullable = false) private boolean active = true;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "tax_rate_id", nullable = false) private TaxRate taxRate;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "product_tax_rates",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "tax_rate_id"))
+    @NotEmpty(message = "Produkt musí mít přiřazenu alespoň jednu daňovou sazbu.") // Validace
+    @org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE) // Cache pro asociaci
+    private Set<TaxRate> availableTaxRates = new HashSet<>();
     @ManyToMany(fetch = FetchType.LAZY) @JoinTable(name = "product_available_addons", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "addon_id")) private Set<Addon> availableAddons;
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true) private ProductConfigurator configurator;
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY) @OrderBy("displayOrder ASC, id ASC") private Set<Image> images = new HashSet<>();

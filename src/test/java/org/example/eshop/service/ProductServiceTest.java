@@ -36,7 +36,7 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
 
     @Mock private ProductRepository productRepository;
     @Mock private ImageRepository imageRepository;
-    @Mock private TaxRateRepository taxRateRepository;
+    @Mock private TaxRateRepository taxRateRepository; // Stále potřeba pro jiné metody, pokud existují
     @Mock private DiscountService discountService;
     @Mock private FileStorageService fileStorageService;
 
@@ -52,8 +52,18 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
 
     @BeforeEach
     void setUp() {
-        standardTaxRate = new TaxRate(1L, "Standard 21%", new BigDecimal("0.21"), false, null);
-        reducedTaxRate = new TaxRate(2L, "Reduced 12%", new BigDecimal("0.12"), false, null);
+        // TaxRate konstruktor dle TaxRate.java
+        standardTaxRate = new TaxRate();
+        standardTaxRate.setId(1L);
+        standardTaxRate.setName("Standard 21%");
+        standardTaxRate.setRate(new BigDecimal("0.21"));
+        standardTaxRate.setReverseCharge(false);
+
+        reducedTaxRate = new TaxRate();
+        reducedTaxRate.setId(2L);
+        reducedTaxRate.setName("Reduced 12%");
+        reducedTaxRate.setRate(new BigDecimal("0.12"));
+        reducedTaxRate.setReverseCharge(false);
 
         image1 = new Image();
         image1.setId(50L);
@@ -67,7 +77,8 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         standardProduct.setSlug("standard-drevnik");
         standardProduct.setActive(true);
         standardProduct.setCustomisable(false);
-        standardProduct.setTaxRate(standardTaxRate);
+        // OPRAVA: Používáme setAvailableTaxRates
+        standardProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
         standardProduct.setBasePriceCZK(new BigDecimal("1000.00"));
         standardProduct.setBasePriceEUR(new BigDecimal("40.00"));
         standardProduct.setImages(new HashSet<>(List.of(image1)));
@@ -80,12 +91,14 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         customProduct.setSlug("drevnik-na-miru");
         customProduct.setActive(true);
         customProduct.setCustomisable(true);
-        customProduct.setTaxRate(standardTaxRate);
+        // OPRAVA: Používáme setAvailableTaxRates
+        customProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
         customProduct.setImages(new HashSet<>());
         customProduct.setDiscounts(new HashSet<>()); // Inicializace
 
+        // ProductConfigurator konstruktor dle ProductConfigurator.java - nemá vlastní ID
         configurator = new ProductConfigurator();
-        configurator.setId(customProduct.getId());
+        //configurator.setId(customProduct.getId()); // ID se dědí z Product nebo je vlastní
         configurator.setProduct(customProduct);
         configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500"));
         configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200"));
@@ -105,49 +118,49 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         inactiveProduct.setName("Neaktivní Produkt");
         inactiveProduct.setSlug("neaktivni-produkt");
         inactiveProduct.setActive(false);
-        inactiveProduct.setTaxRate(standardTaxRate);
+        // OPRAVA: Používáme setAvailableTaxRates
+        inactiveProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
         inactiveProduct.setImages(new HashSet<>());
 
         // Lenient mockování
-        lenient().when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(standardProduct)); // Používáme metodu s @Query
-        lenient().when(productRepository.findByIdWithDetails(2L)).thenReturn(Optional.of(customProduct));   // Používáme metodu s @Query
-        lenient().when(productRepository.findByIdWithDetails(3L)).thenReturn(Optional.of(inactiveProduct)); // Používáme metodu s @Query
-        lenient().when(productRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());           // Používáme metodu s @Query
+        lenient().when(productRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(standardProduct));
+        lenient().when(productRepository.findByIdWithDetails(2L)).thenReturn(Optional.of(customProduct));
+        lenient().when(productRepository.findByIdWithDetails(3L)).thenReturn(Optional.of(inactiveProduct));
+        lenient().when(productRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
         lenient().when(imageRepository.findById(50L)).thenReturn(Optional.of(image1));
         lenient().when(imageRepository.findById(999L)).thenReturn(Optional.empty());
+        // Mock taxRateRepository zde není nutný pro základní findById, protože ProductService je nevolá přímo při loadu produktu
     }
 
-    // --- Testy Načítání (Upraveno pro standardní názvy metod) ---
+    // --- Testy Načítání ---
 
     @Test
     @DisplayName("getActiveProducts vrátí stránku aktivních produktů")
     void getActiveProducts_ReturnsActiveOnly() {
         Pageable pageable = PageRequest.of(0, 10);
-        // Mockujeme STANDARDNÍ metodu repository, ale očekáváme, že @EntityGraph načte detaily
         Page<Product> mockPage = new PageImpl<>(List.of(standardProduct, customProduct), pageable, 2);
-        when(productRepository.findByActiveTrue(pageable)).thenReturn(mockPage); // <-- VOLÁNÍ findByActiveTrue
+        when(productRepository.findByActiveTrue(pageable)).thenReturn(mockPage);
 
         Page<Product> result = productService.getActiveProducts(pageable);
 
         assertNotNull(result);
         assertEquals(2, result.getTotalElements());
         assertTrue(result.getContent().stream().allMatch(Product::isActive));
-        verify(productRepository).findByActiveTrue(pageable); // <-- OVĚŘENÍ findByActiveTrue
+        verify(productRepository).findByActiveTrue(pageable);
     }
 
     @Test
     @DisplayName("getAllActiveProducts vrátí seznam aktivních produktů")
     void getAllActiveProducts_ReturnsActiveList() {
-        // Mockujeme STANDARDNÍ metodu repository
         List<Product> mockList = List.of(standardProduct, customProduct);
-        when(productRepository.findAllByActiveTrue()).thenReturn(mockList); // <-- VOLÁNÍ findAllByActiveTrue
+        when(productRepository.findAllByActiveTrue()).thenReturn(mockList);
 
         List<Product> result = productService.getAllActiveProducts();
 
         assertNotNull(result);
         assertEquals(2, result.size());
         assertTrue(result.stream().allMatch(Product::isActive));
-        verify(productRepository).findAllByActiveTrue(); // <-- OVĚŘENÍ findAllByActiveTrue
+        verify(productRepository).findAllByActiveTrue();
     }
 
 
@@ -160,34 +173,39 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
 
         assertTrue(result.isPresent());
         assertEquals(standardProduct.getId(), result.get().getId());
-        // Můžeme ověřit i načtení asociace, pokud byla v EntityGraph
-        assertNotNull(result.get().getTaxRate());
+        // OPRAVA: Ověření obsahu kolekce
+        assertNotNull(result.get().getAvailableTaxRates());
+        assertFalse(result.get().getAvailableTaxRates().isEmpty());
+        assertTrue(result.get().getAvailableTaxRates().contains(standardTaxRate));
         verify(productRepository).findActiveBySlugWithDetails("standard-drevnik");
     }
 
     @Test
     @DisplayName("getProductById najde produkt (s detaily)")
     void getProductById_FindsWithDetails() {
-        // findByIdWithDetails mockováno v setUp
         Optional<Product> result = productService.getProductById(1L);
 
         assertTrue(result.isPresent());
         assertEquals(standardProduct.getId(), result.get().getId());
-        assertNotNull(result.get().getTaxRate()); // Ověření načtení asociace
-        verify(productRepository).findByIdWithDetails(1L); // Ověření volání metody s @Query
+        // OPRAVA: Ověření obsahu kolekce
+        assertNotNull(result.get().getAvailableTaxRates());
+        assertFalse(result.get().getAvailableTaxRates().isEmpty());
+        assertTrue(result.get().getAvailableTaxRates().contains(standardTaxRate));
+        verify(productRepository).findByIdWithDetails(1L);
     }
 
 
-    // --- Testy Výpočtu Ceny Na Míru (beze změny) ---
+    // --- Testy Výpočtu Ceny Na Míru (zůstávají stejné, nezávisí na get/set TaxRate) ---
     @Test
     @DisplayName("calculateDynamicProductPrice spočítá cenu správně (CZK)")
     void calculateDynamicProductPrice_CorrectCalculation_CZK() {
-        // ... (kód testu zůstává stejný) ...
         Map<String, BigDecimal> dimensions = Map.of(
                 "length", new BigDecimal("200"),
-                "width", new BigDecimal("100"),
+                "width", new BigDecimal("100"), // Depth
                 "height", new BigDecimal("180")
         );
+        // Výpočet: (200*10) + (100*5) + (180*8) + (100*3)[přepážka] + 500[okapy] + 2000[kůlna] + 100[design]
+        // = 2000 + 500 + 1440 + 300 + 500 + 2000 + 100 = 6840
         BigDecimal expectedPrice = new BigDecimal("6840.00");
         BigDecimal calculatedPrice = productService.calculateDynamicProductPrice(
                 customProduct, dimensions, "Nějaký Design", true, true, true, "CZK"
@@ -195,7 +213,6 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         assertNotNull(calculatedPrice);
         assertEquals(0, expectedPrice.compareTo(calculatedPrice), "Vypočtená dynamická cena nesouhlasí");
     }
-    // ... (ostatní testy pro calculateDynamicProductPrice zůstávají stejné) ...
     @Test
     @DisplayName("calculateDynamicProductPrice vrátí 0 pro záporný výsledek (CZK)")
     void calculateDynamicProductPrice_NegativeResultBecomesZero_CZK() {
@@ -276,34 +293,37 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         assertTrue(exception.getMessage().contains("price configuration 'Length Price/cm' missing"));
     }
 
+    // --- Testy CRUD ---
 
-    // --- Testy CRUD (beze změny, protože volají findByIdWithDetails, které má @Query) ---
-    // ... (testy createProduct, updateProduct, deleteProduct zůstávají stejné) ...
     @Test
     @DisplayName("createProduct vytvoří produkt a vygeneruje slug")
     void createProduct_GeneratesSlugAndSaves() {
         Product newProduct = new Product();
         newProduct.setName("  Nový Dřevník Test  ");
         newProduct.setActive(true);
-        TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
-        newProduct.setTaxRate(rateRef);
+        // OPRAVA: Nastavíme Set sazeb
+        newProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate))); // Předpokládáme, že controller nastaví entity
 
-        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
         when(productRepository.existsBySlugIgnoreCase("novy-drevnik-test")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
             Product p = invocation.getArgument(0);
-            p.setId(5L);
+            p.setId(5L); // Simulace ID z DB
             assertEquals("novy-drevnik-test", p.getSlug());
+            // Ponecháme kolekce, jak přišly (už by měly být nastavené)
             return p;
         });
 
+        // Služba createProduct nevolá taxRateRepository.findById
         Product savedProduct = productService.createProduct(newProduct);
 
         assertNotNull(savedProduct);
         assertEquals("novy-drevnik-test", savedProduct.getSlug());
-        assertEquals(standardTaxRate, savedProduct.getTaxRate());
+        // OPRAVA: Ověření obsahu kolekce
+        assertNotNull(savedProduct.getAvailableTaxRates());
+        assertTrue(savedProduct.getAvailableTaxRates().contains(standardTaxRate));
         verify(productRepository).existsBySlugIgnoreCase("novy-drevnik-test");
         verify(productRepository).save(savedProduct);
+        // verify(taxRateRepository, never()).findById(anyLong()); // Ověření, že se nevolá findById
     }
 
     @Test
@@ -312,10 +332,9 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         Product newProduct = new Product();
         newProduct.setName("Existující Slug Produkt");
         newProduct.setSlug("existujici-slug");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
-        newProduct.setTaxRate(rateRef);
+        // OPRAVA: Nastavíme Set sazeb
+        newProduct.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
 
-        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
         when(productRepository.existsBySlugIgnoreCase("existujici-slug")).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -332,16 +351,16 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         Product newCustom = new Product();
         newCustom.setName("Nový na míru");
         newCustom.setCustomisable(true);
-        TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
-        newCustom.setTaxRate(rateRef);
+        // OPRAVA: Nastavíme Set sazeb
+        newCustom.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
 
-        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
         when(productRepository.existsBySlugIgnoreCase(anyString())).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
             Product p = invocation.getArgument(0);
             p.setId(6L);
             assertNotNull(p.getConfigurator(), "Konfigurátor by měl být vytvořen");
             assertEquals(p, p.getConfigurator().getProduct(), "Konfigurátor by měl být propojen s produktem");
+            // Ponecháme kolekce, jak přišly
             return p;
         });
 
@@ -350,6 +369,24 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         assertNotNull(saved.getConfigurator());
         verify(productRepository).save(saved);
     }
+    @Test
+    @DisplayName("createProduct vyhodí výjimku, pokud nejsou nastaveny TaxRates")
+    void createProduct_ThrowsIfTaxRatesNotSet() {
+        Product newProduct = new Product();
+        newProduct.setName("Produkt bez sazby");
+        // newProduct.setAvailableTaxRates(null); // Nebo prázdný set
+        newProduct.setAvailableTaxRates(new HashSet<>());
+
+        when(productRepository.existsBySlugIgnoreCase(anyString())).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.createProduct(newProduct);
+        });
+
+        assertTrue(exception.getMessage().contains("Produkt musí mít přiřazenu alespoň jednu daňovou sazbu"));
+        verify(productRepository, never()).save(any());
+    }
+
 
     @Test
     @DisplayName("deleteProduct označí produkt jako neaktivní")
@@ -381,109 +418,88 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
     @DisplayName("updateProduct úspěšně aktualizuje data produktu")
     void updateProduct_Success() {
         long productId = 1L;
+        // Data z formuláře
         Product updatedData = new Product();
         updatedData.setName("Aktualizovaný Název");
         updatedData.setDescription("Nový popis.");
         updatedData.setBasePriceCZK(new BigDecimal("1200.00"));
         updatedData.setActive(true);
         updatedData.setSlug("standard-drevnik"); // Slug neměníme
-        TaxRate rateRef = new TaxRate(); rateRef.setId(2L); // ID nové sazby
-        updatedData.setTaxRate(rateRef);
+        // OPRAVA: Controller by měl nastavit Set entit na základě ID z formuláře
+        updatedData.setAvailableTaxRates(new HashSet<>(Collections.singletonList(reducedTaxRate)));
 
-        // Klon pro předání do updateProduct
+        // Klon existující entity (načtený v controlleru)
         Product existingProductClone = new Product();
         existingProductClone.setId(productId);
         existingProductClone.setName("Standard Dřevník");
         existingProductClone.setSlug("standard-drevnik");
-        existingProductClone.setTaxRate(standardTaxRate); // Původní sazba
+        // OPRAVA: Původní sazby
+        existingProductClone.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
 
-        when(taxRateRepository.findById(2L)).thenReturn(Optional.of(reducedTaxRate));
+        // ProductService.updateProduct nevolá taxRateRepository.findById
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        // findBySlugIgnoreCase se nevolá, protože slug se nemění
-        // when(productRepository.findBySlugIgnoreCase(anyString())).thenReturn(Optional.empty());
 
+        // Volání metody služby
         Optional<Product> resultOpt = productService.updateProduct(productId, updatedData, existingProductClone);
 
         assertTrue(resultOpt.isPresent());
         Product savedProduct = resultOpt.get();
 
+        // Ověření aktualizovaných dat
         assertEquals("Aktualizovaný Název", savedProduct.getName());
         assertEquals("Nový popis.", savedProduct.getDescription());
         assertEquals(0, new BigDecimal("1200.00").compareTo(savedProduct.getBasePriceCZK()));
-        assertEquals(reducedTaxRate, savedProduct.getTaxRate()); // Ověření nové sazby
+        // OPRAVA: Ověření nové sazby v kolekci
+        assertNotNull(savedProduct.getAvailableTaxRates());
+        assertTrue(savedProduct.getAvailableTaxRates().contains(reducedTaxRate));
+        assertFalse(savedProduct.getAvailableTaxRates().contains(standardTaxRate)); // Stará by tam neměla být
         assertTrue(savedProduct.isActive());
 
-        verify(taxRateRepository).findById(2L); // Ověříme načtení nové sazby
-        verify(productRepository).save(existingProductClone);
-        verify(productRepository, never()).findBySlugIgnoreCase(anyString()); // Ověříme, že se nehledal slug
+        verify(productRepository).save(existingProductClone); // Ukládá se upravená existující entita
+        verify(productRepository, never()).findBySlugIgnoreCase(anyString()); // Slug se neměnil
+        // verify(taxRateRepository, never()).findById(anyLong()); // Ověření, že se nevolá findById
     }
 
     @Test
     @DisplayName("updateProduct vyhodí výjimku při změně slugu na existující")
     void updateProduct_ThrowsForExistingSlugConflict() {
         long productId = 1L;
+        // Data z formuláře
         Product updatedData = new Product();
         updatedData.setName("Produkt s novým slugem");
-        updatedData.setSlug("existujici-slug");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(1L);
-        updatedData.setTaxRate(rateRef);
+        updatedData.setSlug("existujici-slug"); // Nový konfliktní slug
+        // OPRAVA: Nastavíme Set sazeb
+        updatedData.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
 
-        // Klon pro předání
+        // Klon existující entity
         Product existingProductClone = new Product();
         existingProductClone.setId(productId);
         existingProductClone.setName("Standard Dřevník");
         existingProductClone.setSlug("standard-drevnik"); // Původní slug
-        existingProductClone.setTaxRate(standardTaxRate);
+        // OPRAVA: Původní sazby
+        existingProductClone.setAvailableTaxRates(new HashSet<>(Collections.singletonList(standardTaxRate)));
 
-        // Konfliktní produkt
+        // Konfliktní produkt vrácený repository
         Product conflictingProduct = new Product();
         conflictingProduct.setId(50L);
         conflictingProduct.setSlug("existujici-slug");
 
-        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(standardTaxRate));
-        when(productRepository.findBySlugIgnoreCase("existujici-slug")).thenReturn(Optional.of(conflictingProduct));
+        // Mock repository pro kontrolu slugu
+        // findBySlugIgnoreCaseAndIdNot se volá PŘED save
+        when(productRepository.existsBySlugIgnoreCaseAndIdNot("existujici-slug", productId)).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            // Služba by měla vyhodit výjimku PŘED voláním save
             productService.updateProduct(productId, updatedData, existingProductClone);
         });
 
-        assertTrue(exception.getMessage().contains("Produkt se slugem") && exception.getMessage().contains("již používá jiný produkt"));
+        assertTrue(exception.getMessage().contains("Produkt se slugem 'existujici-slug' již existuje."));
 
-        verify(productRepository).findBySlugIgnoreCase("existujici-slug");
+        verify(productRepository).existsBySlugIgnoreCaseAndIdNot("existujici-slug", productId);
         verify(productRepository, never()).save(any());
     }
 
-    @Test
-    @DisplayName("updateProduct vyhodí výjimku při neplatné TaxRate ID")
-    void updateProduct_ThrowsForInvalidTaxRateId() {
-        long productId = 1L;
-        Product updatedData = new Product();
-        updatedData.setName("Název");
-        updatedData.setSlug("standard-drevnik");
-        TaxRate rateRef = new TaxRate(); rateRef.setId(999L); // Neexistující ID
-        updatedData.setTaxRate(rateRef);
-
-        // Klon pro předání
-        Product existingProductClone = new Product();
-        existingProductClone.setId(productId);
-        existingProductClone.setName("Standard Dřevník");
-        existingProductClone.setSlug("standard-drevnik");
-        existingProductClone.setTaxRate(standardTaxRate);
-
-        when(taxRateRepository.findById(999L)).thenReturn(Optional.empty());
-
-        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-            productService.updateProduct(productId, updatedData, existingProductClone);
-        });
-
-        assertTrue(exception.getMessage().contains("TaxRate not found"));
-
-        verify(taxRateRepository).findById(999L);
-        verify(productRepository, never()).save(any());
-    }
-
-    // --- Testy Správy Obrázků (beze změny, protože volají findById, ne findByIdWithDetails) ---
-    // ... (testy addImageToProduct a deleteImage zůstávají stejné) ...
+    // --- Testy Správy Obrázků (zůstávají stejné, nezávisí na TaxRate) ---
     @Test
     @DisplayName("[addImageToProduct] Úspěšně přidá obrázek pomocí MultipartFile")
     void addImageToProduct_MultipartFile_Success() throws IOException {
@@ -641,7 +657,7 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
     }
 
 
-    // --- Testy Generování Slugu (beze změny) ---
+    // --- Testy Generování Slugu (zůstávají stejné) ---
     @Test
     @DisplayName("generateSlug správně generuje slugy")
     void generateSlug_GeneratesCorrectly() {

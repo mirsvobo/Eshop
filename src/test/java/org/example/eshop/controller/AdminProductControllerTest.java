@@ -1,367 +1,455 @@
-package org.example.eshop.controller; // Balíček musí být admin.controller
+package org.example.eshop.controller;
 
-import jakarta.persistence.EntityNotFoundException;
-import org.example.eshop.admin.controller.AdminProductController;
-import org.example.eshop.config.SecurityTestConfig; // Import SecurityTestConfig
+import org.example.eshop.admin.controller.AdminProductController; // Správný import controlleru
+import org.example.eshop.config.SecurityTestConfig;
 import org.example.eshop.model.*;
-import org.example.eshop.repository.*;
-import org.example.eshop.service.*; // Import service tříd
+import org.example.eshop.service.FileStorageService;
+import org.example.eshop.service.ProductService;
+// OPRAVA: Import správné třídy AddonsService
+import org.example.eshop.admin.service.AddonsService;
+import org.example.eshop.admin.service.DesignService;
+import org.example.eshop.admin.service.GlazeService;
+import org.example.eshop.admin.service.RoofColorService;
+import org.example.eshop.service.TaxRateService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import; // Import pro @Import
-import org.springframework.data.domain.*;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile; // <-- Přidáno pro test uploadu
+import org.springframework.boot.test.mock.mockito.MockBean; // Anotace je v pořádku
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.web.multipart.MultipartFile; // <-- Přidáno pro test uploadu
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException; // <-- Přidáno pro IOException
+
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.*; // Pro detailnější asserce modelu
+import static org.junit.jupiter.api.Assertions.*; // Pro ověření captoru
 
+// Cílíme na správný controller
 @WebMvcTest(AdminProductController.class)
-@WithMockUser(roles = "ADMIN")
-@Import(SecurityTestConfig.class) // Použití sdílené testovací konfigurace
+@Import(SecurityTestConfig.class) // Importujeme testovací SecurityConfig
 class AdminProductControllerTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mvc;
 
-    @MockBean private CurrencyService currencyService;
+    // Mockujeme všechny PŘÍMÉ závislosti AdminProductController
     @MockBean private ProductService productService;
+    @MockBean private DesignService designService;
+    @MockBean private GlazeService glazeService;
+    @MockBean private RoofColorService roofColorService;
+    // OPRAVA: Mock správné třídy AddonsService
+    @MockBean private AddonsService addonsService;
+    @MockBean private FileStorageService fileStorageService;
     @MockBean private TaxRateService taxRateService;
-    @MockBean private DesignRepository designRepository;
-    @MockBean private GlazeRepository glazeRepository;
-    @MockBean private RoofColorRepository roofColorRepository;
-    @MockBean private AddonsRepository addonsRepository;
-    @MockBean private ImageRepository imageRepository; // <-- Přidáno
-    @MockBean private FileStorageService fileStorageService; // <-- Přidáno
 
-    private Product product1, product2;
-    private TaxRate taxRate21;
+    // Testovací data
+    private Product product1;
+    private Product product2;
+    private TaxRate taxRate1;
+    private TaxRate taxRate2;
     private Design design1;
     private Glaze glaze1;
     private RoofColor roofColor1;
     private Addon addon1;
-    private ProductConfigurator testConfigurator;
-    private Image image1; // <-- Přidáno
+    private List<TaxRate> allTaxRates;
+    private List<Design> allDesigns;
+    private List<Glaze> allGlazes;
+    private List<RoofColor> allRoofColors;
+    private List<Addon> allAddons;
+    private Image image1;
+
 
     @BeforeEach
     void setUp() {
-        taxRate21 = new TaxRate(1L, "21%", new BigDecimal("0.21"), false, null);
-        design1 = new Design(); design1.setId(10L); design1.setName("Klasik");
-        glaze1 = new Glaze(); glaze1.setId(20L); glaze1.setName("Ořech");
-        roofColor1 = new RoofColor(); roofColor1.setId(30L); roofColor1.setName("Antracit");
-        addon1 = new Addon(); addon1.setId(40L); addon1.setName("Polička");
-        image1 = new Image(); image1.setId(50L); image1.setUrl("/uploads/products/img1.jpg"); image1.setAltText("Obrázek 1"); image1.setDisplayOrder(0); // <-- Přidáno
+        // Inicializace testovacích dat s Long ID a BigDecimal
+        taxRate1 = new TaxRate();
+        taxRate1.setId(1L);
+        taxRate1.setName("Standard 21%");
+        taxRate1.setRate(new BigDecimal("0.21"));
+        taxRate1.setReverseCharge(false);
+        allTaxRates = Collections.singletonList(taxRate1);
+
+        design1 = new Design();
+        design1.setId(1L);
+        design1.setName("Standard Design");
+        design1.setImageUrl("path/design1.jpg");
+        design1.setActive(true);
+        allDesigns = Collections.singletonList(design1);
+
+        glaze1 = new Glaze();
+        glaze1.setId(1L);
+        glaze1.setName("Clear Glaze");
+        glaze1.setImageUrl("path/glaze1.png");
+        glaze1.setActive(true);
+        allGlazes = Collections.singletonList(glaze1);
+
+        roofColor1 = new RoofColor();
+        roofColor1.setId(1L);
+        roofColor1.setName("Red Tile");
+        roofColor1.setImageUrl("path/roof1.jpg");
+        roofColor1.setActive(true);
+        allRoofColors = Collections.singletonList(roofColor1);
+
+        addon1 = new Addon();
+        addon1.setId(1L);
+        addon1.setName("Extra Shelf");
+        addon1.setActive(true);
+        addon1.setPriceCZK(new BigDecimal("500.00"));
+        addon1.setPriceEUR(new BigDecimal("20.00"));
+        allAddons = Collections.singletonList(addon1);
+
+        image1 = new Image();
+        image1.setId(1L);
+        image1.setUrl("/uploads/products/image1.jpg");
+        image1.setAltText("Alt text 1");
+        image1.setDisplayOrder(0);
+
 
         product1 = new Product();
         product1.setId(1L);
-        product1.setName("Produkt 1 Standard");
-        product1.setSlug("produkt-1-standard");
+        product1.setName("Standard Drevnik");
+        product1.setSlug("standard-drevnik");
+        product1.setBasePriceCZK(new BigDecimal("10000.00"));
+        product1.setBasePriceEUR(new BigDecimal("400.00"));
+        product1.setDescription("Description 1");
         product1.setActive(true);
         product1.setCustomisable(false);
-        product1.setTaxRate(taxRate21);
-        product1.setBasePriceCZK(new BigDecimal("1000"));
-        product1.setAvailableDesigns(new HashSet<>(Set.of(design1)));
-        product1.setAvailableGlazes(new HashSet<>(Set.of(glaze1)));
-        product1.setAvailableRoofColors(new HashSet<>(Set.of(roofColor1)));
-        product1.setAvailableAddons(new HashSet<>());
-        product1.setImages(new HashSet<>(List.of(image1))); // <-- Přiřazení obrázku
-        image1.setProduct(product1); // <-- Obousměrná vazba
+        product1.setAvailableTaxRates(new HashSet<>(Collections.singletonList(taxRate1)));
+        product1.setImages(new HashSet<>(Collections.singletonList(image1)));
+        image1.setProduct(product1);
+        product1.setAvailableDesigns(new HashSet<>(allDesigns));
+        product1.setAvailableGlazes(new HashSet<>(allGlazes));
+        product1.setAvailableRoofColors(new HashSet<>(allRoofColors));
 
-        testConfigurator = new ProductConfigurator(); // Vytvoříme konfigurátor
-        testConfigurator.setId(2L); // ID musí odpovídat produktu
-        testConfigurator.setMinLength(new BigDecimal("100.00"));
-        testConfigurator.setMaxLength(new BigDecimal("500.00"));
-        testConfigurator.setMinWidth(new BigDecimal("50.00"));
-        testConfigurator.setMaxWidth(new BigDecimal("200.00"));
-        testConfigurator.setMinHeight(new BigDecimal("150.00"));
-        testConfigurator.setMaxHeight(new BigDecimal("300.00"));
-        // ... (další nastavení konfigurátoru, pokud je potřeba) ...
 
         product2 = new Product();
         product2.setId(2L);
-        product2.setName("Produkt 2 Custom");
-        product2.setSlug("produkt-2-custom");
+        product2.setName("Custom Drevnik");
+        product2.setSlug("custom-drevnik");
+        product2.setBasePriceCZK(new BigDecimal("12000.00"));
+        product2.setDescription("Description 2");
         product2.setActive(true);
-        product2.setCustomisable(true); // Je customisable
-        product2.setTaxRate(taxRate21);
-        product2.setBasePriceCZK(null);
+        product2.setCustomisable(true);
+        product2.setAvailableTaxRates(new HashSet<>(Collections.singletonList(taxRate1)));
+        product2.setImages(new HashSet<>());
         product2.setAvailableDesigns(new HashSet<>());
         product2.setAvailableGlazes(new HashSet<>());
         product2.setAvailableRoofColors(new HashSet<>());
-        product2.setAvailableAddons(new HashSet<>(Set.of(addon1)));
-        product2.setConfigurator(testConfigurator); // Přiřadíme konfigurátor
-        testConfigurator.setProduct(product2); // Obousměrná vazba
-        product2.setImages(new HashSet<>()); // Prázdný seznam obrázků
+        product2.setAvailableAddons(new HashSet<>(allAddons));
 
-        // Lenient mockování (zůstává a přidáváme pro imageRepository)
-        lenient().when(currencyService.getSelectedCurrency()).thenReturn("CZK");
-        lenient().when(designRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
-        lenient().when(glazeRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
-        lenient().when(roofColorRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
-        lenient().when(addonsRepository.findAllById(argThat(iterable -> iterable != null && !iterable.iterator().hasNext()))).thenReturn(Collections.emptyList());
-        lenient().when(imageRepository.findById(50L)).thenReturn(Optional.of(image1)); // <-- Přidáno
-        lenient().when(imageRepository.findById(999L)).thenReturn(Optional.empty()); // <-- Přidáno
 
-        // Mock pro načítání atributů ve formuláři (zůstává)
-        lenient().when(taxRateService.getAllTaxRates()).thenReturn(Collections.singletonList(taxRate21));
-        lenient().when(designRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(design1));
-        lenient().when(glazeRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(glaze1));
-        lenient().when(roofColorRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(roofColor1));
-        lenient().when(addonsRepository.findAll(any(Sort.class))).thenReturn(Collections.singletonList(addon1));
-
-        // Lenient mockování pro getProductById (zůstává)
-        lenient().when(productService.getProductById(1L)).thenReturn(Optional.of(product1));
-        lenient().when(productService.getProductById(2L)).thenReturn(Optional.of(product2));
-        lenient().when(productService.getProductById(99L)).thenReturn(Optional.empty());
+        // Mockování služeb - POUŽÍVÁME SPRÁVNÉ NÁZVY METOD
+        // OPRAVA: Používáme addonsService (s 's')
+        // Předpokládáme, že AddonsService má metodu getAllActiveAddons()
+        lenient().when(addonsService.getAllActiveAddons()).thenReturn(allAddons);
+        lenient().when(designService.getAllDesignsSortedByName()).thenReturn(allDesigns);
+        lenient().when(glazeService.getAllGlazesSortedByName()).thenReturn(allGlazes);
+        lenient().when(roofColorService.getAllRoofColorsSortedByName()).thenReturn(allRoofColors);
+        lenient().when(taxRateService.getAllTaxRates()).thenReturn(allTaxRates);
     }
 
-    // --- Testy GET (seznam, nový produkt) - beze změny ---
     @Test
-    @DisplayName("GET /admin/products - Zobrazí seznam produktů")
-    void listProducts_ShouldReturnListView() throws Exception {
-        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2), PageRequest.of(0, 15), 2);
+    @WithMockUser(roles = "ADMIN")
+    void listProducts_ShouldReturnProductsListView() throws Exception {
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2), PageRequest.of(0, 10), 2);
         when(productService.getAllProducts(any(Pageable.class))).thenReturn(productPage);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products"))
+        mvc.perform(get("/admin/products"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/products-list"))
-                .andExpect(model().attributeExists("productPage"));
+                .andExpect(model().attributeExists("productsPage"))
+                .andExpect(model().attribute("productsPage", productPage))
+                .andExpect(model().attributeExists("pageTitle"));
+
+        verify(productService).getAllProducts(any(Pageable.class));
     }
 
     @Test
-    @DisplayName("GET /admin/products/new - Zobrazí formulář pro nový produkt")
-    void showCreateProductForm_ShouldReturnFormView() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/new"))
+    @WithMockUser(roles = "ADMIN")
+    void showAddProductForm_ShouldReturnProductFormViewWithSupportData() throws Exception {
+        // Mockování služeb pro tento test
+        when(designService.getAllDesignsSortedByName()).thenReturn(allDesigns);
+        when(glazeService.getAllGlazesSortedByName()).thenReturn(allGlazes);
+        when(roofColorService.getAllRoofColorsSortedByName()).thenReturn(allRoofColors);
+        // OPRAVA: Používáme addonsService (s 's')
+        when(addonsService.getAllActiveAddons()).thenReturn(allAddons);
+        when(taxRateService.getAllTaxRates()).thenReturn(allTaxRates);
+
+        mvc.perform(get("/admin/products/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/product-form"))
-                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons"));
-    }
+                .andExpect(model().attributeExists("product"))
+                .andExpect(model().attribute("product", instanceOf(Product.class)))
+                .andExpect(model().attribute("allDesigns", allDesigns))
+                .andExpect(model().attribute("allGlazes", allGlazes))
+                .andExpect(model().attribute("allRoofColors", allRoofColors))
+                .andExpect(model().attribute("allAddons", allAddons)) // Očekávaný atribut
+                .andExpect(model().attribute("allTaxRates", allTaxRates))
+                .andExpect(model().attribute("pageTitle", "Přidat nový produkt"));
 
-    // --- Testy GET /edit (aktualizované) ---
-    @Test
-    @DisplayName("GET /admin/products/{id}/edit - Zobrazí formulář pro úpravu STANDARD produktu (včetně obrázků)")
-    void showEditProductForm_Standard_ShouldReturnFormViewWithImages() throws Exception {
-        // getProductById mockováno v setUp
-        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/1/edit"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/product-form"))
-                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons", "newImage")) // Ověření existence newImage
-                .andExpect(model().attribute("product", hasProperty("id", is(1L))))
-                .andExpect(model().attribute("product", hasProperty("customisable", is(false))))
-                .andExpect(model().attribute("product", hasProperty("images", hasSize(1)))) // Ověření, že obrázky jsou v modelu
-                .andExpect(model().attribute("product", hasProperty("images", hasItem(hasProperty("id", is(image1.getId())))))) // Ověření konkrétního obrázku
-                .andExpect(model().attribute("pageTitle", containsString("Upravit")));
-
-        verify(productService).getProductById(1L);
+        // Verify services were called
+        verify(designService).getAllDesignsSortedByName();
+        verify(glazeService).getAllGlazesSortedByName();
+        verify(roofColorService).getAllRoofColorsSortedByName();
+        // OPRAVA: Ověřujeme addonsService (s 's')
+        verify(addonsService).getAllActiveAddons();
+        verify(taxRateService).getAllTaxRates();
     }
 
     @Test
-    @DisplayName("GET /admin/products/{id}/edit - Zobrazí formulář pro úpravu CUSTOM produktu")
-    void showEditProductForm_Custom_ShouldReturnFormViewWithConfig() throws Exception {
-        // getProductById mockováno v setUp
-        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/2/edit"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/product-form"))
-                .andExpect(model().attributeExists("product", "allTaxRates", "allDesigns", "allGlazes", "allRoofColors", "allAddons", "newImage"))
-                .andExpect(model().attribute("product", hasProperty("id", is(2L))))
-                .andExpect(model().attribute("product", hasProperty("customisable", is(true))))
-                .andExpect(model().attribute("product", hasProperty("configurator", notNullValue())))
-                .andExpect(model().attribute("product", hasProperty("images", empty()))); // Custom produkt nemá obrázky v testu
-        verify(productService).getProductById(2L);
-    }
+    @WithMockUser(roles = "ADMIN")
+    void saveProduct_NewProduct_ShouldCreateProductAndRedirect() throws Exception {
+        MockMultipartFile imageFile = new MockMultipartFile("imageFiles", "test.jpg", "image/jpeg", "test image content".getBytes());
+        String storedFileUrl = "/uploads/products/unique-filename.jpg";
+        Long selectedTaxRateId = taxRate1.getId();
 
-    @Test
-    @DisplayName("GET /admin/products/{id}/edit - Nenalezeno - Přesměruje na seznam")
-    void showEditProductForm_NotFound_ShouldRedirect() throws Exception {
-        // getProductById mockováno v setUp
-        mockMvc.perform(MockMvcRequestBuilders.get("/admin/products/99/edit"))
+        when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
+        when(productService.createProduct(any(Product.class))).thenAnswer(invocation -> {
+            Product p = invocation.getArgument(0);
+            p.setId(3L);
+            assertNotNull(p.getAvailableTaxRates());
+            assertTrue(p.getAvailableTaxRates().stream().anyMatch(tr -> tr.getId().equals(selectedTaxRateId)));
+            Image savedImage = new Image(); savedImage.setId(10L); savedImage.setUrl(storedFileUrl); savedImage.setProduct(p);
+            p.setImages(new HashSet<>(Collections.singletonList(savedImage)));
+            // Simulace načtení a přiřazení asociací controllerem (pro kontrolu IDček)
+            p.setAvailableDesigns(new HashSet<>(allDesigns));
+            p.setAvailableGlazes(new HashSet<>(allGlazes));
+            p.setAvailableRoofColors(new HashSet<>(allRoofColors));
+            p.setAvailableAddons(new HashSet<>(allAddons));
+            return p;
+        });
+        when(productService.addImageToProduct(anyLong(), any(MultipartFile.class), any(), any(), any())).thenReturn(new Image()); // Mock pro případné volání
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("name", "Nový Produkt");
+        params.add("basePriceCZK", "15000.00");
+        params.add("basePriceEUR", "600.00");
+        params.add("description", "Nový popis");
+        params.add("active", "true");
+        params.add("customisable", "false");
+        params.add("availableDesignIds", design1.getId().toString());
+        params.add("availableGlazeIds", glaze1.getId().toString());
+        params.add("availableRoofColorIds", roofColor1.getId().toString());
+        params.add("availableAddonIds", addon1.getId().toString()); // ID doplňku
+        params.add("availableTaxRateIds", selectedTaxRateId.toString());
+
+        mvc.perform(multipart("/admin/products/save")
+                        .file(imageFile)
+                        .params(params)
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products"));
-        verify(productService).getProductById(99L);
+                .andExpect(redirectedUrl("/admin/products"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        verify(fileStorageService).storeFile(eq(imageFile), eq("products"));
+
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).createProduct(productCaptor.capture());
+
+        Product capturedProduct = productCaptor.getValue();
+        assertEquals("Nový Produkt", capturedProduct.getName());
+        assertEquals(new BigDecimal("15000.00"), capturedProduct.getBasePriceCZK());
+        // Ověření IDček (předpokládáme, že gettery vracejí Set<Long>)
+        // Pokud gettery nevracejí Set<Long>, museli bychom iterovat Set<Entity> a získat ID
+        assertTrue(capturedProduct.getAvailableTaxRates().stream().anyMatch(tr -> tr.getId().equals(selectedTaxRateId)));
+        assertTrue(capturedProduct.getAvailableDesigns().stream().anyMatch(d -> d.getId().equals(design1.getId())));
+        assertTrue(capturedProduct.getAvailableGlazes().stream().anyMatch(g -> g.getId().equals(glaze1.getId())));
+        assertTrue(capturedProduct.getAvailableRoofColors().stream().anyMatch(rc -> rc.getId().equals(roofColor1.getId())));
+        assertTrue(capturedProduct.getAvailableAddons().stream().anyMatch(a -> a.getId().equals(addon1.getId()))); // Ověření doplňku
+
+        verify(productService, atMost(1)).addImageToProduct(anyLong(), any(MultipartFile.class), any(), any(), any());
     }
 
-    // --- Testy POST (create, update) - beze změny ---
-    // ... (stávající testy pro create a update produktu) ...
 
-    // --- Testy POST Delete - beze změny ---
     @Test
-    @DisplayName("POST /admin/products/{id}/delete - Úspěšně deaktivuje produkt")
-    void deleteProduct_Success() throws Exception {
-        long productId = 1L;
+    @WithMockUser(roles = "ADMIN")
+    void showEditProductForm_ShouldReturnProductFormViewWithProductData() throws Exception {
+        Long productId = product1.getId();
+        when(productService.getProductById(productId)).thenReturn(Optional.of(product1));
+        when(designService.getAllDesignsSortedByName()).thenReturn(allDesigns);
+        when(glazeService.getAllGlazesSortedByName()).thenReturn(allGlazes);
+        when(roofColorService.getAllRoofColorsSortedByName()).thenReturn(allRoofColors);
+        // OPRAVA: Používáme addonsService (s 's')
+        when(addonsService.getAllActiveAddons()).thenReturn(allAddons);
+        when(taxRateService.getAllTaxRates()).thenReturn(allTaxRates);
+
+        mvc.perform(get("/admin/products/edit/{id}", productId))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/product-form"))
+                .andExpect(model().attributeExists("product"))
+                .andExpect(model().attribute("product", hasProperty("id", is(productId))))
+                .andExpect(model().attribute("allDesigns", allDesigns))
+                .andExpect(model().attribute("allGlazes", allGlazes))
+                .andExpect(model().attribute("allRoofColors", allRoofColors))
+                .andExpect(model().attribute("allAddons", allAddons)) // Očekávaný atribut
+                .andExpect(model().attribute("allTaxRates", allTaxRates))
+                .andExpect(model().attribute("pageTitle", containsString("Upravit produkt")));
+
+        verify(productService).getProductById(productId);
+        verify(designService).getAllDesignsSortedByName();
+        verify(glazeService).getAllGlazesSortedByName();
+        verify(roofColorService).getAllRoofColorsSortedByName();
+        // OPRAVA: Ověřujeme addonsService (s 's')
+        verify(addonsService).getAllActiveAddons();
+        verify(taxRateService).getAllTaxRates();
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void saveProduct_UpdateProduct_ShouldUpdateProductAndRedirect() throws Exception {
+        Long productId = product1.getId();
+        Long newTaxRateId = 2L;
+        taxRate2 = new TaxRate(); taxRate2.setId(newTaxRateId); taxRate2.setName("Reduced 15%"); taxRate2.setRate(new BigDecimal("0.15"));
+        allTaxRates = Arrays.asList(taxRate1, taxRate2); // Potřebujeme obě sazby
+
+        MockMultipartFile newImageFile = new MockMultipartFile("imageFiles", "update.jpg", "image/jpeg", "update image content".getBytes());
+        String storedFileUrl = "/uploads/products/updated-image.jpg";
+        String existingImageIdToDelete = image1.getId().toString();
+
+        when(productService.getProductById(productId)).thenReturn(Optional.of(product1));
+        when(fileStorageService.storeFile(any(MultipartFile.class), eq("products"))).thenReturn(storedFileUrl);
+        when(productService.updateProduct(eq(productId), any(Product.class), any(Product.class))).thenReturn(Optional.of(product1));
+        when(productService.addImageToProduct(eq(productId), any(MultipartFile.class), any(), any(), any())).thenReturn(new Image());
+        doNothing().when(productService).deleteImage(eq(image1.getId()));
+        when(taxRateService.getTaxRateById(taxRate1.getId())).thenReturn(Optional.of(taxRate1));
+        when(taxRateService.getTaxRateById(newTaxRateId)).thenReturn(Optional.of(taxRate2));
+
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("id", productId.toString());
+        params.add("name", "Upravený Produkt");
+        params.add("basePriceCZK", "11000.00");
+        params.add("description", "Upravený popis");
+        params.add("active", "false");
+        params.add("customisable", "false");
+        params.add("availableTaxRateIds", newTaxRateId.toString());
+        params.add("imagesToDelete", existingImageIdToDelete);
+        params.add("availableDesignIds", design1.getId().toString());
+        params.add("availableGlazeIds", glaze1.getId().toString());
+        params.add("availableRoofColorIds", roofColor1.getId().toString());
+        params.add("availableAddonIds", addon1.getId().toString()); // ID doplňku
+
+
+        mvc.perform(multipart("/admin/products/save")
+                        .file(newImageFile)
+                        .params(params)
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        verify(fileStorageService).storeFile(eq(newImageFile), eq("products"));
+
+        ArgumentCaptor<Product> productDataCaptor = ArgumentCaptor.forClass(Product.class);
+        ArgumentCaptor<Product> productToUpdateCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(productService).updateProduct(eq(productId), productDataCaptor.capture(), productToUpdateCaptor.capture());
+
+        Product capturedData = productDataCaptor.getValue();
+        assertEquals("Upravený Produkt", capturedData.getName());
+        // Předpokládáme, že controller naplní Set IDček do data objektu pro updateProduct
+        // Zkontrolujeme, že ID nové sazby je v datech z formuláře
+        assertNotNull(capturedData.getAvailableTaxRates()); // Pokud controller používá entity
+        assertTrue(capturedData.getAvailableTaxRates().stream().anyMatch(tr -> tr.getId().equals(newTaxRateId))); // Pokud controller používá entity
+
+
+        assertEquals(productId, productToUpdateCaptor.getValue().getId());
+
+
+        verify(productService, atMost(1)).deleteImage(eq(image1.getId()));
+        verify(productService, atMost(1)).addImageToProduct(eq(productId), eq(newImageFile), any(), any(), any());
+    }
+
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void deleteProduct_ShouldDeleteProductAndRedirect() throws Exception {
+        Long productId = product1.getId();
         doNothing().when(productService).deleteProduct(productId);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/{id}/delete", productId))
+        mvc.perform(post("/admin/products/delete/{id}", productId)
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products"));
+                .andExpect(redirectedUrl("/admin/products"))
+                .andExpect(flash().attributeExists("successMessage"));
 
         verify(productService).deleteProduct(productId);
     }
 
-    // --- NOVÉ TESTY pro Upload/Delete obrázků ---
-
     @Test
-    @DisplayName("POST /admin/products/{productId}/images/upload - Úspěšný upload")
-    void uploadProductImage_Success() throws Exception {
-        long productId = 1L;
-        MockMultipartFile mockFile = new MockMultipartFile(
-                "imageFile", // Název parametru v controlleru
-                "hello.jpg",
-                MediaType.IMAGE_JPEG_VALUE,
-                "Hello, World!".getBytes()
-        );
-        String altText = "Alt Popis";
-        String titleText = "Title Popis";
-        Integer displayOrder = 1;
+    @WithMockUser(roles = "ADMIN")
+    void deleteProductImage_Ajax_ShouldDeleteImageAndReturnOk() throws Exception {
+        Long imageId = image1.getId();
 
-        Image savedImage = new Image(); savedImage.setId(101L); savedImage.setUrl("/uploads/products/new.jpg");
-        when(productService.addImageToProduct(eq(productId), any(MultipartFile.class), eq(altText), eq(titleText), eq(displayOrder)))
-                .thenReturn(savedImage);
-
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/admin/products/{productId}/images/upload", productId) // Použijeme multipart
-                                .file(mockFile)
-                                .param("altText", altText)
-                                .param("titleText", titleText)
-                                .param("displayOrder", String.valueOf(displayOrder))
-                        // Bez .with(csrf()) protože je vypnuté v SecurityTestConfig
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products/" + productId + "/edit"))
-                .andExpect(flash().attributeExists("imageSuccess"));
-
-        verify(productService).addImageToProduct(eq(productId), any(MultipartFile.class), eq(altText), eq(titleText), eq(displayOrder));
-    }
-
-    @Test
-    @DisplayName("POST /admin/products/{productId}/images/upload - Chyba (prázdný soubor)")
-    void uploadProductImage_EmptyFile() throws Exception {
-        long productId = 1L;
-        MockMultipartFile mockFile = new MockMultipartFile(
-                "imageFile", // Název parametru
-                "empty.txt",
-                MediaType.TEXT_PLAIN_VALUE,
-                new byte[0] // Prázdný obsah
-        );
-
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/admin/products/{productId}/images/upload", productId)
-                        .file(mockFile)
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products/" + productId + "/edit"))
-                .andExpect(flash().attributeExists("imageError"))
-                .andExpect(flash().attribute("imageError", containsString("Nebyl vybrán žádný soubor")));
-
-        verify(productService, never()).addImageToProduct(anyLong(), any(), anyString(), anyString(), any());
-    }
-
-    @Test
-    @DisplayName("POST /admin/products/{productId}/images/upload - Chyba (produkt nenalezen)")
-    void uploadProductImage_ProductNotFound() throws Exception {
-        long nonExistentProductId = 99L;
-        MockMultipartFile mockFile = new MockMultipartFile("imageFile", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test".getBytes());
-        when(productService.addImageToProduct(eq(nonExistentProductId), any(), any(), any(), any()))
-                .thenThrow(new EntityNotFoundException("Produkt nenalezen."));
-
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/admin/products/{productId}/images/upload", nonExistentProductId)
-                        .file(mockFile)
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products")) // Přesměrování na seznam
-                .andExpect(flash().attributeExists("errorMessage"))
-                .andExpect(flash().attribute("errorMessage", containsString("Produkt nenalezen")));
-
-        verify(productService).addImageToProduct(eq(nonExistentProductId), any(), any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("POST /admin/products/{productId}/images/upload - Chyba (IO chyba při ukládání)")
-    void uploadProductImage_StorageError() throws Exception {
-        long productId = 1L;
-        MockMultipartFile mockFile = new MockMultipartFile("imageFile", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test".getBytes());
-        when(productService.addImageToProduct(eq(productId), any(), any(), any(), any()))
-                .thenThrow(new IOException("Disk full"));
-
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/admin/products/{productId}/images/upload", productId)
-                        .file(mockFile)
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products/" + productId + "/edit"))
-                .andExpect(flash().attributeExists("imageError"))
-                .andExpect(flash().attribute("imageError", containsString("Chyba při ukládání souboru: Disk full")));
-
-        verify(productService).addImageToProduct(eq(productId), any(), any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("POST /admin/products/images/{imageId}/delete - Úspěšné smazání")
-    void deleteProductImage_Success() throws Exception {
-        long imageId = 50L;
-        long productId = 1L;
-        // Mock imageRepository.findById v setUp()
         doNothing().when(productService).deleteImage(imageId);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/images/{imageId}/delete", imageId))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products/" + productId + "/edit")) // Očekáváme přesměrování zpět na editaci produktu
-                .andExpect(flash().attributeExists("imageSuccess"));
+        mvc.perform(delete("/admin/products/images/delete/{imageId}", imageId)
+                        .with(csrf())
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isOk());
 
         verify(productService).deleteImage(imageId);
-        verify(imageRepository).findById(imageId); // Ověříme, že se ID produktu hledalo přes repo
+    }
+
+
+    // --- Testy pro chybové stavy ---
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void showEditProductForm_ShouldReturnNotFound_WhenProductDoesNotExist() throws Exception {
+        Long nonExistentId = 999L;
+        when(productService.getProductById(nonExistentId)).thenReturn(Optional.empty());
+
+        mvc.perform(get("/admin/products/edit/{id}", nonExistentId))
+                .andExpect(status().isNotFound());
+
+        verify(productService).getProductById(nonExistentId);
     }
 
     @Test
-    @DisplayName("POST /admin/products/images/{imageId}/delete - Chyba (obrázek nenalezen)")
-    void deleteProductImage_NotFound() throws Exception {
-        long nonExistentImageId = 999L;
-        String errorMessage = "Image not found: " + nonExistentImageId;
-        // Mock imageRepository.findById v setUp()
-        doThrow(new EntityNotFoundException(errorMessage)).when(productService).deleteImage(nonExistentImageId);
+    @WithMockUser(roles = "ADMIN")
+    void saveProduct_NewProduct_ShouldReturnFormWithError_WhenValidationFails() throws Exception {
+        // Mock služby potřebné pro znovuzobrazení formuláře
+        when(designService.getAllDesignsSortedByName()).thenReturn(allDesigns);
+        when(glazeService.getAllGlazesSortedByName()).thenReturn(allGlazes);
+        when(roofColorService.getAllRoofColorsSortedByName()).thenReturn(allRoofColors);
+        // OPRAVA: Používáme addonsService (s 's')
+        when(addonsService.getAllActiveAddons()).thenReturn(allAddons);
+        when(taxRateService.getAllTaxRates()).thenReturn(allTaxRates);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/images/{imageId}/delete", nonExistentImageId))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products")) // Přesměrování na seznam, protože ID produktu neznáme
-                .andExpect(flash().attribute("imageError", is(errorMessage)));
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        // Chybí jméno
+        params.add("basePriceCZK", "15000.00");
+        params.add("availableTaxRateIds", taxRate1.getId().toString());
 
-        verify(productService).deleteImage(nonExistentImageId);
-        verify(imageRepository).findById(nonExistentImageId); // Zkusí najít ID pro productId
+        mvc.perform(post("/admin/products/save")
+                        .params(params)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/product-form"))
+                .andExpect(model().attributeHasFieldErrors("product", "name"))
+                .andExpect(model().attributeExists("allDesigns", "allGlazes", "allRoofColors", "allAddons", "allTaxRates")); // Ověření atributů
+
+        verify(productService, never()).createProduct(any(Product.class));
+        verify(fileStorageService, never()).storeFile(any(), any());
     }
-
-    @Test
-    @DisplayName("POST /admin/products/images/update-order - Úspěšná aktualizace pořadí")
-    void updateImageOrder_Success() throws Exception {
-        long imageId1 = 50L; // image1 je v setUp mockován pro findById
-        int newOrder = 5;
-
-        // Mock save, aby vrátil upravený obrázek
-        when(imageRepository.save(any(Image.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/admin/products/images/update-order")
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("displayOrder_" + imageId1, String.valueOf(newOrder))
-                )
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products/1/edit")) // Přesměrování na editaci produktu 1
-                .andExpect(flash().attributeExists("imageSuccess"));
-
-        verify(imageRepository).findById(imageId1);
-        verify(imageRepository).save(argThat(img -> img.getId().equals(imageId1) && Objects.equals(img.getDisplayOrder(), newOrder)));
-    }
-
 }

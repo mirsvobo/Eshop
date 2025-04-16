@@ -132,19 +132,15 @@ public class TaxRateService {
         TaxRate rate = getTaxRateById(taxRateId)
                 .orElseThrow(() -> new EntityNotFoundException("TaxRate with id " + taxRateId + " not found for deletion."));
 
-        // Kontrola: Je sazba použita u nějakých produktů?
-        // Načteme produkty asociované s touto sazbou (spoléháme na LAZY loading v transakci)
-        // Efektivnější by bylo přidat countByTaxRateId do ProductRepository
-        boolean isUsed = !CollectionUtils.isEmpty(rate.getProducts());
-        // boolean isUsed = productRepository.countByTaxRateId(taxRateId) > 0; // Pokud přidáme metodu
+        long countProductsUsingRate = productRepository.findAll().stream()
+                .filter(product -> product.getAvailableTaxRates() != null && product.getAvailableTaxRates().contains(rate))
+                .count();
 
-        if (isUsed) {
-            log.error("Cannot delete tax rate '{}' (ID: {}) because it is assigned to products.",
-                    rate.getName(), taxRateId);
-            throw new IllegalStateException("Cannot delete tax rate '" + rate.getName() + "' as it is currently assigned to products. Please reassign products to another tax rate first.");
+        if (countProductsUsingRate > 0) {
+            log.error("Cannot delete tax rate '{}' (ID: {}) because it is assigned to {} product(s).",
+                    rate.getName(), taxRateId, countProductsUsingRate);
+            throw new IllegalStateException("Cannot delete tax rate '" + rate.getName() + "' as it is currently assigned to " + countProductsUsingRate + " products. Please reassign products first.");
         }
-
-        // Pokud není použita, smazat
         try {
             taxRateRepository.deleteById(taxRateId);
             log.info("Tax rate {} (ID: {}) deleted successfully.", rate.getName(), taxRateId);

@@ -62,8 +62,11 @@ class CheckoutControllerTest implements PriceConstants {
     @MockBean private ProductService productService;
     @MockBean private CurrencyService currencyService;
     @MockBean private TaxRateService taxRateService;
+    // Přidáno mockování TaxRateRepository, i když ho CheckoutController přímo nepoužívá,
+    // může být potřeba pro jiné závislosti nebo budoucí rozšíření.
+    @MockBean private TaxRateRepository taxRateRepository;
 
-    // ===== @MockBean pro repository (potřeba pro setUp lenient mockování) =====
+    // ===== @MockBean pro repository (potřeba pro setUp lenient mockování, pokud by je controller používal) =====
     @MockBean private DesignRepository designRepository;
     @MockBean private GlazeRepository glazeRepository;
     @MockBean private RoofColorRepository roofColorRepository;
@@ -75,6 +78,8 @@ class CheckoutControllerTest implements PriceConstants {
     private CartItem testCartItem;
     private Coupon testCoupon;
     private Order createdOrder;
+    // Přidáno pro inicializaci CartItem
+    private TaxRate testTaxRate;
 
     private final String MOCK_USER_EMAIL = "user@checkout.com";
     private final String CURRENT_CURRENCY = "CZK";
@@ -92,6 +97,14 @@ class CheckoutControllerTest implements PriceConstants {
 
     @BeforeEach
     void setUp() {
+        // OPRAVA: Inicializace TaxRate dle modelu
+        testTaxRate = new TaxRate();
+        testTaxRate.setId(1L);
+        testTaxRate.setName("Standard 21%");
+        testTaxRate.setRate(new BigDecimal("0.21"));
+        testTaxRate.setReverseCharge(false);
+
+
         loggedInCustomer = new Customer();
         loggedInCustomer.setId(1L);
         loggedInCustomer.setEmail(MOCK_USER_EMAIL);
@@ -102,7 +115,6 @@ class CheckoutControllerTest implements PriceConstants {
         loggedInCustomer.setInvoiceZipCode("11111");
         loggedInCustomer.setInvoiceCountry("ČR");
         loggedInCustomer.setUseInvoiceAddressAsDelivery(true);
-        // Manuální synchronizace pro testy
         loggedInCustomer.setDeliveryStreet(loggedInCustomer.getInvoiceStreet());
         loggedInCustomer.setDeliveryCity(loggedInCustomer.getInvoiceCity());
         loggedInCustomer.setDeliveryZipCode(loggedInCustomer.getInvoiceZipCode());
@@ -125,7 +137,14 @@ class CheckoutControllerTest implements PriceConstants {
         testCartItem.setProductId(100L);
         testCartItem.setQuantity(1);
         testCartItem.setUnitPriceCZK(MOCK_SUBTOTAL);
-        testCartItem.setTaxRatePercent(new BigDecimal("0.21"));
+        testCartItem.setUnitPriceEUR(new BigDecimal("20.00")); // Přidána EUR cena pro konzistenci
+        // OPRAVA: Nastavení nových polí pro DPH místo taxRatePercent
+        testCartItem.setSelectedTaxRateId(testTaxRate.getId());
+        testCartItem.setSelectedTaxRateValue(testTaxRate.getRate());
+        testCartItem.setSelectedIsReverseCharge(testTaxRate.isReverseCharge());
+        // Generování ID položky (předpokládáme jednoduchou variantu pro tento test)
+        testCartItem.setCartItemId(CartItem.generateCartItemId(100L, false, null, null, null, null, null, null, null, testTaxRate.getId(), null, false, false, false, null));
+
 
         testCoupon = new Coupon();
         testCoupon.setId(1L);
@@ -162,7 +181,7 @@ class CheckoutControllerTest implements PriceConstants {
         lenient().when(couponService.checkMinimumOrderValue(any(), any(), anyString())).thenReturn(true);
         lenient().when(couponService.checkCustomerUsageLimit(any(), any())).thenReturn(true);
 
-        // Lenient mockování pro findAllById s prázdným SETEM
+        // Lenient mockování pro findAllById s prázdným SETEM (pokud by bylo potřeba)
         lenient().when(designRepository.findAllById(eq(Collections.emptySet()))).thenReturn(Collections.emptyList());
         lenient().when(glazeRepository.findAllById(eq(Collections.emptySet()))).thenReturn(Collections.emptyList());
         lenient().when(roofColorRepository.findAllById(eq(Collections.emptySet()))).thenReturn(Collections.emptyList());
@@ -181,6 +200,9 @@ class CheckoutControllerTest implements PriceConstants {
         when(sessionCart.calculateVatBreakdown(CURRENT_CURRENCY)).thenReturn(Map.of(new BigDecimal("0.21").setScale(2), MOCK_TOTAL_VAT));
         when(sessionCart.calculateTotalPriceBeforeShipping(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_PRICE_BEFORE_SHIPPING);
 
+        // Mock pro getShippingTaxRate() pro initial výpočet v controlleru
+        when(shippingService.getShippingTaxRate()).thenReturn(MOCK_SHIPPING_RATE);
+
         mockMvc.perform(MockMvcRequestBuilders.get("/pokladna"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("pokladna"))
@@ -188,17 +210,23 @@ class CheckoutControllerTest implements PriceConstants {
                 .andExpect(model().attribute("customer", notNullValue()))
                 .andExpect(model().attribute("customer", hasProperty("email", is(MOCK_USER_EMAIL))))
                 .andExpect(model().attribute("checkoutForm", hasProperty("email", is(MOCK_USER_EMAIL))))
+                // Ověření cen v modelu
+                .andExpect(model().attribute("subtotal", comparesEqualTo(MOCK_SUBTOTAL)))
+                .andExpect(model().attribute("totalVat", comparesEqualTo(MOCK_TOTAL_VAT)))
                 .andExpect(model().attribute("shippingCostNoTax", comparesEqualTo(MOCK_SHIPPING_COST)))
-                .andExpect(model().attribute("totalPrice", comparesEqualTo(MOCK_TOTAL_PRICE)));
+                .andExpect(model().attribute("shippingTax", comparesEqualTo(MOCK_SHIPPING_TAX)))
+                .andExpect(model().attribute("totalPrice", comparesEqualTo(MOCK_TOTAL_PRICE.setScale(0, RoundingMode.DOWN)))) // Ověřujeme zaokrouhlenou cenu
+                .andExpect(model().attribute("roundingDifference", comparesEqualTo(MOCK_TOTAL_PRICE.subtract(MOCK_TOTAL_PRICE.setScale(0, RoundingMode.DOWN)).setScale(PRICE_SCALE, RoundingMode.HALF_UP)))); // Ověřujeme rozdíl
+
 
         verify(customerService).getCustomerByEmail(MOCK_USER_EMAIL);
         verify(currencyService, times(2)).getSelectedCurrency();
         verify(shippingService).calculateShippingCost(any(Order.class), eq(CURRENT_CURRENCY));
-        verify(shippingService).getShippingTaxRate();
+        verify(shippingService, atLeastOnce()).getShippingTaxRate(); // Ověření volání sazby DPH dopravy
         verify(sessionCart).calculateSubtotal(CURRENT_CURRENCY);
         verify(sessionCart, atLeastOnce()).getAppliedCouponCode();
         verify(sessionCart).calculateTotalVatAmount(CURRENT_CURRENCY);
-        verify(sessionCart, atLeastOnce()).calculateVatBreakdown(CURRENT_CURRENCY); // Pouze atLeastOnce
+        verify(sessionCart, atLeastOnce()).calculateVatBreakdown(CURRENT_CURRENCY);
         verify(sessionCart).calculateTotalPriceBeforeShipping(CURRENT_CURRENCY);
     }
 
@@ -211,35 +239,40 @@ class CheckoutControllerTest implements PriceConstants {
         when(sessionCart.calculateTotalVatAmount(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_VAT);
         when(sessionCart.calculateVatBreakdown(CURRENT_CURRENCY)).thenReturn(Map.of(new BigDecimal("0.21").setScale(2), MOCK_TOTAL_VAT));
         when(sessionCart.calculateTotalPriceBeforeShipping(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_PRICE_BEFORE_SHIPPING);
+        // Mock pro getShippingTaxRate() - volá se i pro hosta
+        when(shippingService.getShippingTaxRate()).thenReturn(MOCK_SHIPPING_RATE);
 
         mockMvc.perform(MockMvcRequestBuilders.get("/pokladna"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("pokladna"))
                 .andExpect(model().attribute("customer", is(nullValue())))
-                // ===== OPRAVA: Pouze kontrola existence =====
                 .andExpect(model().attributeExists("checkoutForm"))
-                // ===== KONEC OPRAVY =====
                 .andExpect(model().attribute("cart", notNullValue()))
                 .andExpect(model().attribute("allowedPaymentMethods", notNullValue()))
                 .andExpect(model().attribute("currency", notNullValue()))
                 .andExpect(model().attribute("currencySymbol", notNullValue()))
-                .andExpect(model().attribute("subtotal", notNullValue()))
+                .andExpect(model().attribute("subtotal", comparesEqualTo(MOCK_SUBTOTAL)))
                 .andExpect(model().attribute("validatedCoupon", is(nullValue())))
-                .andExpect(model().attribute("couponDiscount", notNullValue()))
-                .andExpect(model().attribute("totalVat", notNullValue()))
+                .andExpect(model().attribute("couponDiscount", comparesEqualTo(BigDecimal.ZERO)))
+                .andExpect(model().attribute("totalVat", comparesEqualTo(MOCK_TOTAL_VAT)))
                 .andExpect(model().attribute("vatBreakdown", notNullValue()))
+                // Pro hosta bez adresy by cena dopravy měla být 0 nebo null, a chyba nastavena
+                .andExpect(model().attribute("originalShippingCostNoTax", is(nullValue())))
+                .andExpect(model().attribute("shippingError", not(nullValue())))
                 .andExpect(model().attribute("shippingCostNoTax", comparesEqualTo(BigDecimal.ZERO)))
                 .andExpect(model().attribute("shippingTax", comparesEqualTo(BigDecimal.ZERO)))
-                .andExpect(model().attribute("totalPrice", comparesEqualTo(MOCK_TOTAL_PRICE_BEFORE_SHIPPING)))
-                .andExpect(model().attributeExists("shippingError"));
+                // Celková cena pro hosta bez vypočtené dopravy je cena před dopravou (zaokrouhlená)
+                .andExpect(model().attribute("totalPrice", comparesEqualTo(MOCK_TOTAL_PRICE_BEFORE_SHIPPING.setScale(0, RoundingMode.DOWN))))
+                .andExpect(model().attribute("roundingDifference", comparesEqualTo(MOCK_TOTAL_PRICE_BEFORE_SHIPPING.subtract(MOCK_TOTAL_PRICE_BEFORE_SHIPPING.setScale(0, RoundingMode.DOWN)).setScale(PRICE_SCALE, RoundingMode.HALF_UP))));
 
         verify(customerService, never()).getCustomerByEmail(anyString());
         verify(currencyService, times(2)).getSelectedCurrency();
-        verify(shippingService, never()).calculateShippingCost(any(), anyString());
+        verify(shippingService, never()).calculateShippingCost(any(), anyString()); // Doprava se nepočítá
+        verify(shippingService, atLeastOnce()).getShippingTaxRate(); // Sazba se ale načítá
         verify(sessionCart).calculateSubtotal(CURRENT_CURRENCY);
         verify(sessionCart, atLeastOnce()).getAppliedCouponCode();
         verify(sessionCart).calculateTotalVatAmount(CURRENT_CURRENCY);
-        verify(sessionCart, atLeastOnce()).calculateVatBreakdown(CURRENT_CURRENCY); // Pouze atLeastOnce
+        verify(sessionCart, atLeastOnce()).calculateVatBreakdown(CURRENT_CURRENCY);
         verify(sessionCart).calculateTotalPriceBeforeShipping(CURRENT_CURRENCY);
     }
 
@@ -264,10 +297,18 @@ class CheckoutControllerTest implements PriceConstants {
     @DisplayName("POST /pokladna/odeslat - Úspěšné odeslání pro přihlášeného uživatele")
     @WithMockUser(username = MOCK_USER_EMAIL)
     void processCheckout_LoggedInUser_Success() throws Exception {
+        // Mockujeme shipping cost a tax, které se nyní předávají ve skrytých polích
+        // Tyto hodnoty by měly být získány z předchozího AJAXového volání
+        String submittedShippingCost = MOCK_SHIPPING_COST.toPlainString();
+        String submittedShippingTax = MOCK_SHIPPING_TAX.toPlainString();
+
         mockMvc.perform(MockMvcRequestBuilders.post("/pokladna/odeslat")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                                 .param("paymentMethod", "BANK_TRANSFER")
                                 .param("agreeTerms", "true")
+                                // Přidání parametrů pro shipping cost
+                                .param("shippingCostNoTax", submittedShippingCost)
+                                .param("shippingTax", submittedShippingTax)
                         // .with(csrf())
                 )
                 .andExpect(status().is3xxRedirection())
@@ -284,10 +325,12 @@ class CheckoutControllerTest implements PriceConstants {
         assertEquals("BANK_TRANSFER", capturedRequest.getPaymentMethod());
         assertNotNull(capturedRequest.getItems());
         assertFalse(capturedRequest.getItems().isEmpty());
+        // Ověření, že předané ceny dopravy jsou správně nastaveny v requestu
         assertEquals(0, MOCK_SHIPPING_COST.compareTo(capturedRequest.getShippingCostNoTax()));
         assertEquals(0, MOCK_SHIPPING_TAX.compareTo(capturedRequest.getShippingTax()));
 
         verify(sessionCart).clearCart();
+        verify(customerService).getCustomerByEmail(MOCK_USER_EMAIL); // Ověření načtení zákazníka
     }
 
     @Test
@@ -308,6 +351,11 @@ class CheckoutControllerTest implements PriceConstants {
         createdOrder.setCustomer(newGuest);
         when(orderService.createOrder(any(CreateOrderRequest.class))).thenReturn(createdOrder);
 
+        // Mockujeme shipping cost a tax
+        String submittedShippingCost = MOCK_SHIPPING_COST.toPlainString();
+        String submittedShippingTax = MOCK_SHIPPING_TAX.toPlainString();
+
+
         mockMvc.perform(MockMvcRequestBuilders.post("/pokladna/odeslat")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                                 .param("email", checkoutFormDto.getEmail())
@@ -321,6 +369,9 @@ class CheckoutControllerTest implements PriceConstants {
                                 .param("useInvoiceAddressAsDelivery", String.valueOf(checkoutFormDto.isUseInvoiceAddressAsDelivery()))
                                 .param("paymentMethod", checkoutFormDto.getPaymentMethod())
                                 .param("agreeTerms", String.valueOf(checkoutFormDto.isAgreeTerms()))
+                                // Přidání parametrů pro shipping cost
+                                .param("shippingCostNoTax", submittedShippingCost)
+                                .param("shippingTax", submittedShippingTax)
                         // .with(csrf())
                 )
                 .andExpect(status().is3xxRedirection())
@@ -335,6 +386,10 @@ class CheckoutControllerTest implements PriceConstants {
         verify(orderService).createOrder(requestCaptor.capture());
         assertEquals(newGuest.getId(), requestCaptor.getValue().getCustomerId());
         assertTrue(requestCaptor.getValue().isUseCustomerAddresses());
+        // Ověření cen dopravy v requestu
+        assertEquals(0, MOCK_SHIPPING_COST.compareTo(requestCaptor.getValue().getShippingCostNoTax()));
+        assertEquals(0, MOCK_SHIPPING_TAX.compareTo(requestCaptor.getValue().getShippingTax()));
+
 
         verify(sessionCart).clearCart();
     }
@@ -350,6 +405,8 @@ class CheckoutControllerTest implements PriceConstants {
         when(sessionCart.calculateTotalVatAmount(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_VAT);
         when(sessionCart.calculateVatBreakdown(CURRENT_CURRENCY)).thenReturn(Map.of(new BigDecimal("0.21").setScale(2), MOCK_TOTAL_VAT));
         when(sessionCart.calculateTotalPriceBeforeShipping(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_PRICE_BEFORE_SHIPPING);
+        // Mock getShippingTaxRate pro prepareModelForError
+        when(shippingService.getShippingTaxRate()).thenReturn(MOCK_SHIPPING_RATE);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/pokladna/odeslat")
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -364,6 +421,7 @@ class CheckoutControllerTest implements PriceConstants {
                                 .param("invoiceZipCode", checkoutFormDto.getInvoiceZipCode())
                                 .param("invoiceCountry", checkoutFormDto.getInvoiceCountry())
                                 .param("useInvoiceAddressAsDelivery", "true")
+                        // Chybí parametry pro shipping cost - chyba by se měla projevit ve formuláři
                         // .with(csrf())
                 )
                 .andExpect(status().isOk()) // Zůstane na stránce
@@ -371,11 +429,11 @@ class CheckoutControllerTest implements PriceConstants {
                 .andExpect(model().attributeExists("checkoutForm", "cart", "allowedPaymentMethods", "currency", "currencySymbol"))
                 .andExpect(model().hasErrors())
                 .andExpect(model().attributeHasFieldErrors("checkoutForm", "agreeTerms")) // Chyba u agreeTerms
-                .andExpect(model().attributeExists("checkoutError"));
+                .andExpect(model().attributeExists("checkoutError")); // Obecná chyba formuláře
 
         verify(orderService, never()).createOrder(any());
         verify(sessionCart, never()).clearCart();
-        verify(currencyService, times(2)).getSelectedCurrency();
+        verify(currencyService, times(2)).getSelectedCurrency(); // Voláno při přípravě modelu pro chybu
     }
 
     @Test
@@ -391,11 +449,12 @@ class CheckoutControllerTest implements PriceConstants {
                                 .param("firstName", "a").param("lastName", "b").param("phone", "1")
                                 .param("invoiceStreet", "c").param("invoiceCity", "d")
                                 .param("invoiceZipCode", "11111").param("invoiceCountry", "e")
+                        // Chybí shipping cost, ale nemělo by vadit, protože košík je prázdný
                         // .with(csrf())
                 )
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/kosik"))
-                .andExpect(flash().attributeExists("checkoutError"));
+                .andExpect(flash().attributeExists("checkoutError")); // Flash atribut z controlleru
 
         verify(sessionCart).hasItems();
         verify(orderService, never()).createOrder(any());
@@ -413,11 +472,18 @@ class CheckoutControllerTest implements PriceConstants {
         addressDto.setZipCode("12345");
         addressDto.setCountry("Test Country");
 
-        // Mock pro výpočet DPH zboží
+        // Mock pro výpočet DPH zboží a celkové ceny
+        when(sessionCart.calculateSubtotal(CURRENT_CURRENCY)).thenReturn(MOCK_SUBTOTAL);
         when(sessionCart.calculateVatBreakdown(CURRENT_CURRENCY)).thenReturn(Map.of(new BigDecimal("0.21").setScale(2), MOCK_TOTAL_VAT));
         when(sessionCart.calculateTotalVatAmount(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_VAT);
         when(sessionCart.calculateTotalPriceBeforeShipping(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_PRICE_BEFORE_SHIPPING);
         when(sessionCart.getAppliedCoupon()).thenReturn(null); // Bez kupónu
+        when(sessionCart.calculateDiscountAmount(CURRENT_CURRENCY)).thenReturn(BigDecimal.ZERO); // Bez slevy
+
+        // Mock pro shipping service
+        when(shippingService.calculateShippingCost(any(Order.class), eq(CURRENT_CURRENCY))).thenReturn(MOCK_SHIPPING_COST);
+        when(shippingService.getShippingTaxRate()).thenReturn(MOCK_SHIPPING_RATE);
+
 
         mockMvc.perform(MockMvcRequestBuilders.post("/pokladna/calculate-shipping")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -429,16 +495,19 @@ class CheckoutControllerTest implements PriceConstants {
                 .andExpect(jsonPath("$.errorMessage", is(nullValue())))
                 .andExpect(jsonPath("$.shippingCostNoTax", is(MOCK_SHIPPING_COST.doubleValue())))
                 .andExpect(jsonPath("$.shippingTax", is(MOCK_SHIPPING_TAX.doubleValue())))
-                .andExpect(jsonPath("$.totalPrice", is(MOCK_TOTAL_PRICE.doubleValue())))
-                .andExpect(jsonPath("$.currencySymbol", is(CURRENCY_SYMBOL)));
+                .andExpect(jsonPath("$.totalPrice", is(MOCK_TOTAL_PRICE.doubleValue()))) // Ověřujeme přesnou cenu PŘED zaokrouhlením pro AJAX
+                .andExpect(jsonPath("$.currencySymbol", is(CURRENCY_SYMBOL)))
+                .andExpect(jsonPath("$.originalShippingCostNoTax", is(MOCK_SHIPPING_COST.doubleValue())))
+                .andExpect(jsonPath("$.originalShippingTax", is(MOCK_SHIPPING_TAX.doubleValue())));
+
 
         verify(shippingService).calculateShippingCost(any(Order.class), eq(CURRENT_CURRENCY));
         verify(shippingService).getShippingTaxRate();
-        // ===== OPRAVA: Ověření počtu volání (předpokládáme nyní 2 dle logu) =====
         verify(sessionCart, times(1)).calculateVatBreakdown(CURRENT_CURRENCY);
-        // ===== KONEC OPRAVY =====
         verify(sessionCart).calculateTotalVatAmount(CURRENT_CURRENCY);
-        verify(sessionCart).calculateTotalPriceBeforeShipping(CURRENT_CURRENCY);
+        verify(sessionCart).calculateTotalPriceBeforeShipping(CURRENT_CURRENCY); // Voláno pro výpočet
+        verify(sessionCart).calculateSubtotal(CURRENT_CURRENCY); // Voláno pro výpočet
+        verify(sessionCart).calculateDiscountAmount(CURRENT_CURRENCY); // Voláno pro výpočet
     }
 
     @Test
@@ -461,7 +530,7 @@ class CheckoutControllerTest implements PriceConstants {
 
     @Test
     @DisplayName("POST /pokladna/calculate-shipping - Chyba (chyba výpočtu v service)")
-    void calculateShippingAjax_CalculationError_ShouldReturnInternalServerError() throws Exception {
+    void calculateShippingAjax_CalculationError_ShouldReturnAppropriateError() throws Exception {
         ShippingAddressDto addressDto = new ShippingAddressDto();
         addressDto.setStreet("Problem Address 1");
         addressDto.setCity("Problem City");
@@ -470,8 +539,10 @@ class CheckoutControllerTest implements PriceConstants {
 
         String errorMessage = "Simulated shipping service error";
         when(shippingService.calculateShippingCost(any(Order.class), eq(CURRENT_CURRENCY)))
-                .thenThrow(new RuntimeException(errorMessage));
+                .thenThrow(new RuntimeException(errorMessage)); // Simulace obecné chyby
         // Mockování pro DPH zboží (volá se i při chybě dopravy)
+        when(sessionCart.calculateSubtotal(CURRENT_CURRENCY)).thenReturn(MOCK_SUBTOTAL); // Potřeba pro výpočet ceny bez daně po slevě
+        when(sessionCart.calculateDiscountAmount(CURRENT_CURRENCY)).thenReturn(BigDecimal.ZERO); // Potřeba pro výpočet ceny bez daně po slevě
         when(sessionCart.calculateVatBreakdown(CURRENT_CURRENCY)).thenReturn(Map.of(new BigDecimal("0.21").setScale(2), MOCK_TOTAL_VAT));
         when(sessionCart.calculateTotalVatAmount(CURRENT_CURRENCY)).thenReturn(MOCK_TOTAL_VAT);
         when(sessionCart.getAppliedCoupon()).thenReturn(null);
@@ -482,19 +553,18 @@ class CheckoutControllerTest implements PriceConstants {
                                 .content(objectMapper.writeValueAsString(addressDto))
                         // .with(csrf())
                 )
-                .andExpect(status().isInternalServerError()) // Očekáváme 500
+                .andExpect(status().isInternalServerError()) // Očekáváme 500 kvůli RuntimeException
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.errorMessage", containsString("Výpočet dopravy selhal")))
+                .andExpect(jsonPath("$.errorMessage", containsString("Výpočet dopravy selhal"))) // Obecná chyba pro uživatele
                 .andExpect(jsonPath("$.shippingCostNoTax", is(-1))) // Chyba je signalizována jako -1
-                // ===== OPRAVA: Použití is(0) pro integer =====
-                .andExpect(jsonPath("$.shippingTax", is(0)))
-                // ===== KONEC OPRAVY =====
+                .andExpect(jsonPath("$.shippingTax", is(0))) // DPH z dopravy je 0
                 .andExpect(jsonPath("$.totalVatWithShipping", is(MOCK_TOTAL_VAT.doubleValue()))); // Jen DPH zboží
 
         verify(shippingService).calculateShippingCost(any(Order.class), eq(CURRENT_CURRENCY));
         // Ověření, že se volaly metody pro DPH zboží
-        // Očekáváme 2 volání (jedno přímo v AJAX, jedno v prepare... při error handlingu) - dle logu
         verify(sessionCart, times(1)).calculateVatBreakdown(CURRENT_CURRENCY);
         verify(sessionCart).calculateTotalVatAmount(CURRENT_CURRENCY);
+        verify(sessionCart).calculateSubtotal(CURRENT_CURRENCY); // Voláno
+        verify(sessionCart).calculateDiscountAmount(CURRENT_CURRENCY); // Voláno
     }
 }

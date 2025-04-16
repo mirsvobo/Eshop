@@ -5,11 +5,11 @@
       layout:decorate="~{layout/main}">
 <head>
     <title th:text="${product?.name ?: 'Produkt na míru'}">Produkt na míru</title>
-    <meta name="description" th:content="${product?.metaDescription != null ? product.metaDescription : (#strings.isEmpty(product?.description) ? 'Navrhněte si dřevník na míru.' : #strings.abbreviate(product.description, 160))}" layout:fragment="meta-description"/>
+    <meta name="description" th:content="${product?.metaDescription != null ? product.metaDescription : (#strings.isEmpty(product?.shortDescription) ? #strings.abbreviate(product.description, 160) : product.shortDescription)}" layout:fragment="meta-description"/>
 
     <th:block layout:fragment="css">
         <style>
-            /* Styly zůstávají stejné jako v předchozí verzi */
+            /* Styly zůstávají stejné jako v předchozí verzi, přidáme styl pro chyby DPH */
             .product-images img.main-image { max-width: 100%; height: auto; display: block; margin-bottom: 15px; border: 1px solid #dee2e6; cursor: pointer; background-color: #fff; padding: 0.25rem; border-radius: 0.375rem; }
             .product-thumbnails { display: flex; gap: 8px; flex-wrap: wrap; }
             .product-thumbnails img { width: 80px; height: 80px; object-fit: cover; border: 2px solid #dee2e6; cursor: pointer; opacity: 0.7; border-radius: 0.25rem; transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out; }
@@ -27,7 +27,6 @@
             .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
             .form-check-label.checkbox-label { margin-left: 0.3rem; font-weight: normal; }
             .price .spinner-border-sm { vertical-align: middle; margin-left: 5px; }
-            /* Specific style for attribute select error messages */
             .attribute-select-error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
         </style>
     </th:block>
@@ -36,7 +35,14 @@
 <body>
 
 <section layout:fragment="content">
-    <div class="container mt-5">
+    <div class="container mt-5 mb-5"> <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/}">Domů</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/produkty}">Produkty</a></li>
+            <li class="breadcrumb-item active" aria-current="page" th:text="${product?.name ?: 'Produkt na míru'}">Produkt na míru</li>
+        </ol>
+    </nav>
+
         <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
             <span th:text="${cartSuccess}"></span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -48,25 +54,38 @@
         <div th:if="${configuratorError != null}" class="alert alert-warning" role="alert" th:text="${configuratorError}">
             Chyba konfigurátoru.
         </div>
+        <div th:if="${productError}" class="alert alert-warning" role="alert" th:text="${productError}">
+            Produkt nelze objednat.
+        </div>
 
-        <div class="row" th:if="${product != null and configuratorError == null}" th:object="${product}">
+        <div class="row g-4" th:if="${product != null and configuratorError == null and productError == null}" th:object="${product}">
             <div class="col-lg-6 product-images mb-4 mb-lg-0">
-                <img th:if="*{images != null and not #lists.isEmpty(images)}" th:src="*{images[0].url}" th:alt="*{name}" id="mainProductImage" class="main-image img-fluid shadow-sm" />
-                <img th:unless="*{images != null and not #lists.isEmpty(images)}" th:src="@{/images/placeholder-custom.png}" alt="Produkt na míru - Ilustrační obrázek" class="main-image img-fluid shadow-sm"/>
+                <img th:if="*{images != null and not #lists.isEmpty(getImagesOrdered())}"
+                     th:src="*{getImagesOrdered()[0].url}"
+                     th:alt="*{getImagesOrdered()[0].altText ?: name}"
+                     id="mainProductImageCustom" class="main-image img-fluid shadow-sm" />
+                <img th:unless="*{images != null and not #lists.isEmpty(getImagesOrdered())}"
+                     th:src="@{/images/placeholder-custom.png}" alt="Produkt na míru - Ilustrační obrázek" class="main-image img-fluid shadow-sm"/>
                 <div class="product-thumbnails mt-3" th:if="*{images != null and #lists.size(images) > 1}">
-                    th:src="${img.url}" th:alt="|*{name} - náhled ${iter.index + 1}|"
+                    <img th:each="img, iter : *{getImagesOrdered()}"
+                         th:src="${img.url}"
+                         th:alt="|*{name} - náhled ${iter.index + 1}|"
+                         th:class="${iter.index == 0} ? 'active' : ''"
+                         th:onclick="|document.getElementById('mainProductImageCustom').src='${img.url}'; document.querySelectorAll('.product-thumbnails img').forEach(el => el.classList.remove('active')); this.classList.add('active');|"
+                    />
                 </div>
             </div>
 
             <div class="col-lg-6 product-info">
                 <h1 class="mb-3" th:text="*{name}">Produkt na míru</h1>
+
                 <div class="price mb-2" id="product-price-display">
                     <span class="spinner-border spinner-border-sm text-primary d-none" id="price-spinner" role="status" aria-hidden="true"></span>
+                    <span id="price-value">Načítání ceny...</span>
+                    <span class="text-muted ms-1">(bez DPH)</span>
                 </div>
-                <div id="customPriceErrorDisplay" class="error mb-3" style="display: none;"></div>
-                <div th:utext="*{description}" class="mb-4">
-                    Popis produktu na míru...
-                </div>
+                <div id="customPriceErrorDisplay" class="error mb-3" style="display: none;"></div> <div th:if="${product.shortDescription != null}" class="lead text-muted mb-3" th:text="*{shortDescription}">Krátký popis produktu.</div>
+                <div th:utext="*{description}" class="mb-4 description-content"> Hlavní popis produktu na míru... </div>
                 <hr class="mb-4"/>
 
                 <form th:action="@{/kosik/pridat}" method="post" id="add-to-cart-form" th:object="${cartItemDto}"
@@ -79,6 +98,7 @@
 
                     <input type="hidden" th:field="*{productId}" />
                     <input type="hidden" th:field="*{custom}" value="true" />
+                    <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
 
                     <div class="configurator-section" th:if="${configurator != null}">
                         <h3 class="h5 mb-3">Navrhněte si vlastní rozměry a vzhled</h3>
@@ -90,7 +110,7 @@
                                    th:value="*{customDimensions['length'] ?: configurator.defaultLength ?: configurator.minLength}" />
                             <span class="range-value"><span id="customLengthValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minLength != null and configurator.maxLength != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minLength, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxLength, 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minLength, 1, 'POINT', 0, 'POINT')} + ' - ' + ${#numbers.formatDecimal(configurator.maxLength, 1, 'POINT', 0, 'POINT')} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
                         <div class="mb-3 range-container">
@@ -100,7 +120,7 @@
                                    th:value="*{customDimensions['width'] ?: configurator.defaultWidth ?: configurator.minWidth}" />
                             <span class="range-value"><span id="customWidthValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minWidth != null and configurator.maxWidth != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minWidth, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxWidth, 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minWidth, 1, 'POINT', 0, 'POINT')} + ' - ' + ${#numbers.formatDecimal(configurator.maxWidth, 1, 'POINT', 0, 'POINT')} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
                         <div class="mb-3 range-container">
@@ -110,7 +130,7 @@
                                    th:value="*{customDimensions['height'] ?: configurator.defaultHeight ?: configurator.minHeight}" />
                             <span class="range-value"><span id="customHeightValueDisplay">...</span> cm</span>
                             <small th:if="${configurator.minHeight != null and configurator.maxHeight != null}"
-                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minHeight, 1, 1)} + ' - ' + ${#numbers.formatDecimal(configurator.maxHeight, 1, 1)} + ' cm]'"
+                                   th:text="'[' + ${#numbers.formatDecimal(configurator.minHeight, 1, 'POINT', 0, 'POINT')} + ' - ' + ${#numbers.formatDecimal(configurator.maxHeight, 1, 'POINT', 0, 'POINT')} + ' cm]'"
                                    class="text-muted"></small>
                         </div>
 
@@ -118,47 +138,64 @@
                         <div class="row g-3">
                             <div class="col-md-6 mb-3">
                                 <label for="designSelect" class="form-label fw-bold">Design:</label>
-                                <select class="form-select config-input" id="designSelect" th:field="*{selectedDesignId}" required>
+                                <select class="form-select config-input attribute-select" id="designSelect" th:field="*{selectedDesignId}" required>
                                     <option value="" disabled selected>-- Vyberte design --</option>
                                     <option th:each="designOpt : ${availableDesigns}"
                                             th:value="${designOpt.id}"
                                             th:with="priceCzk=${designOpt.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${designOpt.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                            th:text="|${designOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:text="|${designOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|"
                                             th:data-price-czk="${priceCzk}"
                                             th:data-price-eur="${priceEur}">
                                     </option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('selectedDesignId')}" class="attribute-select-error">Vyberte prosím design.</div>
                             </div>
-
                             <div class="col-md-6 mb-3">
                                 <label for="glazeSelect" class="form-label fw-bold">Lazura:</label>
-                                <select class="form-select config-input" id="glazeSelect" th:field="*{selectedGlazeId}" required>
+                                <select class="form-select config-input attribute-select" id="glazeSelect" th:field="*{selectedGlazeId}" required>
                                     <option value="" disabled selected>-- Vyberte lazuru --</option>
                                     <option th:each="glazeOpt : ${availableGlazes}"
                                             th:value="${glazeOpt.id}"
                                             th:with="priceCzk=${glazeOpt.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${glazeOpt.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                            th:text="|${glazeOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:text="|${glazeOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|"
                                             th:data-price-czk="${priceCzk}"
                                             th:data-price-eur="${priceEur}">
                                     </option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="attribute-select-error">Vyberte prosím lazuru.</div>
                             </div>
-
                             <div class="col-md-6 mb-3">
                                 <label for="roofColorSelect" class="form-label fw-bold">Barva střechy:</label>
-                                <select class="form-select config-input" id="roofColorSelect" th:field="*{selectedRoofColorId}" required>
+                                <select class="form-select config-input attribute-select" id="roofColorSelect" th:field="*{selectedRoofColorId}" required>
                                     <option value="" disabled selected>-- Vyberte barvu --</option>
                                     <option th:each="colorOpt : ${availableRoofColors}"
                                             th:value="${colorOpt.id}"
                                             th:with="priceCzk=${colorOpt.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${colorOpt.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                            th:text="|${colorOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|"
+                                            th:text="|${colorOpt.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|"
                                             th:data-price-czk="${priceCzk}"
                                             th:data-price-eur="${priceEur}">
                                     </option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="attribute-select-error">Vyberte prosím barvu střechy.</div>
+                            </div>
+
+                            <div th:if="${availableTaxRates != null and not #lists.isEmpty(availableTaxRates)}" class="mb-3">
+                                <label for="taxRateSelect" class="form-label fw-bold">Režim DPH <span class="text-danger">*</span></label>
+                                <select class="form-select" id="taxRateSelect" th:field="*{selectedTaxRateId}" required>
+                                    <option value="" disabled th:text="'-- Vyberte režim DPH --'" th:if="${#lists.size(availableTaxRates) > 1}" th:selected="${cartItemDto.selectedTaxRateId == null}"></option>
+                                    <option th:each="rate : ${availableTaxRates}"
+                                            th:value="${rate.id}"
+                                            th:text="|${rate.name} (${#numbers.formatDecimal(rate.rate.multiply(100), 1, 'POINT', 0, 'POINT')}%) ${rate.reverseCharge ? '(PDP)' : ''}|"
+                                            th:selected="${#lists.size(availableTaxRates) == 1 or (cartItemDto.selectedTaxRateId != null and cartItemDto.selectedTaxRateId == rate.id)}">
+                                        Sazba DPH (Režim)
+                                    </option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('selectedTaxRateId')}" class="attribute-select-error">
+                                    Vyberte prosím režim DPH.
+                                </div>
+                            </div>
+                            <div th:if="${availableTaxRates == null or #lists.isEmpty(availableTaxRates)}" class="alert alert-warning small p-2">
+                                Pro tento produkt nejsou definovány žádné daňové sazby. Kontaktujte prosím podporu.
                             </div>
                         </div>
                         <hr>
@@ -185,48 +222,48 @@
                                    th:name="|selectedAddons[${iter.index}].addonId|"
                                    th:value="${addon.id}"
                                    th:checked="${cartItemDto.selectedAddons != null and #lists.contains(cartItemDto.selectedAddons.![addonId], addon.id)}"
+                                   th:data-price-czk="${addon.priceCZK ?: 0}"
+                                   th:data-price-eur="${addon.priceEUR ?: 0}"
                             />
                             <label class="form-check-label checkbox-label" th:for="'addon_' + ${addon.id}">
                                 <span th:text="${addon.name}">Název doplňku</span>
                                 <span class="text-muted ms-2">
-                                     (<th:block th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? addon.priceEUR : addon.priceCZK, 1, 'DEFAULT', 2, 'DEFAULT')}"/>&nbsp;<th:block th:text="${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}"/>)
+                                     (<th:block th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? addon.priceEUR : addon.priceCZK, 1, 'POINT', 2, 'COMMA')}"/>&nbsp;<th:block th:text="${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}"/>)
                                  </span>
                             </label>
                             <input type="hidden" th:if="${cartItemDto.selectedAddons != null and #lists.contains(cartItemDto.selectedAddons.![addonId], addon.id)}"
                                    th:name="|selectedAddons[${iter.index}].quantity|" value="1" />
-                            <input type="hidden" th:id="'addon_price_czk_' + ${addon.id}" th:value="${addon.priceCZK ?: 0}">
-                            <input type="hidden" th:id="'addon_price_eur_' + ${addon.id}" th:value="${addon.priceEUR ?: 0}">
                         </div>
+                        <div th:if="${#fields.hasErrors('selectedAddons')}" class="error mt-2" th:errors="*{selectedAddons}"></div>
                     </div>
 
                     <div class="row mt-4 align-items-center">
                         <div class="col-auto">
-                            <label for="quantity" class="form-label">Množství:</label>
+                            <label for="quantity" class="form-label fw-bold">Množství:</label>
                         </div>
                         <div class="col-auto">
                             <input type="number" class="form-control" style="width: 80px;" id="quantity" th:field="*{quantity}" value="1" min="1" max="99" required />
                         </div>
-                        <div class="col">
-                            <button type="submit" class="btn btn-success btn-lg w-100"
-                                    id="add-to-cart-btn"
-                                    th:disabled="${configuratorError != null or initialCustomPriceError != null}">
-                                <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
-                            </button>
-                        </div>
+                        <div th:if="${#fields.hasErrors('quantity')}" class="col error ps-0">Zadejte platné množství.</div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-success btn-lg w-100"
+                                id="add-to-cart-btn"
+                                th:disabled="${configuratorError != null or initialCustomPriceError != null or productError != null}"> <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
+                        </button>
                     </div>
                 </form>
-            </div>
-        </div>
-
-        <div class="row mt-5" th:if="${product != null and configuratorError == null}" th:object="${product}">
+            </div> </div> <div class="row mt-5" th:if="${product != null and configuratorError == null and productError == null}" th:object="${product}">
             <div class="col">
-                <h2>Základní parametry</h2>
+                <h2>Základní specifikace</h2>
                 <p>Přesné rozměry a vzhled volíte v konfigurátoru výše.</p>
                 <table class="table table-striped table-sm">
                     <tbody>
                     <tr th:if="${product.material}"><th>Základní materiál</th><td th:text="${product.material}"></td></tr>
-                    <tr th:if="${product.taxRate}"><th>Sazba DPH</th><td th:text="${#numbers.formatDecimal(product.taxRate.rate * 100, 1, 'DEFAULT', 0, 'POINT')} + '%'"></td></tr>
-                    <tr th:if="${product.taxRate != null and product.taxRate.reverseCharge}"><th>Režim DPH</th><td>Přenesená daňová povinnost</td></tr>
+                    <tr th:if="${availableTaxRates != null and #lists.size(availableTaxRates) == 1}">
+                        <th th:text="${availableTaxRates[0].reverseCharge ? 'Režim DPH:' : 'Sazba DPH:'}"></th>
+                        <td th:text="${availableTaxRates[0].name} + ' (' + ${#numbers.formatDecimal(availableTaxRates[0].rate.multiply(100), 1, 'POINT', 0, 'POINT')} + '%)' + ${availableTaxRates[0].reverseCharge ? ' (PDP)' : ''}"></td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
@@ -234,7 +271,8 @@
 
     </div> </section>
 
-<th:block layout:fragment="javascript"> <script th:src="@{/js/product-configurator.js}"></script>
+<th:block layout:fragment="javascript">
+    <script th:src="@{/js/product-configurator.js}"></script>
 </th:block>
 
 </body>

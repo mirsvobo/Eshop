@@ -91,6 +91,16 @@ public class ProductController {
             logger.info("[ProductController] Produkt ID {} nalezen pro slug '{}'.", product.getId(), slug);
 
             model.addAttribute("product", product);
+            Set<TaxRate> availableTaxRates = product.getAvailableTaxRates();
+            logger.debug("DEBUG: Načtené availableTaxRates pro produkt ID {}: {}", product.getId(), availableTaxRates); // Dočasný log
+            if (availableTaxRates == null || availableTaxRates.isEmpty()) {
+                // ...
+            } else {
+                List<TaxRate> sortedTaxRates = availableTaxRates.stream()
+                        .sorted(Comparator.comparing(TaxRate::getName))
+                        .collect(Collectors.toList());
+                logger.debug("DEBUG: Přidávám sortedTaxRates do modelu, velikost: {}", sortedTaxRates.size()); // Dočasný log
+                model.addAttribute("availableTaxRates", sortedTaxRates);}
             CartItemDto cartItemDto = new CartItemDto();
             cartItemDto.setProductId(product.getId());
             cartItemDto.setCustom(product.isCustomisable());

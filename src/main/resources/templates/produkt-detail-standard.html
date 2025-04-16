@@ -3,28 +3,23 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title th:text="${product.name}"></title>
+    <title th:text="${product.metaTitle != null ? product.metaTitle : product.name}">Název Produktu</title>
+    <meta name="description" th:content="${product.metaDescription != null ? product.metaDescription : (#strings.isEmpty(product.shortDescription) ? #strings.abbreviate(product.description, 160) : product.shortDescription)}" layout:fragment="meta-description"/>
+
     <th:block layout:fragment="css">
         <style>
-            .product-image { max-height: 400px; object-fit: contain; }
-            /* Přidáno pro cenu */
-            .price-container-detail {
-                /* Můžete přidat specifické styly pro detail, pokud je třeba */
-            }
-            .original-price-detail {
-                font-size: 1.1em; /* Trochu větší než v listu */
-                color: #6c757d;
-                text-decoration: line-through;
-                margin-right: 0.75rem; /* Mezera mezi cenami */
-            }
-            .final-price-detail {
-                font-size: 1.8em; /* Větší finální cena */
-            }
-            .discount-badge-detail {
-                font-size: 0.8em; /* Větší badge */
-                vertical-align: middle;
-                margin-left: 0.5rem;
-            }
+            .product-image { max-height: 500px; object-fit: contain; } /* Zvětšený obrázek */
+            .product-thumbnails { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; /* Centrování náhledů */ margin-top: 15px; }
+            .product-thumbnails img { width: 80px; height: 80px; object-fit: cover; border: 2px solid #dee2e6; cursor: pointer; opacity: 0.7; border-radius: 0.25rem; transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out; }
+            .product-thumbnails img:hover { opacity: 1.0; }
+            .product-thumbnails img.active { border-color: var(--bs-primary); opacity: 1.0; }
+            .price-container-detail { /* Můžete přidat specifické styly pro detail, pokud je třeba */ }
+            .original-price-detail { font-size: 1.1em; color: #6c757d; text-decoration: line-through; margin-right: 0.75rem; }
+            .final-price-detail { font-size: 1.8em; color: var(--bs-danger); /* Změna barvy */ font-weight: bold; }
+            .discount-badge-detail { font-size: 0.8em; vertical-align: middle; margin-left: 0.5rem; }
+            .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+            /* Styl pro chyby u selectů */
+            .attribute-select-error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
         </style>
     </th:block>
 </head>
@@ -33,7 +28,7 @@
 <section layout:fragment="content">
     <div class="container mt-4 mb-5">
 
-        <nav aria-label="breadcrumb" class="mb-3">
+        <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a th:href="@{/}">Domů</a></li>
                 <li class="breadcrumb-item"><a th:href="@{/produkty}">Produkty</a></li>
@@ -41,25 +36,45 @@
             </ol>
         </nav>
 
-        <div class="row g-4">
+        <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${cartSuccess}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${cartError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${cartError}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${productError}" class="alert alert-warning" role="alert" th:text="${productError}">
+            Produkt nelze objednat.
+        </div>
+
+        <div class="row g-4" th:if="${product != null and productError == null}">
             <div class="col-lg-6 text-center">
-                <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}"
-                     class="img-fluid rounded product-image" th:alt="${product.name}">
+                <img th:src="${not #lists.isEmpty(product.getImagesOrdered()) ? product.getImagesOrdered()[0].url : '/images/placeholder.png'}"
+                     class="img-fluid rounded shadow-sm product-image" id="mainProductImageStandard"
+                     th:alt="${not #lists.isEmpty(product.getImagesOrdered()) and product.getImagesOrdered()[0].altText != null ? product.getImagesOrdered()[0].altText : product.name}">
+                <div class="product-thumbnails mt-3" th:if="${product.images != null and #lists.size(product.images) > 1}">
+                    <img th:each="img, iter : ${product.getImagesOrdered()}"
+                         th:src="${img.url}"
+                         th:alt="|${product.name} - náhled ${iter.index + 1}|"
+                         th:class="${iter.index == 0} ? 'active' : ''"
+                         th:onclick="|document.getElementById('mainProductImageStandard').src='${img.url}'; document.querySelectorAll('.product-thumbnails img').forEach(el => el.classList.remove('active')); this.classList.add('active');|"
+                    />
+                </div>
             </div>
 
             <div class="col-lg-6">
                 <h1 th:text="${product.name}">Název Produktu</h1>
-                <p class="lead text-muted" th:if="${product.description != null}" th:text="${product.description}">Krátký popis produktu.</p>
+                <p class="lead text-muted" th:if="${product.shortDescription != null}" th:text="${product.shortDescription}">Krátký popis produktu.</p>
 
                 <div class="my-3 price-container-detail">
                     <div th:if="${priceInfo != null}">
                         <small class="original-price-detail"
                                th:if="${priceInfo.discountedPrice != null}"
-                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
+                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}">
                         </small>
-                        <span class="h3 fw-bold text-primary final-price-detail">
-                             <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
-                             </span>
+                        <span class="final-price-detail">
+                             <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'POINT', 2, 'COMMA')}"></span>&nbsp;<span th:text="${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}"></span>
                          </span>
                         <span th:if="${priceInfo.discountApplied != null}"
                               class="badge bg-danger discount-badge-detail"
@@ -75,9 +90,9 @@
                 </div>
                 <hr>
 
-                <form th:action="@{/kosik/pridat}" method="post" th:object="${cartItemDto}">
+                <form th:action="@{/kosik/pridat}" method="post" th:object="${cartItemDto}" id="addToCartFormStandard">
                     <input type="hidden" th:field="*{productId}" />
-                    <input type="hidden" th:field="*{custom}" />
+                    <input type="hidden" th:field="*{custom}" value="false" /> <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
 
                     <div class="mb-3" th:if="${availableDesigns != null and not #lists.isEmpty(availableDesigns)}">
                         <label for="designSelect" class="form-label fw-bold">Design:</label>
@@ -85,10 +100,11 @@
                             <option value="" disabled selected>-- Vyberte design --</option>
                             <option th:each="design : ${availableDesigns}"
                                     th:value="${design.id}"
-                                    th:text="|${design.name} ${ (design.priceSurchargeCZK != null and design.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? design.priceSurchargeEUR : design.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
+                                    th:with="priceCzk=${design.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${design.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
+                                    th:text="|${design.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedDesignId')}" class="error">Vyberte prosím design.</div>
+                        <div th:if="${#fields.hasErrors('selectedDesignId')}" class="attribute-select-error">Vyberte prosím design.</div>
                     </div>
 
                     <div class="mb-3" th:if="${availableGlazes != null and not #lists.isEmpty(availableGlazes)}">
@@ -97,10 +113,11 @@
                             <option value="" disabled selected>-- Vyberte lazuru --</option>
                             <option th:each="glaze : ${availableGlazes}"
                                     th:value="${glaze.id}"
-                                    th:text="|${glaze.name} ${ (glaze.priceSurchargeCZK != null and glaze.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? glaze.priceSurchargeEUR : glaze.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
+                                    th:with="priceCzk=${glaze.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${glaze.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
+                                    th:text="|${glaze.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="error">Vyberte prosím lazuru.</div>
+                        <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="attribute-select-error">Vyberte prosím lazuru.</div>
                     </div>
 
                     <div class="mb-3" th:if="${availableRoofColors != null and not #lists.isEmpty(availableRoofColors)}">
@@ -109,53 +126,96 @@
                             <option value="" disabled selected>-- Vyberte barvu střechy --</option>
                             <option th:each="color : ${availableRoofColors}"
                                     th:value="${color.id}"
-                                    th:text="|${color.name} ${ (color.priceSurchargeCZK != null and color.priceSurchargeCZK.doubleValue() > 0) ? '(+ ' + #numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? color.priceSurchargeEUR : color.priceSurchargeCZK, 1, 'DEFAULT', 2, 'DEFAULT') + ' ' + currentGlobalCurrency + ')' : '' }|">
+                                    th:with="priceCzk=${color.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${color.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
+                                    th:text="|${color.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="error">Vyberte prosím barvu střechy.</div>
+                        <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="attribute-select-error">Vyberte prosím barvu střechy.</div>
                     </div>
 
+                    <div th:if="${availableTaxRates != null and not #lists.isEmpty(availableTaxRates)}" class="mb-3">
+                        <label for="taxRateSelect" class="form-label fw-bold">Režim DPH <span class="text-danger">*</span></label>
+                        <select class="form-select" id="taxRateSelect" th:field="*{selectedTaxRateId}" required>
+                            <option value="" disabled th:text="'-- Vyberte režim DPH --'" th:if="${#lists.size(availableTaxRates) > 1}" th:selected="${cartItemDto.selectedTaxRateId == null}"></option>
+                            <option th:each="rate : ${availableTaxRates}"
+                                    th:value="${rate.id}"
+                                    th:text="|${rate.name} (${#numbers.formatDecimal(rate.rate.multiply(100), 1, 'POINT', 0, 'POINT')}%) ${rate.reverseCharge ? '(PDP)' : ''}|"
+                                    th:selected="${#lists.size(availableTaxRates) == 1 or (cartItemDto.selectedTaxRateId != null and cartItemDto.selectedTaxRateId == rate.id)}">
+                                Sazba DPH (Režim)
+                            </option>
+                        </select>
+                        <div th:if="${#fields.hasErrors('selectedTaxRateId')}" class="attribute-select-error">
+                            Vyberte prosím režim DPH.
+                        </div>
+                    </div>
+                    <div th:if="${availableTaxRates == null or #lists.isEmpty(availableTaxRates)}" class="alert alert-warning small p-2">
+                        Pro tento produkt nejsou definovány žádné daňové sazby. Kontaktujte prosím podporu.
+                    </div>
                     <div class="row align-items-center mb-3">
                         <label for="quantity" class="col-auto col-form-label fw-bold">Množství:</label>
                         <div class="col-auto">
-                            <input type="number" class="form-control" id="quantity" th:field="*{quantity}" value="1" min="1" max="10" style="width: 80px;">
+                            <input type="number" class="form-control" id="quantity" th:field="*{quantity}" value="1" min="1" max="10" style="width: 80px;" required>
                         </div>
+                        <div th:if="${#fields.hasErrors('quantity')}" class="col error">Zadejte platné množství.</div>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
+                        <button type="submit" class="btn btn-success btn-lg" th:disabled="${productError != null}"> <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
                         </button>
                     </div>
                 </form>
 
                 <hr class="my-4">
-
                 <h4>Popis</h4>
-                <div th:if="${product.description != null}" th:utext="${product.description}"> Popis produktu zde...
-                </div>
-                <div th:unless="${product.description != null}">
-                    <p>Popis není k dispozici.</p>
-                </div>
-
+                <div th:if="${product.description != null}" th:utext="${product.description}"> Popis produktu zde... </div>
+                <div th:unless="${product.description != null}"> <p>Popis není k dispozici.</p> </div>
 
                 <div th:if="${product.length != null or product.width != null or product.height != null or product.material != null}">
                     <hr class="my-4">
                     <h4>Parametry</h4>
                     <ul class="list-unstyled">
-                        <li th:if="${product.length}"><strong class="me-2">Délka:</strong> <span th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'DEFAULT')} + ' cm'"></span></li>
-                        <li th:if="${product.width}"><strong class="me-2">Hloubka:</strong> <span th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'DEFAULT')} + ' cm'"></span></li>
-                        <li th:if="${product.height}"><strong class="me-2">Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'DEFAULT')} + ' cm'"></span></li>
+                        <li th:if="${product.length}"><strong class="me-2">Délka:</strong> <span th:text="${#numbers.formatDecimal(product.length, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
+                        <li th:if="${product.width}"><strong class="me-2">Hloubka:</strong> <span th:text="${#numbers.formatDecimal(product.width, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
+                        <li th:if="${product.height}"><strong class="me-2">Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
                         <li th:if="${product.material}"><strong class="me-2">Materiál:</strong> <span th:text="${product.material}"></span></li>
                         <li th:if="${product.roofOverstep}"><strong class="me-2">Přesah střechy:</strong> <span th:text="${product.roofOverstep}"></span></li>
                         <li th:if="${product.model}"><strong class="me-2">Model:</strong> <span th:text="${product.model}"></span></li>
+                        <li th:if="${availableTaxRates != null and #lists.size(availableTaxRates) == 1}">
+                            <strong class="me-2" th:text="${availableTaxRates[0].reverseCharge ? 'Režim DPH:' : 'Sazba DPH:'}"></strong>
+                            <span th:text="${availableTaxRates[0].name} + ' (' + ${#numbers.formatDecimal(availableTaxRates[0].rate.multiply(100), 1, 'POINT', 0, 'POINT')} + '%)'"></span>
+                            <span th:if="${availableTaxRates[0].reverseCharge}" class="ms-1">(PDP)</span>
+                        </li>
                     </ul>
                 </div>
 
             </div>
-        </div> </div> </section>
+        </div>
+
+    </div>
+</section>
 
 <th:block layout:fragment="javascript">
+    <script>
+        // Jednoduchý skript pro aktivaci náhledů, pokud existují
+        document.addEventListener('DOMContentLoaded', () => {
+            const thumbnails = document.querySelectorAll('.product-thumbnails img');
+            const mainImage = document.getElementById('mainProductImageStandard');
+            if (thumbnails.length > 0 && mainImage) {
+                thumbnails.forEach(thumb => {
+                    thumb.addEventListener('click', function() {
+                        mainImage.src = this.src;
+                        // Odstranění aktivní třídy ze všech a přidání na kliknutý
+                        thumbnails.forEach(el => el.classList.remove('active'));
+                        this.classList.add('active');
+                    });
+                });
+                // Zajistíme, že první náhled je aktivní po načtení
+                if (!document.querySelector('.product-thumbnails img.active')) {
+                    thumbnails[0].classList.add('active');
+                }
+            }
+        });
+    </script>
 </th:block>
 
 </body>

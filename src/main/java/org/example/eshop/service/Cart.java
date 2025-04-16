@@ -31,7 +31,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
     private Coupon appliedCoupon; // Applied valid coupon object
     private String appliedCouponCode; // Last attempted coupon code
 
-    // --- Existing Methods (addItem, removeItem, updateQuantity, etc.) ---
+    // --- UPRAVENO: Odstraněno nastavení TaxRatePercent ---
     public void addItem(CartItem newItem) {
         if (newItem == null || newItem.getProductId() == null || newItem.getCartItemId() == null) {
             log.warn("Attempted to add invalid CartItem (null or missing ID). Cart hash: {}", this.hashCode());
@@ -43,9 +43,10 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
             CartItem existingItem = items.get(itemId);
             int newQuantity = existingItem.getQuantity() + newItem.getQuantity();
             existingItem.setQuantity(newQuantity);
+            // Aktualizujeme jednotkovou cenu, pokud se mohla změnit (pro jistotu)
             existingItem.setUnitPriceCZK(newItem.getUnitPriceCZK());
             existingItem.setUnitPriceEUR(newItem.getUnitPriceEUR());
-            existingItem.setTaxRatePercent(newItem.getTaxRatePercent());
+            // ODSTRANĚNO: existingItem.setTaxRatePercent(newItem.getTaxRatePercent());
             log.debug("Increased quantity for cart item ID: {} to {}. Cart hash: {}", itemId, newQuantity, this.hashCode());
         } else {
             items.put(itemId, newItem);
@@ -53,17 +54,6 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
         }
         if (log.isDebugEnabled()) {
             log.debug("Cart items map after addItem (hash: {}): {}", this.hashCode(), items);
-        }
-    }
-    public void removeItem(String cartItemId) {
-        log.debug("removeItem called for cart hash: {}. Item ID: {}", this.hashCode(), cartItemId);
-        if (items.remove(cartItemId) != null) {
-            log.debug("Removed cart item ID: {}. Cart hash: {}", cartItemId, this.hashCode());
-        } else {
-            log.warn("Attempted to remove non-existent cart item ID: {}. Cart hash: {}", cartItemId, this.hashCode());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Cart items map after removeItem (hash: {}): {}", this.hashCode(), items);
         }
     }
     public void updateQuantity(String cartItemId, int quantity) {
@@ -206,14 +196,14 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
      * @param currency Currency code ("CZK" or "EUR").
      * @return Total VAT amount for items, never null.
      */
-    public BigDecimal calculateTotalVatAmount(String currency) {
+    public java.math.BigDecimal calculateTotalVatAmount(String currency) {
         log.trace("DEBUG_VAT (Cart {}): Starting calculateTotalVatAmount for currency {}", this.hashCode(), currency);
-        BigDecimal totalVat = items.values().stream()
-                .map(item -> item.getVatAmount(currency)) // Use method from CartItem
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        java.math.BigDecimal totalVat = items.values().stream()
+                .map(item -> item.getVatAmount(currency)) // Použijeme metodu z CartItem, která má logiku DPH
+                .filter(java.util.Objects::nonNull) // Jen pro jistotu
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-        BigDecimal finalTotalVat = totalVat.setScale(PRICE_SCALE, ROUNDING_MODE);
+        java.math.BigDecimal finalTotalVat = totalVat.setScale(PRICE_SCALE, ROUNDING_MODE);
         log.trace("DEBUG_VAT (Cart {}): Calculated total VAT = {}", this.hashCode(), finalTotalVat);
         return finalTotalVat;
     }
@@ -224,26 +214,31 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
      * @param currency Currency code ("CZK" or "EUR").
      * @return Map where key is the TaxRate percentage (BigDecimal) and value is the total VAT amount (BigDecimal) for that rate. Sorted by rate.
      */
-    public Map<BigDecimal, BigDecimal> calculateVatBreakdown(String currency) {
-        Map<BigDecimal, BigDecimal> vatBreakdown = new HashMap<>();
+    public java.util.Map<java.math.BigDecimal, java.math.BigDecimal> calculateVatBreakdown(String currency) {
+        // Použijeme HashMap pro sčítání
+        java.util.Map<java.math.BigDecimal, java.math.BigDecimal> vatBreakdown = new java.util.HashMap<>();
         log.trace("DEBUG_VAT (Cart {}): Starting calculateVatBreakdown for currency {}", this.hashCode(), currency);
 
         for (CartItem item : items.values()) {
-            BigDecimal itemVatAmount = item.getVatAmount(currency);
-            BigDecimal taxRatePercent = item.getTaxRatePercent();
-            BigDecimal rateKey = (taxRatePercent == null)
-                    ? BigDecimal.ZERO.setScale(2)
-                    : taxRatePercent.setScale(2, RoundingMode.HALF_UP);
+            java.math.BigDecimal itemVatAmount = item.getVatAmount(currency); // DPH této položky
+            java.math.BigDecimal rateValue = item.getSelectedTaxRateValue(); // Hodnota sazby (např. 0.21)
+
+            // Klíč mapy bude hodnota sazby zaokrouhlená na 2 des. místa (např. 0.21)
+            // Pokud sazba není nastavena (nemělo by nastat), použijeme 0.00
+            java.math.BigDecimal rateKey = (rateValue == null)
+                    ? java.math.BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP)
+                    : rateValue.setScale(2, java.math.RoundingMode.HALF_UP);
 
             log.trace("DEBUG_VAT (Cart {}): Processing item ID {}. RateKey={}, ItemVatAmount={}",
                     this.hashCode(), item.getCartItemId(), rateKey, itemVatAmount);
 
             if (itemVatAmount != null) {
-                BigDecimal currentTotalForRate = vatBreakdown.getOrDefault(rateKey, BigDecimal.ZERO);
-                vatBreakdown.merge(rateKey, itemVatAmount, BigDecimal::add);
-                log.trace("DEBUG_VAT (Cart {}): Merged item VAT. RateKey {}: {} -> {}",
-                        this.hashCode(), rateKey, currentTotalForRate, vatBreakdown.get(rateKey));
+                // Přičteme DPH k existující hodnotě pro danou sazbu (klíč)
+                vatBreakdown.merge(rateKey, itemVatAmount, java.math.BigDecimal::add);
+                log.trace("DEBUG_VAT (Cart {}): Merged item VAT. RateKey {}: New total={}",
+                        this.hashCode(), rateKey, vatBreakdown.get(rateKey));
             } else {
+                // Toto by nemělo nastat, pokud getVatAmount vrací ZERO místo null
                 log.warn("DEBUG_VAT (Cart {}): Item ID {} returned null VAT amount for currency {}. Skipping merge.",
                         this.hashCode(), item.getCartItemId(), currency);
             }
@@ -251,13 +246,14 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
 
         log.trace("DEBUG_VAT (Cart {}): Raw breakdown map before sorting/scaling: {}", this.hashCode(), vatBreakdown);
 
-        Map<BigDecimal, BigDecimal> finalBreakdown = vatBreakdown.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().setScale(PRICE_SCALE, ROUNDING_MODE),
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
+        // Seřadíme výsledek podle sazby (klíče) a zaokrouhlíme hodnoty DPH
+        java.util.Map<java.math.BigDecimal, java.math.BigDecimal> finalBreakdown = vatBreakdown.entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByKey()) // Seřadit podle klíče (sazby)
+                .collect(java.util.stream.Collectors.toMap(
+                        java.util.Map.Entry::getKey, // Klíč (sazba 0.xx)
+                        entry -> entry.getValue().setScale(PRICE_SCALE, ROUNDING_MODE), // Hodnota (celkové DPH pro sazbu)
+                        (e1, e2) -> e1, // Merge funkce (neměla by být potřeba)
+                        java.util.LinkedHashMap::new // Použijeme LinkedHashMap pro zachování pořadí po seřazení
                 ));
 
         log.trace("DEBUG_VAT (Cart {}): Final breakdown map after sorting/scaling: {}", this.hashCode(), finalBreakdown);
@@ -283,5 +279,17 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
         BigDecimal finalTotal = total.max(BigDecimal.ZERO).setScale(PRICE_SCALE, ROUNDING_MODE);
         log.trace("DEBUG_VAT (Cart {}): Calculated TotalPriceBeforeShipping = {}", this.hashCode(), finalTotal);
         return finalTotal;
+    }
+    // Metoda z Cart.java
+    public void removeItem(String cartItemId) {
+        log.debug("removeItem called for cart hash: {}. Item ID: {}", this.hashCode(), cartItemId);
+        if (items.remove(cartItemId) != null) {
+            log.debug("Removed cart item ID: {}. Cart hash: {}", cartItemId, this.hashCode());
+        } else {
+            log.warn("Attempted to remove non-existent cart item ID: {}. Cart hash: {}", cartItemId, this.hashCode());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Cart items map after removeItem (hash: {}): {}", this.hashCode(), items);
+        }
     }
 }

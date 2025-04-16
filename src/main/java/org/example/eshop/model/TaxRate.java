@@ -2,25 +2,28 @@ package org.example.eshop.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor; // Přidat NoArgsConstructor
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.AllArgsConstructor; // Přidat AllArgsConstructor
+import lombok.AllArgsConstructor;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
-import java.util.List;
+// import java.util.List; // Nahrazeno Set
+import java.util.Set; // Přidat import pro Set
+import java.util.HashSet; // Přidat import pro HashSet
 
 @Getter
 @Setter
 @Entity
 @Cacheable
+// Pro TaxRate můžeme nechat READ_ONLY, pokud se nemění často. Pokud ano, změnit na READ_WRITE.
 @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
-@Table(name = "tax_rate", indexes = { // Přidána anotace @Table
+@Table(name = "tax_rate", indexes = {
         @Index(name = "idx_taxrate_name", columnList = "name", unique = true)
 })
-@NoArgsConstructor // Lombok vygeneruje konstruktor bez argumentů (potřeba pro JPA)
-@AllArgsConstructor // Lombok vygeneruje konstruktor se všemi argumenty
+@NoArgsConstructor
+@AllArgsConstructor
 public class TaxRate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,13 +32,50 @@ public class TaxRate {
     @Column(nullable = false, unique = true, length=100)
     private String name;
 
-    @Column(nullable = false, precision = 5, scale = 4)
+    @Column(nullable = false, precision = 5, scale = 4) // scale=4 pro sazby jako 0.2100
     private BigDecimal rate;
 
     @Column(nullable = false)
-    private boolean reverseCharge = false;
+    private boolean reverseCharge = false; // Příznak přenesené daňové povinnosti
 
-    @OneToMany(mappedBy = "taxRate", fetch = FetchType.LAZY)
-    private List<Product> products;
+    // --- OPRAVENÁ RELACE ---
+    @ManyToMany(mappedBy = "availableTaxRates", fetch = FetchType.LAZY) // mappedBy ukazuje na pole v Product
+    // Cache pro ManyToMany asociaci (nepovinné, ale může pomoci)
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    private Set<Product> products = new HashSet<>(); // Použijeme Set a inicializujeme
+    // --- KONEC OPRAVY ---
 
+    // equals a hashCode by měly být založeny na 'id' nebo 'name' pro konzistenci
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TaxRate taxRate = (TaxRate) o;
+        // Porovnání podle ID, pokud není null, jinak podle názvu
+        if (id != null) {
+            return id.equals(taxRate.id);
+        } else {
+            return name != null && name.equals(taxRate.name);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        // Hash kód podle ID, pokud není null, jinak podle názvu
+        if (id != null) {
+            return java.util.Objects.hash(id);
+        } else {
+            return java.util.Objects.hash(name);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "TaxRate{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", rate=" + rate +
+                ", reverseCharge=" + reverseCharge +
+                '}';
+    }
 }

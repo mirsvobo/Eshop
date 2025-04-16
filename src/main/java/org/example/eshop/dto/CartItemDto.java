@@ -19,7 +19,6 @@ public class CartItemDto {
 
     private boolean isCustom = false;
 
-    // --- Atributy vybírané selectem (použijí se pro standardní i custom) ---
     @NotNull(message = "Design musí být vybrán.")
     private Long selectedDesignId;
 
@@ -29,15 +28,16 @@ public class CartItemDto {
     @NotNull(message = "Barva střechy musí být vybrána.")
     private Long selectedRoofColorId;
 
+    // *** NOVÉ POLE: ID vybrané daňové sazby ***
+    @NotNull(message = "Daňová sazba musí být vybrána.")
+    private Long selectedTaxRateId;
+
     // --- Atributy pro custom produkt (zůstávají) ---
     private Map<String, BigDecimal> customDimensions;
-    // Odebráno: private String customGlaze;
-    // Odebráno: private String customRoofColor;
-    private String customRoofOverstep; // Ponecháme, pokud je to stále textový vstup
-    // Odebráno: private String customDesign;
+    private String customRoofOverstep;
     private boolean customHasDivider = false;
     private boolean customHasGutter = false;
     private boolean customHasGardenShed = false;
 
-    private List<AddonDto> selectedAddons; // Jen pro custom
+    private List<AddonDto> selectedAddons;
 }
