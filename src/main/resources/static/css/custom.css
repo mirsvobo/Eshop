@@ -841,91 +841,111 @@ main {
     }
 }
 
-/* Mobil (šířka < 768px) */
+/* ===== MOBILNÍ ČASOVÁ OSA (Osa více vlevo od středu, Text vpravo) ===== */
 @media (max-width: 767.98px) {
+
+    /* === Kontejner celé sekce === */
+    .timeline-section {
+        padding-top: 30px;
+        padding-bottom: 10px;
+    }
     .timeline-section h2 {
-        margin-bottom: 2rem; /* Menší mezera pod nadpisem na mobilu */
-    }
-    /* Kontejner kroků (Mobil) - vertikální layout */
-    .timeline-steps {
-        padding-top: 25px; /* Horní padding = polovina výšky ikony */
-        padding-bottom: 25px; /* Dolní padding = polovina výšky ikony */
-        padding-left: 0; /* Reset paddingu z desktopu, pokud by byl */
-        padding-right: 0;
-        width: 100%; /* Plná šířka wrapperu */
-        flex-direction: column; /* Kroky pod sebou */
-        align-items: flex-start; /* Zarovnání obsahu doleva */
-        margin: 0; /* Reset marginu */
+        margin-bottom: 3rem;
+        font-size: 1.6rem;
+        text-align: center;
     }
 
-    /* Vertikální čára (Mobil) - pozicovaná vůči timeline-wrapper */
+    /* === Wrapper pro osu a kroky === */
+    .timeline-wrapper {
+        position: relative;
+        /* Můžeme přidat boční padding pro celý blok */
+        padding: 0 5%; /* Např. 5% z každé strany */
+        /* Nebo nechat padding 0 a řídit pozici osy left */
+        /* padding: 0; */
+    }
+
+    /* === Vertikální čára (Mobil) === */
     .timeline-line.d-md-none {
-        display: block !important; /* Zobrazit */
+        display: block !important;
         position: absolute;
-        /* Pozice X: Střed ikony/puntíku (25px od leva) */
-        left: 25px; /* Ikona je široká 50px, její střed je 25px */
-        transform: translateX(-50%); /* Vycentruje 2px čáru na pozici left */
-        /* Vertikální rozsah: mezi středy horního a dolního paddingu .timeline-steps */
-        top: 25px;
-        bottom: 25px;
-        width: 2px; /* Tloušťka čáry */
-        height: auto; /* Výška se určí pomocí top/bottom */
+        /* Změna: Posunuto více ke středu */
+        left: 25%; /* Osa bude na 35% šířky wrapperu */
+        transform: translateX(-50%); /* Centruje čáru */
+        top: 0;
+        bottom: 0;
+        width: 3px;
         background-color: var(--bs-primary);
-        z-index: 1; /* Pod ikonami a puntíky */
+        z-index: 1;
     }
-    /* Skrytí desktopové čáry */
-    .timeline-line.d-none.d-md-block {
-        display: none !important;
+    .timeline-line.d-none.d-md-block { display: none !important; }
+
+    /* === Kontejner pro kroky === */
+    .timeline-steps {
+        display: block;
+        width: 100%;
+        padding: 0;
+        margin: 0;
     }
 
-    /* Krok (Mobil) */
+    /* === Jednotlivý krok (Mobil) === */
     .timeline-step {
-        width: 100%; /* Plná šířka */
-        text-align: left; /* Text doleva */
-        margin-bottom: 35px; /* Mezera mezi kroky */
-        padding-left: 75px; /* Mezera vlevo: šířka ikony (50px) + odsazení (25px) */
-        position: relative; /* Stále relativní pro ikonu a ::after */
-        min-height: 50px; /* Minimální výška (jako ikona) */
-        display: block; /* Zajistí správné blokové chování */
-        padding-top: 0; /* Reset paddingu z desktopu */
+        width: 100%;
+        text-align: left;
+        position: relative;
+        margin-bottom: 2.5rem;
+        min-height: 60px;
+        padding: 5px 0;
     }
-    .timeline-step:last-child {
-        margin-bottom: 0; /* Poslední krok nemá mezeru dole */
-    }
+    .timeline-step:last-child { margin-bottom: 0; }
 
-    /* Ikona (Mobil) - pozice vůči .timeline-step */
+    /* === Ikona kroku (Mobil) === */
     .timeline-step .icon {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+        border-width: 3px;
         position: absolute;
-        left: 0; /* Na levém okraji padding-boxu kroku */
-        top: 50%; /* Vertikální střed */
-        transform: translateY(-50%); /* Přesné vertikální vycentrování */
-        width: 50px; /* Rozměry pro mobil */
-        height: 50px;
-        font-size: 1.5rem;
-        z-index: 3; /* Navrchu */
+        /* Změna: Posunuto více ke středu */
+        left: 25%; /* Stejná pozice X jako čára */
+        top: 50%;
+        transform: translate(-50%, -50%); /* Centruje ikonu */
+        z-index: 3;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        border-style: solid;
+        border-color: var(--bs-primary);
+        border-radius: 50%;
+        color: var(--bs-primary);
     }
 
-    /* Puntík (Mobil) - pozice vůči .timeline-step */
-    .timeline-step::after {
-        width: 14px; /* Velikost pro mobil */
-        height: 14px;
-        top: 50%; /* Vertikální střed (jako ikona) */
-        /* Pozice X: Střed ikony (50px / 2 = 25px) od leva kroku */
-        left: 25px;
-        transform: translate(-50%, -50%); /* Přesné vycentrování */
-        z-index: 2; /* Nad čárou, pod ikonou */
-    }
+    /* === Puntík (Mobil) - skrytý === */
+    .timeline-step::after { display: none; }
 
-    /* Popisek (Mobil) */
+    /* === Popisek kroku (Mobil) === */
     .timeline-step .step-label {
-        margin-left: 0; /* Reset marginu */
-        display: flex; /* Flex pro lepší zarovnání */
-        align-items: center; /* Vertikální centrování textu */
-        min-height: 50px; /* Stejná výška jako ikona pro konzistenci */
-        padding-top: 0; /* Reset paddingu */
-        line-height: 1.4; /* Výška řádku */
-        font-size: 0.9rem; /* Případně upravit velikost písma pro mobil */
+        display: flex;
+        align-items: center;
+        min-height: 60px;
+        /* Změna: Přepočítané odsazení zleva */
+        /* Musí být větší než pozice osy (35%) + polovina ikony (30px) + mezera */
+        /* Zkusíme kombinaci % a px pomocí calc() nebo větší pevnou hodnotu */
+        /* Varianta s calc(): 35% + 30px (okraj ikony) + 20px (mezera) */
+        padding-left: calc(25% + 55px);
+        /* Varianta s pevnou hodnotou (musí se otestovat na různých šířkách) */
+        /* padding-left: 180px; */
+        padding-right: 5%; /* Odsazení od pravého okraje */
+        /* Styl textu */
+        font-size: 1.15rem; /* Větší písmo */
+        font-weight: 600; /* Tučnější */
+        color: var(--bs-dark);
+        line-height: 1.45;
+        text-align: left;
+        margin: 0;
+        padding-top: 2px; padding-bottom: 2px;
     }
 }
+/* ===== KONEC MOBILNÍ ČASOVÉ OSY (Více centrované) ===== */
 
 /* --- Konec stylů pro O nás --- */

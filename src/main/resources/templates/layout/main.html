@@ -59,21 +59,22 @@
                     </a>
                 </li>
                 <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Můj účet">
-                        <i class="bi bi-person-circle me-1"></i>
-                        <span sec:authentication="name">Účet</span> </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
-                        <li><a class="dropdown-item" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a></li>
-                        <li><a class="dropdown-item" th:href="@{/muj-ucet/profil}">Můj profil</a></li>
-                        <li><a class="dropdown-item" th:href="@{/muj-ucet/adresy}">Moje adresy</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form th:action="@{/odhlaseni}" method="post" class="d-inline">
-                                <button type="submit" class="dropdown-item">Odhlásit se</button>
-                            </form>
-                        </li>
-                    </ul>
-                </li>
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Můj účet">
+                    <i class="bi bi-person-circle me-1"></i>
+                    <span sec:authentication="name">Účet</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownAccount">
+                    <li><a class="dropdown-item" th:href="@{/muj-ucet/objednavky}">Moje objednávky</a></li>
+                    <li><a class="dropdown-item" th:href="@{/muj-ucet/profil}">Můj profil</a></li>
+                    <li><a class="dropdown-item" th:href="@{/muj-ucet/adresy}">Moje adresy</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form th:action="@{/odhlaseni}" method="post" class="d-inline">
+                            <button type="submit" class="dropdown-item">Odhlásit se</button>
+                        </form>
+                    </li>
+                </ul>
+            </li>
 
                 <li class="nav-item ms-2">
                     <form th:action="@{/nastavit-menu}" method="post" id="currency-form" class="d-inline-block">
