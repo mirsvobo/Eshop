@@ -60,11 +60,37 @@
 .navbar .nav-link {
     display: inline-flex;
     align-items: center;
-    padding-top: 0.75rem; /* Větší padding */
+    padding-top: 0.75rem;
     padding-bottom: 0.75rem;
     color: var(--bs-secondary);
-    transition: color 0.15s ease-in-out;
-    font-size: 1rem; /* Mírně zvětšit písmo v navigaci */
+    transition: color 0.2s ease-in-out; /* Mírně zpomalíme přechod barvy */
+    font-size: 1rem;
+    position: relative; /* Nutné pro pozicování ::after */
+    text-decoration: none; /* Zajistíme, že není defaultní podtržení */
+    background-color: transparent; /* Explicitně nastavit průhledné pozadí */
+}
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+    color: var(--bs-primary); /* Změna barvy textu na primární zelenou */
+    /* Odstraněno: text-decoration: underline; */ /* Nepotřebujeme defaultní podtržení */
+}
+/* --- NOVÉ PRAVIDLO: Pseudo-element pro podtržení --- */
+.navbar .nav-link::after {
+    content: ''; /* Povinné pro pseudo-element */
+    position: absolute; /* Absolutní pozice vůči .nav-link */
+    left: 0; /* Začíná na levém okraji */
+    /* Posuneme níže, aby bylo pod textem, upravit dle potřeby (závisí na paddingu) */
+    bottom: 0.5rem; /* Experimentální hodnota, upravit dle vizuálu */
+    width: 0; /* Počáteční šířka (skryté) */
+    height: 3px; /* Tloušťka podtržení */
+    background-color: var(--bs-primary); /* Barva podtržení */
+    transition: width 0.3s ease-in-out; /* Animace šířky */
+}
+
+/* --- NOVÉ PRAVIDLO: Zobrazení podtržení při hover/focus --- */
+.navbar .nav-link:hover::after,
+.navbar .nav-link:focus::after {
+    width: 100%; /* Roztažení podtržení na plnou šířku */
 }
 
 .navbar .nav-link:hover,
