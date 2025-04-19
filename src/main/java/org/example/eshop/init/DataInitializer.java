@@ -116,8 +116,8 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
     private void createTaxRates() {
         if (taxRateRepository.count() == 0) {
             log.info("Creating default Tax Rates...");
-            TaxRate rate21 = new TaxRate(null, "Základní 21%", new BigDecimal("0.2100"), false, null);
-            TaxRate rate12 = new TaxRate(null, "Snížená 12%", new BigDecimal("0.1200"), false, null);
+            TaxRate rate21 = new TaxRate(null, "Základní", new BigDecimal("0.2100"), false, null);
+            TaxRate rate12 = new TaxRate(null, "Snížená", new BigDecimal("0.1200"), false, null);
             TaxRate rateRC = new TaxRate(null, "Přenesená daňová povinnost", BigDecimal.ZERO, true, null);
             taxRateRepository.saveAll(List.of(rate21, rate12, rateRC));
             log.info("Default Tax Rates created.");

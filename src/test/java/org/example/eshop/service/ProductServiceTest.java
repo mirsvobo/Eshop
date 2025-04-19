@@ -103,12 +103,12 @@ class ProductServiceTest implements PriceConstants { // Přidáno implementace P
         configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500"));
         configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200"));
         configurator.setMinHeight(new BigDecimal("150")); configurator.setMaxHeight(new BigDecimal("300"));
-        configurator.setPricePerCmLengthCZK(new BigDecimal("10.00")); configurator.setPricePerCmDepthCZK(new BigDecimal("5.00")); configurator.setPricePerCmHeightCZK(new BigDecimal("8.00"));
+        configurator.setPricePerCmLengthCZK(new BigDecimal("10.00")); configurator.setPricePerCmWidthCZK((new BigDecimal("5.00"))); configurator.setPricePerCmHeightCZK(new BigDecimal("8.00"));
         configurator.setDividerPricePerCmDepthCZK(new BigDecimal("3.00"));
         configurator.setGutterPriceCZK(new BigDecimal("500.00"));
         configurator.setShedPriceCZK(new BigDecimal("2000.00"));
         configurator.setDesignPriceCZK(new BigDecimal("100.00"));
-        configurator.setPricePerCmLengthEUR(new BigDecimal("0.40")); configurator.setPricePerCmDepthEUR(new BigDecimal("0.20")); configurator.setPricePerCmHeightEUR(new BigDecimal("0.32"));
+        configurator.setPricePerCmLengthEUR(new BigDecimal("0.40")); configurator.setPricePerCmWidthEUR(new BigDecimal("0.20")); configurator.setPricePerCmHeightEUR(new BigDecimal("0.32"));
         configurator.setDividerPricePerCmDepthEUR(new BigDecimal("0.12")); configurator.setGutterPriceEUR(new BigDecimal("20.00")); configurator.setShedPriceEUR(new BigDecimal("80.00"));
         configurator.setDesignPriceEUR(new BigDecimal("4.00"));
         customProduct.setConfigurator(configurator);

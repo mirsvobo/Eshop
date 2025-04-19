@@ -45,8 +45,8 @@ public class ProductConfigurator {
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmHeightEUR;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthCZK;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmLengthEUR;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthCZK;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmDepthEUR;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthCZK;
+    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthEUR;
 
     // Ceny za volitelné prvky
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceCZK = BigDecimal.ZERO;

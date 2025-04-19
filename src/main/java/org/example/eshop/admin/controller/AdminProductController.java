@@ -72,8 +72,14 @@ public class AdminProductController {
 
     // Pomocná metoda pro přidání společných dat do modelu pro formulář
     private void addCommonFormAttributes(Model model) {
-        List<TaxRate> taxRates = taxRateService.getAllTaxRates();
-        model.addAttribute("allTaxRates", taxRates);
+        // Zkontrolujeme, zda už tam nejsou, abychom nenačítali zbytečně
+        if (!model.containsAttribute("allTaxRates")) {
+            List<TaxRate> taxRates = taxRateService.getAllTaxRates();
+            model.addAttribute("allTaxRates", taxRates);
+            log.debug("Added 'allTaxRates' to model.");
+        } else {
+            log.trace("Skipping adding 'allTaxRates', already present in model.");
+        }
     }
 
     // Pomocná metoda pro načtení všech dostupných asociací pro checkboxy/selecty
@@ -116,17 +122,23 @@ public class AdminProductController {
         return "admin/products-list";
     }
 
-    /**
-     * Zobrazí formulář pro vytvoření nového produktu.
-     */
     @GetMapping("/new")
     public String showCreateProductForm(Model model) {
         log.info("Requesting new product form.");
         Product product = new Product();
-        ensureCollectionsInitialized(product); // Použijeme pomocnou metodu
+        ensureCollectionsInitialized(product);
+
+        // === ZAČÁTEK PŘIDANÉHO KÓDU ===
+        // Zajistíme, že configurator existuje pro vazby ve formuláři
+        if (product.getConfigurator() == null) {
+            product.setConfigurator(new ProductConfigurator());
+            // Není třeba nastavovat product.getConfigurator().setProduct(product); zde,
+            // protože vazba se vytvoří při uložení přes CascadeType.ALL
+        }
+        // === KONEC PŘIDANÉHO KÓDU ===
 
         model.addAttribute("product", product);
-        addCommonFormAttributes(model);
+        addCommonFormAttributes(model); // Metoda nyní obsahuje i tax rates
         addAssociationAttributesToModel(model);
         model.addAttribute("pageTitle", "Vytvořit nový produkt");
         return "admin/product-form";
@@ -137,25 +149,31 @@ public class AdminProductController {
     public String showEditProductForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting edit form for product ID: {}", id);
         try {
-            Product product = productService.getProductById(id)
+            // Používáme metodu, která načte i detaily včetně konfigurátoru (pokud existuje)
+            Product product = productService.getProductById(id) // Předpokládáme, že getProductById načte i configurator (pokud EAGER nebo přes EntityGraph)
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
             ensureCollectionsInitialized(product);
 
-            log.debug("Product ID: {}, Images loaded: {}", product.getId(), product.getImages() != null ? product.getImages().size() : "null");
+            // === ZAČÁTEK PŘIDANÉHO/UPRAVENÉHO KÓDU ===
+            // Znovu zajistíme, že configurator existuje, pro případ, že by v DB z nějakého důvodu nebyl
+            if (product.getConfigurator() == null) {
+                log.warn("ProductConfigurator was null for existing product ID: {}. Initializing new one.", id);
+                product.setConfigurator(new ProductConfigurator());
+                // Není třeba nastavovat product.getConfigurator().setProduct(product);
+            }
+            // === KONEC PŘIDANÉHO/UPRAVENÉHO KÓDU ===
 
+
+            log.debug("Product ID: {}, Images loaded: {}", product.getId(), product.getImages() != null ? product.getImages().size() : "null");
+            // ... (zbytek metody pro přidání atributů do modelu - addCommonFormAttributes teď stačí pro tax rates) ...
             model.addAttribute("product", product);
-            model.addAttribute("newImage", new Image());
-            addCommonFormAttributes(model);
+            addCommonFormAttributes(model); // Přidá allTaxRates
             addAssociationAttributesToModel(model);
             model.addAttribute("pageTitle", "Upravit produkt: " + product.getName());
 
-            // Přidáme ID vybraných asociací do modelu pro správné zaškrtnutí checkboxů
-            model.addAttribute("selectedDesignIds", product.getAvailableDesigns().stream().map(Design::getId).collect(Collectors.toSet()));
-            model.addAttribute("selectedGlazeIds", product.getAvailableGlazes().stream().map(Glaze::getId).collect(Collectors.toSet()));
-            model.addAttribute("selectedRoofColorIds", product.getAvailableRoofColors().stream().map(RoofColor::getId).collect(Collectors.toSet()));
-            model.addAttribute("selectedAddonIds", product.getAvailableAddons().stream().map(Addon::getId).collect(Collectors.toSet()));
-            model.addAttribute("selectedTaxRateIds", product.getAvailableTaxRates().stream().map(TaxRate::getId).collect(Collectors.toSet()));
+            // Není už nutné přidávat selected*Ids, protože th:field na checkboxech to vyřeší automaticky
+            // s kolekcemi v objektu 'product'
 
             return "admin/product-form";
         } catch (EntityNotFoundException e) {
@@ -546,16 +564,22 @@ public class AdminProductController {
         log.debug("Updated available tax rates for product {}: {}", product.getId(), taxRateIds);
     }
 
-    // Pomocná metoda pro inicializaci kolekcí
     private void ensureCollectionsInitialized(Product product) {
         if (product == null) return;
         if (product.getAvailableDesigns() == null) product.setAvailableDesigns(new HashSet<>());
         if (product.getAvailableGlazes() == null) product.setAvailableGlazes(new HashSet<>());
         if (product.getAvailableRoofColors() == null) product.setAvailableRoofColors(new HashSet<>());
         if (product.getAvailableAddons() == null) product.setAvailableAddons(new HashSet<>());
-        if (product.getAvailableTaxRates() == null) product.setAvailableTaxRates(new HashSet<>()); // Přidáno
+        if (product.getAvailableTaxRates() == null) product.setAvailableTaxRates(new HashSet<>());
         if (product.getImages() == null) product.setImages(new HashSet<>());
         if (product.getDiscounts() == null) product.setDiscounts(new HashSet<>());
+
+        // --- PŘIDÁNO ---
+        if (product.getConfigurator() == null) {
+            // Pouze inicializujeme, pokud je null. Nenastavujeme default hodnoty zde.
+            product.setConfigurator(new ProductConfigurator());
+        }
+        // --- KONEC PŘIDÁNÍ ---
     }
 
     // --- Delete Product (zůstává stejné) ---

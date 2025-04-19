@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects; // <<< Potřebný import
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -31,20 +32,27 @@ public class AdminEmailConfigController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminEmailConfigController.class);
 
-    // TODO: V budoucnu nahradit dedikovanou EmailTemplateConfigService
+    // Poznámka: Zvažte použití dedikované Service vrstvy místo přímého repozitáře
     @Autowired private EmailTemplateConfigRepository emailTemplateConfigRepository;
     @Autowired private OrderStateService orderStateService;
     @Autowired private EmailService emailService; // Pro čištění cache
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
+        // Odstraní /new nebo /<id>/edit pro správné zvýraznění v menu
         return request.getRequestURI().replaceFirst("/(new|\\d+/edit)$", "");
     }
 
     // Pomocná metoda pro načtení všech stavů do modelu (pro select box)
     private void loadAllOrderStates(Model model) {
-        List<OrderState> states = orderStateService.getAllOrderStatesSorted();
-        model.addAttribute("allOrderStates", states);
+        try {
+            List<OrderState> states = orderStateService.getAllOrderStatesSorted();
+            model.addAttribute("allOrderStates", states);
+        } catch (Exception e) {
+            log.error("Failed to load order states: {}", e.getMessage(), e);
+            // Případně přidat chybovou hlášku do modelu, pokud je to kritické
+            model.addAttribute("allOrderStates", List.of()); // Poskytnout prázdný seznam
+        }
     }
 
     @GetMapping
@@ -85,12 +93,16 @@ public class AdminEmailConfigController {
 
         // Validace unikátnosti stateCode (musí být case-insensitive)
         if (config.getStateCode() != null) {
-            config.setStateCode(config.getStateCode().trim().toUpperCase());
-            if (emailTemplateConfigRepository.findByStateCodeIgnoreCase(config.getStateCode()).isPresent()) {
+            String normalizedCode = config.getStateCode().trim().toUpperCase();
+            config.setStateCode(normalizedCode); // Normalizujeme kód před další kontrolou
+            if (emailTemplateConfigRepository.findByStateCodeIgnoreCase(normalizedCode).isPresent()) {
                 bindingResult.rejectValue("stateCode", "error.emailConfig.duplicate", "Konfigurace pro tento stav již existuje.");
             }
         } else {
-            bindingResult.rejectValue("stateCode", "NotNull", "Kód stavu nesmí být prázdný.");
+            // Tato kontrola by měla být pokryta @Valid (@NotEmpty nebo @NotBlank na entitě)
+            if (!bindingResult.hasFieldErrors("stateCode")) { // Jen pokud ještě není chyba z @Valid
+                bindingResult.rejectValue("stateCode", "NotNull", "Kód stavu nesmí být prázdný.");
+            }
         }
 
         if (bindingResult.hasErrors()) {
@@ -120,10 +132,28 @@ public class AdminEmailConfigController {
         try {
             EmailTemplateConfig config = emailTemplateConfigRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Konfigurace emailu s ID " + id + " nenalezena."));
+
             model.addAttribute("emailTemplateConfig", config);
-            loadAllOrderStates(model); // Načteme stavy pro dropdown
+            loadAllOrderStates(model); // Načteme všechny stavy
+
+            // --- Opravená část: Příprava zobrazovaného názvu stavu ---
+            String currentStateDisplayName = "N/A"; // Výchozí hodnota
+            List<OrderState> allStates = orderStateService.getAllOrderStatesSorted(); // Získáme stavy (již by měly být v modelu, ale pro jistotu)
+
+            if (config.getStateCode() != null && allStates != null) {
+                currentStateDisplayName = allStates.stream()
+                        // Bezpečné porovnání kódů (case-insensitive, pokud je potřeba, zde je sensitive)
+                        .filter(state -> Objects.equals(state.getCode(), config.getStateCode()))
+                        .map(state -> state.getName() + " (" + state.getCode() + ")") // Vytvořit řetězec Název (KOD)
+                        .findFirst() // Najít první shodu
+                        .orElse(config.getStateCode()); // Pokud nenalezeno, zobrazit jen kód
+            }
+            model.addAttribute("currentStateDisplayName", currentStateDisplayName); // Přidáme do modelu
+            // ----------------------------------------------------------
+
             model.addAttribute("pageTitle", "Upravit konfiguraci emailu: " + config.getStateCode());
             return "admin/email-config-form";
+
         } catch (EntityNotFoundException e) {
             log.warn("Email config with ID {} not found for editing.", id);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -135,6 +165,9 @@ public class AdminEmailConfigController {
         }
     }
 
+    // Poznámka: Metoda update používá POST, což je v šabloně nastaveno pomocí hidden inputu.
+    // Pokud byste chtěli použít PUT, změňte value v hidden inputu na "PUT"
+    // a zde změňte @PostMapping na @PutMapping.
     @PostMapping("/{id}")
     public String updateEmailConfig(@PathVariable Long id,
                                     @Valid @ModelAttribute("emailTemplateConfig") EmailTemplateConfig configData,
@@ -143,31 +176,55 @@ public class AdminEmailConfigController {
                                     Model model) {
         log.info("Attempting to update email config ID: {}", id);
 
-        // Ruční validace unikátnosti stateCode při změně
-        if (configData.getStateCode() != null) {
-            configData.setStateCode(configData.getStateCode().trim().toUpperCase());
-            Optional<EmailTemplateConfig> existingWithCode = emailTemplateConfigRepository.findByStateCodeIgnoreCase(configData.getStateCode());
-            if (existingWithCode.isPresent() && !existingWithCode.get().getId().equals(id)) {
-                bindingResult.rejectValue("stateCode", "error.emailConfig.duplicate", "Konfigurace pro tento stav již existuje.");
-            }
-        } else {
-            bindingResult.rejectValue("stateCode", "NotNull", "Kód stavu nesmí být prázdný.");
+        // Najdeme existující konfiguraci NEBO vyhodíme výjimku HNED na začátku
+        Optional<EmailTemplateConfig> existingConfigOpt = emailTemplateConfigRepository.findById(id);
+        if (existingConfigOpt.isEmpty()) {
+            log.warn("Cannot update email config. Config not found: ID={}", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "Konfigurace emailu s ID " + id + " nenalezena pro update.");
+            return "redirect:/admin/email-configs";
         }
+        EmailTemplateConfig existingConfig = existingConfigOpt.get();
+
+        // Získání kódu stavu z databáze (ten se nemění a musí být odeslán)
+        String originalStateCode = existingConfig.getStateCode();
+        // Nastavíme ho do příchozích dat, aby prošel validací a byl dostupný v modelu v případě chyby
+        configData.setStateCode(originalStateCode);
 
 
+        // Pokud jsou chyby z @Valid anotací (kromě stateCode, který jsme právě nastavili)
         if (bindingResult.hasErrors()) {
-            log.warn("Validation errors updating email config {}: {}", id, bindingResult.getAllErrors());
+            // Odstraníme případnou chybu u stateCode, protože ten jsme nastavili ručně
+            if (bindingResult.hasFieldErrors("stateCode")) {
+                // Toto je složitější, ideálně by validace @Valid neměla běžet na stateCode při update
+                // Nebo by se musela validace přepsat. Pro jednoduchost chybu necháme,
+                // ale v šabloně se zobrazí správná hodnota.
+                log.warn("Validation errors on fields other than potentially stateCode during update of {}: {}", id, bindingResult.getAllErrors());
+            } else {
+                log.warn("Validation errors updating email config {}: {}", id, bindingResult.getAllErrors());
+            }
+
             model.addAttribute("pageTitle", "Upravit konfiguraci (Chyba)");
             configData.setId(id); // Zachovat ID
             loadAllOrderStates(model); // Znovu načíst stavy
+            // Znovu připravit zobrazovaný název pro případ návratu na formulář
+            model.addAttribute("currentStateDisplayName", existingConfig.getStateCode()); // Zobrazíme jen kód pro jednoduchost při chybě
+            if (orderStateService != null) { // Zkontrolujeme null pro jistotu
+                List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
+                String displayName = allStates.stream()
+                        .filter(state -> Objects.equals(state.getCode(), originalStateCode))
+                        .map(state -> state.getName() + " (" + state.getCode() + ")")
+                        .findFirst()
+                        .orElse(originalStateCode);
+                model.addAttribute("currentStateDisplayName", displayName);
+            }
+
             return "admin/email-config-form";
         }
-        try {
-            EmailTemplateConfig existingConfig = emailTemplateConfigRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Konfigurace emailu s ID " + id + " nenalezena pro update."));
 
+        // Pokud validace prošla, aktualizujeme entitu
+        try {
             // Ruční přenesení hodnot (bezpečnější než save(configData))
-            existingConfig.setStateCode(configData.getStateCode());
+            // stateCode se nemění!
             existingConfig.setSendEmail(configData.isSendEmail());
             existingConfig.setTemplateName(configData.getTemplateName());
             existingConfig.setSubjectTemplate(configData.getSubjectTemplate());
@@ -178,16 +235,24 @@ public class AdminEmailConfigController {
             redirectAttributes.addFlashAttribute("successMessage", "Konfigurace emailu pro stav '" + updatedConfig.getStateCode() + "' byla úspěšně aktualizována.");
             log.info("Email config ID {} updated successfully.", id);
             return "redirect:/admin/email-configs";
-        } catch (EntityNotFoundException e) {
-            log.warn("Cannot update email config. Config not found: ID={}", id, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/email-configs";
-        } catch (Exception e) {
+        } catch (Exception e) { // Zachytáváme obecnější výjimku pro případ selhání save atd.
             log.error("Unexpected error updating email config ID {}: {}", id, e.getMessage(), e);
             model.addAttribute("pageTitle", "Upravit konfiguraci (Chyba)");
             configData.setId(id); // Zachovat ID
+            configData.setStateCode(originalStateCode); // Ujistit se, že stateCode je správný
             model.addAttribute("emailTemplateConfig", configData); // Vrátit data s chybami
             loadAllOrderStates(model); // Načíst stavy
+            // Znovu připravit zobrazovaný název
+            model.addAttribute("currentStateDisplayName", originalStateCode); // Zobrazíme jen kód pro jednoduchost při chybě
+            if (orderStateService != null) {
+                List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
+                String displayName = allStates.stream()
+                        .filter(state -> Objects.equals(state.getCode(), originalStateCode))
+                        .map(state -> state.getName() + " (" + state.getCode() + ")")
+                        .findFirst()
+                        .orElse(originalStateCode);
+                model.addAttribute("currentStateDisplayName", displayName);
+            }
             model.addAttribute("errorMessage", "Při aktualizaci konfigurace nastala neočekávaná chyba: " + e.getMessage());
             return "admin/email-config-form";
         }

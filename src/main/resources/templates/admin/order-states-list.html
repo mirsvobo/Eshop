@@ -48,9 +48,6 @@
                     <span th:unless="${state.finalState}" class="badge bg-secondary">Ne</span>
                 </td>
                 <td>
-                    <a th:href="@{/admin/order-states/{id}/edit(id=${state.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
-                        <i class="bi bi-pencil-square"></i>
-                    </a>
                     <form th:action="@{/admin/order-states/{id}/delete(id=${state.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete smazat tento stav? Smazání selže, pokud je stav přiřazen k objednávkám.');">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Smazat">
                             <i class="bi bi-trash3"></i>

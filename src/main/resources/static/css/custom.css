@@ -332,6 +332,9 @@
     flex-grow: 1;
     margin-bottom: 0;
 }
+#kontaktni-udaje {
+    background-color: var(--bs-light);
+}
 
 
 /* === Sekce Google Recenzí (placeholder) === */

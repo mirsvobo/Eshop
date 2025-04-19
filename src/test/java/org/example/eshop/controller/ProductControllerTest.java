@@ -112,8 +112,8 @@ class ProductControllerTest {
         configurator.setMinLength(new BigDecimal("100")); configurator.setMaxLength(new BigDecimal("500"));
         configurator.setMinWidth(new BigDecimal("50")); configurator.setMaxWidth(new BigDecimal("200"));
         configurator.setMinHeight(new BigDecimal("150")); configurator.setMaxHeight(new BigDecimal("300"));
-        configurator.setPricePerCmHeightCZK(BigDecimal.TEN); configurator.setPricePerCmLengthCZK(BigDecimal.ONE); configurator.setPricePerCmDepthCZK(BigDecimal.ONE);
-        configurator.setPricePerCmHeightEUR(BigDecimal.ONE); configurator.setPricePerCmLengthEUR(BigDecimal.ONE); configurator.setPricePerCmDepthEUR(BigDecimal.ONE);
+        configurator.setPricePerCmHeightCZK(BigDecimal.TEN); configurator.setPricePerCmLengthCZK(BigDecimal.ONE); configurator.setPricePerCmWidthCZK(BigDecimal.ONE);
+        configurator.setPricePerCmHeightEUR(BigDecimal.ONE); configurator.setPricePerCmLengthEUR(BigDecimal.ONE); configurator.setPricePerCmWidthEUR(BigDecimal.ONE);
         configurator.setDesignPriceCZK(BigDecimal.ZERO); configurator.setDesignPriceEUR(BigDecimal.ZERO);
         configurator.setDividerPricePerCmDepthCZK(BigDecimal.ZERO); configurator.setDividerPricePerCmDepthEUR(BigDecimal.ZERO);
         configurator.setGutterPriceCZK(BigDecimal.ZERO); configurator.setGutterPriceEUR(BigDecimal.ZERO);

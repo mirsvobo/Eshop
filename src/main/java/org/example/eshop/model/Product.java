@@ -40,6 +40,7 @@ public class Product {
     @Column(precision = 10, scale = 2) private BigDecimal length;
     @Column(precision = 10, scale = 2) private BigDecimal width;
     @Column(length = 100) private String roofOverstep;
+    @Version@Column(length = 100) private Integer version;
 
     // --- NOVÉ @ManyToMany RELACE ---
     @ManyToMany(fetch = FetchType.LAZY) // Zůstáváme u LAZY, budeme inicializovat v controlleru
