@@ -137,14 +137,6 @@ public class AdminAddonsController {
                               BindingResult bindingResult,
                               RedirectAttributes redirectAttributes,
                               Model model) {
-        log.info("Attempting to update addon ID: {}", id);
-        // Dodatečná validace cen (musí být kladné)
-        if (addonData.getPriceCZK() == null || addonData.getPriceCZK().compareTo(BigDecimal.ZERO) <= 0) {
-            bindingResult.rejectValue("priceCZK", "Positive", "Cena CZK musí být kladná.");
-        }
-        if (addonData.getPriceEUR() == null || addonData.getPriceEUR().compareTo(BigDecimal.ZERO) <= 0) {
-            bindingResult.rejectValue("priceEUR", "Positive", "Cena EUR musí být kladná.");
-        }
 
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors updating addon {}: {}", id, bindingResult.getAllErrors());

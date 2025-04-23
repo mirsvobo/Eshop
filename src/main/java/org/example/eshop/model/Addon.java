@@ -1,7 +1,7 @@
 package org.example.eshop.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.AssertTrue;
+// Odebrána anotace import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern; // For pricingType validation
@@ -71,20 +71,4 @@ public class Addon {
     @ManyToMany(mappedBy = "availableAddons", fetch = FetchType.LAZY)
     private Set<Product> products;
 
-    // --- Validation Logic Helper (not persisted) ---
-    @AssertTrue(message = "Pro typ ceny 'FIXED' musí být vyplněna 'Cena CZK' a 'Cena EUR'.")
-    public boolean isFixedPriceValid() {
-        if ("FIXED".equals(pricingType)) {
-            return priceCZK != null && priceEUR != null;
-        }
-        return true; // Not applicable otherwise
-    }
-
-    @AssertTrue(message = "Pro dimenzionální ceny musí být vyplněna 'Cena za jednotku CZK' a 'Cena za jednotku EUR'.")
-    public boolean isDimensionalPriceValid() {
-        if (!"FIXED".equals(pricingType)) {
-            return pricePerUnitCZK != null && pricePerUnitEUR != null;
-        }
-        return true; // Not applicable otherwise
-    }
 }
