@@ -5,6 +5,10 @@
 <head>
   <title>Správa produktů</title>
   <style>
+    /* Styl pro dropdown tlačítko */
+    .dropdown-menu .dropdown-item { padding: .5rem 1rem; }
+    .dropdown-menu .dropdown-item i { margin-right: .5rem; }
+    /* Zbytek stylů zůstává stejný */
     .filter-form .row > div { margin-bottom: 0.5rem; }
     .filter-form .form-label { font-size: 0.85em; margin-bottom: 0.2rem; }
     .filter-form .form-control-sm, .filter-form .form-select-sm { font-size: 0.875rem; }
@@ -19,9 +23,23 @@
   <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Přehled produktů</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-      <a th:href="@{/admin/products/new}" class="btn btn-sm btn-success">
-        <i class="bi bi-plus-circle"></i> Vytvořit nový produkt
-      </a>
+      <div class="btn-group">
+        <button type="button" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-plus-circle"></i> Vytvořit nový produkt
+        </button>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" th:href="@{/admin/products/new/standard}">
+              <i class="bi bi-box"></i> Standardní produkt
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" th:href="@{/admin/products/new/custom}">
+              <i class="bi bi-sliders"></i> Produkt na míru
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -43,7 +61,7 @@
         <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filtrovat</button>
       </div>
     </div>
-    <input type="hidden" name="size" th:value="${productPage.size}">
+    <input type="hidden" name="size" th:value="${productPage != null ? productPage.size : 10}">
     <input type="hidden" name="sort" th:value="${currentSort}">
   </form>
 
@@ -95,9 +113,9 @@
             <i class="bi bi-pencil-square"></i>
           </a>
           <form th:action="@{/admin/products/{id}/delete(id=${product.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete deaktivovat tento produkt?');">
-            <input type="hidden" name="_method" value="POST"/> <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
-            <i class="bi bi-toggle-off"></i>
-          </button>
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Deaktivovat">
+              <i class="bi bi-toggle-off"></i>
+            </button>
           </form>
         </td>
       </tr>

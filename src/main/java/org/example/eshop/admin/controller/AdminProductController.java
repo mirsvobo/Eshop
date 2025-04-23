@@ -1,33 +1,42 @@
-// src/main/java/org/example/eshop/admin/controller/AdminProductController.java
-
 package org.example.eshop.admin.controller;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid; // Potřeba pro updateProduct
-import org.example.eshop.model.*; // Model importy
-import org.example.eshop.repository.*;
-import org.example.eshop.service.*; // Service importy
+import jakarta.validation.Valid;
+import org.example.eshop.dto.ImageOrderUpdateRequest;
+import org.example.eshop.model.*;
+import org.example.eshop.repository.ImageRepository;
+import org.example.eshop.service.*; // Importuj všechny potřebné services
+import org.example.eshop.admin.service.AddonsService; // Addons service
+import org.example.eshop.admin.service.DesignService; // Design service
+import org.example.eshop.admin.service.GlazeService; // Glaze service
+import org.example.eshop.admin.service.RoofColorService; // RoofColor service
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
-import java.util.*;
+// Odebrán import java.util.List, protože se nepoužívá přímo
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -37,145 +46,256 @@ public class AdminProductController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminProductController.class);
 
-    private final ProductService productService;
-    private final TaxRateService taxRateService;
-    private final TaxRateRepository taxRateRepository; // <-- PŘIDÁNO
-    private final DesignRepository designRepository;
-    private final GlazeRepository glazeRepository;
-    private final RoofColorRepository roofColorRepository;
-    private final AddonsRepository addonsRepository;
-    private final ImageRepository imageRepository;
-
-    @Autowired
-    public AdminProductController(ProductService productService,
-                                  TaxRateService taxRateService,
-                                  TaxRateRepository taxRateRepository, // <-- PŘIDÁNO
-                                  DesignRepository designRepository,
-                                  GlazeRepository glazeRepository,
-                                  RoofColorRepository roofColorRepository,
-                                  AddonsRepository addonsRepository,
-                                  ImageRepository imageRepository) {
-        this.productService = productService;
-        this.taxRateService = taxRateService;
-        this.taxRateRepository = taxRateRepository; // <-- PŘIDÁNO
-        this.designRepository = designRepository;
-        this.glazeRepository = glazeRepository;
-        this.roofColorRepository = roofColorRepository;
-        this.addonsRepository = addonsRepository;
-        this.imageRepository = imageRepository;
-    }
+    @Autowired private ProductService productService;
+    @Autowired private TaxRateService taxRateService;
+    @Autowired private AddonsService addonsService; // Předpokládá se, že tato service má metodu getAllActiveAddons() a getAddonById() vracející Optional
+    @Autowired private DesignService designService;
+    @Autowired private GlazeService glazeService;
+    @Autowired private RoofColorService roofColorService;
+    @Autowired private FileStorageService fileStorageService; // Nepoužívá se přímo zde, ale v ProductService
+    @Autowired private ImageRepository imageRepository; // Potřeba pro smazání obrázku
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
         return request.getRequestURI();
     }
 
-    // Pomocná metoda pro přidání společných dat do modelu pro formulář
-    private void addCommonFormAttributes(Model model) {
-        // Zkontrolujeme, zda už tam nejsou, abychom nenačítali zbytečně
-        if (!model.containsAttribute("allTaxRates")) {
-            List<TaxRate> taxRates = taxRateService.getAllTaxRates();
-            model.addAttribute("allTaxRates", taxRates);
-            log.debug("Added 'allTaxRates' to model.");
-        } else {
-            log.trace("Skipping adding 'allTaxRates', already present in model.");
-        }
-    }
-
-    // Pomocná metoda pro načtení všech dostupných asociací pro checkboxy/selecty
-    private void addAssociationAttributesToModel(Model model) {
-        model.addAttribute("allDesigns", designRepository.findAll(Sort.by("name")));
-        model.addAttribute("allGlazes", glazeRepository.findAll(Sort.by("name")));
-        model.addAttribute("allRoofColors", roofColorRepository.findAll(Sort.by("name")));
-        model.addAttribute("allAddons", addonsRepository.findAll(Sort.by("name"))); // Pro custom produkty
+    // Načtení společných dat pro formuláře
+    private void loadCommonFormData(Model model) {
+        // Použití opravených názvů metod
+        model.addAttribute("allTaxRates", taxRateService.getAllTaxRates()); //
+        model.addAttribute("allAddons", addonsService.getAllActiveAddons()); // Předpoklad existence metody
+        model.addAttribute("allDesigns", designService.getAllDesignsSortedByName()); //
+        model.addAttribute("allGlazes", glazeService.getAllGlazesSortedByName()); //
+        model.addAttribute("allRoofColors", roofColorService.getAllRoofColorsSortedByName()); //
     }
 
     @GetMapping
-    public String listProducts(Model model,
-                               @PageableDefault(size = 15, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
-                               @RequestParam Optional<String> name,
-                               @RequestParam Optional<Boolean> active) {
-        String nameFilter = name.filter(StringUtils::hasText).orElse(null);
-        Boolean activeFilter = active.orElse(null);
-        log.info("Requesting admin product list view. Filters: name={}, active={}. Pageable: {}", nameFilter, activeFilter, pageable);
-        try {
-            Page<Product> productPage;
-            // TODO: Implementovat lepší filtrování v service/repo
-            if (nameFilter != null || activeFilter != null) {
-                log.warn("Product filtering not fully implemented yet. Showing basic list.");
-                productPage = productService.getAllProducts(pageable);
-            } else {
-                productPage = productService.getAllProducts(pageable);
+    public String listProducts(@PageableDefault(size = 10, sort = "name") Pageable pageable, Model model) {
+        log.info("Requesting product list view. Pageable: {}", pageable);
+        Page<Product> productPage = productService.getAllProducts(pageable); //
+        model.addAttribute("productPage", productPage);
+        return "admin/products-list"; //
+    }
+
+    // --- NOVÉ GET METODY PRO VYTVOŘENÍ ---
+
+    @GetMapping("/new/standard")
+    public String showCreateStandardForm(Model model) {
+        log.info("Requesting new STANDARD product form.");
+        if (!model.containsAttribute("product")) { // Check if redirect didn't already add product
+            Product product = new Product(); //
+            product.setCustomisable(false); // Přednastavení pro standardní produkt
+            model.addAttribute("product", product);
+        }
+        loadCommonFormData(model);
+        model.addAttribute("pageTitle", "Přidat standardní produkt");
+        // Předpokládá se existence šablony product-form-standard.html
+        return "admin/product-form-standard";
+    }
+
+    @GetMapping("/new/custom")
+    public String showCreateCustomForm(Model model) {
+        log.info("Requesting new CUSTOM product form.");
+        if (!model.containsAttribute("product")) {
+            Product product = new Product(); //
+            product.setCustomisable(true); // Přednastavení pro custom produkt
+            // Je potřeba inicializovat konfigurátor, pokud neexistuje
+            if (product.getConfigurator() == null) { //
+                product.setConfigurator(new ProductConfigurator()); //
+                product.getConfigurator().setProduct(product); // Propojení
             }
-            model.addAttribute("productPage", productPage);
-            model.addAttribute("nameFilter", nameFilter);
-            model.addAttribute("activeFilter", activeFilter);
-            String currentSort = pageable.getSort().stream().map(order -> order.getProperty() + "," + order.getDirection()).collect(Collectors.joining("&sort="));
-            if (!StringUtils.hasText(currentSort) || ",".equals(currentSort)) { currentSort = "id,DESC"; }
-            model.addAttribute("currentSort", currentSort);
+            model.addAttribute("product", product);
+        }
+        loadCommonFormData(model);
+        model.addAttribute("pageTitle", "Přidat produkt na míru");
+        // Předpokládá se existence šablony product-form-custom.html
+        return "admin/product-form-custom";
+    }
+
+    // --- NOVÉ POST METODY PRO VYTVOŘENÍ ---
+
+    @PostMapping("/standard")
+    public String createStandardProduct(@Valid @ModelAttribute("product") Product product,
+                                        BindingResult bindingResult,
+                                        @RequestParam(value = "availableTaxRates", required = false) Set<Long> taxRateIds,
+                                        @RequestParam(value = "availableGlazes", required = false) Set<Long> glazeIds,
+                                        @RequestParam(value = "availableDesigns", required = false) Set<Long> designIds,
+                                        @RequestParam(value = "availableRoofColors", required = false) Set<Long> roofColorIds,
+                                        RedirectAttributes redirectAttributes, Model model) {
+        log.info("Attempting to create new STANDARD product: {}", product.getName()); //
+        product.setCustomisable(false); // Zajistíme, že je standardní
+        product.setConfigurator(null); // Standardní produkt nemá configurator
+        product.setAvailableAddons(null); // Standardní produkt nemá custom addons
+
+        // Zpracování asociací (TaxRates, Glazes, Designs, RoofColors) - Může vyhodit IllegalArgumentException
+        try {
+            handleAssociations(product, taxRateIds, null, glazeIds, designIds, roofColorIds); // Addons jsou null
+        } catch (IllegalArgumentException e) {
+            // Přidání chyby do bindingResult, pokud asociace selžou (např. chybí TaxRate)
+            bindingResult.reject("error.product.associations", e.getMessage());
+            log.warn("Association error creating standard product '{}': {}", product.getName(), e.getMessage());
+        }
+
+
+        // Specifická validace pro standardní produkt (např. musí mít základní cenu)
+        if (product.getBasePriceCZK() == null) { //
+            bindingResult.rejectValue("basePriceCZK", "NotNull", "Základní cena CZK je povinná pro standardní produkt.");
+        }
+        // Může být přidána kontrola, zda má vybrané standardní atributy, pokud jsou povinné
+
+        if (bindingResult.hasErrors()) {
+            log.warn("Validation errors creating standard product: {}", bindingResult.getAllErrors());
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat standardní produkt (Chyba)");
+            model.addAttribute("product", product); // Vrátíme data formuláře zpět
+            // Předpokládá se existence šablony product-form-standard.html
+            return "admin/product-form-standard";
+        }
+
+        try {
+            Product savedProduct = productService.createProduct(product); //
+            redirectAttributes.addFlashAttribute("successMessage", "Standardní produkt '" + savedProduct.getName() + "' byl úspěšně vytvořen.");
+            log.info("Standard product '{}' created successfully with ID: {}", savedProduct.getName(), savedProduct.getId()); //
+            return "redirect:/admin/products";
+        } catch (IllegalArgumentException | DataIntegrityViolationException e) {
+            log.warn("Error creating standard product '{}': {}", product.getName(), e.getMessage());
+            // Zpracování specifických chyb (např. duplicitní slug)
+            if (e.getMessage().toLowerCase().contains("slug")) {
+                bindingResult.rejectValue("slug", "error.product.duplicate.slug", e.getMessage());
+            } else if (e.getMessage().toLowerCase().contains("tax rate")) {
+                bindingResult.rejectValue("availableTaxRates", "error.product.taxrate", e.getMessage());
+            }
+            else {
+                model.addAttribute("errorMessage", "Chyba při ukládání: " + e.getMessage());
+            }
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat standardní produkt (Chyba)");
+            model.addAttribute("product", product); // Vrátíme data formuláře
+            // Předpokládá se existence šablony product-form-standard.html
+            return "admin/product-form-standard";
         } catch (Exception e) {
-            log.error("Error fetching products for admin view: {}", e.getMessage(), e);
-            model.addAttribute("errorMessage", "Nepodařilo se načíst produkty.");
-            model.addAttribute("productPage", Page.empty(pageable));
-            model.addAttribute("currentSort", "id,DESC");
+            log.error("Unexpected error creating standard product '{}': {}", product.getName(), e.getMessage(), e);
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat standardní produkt (Chyba)");
+            model.addAttribute("product", product);
+            model.addAttribute("errorMessage", "Při vytváření produktu nastala neočekávaná chyba.");
+            // Předpokládá se existence šablony product-form-standard.html
+            return "admin/product-form-standard";
         }
-        return "admin/products-list";
     }
 
-    @GetMapping("/new")
-    public String showCreateProductForm(Model model) {
-        log.info("Requesting new product form.");
-        Product product = new Product();
-        ensureCollectionsInitialized(product);
+    @PostMapping("/custom")
+    public String createCustomProduct(@Valid @ModelAttribute("product") Product product,
+                                      BindingResult bindingResult,
+                                      @RequestParam(value = "availableTaxRates", required = false) Set<Long> taxRateIds,
+                                      @RequestParam(value = "availableAddons", required = false) Set<Long> addonIds,
+                                      RedirectAttributes redirectAttributes, Model model) {
+        log.info("Attempting to create new CUSTOM product: {}", product.getName()); //
+        product.setCustomisable(true); // Zajistíme, že je custom
+        // Standardní atributy by měly být prázdné/null pro custom produkt
+        product.setAvailableGlazes(null); //
+        product.setAvailableDesigns(null); //
+        product.setAvailableRoofColors(null); //
+        // Základní cena by měla být null nebo 0 pro custom produkt (cena se počítá dynamicky)
+        product.setBasePriceCZK(null); //
+        product.setBasePriceEUR(null); //
 
-        // === ZAČÁTEK PŘIDANÉHO KÓDU ===
-        // Zajistíme, že configurator existuje pro vazby ve formuláři
-        if (product.getConfigurator() == null) {
-            product.setConfigurator(new ProductConfigurator());
-            // Není třeba nastavovat product.getConfigurator().setProduct(product); zde,
-            // protože vazba se vytvoří při uložení přes CascadeType.ALL
+        // Zpracování asociací (TaxRates, Addons) - Může vyhodit IllegalArgumentException
+        try {
+            handleAssociations(product, taxRateIds, addonIds, null, null, null); // Glaze, Design, RoofColor jsou null
+        } catch (IllegalArgumentException e) {
+            // Přidání chyby do bindingResult, pokud asociace selžou (např. chybí TaxRate)
+            bindingResult.reject("error.product.associations", e.getMessage());
+            log.warn("Association error creating custom product '{}': {}", product.getName(), e.getMessage());
         }
-        // === KONEC PŘIDANÉHO KÓDU ===
 
-        model.addAttribute("product", product);
-        addCommonFormAttributes(model); // Metoda nyní obsahuje i tax rates
-        addAssociationAttributesToModel(model);
-        model.addAttribute("pageTitle", "Vytvořit nový produkt");
-        return "admin/product-form";
+
+        // Validace konfigurátoru (pokud je customisable)
+        if (product.getConfigurator() != null) { //
+            // Zde může být dodatečná validace hodnot v konfigurátoru, např. min < max
+            BindingResult configuratorResult = new BeanPropertyBindingResult(product.getConfigurator(), "configurator"); //
+            // TODO: Implementovat validátor pro ProductConfigurator, pokud je potřeba
+            // validator.validate(product.getConfigurator(), configuratorResult);
+            if (configuratorResult.hasErrors()) {
+                configuratorResult.getAllErrors().forEach(error -> {
+                    if (error instanceof FieldError fieldError) {
+                        bindingResult.rejectValue("configurator." + fieldError.getField(), fieldError.getCode(), fieldError.getDefaultMessage());
+                    } else {
+                        bindingResult.addError(new ObjectError("configurator", error.getDefaultMessage()));
+                    }
+                });
+            }
+        } else {
+            bindingResult.reject("error.product.missing.configurator", "Konfigurátor je povinný pro produkt na míru.");
+        }
+
+
+        if (bindingResult.hasErrors()) {
+            log.warn("Validation errors creating custom product: {}", bindingResult.getAllErrors());
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat produkt na míru (Chyba)");
+            model.addAttribute("product", product); // Vrátíme data formuláře
+            // Předpokládá se existence šablony product-form-custom.html
+            return "admin/product-form-custom";
+        }
+
+        try {
+            // Vytvoření produktu (ProductService by měl správně nastavit propojení s konfigurátorem)
+            Product savedProduct = productService.createProduct(product); //
+            redirectAttributes.addFlashAttribute("successMessage", "Produkt na míru '" + savedProduct.getName() + "' byl úspěšně vytvořen.");
+            log.info("Custom product '{}' created successfully with ID: {}", savedProduct.getName(), savedProduct.getId()); //
+            return "redirect:/admin/products";
+        } catch (IllegalArgumentException | DataIntegrityViolationException e) {
+            log.warn("Error creating custom product '{}': {}", product.getName(), e.getMessage());
+            if (e.getMessage().toLowerCase().contains("slug")) {
+                bindingResult.rejectValue("slug", "error.product.duplicate.slug", e.getMessage());
+            } else if (e.getMessage().toLowerCase().contains("tax rate")) {
+                bindingResult.rejectValue("availableTaxRates", "error.product.taxrate", e.getMessage());
+            } else {
+                model.addAttribute("errorMessage", "Chyba při ukládání: " + e.getMessage());
+            }
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat produkt na míru (Chyba)");
+            model.addAttribute("product", product);
+            // Předpokládá se existence šablony product-form-custom.html
+            return "admin/product-form-custom";
+        } catch (Exception e) {
+            log.error("Unexpected error creating custom product '{}': {}", product.getName(), e.getMessage(), e);
+            loadCommonFormData(model);
+            model.addAttribute("pageTitle", "Přidat produkt na míru (Chyba)");
+            model.addAttribute("product", product);
+            model.addAttribute("errorMessage", "Při vytváření produktu nastala neočekávaná chyba.");
+            // Předpokládá se existence šablony product-form-custom.html
+            return "admin/product-form-custom";
+        }
     }
+
+    // --- UPRAVENÉ METODY PRO EDITACI ---
 
     @GetMapping("/{id}/edit")
-    @Transactional(readOnly = true)
-    public String showEditProductForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+    @Transactional(readOnly = true) // Načítáme asociace
+    public String showEditForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting edit form for product ID: {}", id);
         try {
-            // Používáme metodu, která načte i detaily včetně konfigurátoru (pokud existuje)
-            Product product = productService.getProductById(id) // Předpokládáme, že getProductById načte i configurator (pokud EAGER nebo přes EntityGraph)
+            Product product = productService.getProductById(id) //
                     .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
-            ensureCollectionsInitialized(product);
-
-            // === ZAČÁTEK PŘIDANÉHO/UPRAVENÉHO KÓDU ===
-            // Znovu zajistíme, že configurator existuje, pro případ, že by v DB z nějakého důvodu nebyl
-            if (product.getConfigurator() == null) {
-                log.warn("ProductConfigurator was null for existing product ID: {}. Initializing new one.", id);
-                product.setConfigurator(new ProductConfigurator());
-                // Není třeba nastavovat product.getConfigurator().setProduct(product);
-            }
-            // === KONEC PŘIDANÉHO/UPRAVENÉHO KÓDU ===
-
-
-            log.debug("Product ID: {}, Images loaded: {}", product.getId(), product.getImages() != null ? product.getImages().size() : "null");
-            // ... (zbytek metody pro přidání atributů do modelu - addCommonFormAttributes teď stačí pro tax rates) ...
             model.addAttribute("product", product);
-            addCommonFormAttributes(model); // Přidá allTaxRates
-            addAssociationAttributesToModel(model);
-            model.addAttribute("pageTitle", "Upravit produkt: " + product.getName());
+            loadCommonFormData(model); // Načteme všechny možnosti pro checkboxy/selecty
 
-            // Není už nutné přidávat selected*Ids, protože th:field na checkboxech to vyřeší automaticky
-            // s kolekcemi v objektu 'product'
+            if (product.isCustomisable()) { //
+                model.addAttribute("pageTitle", "Upravit produkt na míru: " + product.getName()); //
+                log.debug("Returning custom product form for ID: {}", id);
+                // Předpokládá se existence šablony product-form-custom.html
+                return "admin/product-form-custom";
+            } else {
+                model.addAttribute("pageTitle", "Upravit standardní produkt: " + product.getName()); //
+                log.debug("Returning standard product form for ID: {}", id);
+                // Předpokládá se existence šablony product-form-standard.html
+                return "admin/product-form-standard";
+            }
 
-            return "admin/product-form";
         } catch (EntityNotFoundException e) {
             log.warn("Product with ID {} not found for editing.", id);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -187,417 +307,295 @@ public class AdminProductController {
         }
     }
 
-    @PostMapping("/{productId}/images/upload")
-    public String uploadProductImage(@PathVariable Long productId,
-                                     @RequestParam("imageFile") MultipartFile imageFile,
-                                     @RequestParam(required = false) String altText,
-                                     @RequestParam(required = false) String titleText,
-                                     @RequestParam(required = false) Integer displayOrder,
-                                     RedirectAttributes redirectAttributes) {
-        log.info("Attempting to upload image for product ID: {}", productId);
-        if (imageFile.isEmpty()) {
-            redirectAttributes.addFlashAttribute("imageError", "Nebyl vybrán žádný soubor k nahrání.");
-            return "redirect:/admin/products/" + productId + "/edit";
+    // Jedna POST metoda pro update - rozliší typ podle příchozího productData.isCustomisable()
+    @PostMapping("/{id}")
+    @Transactional // Potřeba pro načtení a uložení
+    public String updateProduct(@PathVariable Long id,
+                                @Valid @ModelAttribute("product") Product productData,
+                                BindingResult bindingResult,
+                                @RequestParam(value = "availableTaxRates", required = false) Set<Long> taxRateIds,
+                                @RequestParam(value = "availableAddons", required = false) Set<Long> addonIds,
+                                @RequestParam(value = "availableGlazes", required = false) Set<Long> glazeIds,
+                                @RequestParam(value = "availableDesigns", required = false) Set<Long> designIds,
+                                @RequestParam(value = "availableRoofColors", required = false) Set<Long> roofColorIds,
+                                RedirectAttributes redirectAttributes, Model model) {
+
+        log.info("Attempting to update product ID: {}. Is custom from form: {}", id, productData.isCustomisable()); //
+
+        // Načtení existujícího produktu z DB (včetně asociací, pokud je potřeba je zachovat/aktualizovat)
+        Optional<Product> existingProductOpt = productService.getProductById(id); //
+        if (!existingProductOpt.isPresent()) {
+            log.error("Product with ID {} not found for update.", id);
+            redirectAttributes.addFlashAttribute("errorMessage", "Produkt s ID " + id + " nenalezen pro úpravu.");
+            return "redirect:/admin/products";
+        }
+        Product existingProduct = existingProductOpt.get();
+
+
+        // Zpracování asociací na základě ID z formuláře - může vyhodit IllegalArgumentException
+        try {
+            handleAssociations(productData, taxRateIds, addonIds, glazeIds, designIds, roofColorIds);
+        } catch (IllegalArgumentException e) {
+            // Přidání chyby do bindingResult, pokud asociace selžou
+            bindingResult.reject("error.product.associations", e.getMessage());
+            log.warn("Association error updating product ID {}: {}", id, e.getMessage());
+        }
+
+
+        // Synchronizace configuratoru, pokud je custom
+        if (productData.isCustomisable()) { //
+            if (productData.getConfigurator() != null) { //
+                productData.getConfigurator().setProduct(existingProduct); // Správné propojení
+                productData.getConfigurator().setId(existingProduct.getId()); // Zajistíme ID
+            }
+            // ProductService.updateProduct by měl ošetřit, aby se nesmazal existující konfigurátor,
+            // pokud productData.getConfigurator() je null, ale existingProduct.isCustomisable() je true.
+        } else {
+            productData.setConfigurator(null); // Zajistíme, že standardní nemá configurator
+        }
+
+
+        // Dodatečné validace specifické pro typ (Standard vs Custom)
+        if (!productData.isCustomisable() && productData.getBasePriceCZK() == null) { //
+            bindingResult.rejectValue("basePriceCZK", "NotNull", "Základní cena CZK je povinná pro standardní produkt.");
+        }
+        if (productData.isCustomisable()) { //
+            // Validace configuratoru, pokud je potřeba
+            // TODO: Implementovat validátor pro ProductConfigurator, pokud je potřeba
+            // validator.validate(productData.getConfigurator(), bindingResult);
+        }
+
+        if (bindingResult.hasErrors()) {
+            log.warn("Validation errors updating product {}: {}", id, bindingResult.getAllErrors());
+            loadCommonFormData(model);
+            // DŮLEŽITÉ: Nastavit productData zpět do modelu, aby se formulář správně zobrazil s chybami
+            // Musíme ale zachovat asociace načtené z existingProduct, pokud productData je nemá (např. obrázky)
+            productData.setImages(existingProduct.getImages()); //
+            // Podobně pro další lazy-loaded nebo speciálně spravované kolekce, které nejsou přímo ve formuláři
+
+            model.addAttribute("product", productData);
+            model.addAttribute("pageTitle", "Upravit produkt (Chyba)");
+            // Vrátíme správný formulář podle typu produktu z dat formuláře
+            return productData.isCustomisable() ? "admin/product-form-custom" : "admin/product-form-standard";
         }
 
         try {
-            productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder);
-            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek byl úspěšně nahrán.");
-            log.info("Image uploaded successfully for product ID: {}", productId);
-        } catch (IOException e) {
-            log.error("Failed to store image file for product ID {}: {}", productId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Chyba při ukládání souboru: " + e.getMessage());
-        } catch (EntityNotFoundException e) {
-            log.warn("Cannot upload image. Product not found: ID={}", productId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Produkt nenalezen.");
+            // ProductService.updateProduct porovná productData s existujícím a uloží změny
+            // Předáme existingProduct (načtený z DB) a productData (data z formuláře)
+            productService.updateProduct(id, productData, existingProduct); //
+            redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + productData.getName() + "' byl úspěšně aktualizován."); //
+            log.info("Product ID {} updated successfully.", id);
             return "redirect:/admin/products";
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid argument during image upload for product ID {}: {}", productId, e.getMessage());
-            redirectAttributes.addFlashAttribute("imageError", "Chyba nahrávání: " + e.getMessage());
+        } catch (EntityNotFoundException e){
+            // Tohle by nemělo nastat, protože jsme existingProduct načetli výše
+            log.error("Product ID {} disappeared during update process!", id, e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Produkt mezitím zmizel.");
+            return "redirect:/admin/products";
+        }
+        catch (IllegalArgumentException | DataIntegrityViolationException e) {
+            log.warn("Error updating product ID {}: {}", id, e.getMessage());
+            if (e.getMessage().toLowerCase().contains("slug")) {
+                bindingResult.rejectValue("slug", "error.product.duplicate.slug", e.getMessage());
+            } else if (e.getMessage().toLowerCase().contains("tax rate")) {
+                bindingResult.rejectValue("availableTaxRates", "error.product.taxrate", e.getMessage());
+            } else {
+                model.addAttribute("errorMessage", "Chyba při ukládání: " + e.getMessage());
+            }
+            loadCommonFormData(model);
+            // Znovu načteme asociace do productData pro zobrazení
+            productData.setImages(existingProduct.getImages()); //
+
+            model.addAttribute("product", productData); // Vrátíme data z formuláře
+            model.addAttribute("pageTitle", "Upravit produkt (Chyba)");
+            return productData.isCustomisable() ? "admin/product-form-custom" : "admin/product-form-standard";
         } catch (Exception e) {
-            log.error("Unexpected error uploading image for product ID {}: {}", productId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Při nahrávání obrázku nastala neočekávaná chyba.");
+            log.error("Unexpected error updating product ID {}: {}", id, e.getMessage(), e);
+            loadCommonFormData(model);
+            // Znovu načteme asociace do productData pro zobrazení
+            productData.setImages(existingProduct.getImages()); //
+
+            model.addAttribute("product", productData);
+            model.addAttribute("pageTitle", "Upravit produkt (Chyba)");
+            model.addAttribute("errorMessage", "Při aktualizaci produktu nastala neočekávaná chyba.");
+            return productData.isCustomisable() ? "admin/product-form-custom" : "admin/product-form-standard";
+        }
+    }
+
+    // --- Pomocná metoda pro zpracování asociací ---
+    // Aktualizováno pro použití findById a rozbalení Optional
+    private void handleAssociations(Product product,
+                                    Set<Long> taxRateIds, Set<Long> addonIds,
+                                    Set<Long> glazeIds, Set<Long> designIds,
+                                    Set<Long> roofColorIds) {
+        // Tax Rates (jsou povinné)
+        if (taxRateIds != null && !taxRateIds.isEmpty()) {
+            Set<TaxRate> rates = taxRateIds.stream()
+                    .map(taxRateService::getTaxRateById) // Vrací Optional<TaxRate>
+                    .filter(Optional::isPresent)        // Zkontroluje, zda Optional obsahuje hodnotu
+                    .map(Optional::get)                 // Získá hodnotu z Optional
+                    .collect(Collectors.toSet());
+            if (rates.isEmpty()) {
+                // Můžeme zde hodit výjimku nebo přidat chybu do BindingResult v volající metodě
+                log.error("No valid TaxRates found for provided IDs: {}", taxRateIds);
+                throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu platnou daňovou sazbu.");
+            }
+            product.setAvailableTaxRates(rates); //
+        } else {
+            // Pokud jsou taxRateIds null nebo prázdné, vyvoláme chybu (nebo ji řeší @Valid @NotEmpty v modelu)
+            log.error("No TaxRate IDs provided for product association.");
+            throw new IllegalArgumentException("Musí být vybrána alespoň jedna daňová sazba.");
         }
 
+        // Addons (jen pro custom)
+        if (product.isCustomisable()) { //
+            if (addonIds != null && !addonIds.isEmpty()) {
+                Set<Addon> addons = addonIds.stream()
+                        .map(addonsService::getAddonById) // Předpoklad: vrací Optional<Addon>
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toSet());
+                product.setAvailableAddons(addons); //
+            } else {
+                product.setAvailableAddons(Set.of()); // Prázdný set, ne null
+            }
+            // Standardní atributy by měly být prázdné pro custom
+            product.setAvailableGlazes(Set.of()); //
+            product.setAvailableDesigns(Set.of()); //
+            product.setAvailableRoofColors(Set.of()); //
+
+        } else { // Pro standardní produkt
+            product.setAvailableAddons(Set.of()); // Zajistíme prázdný set pro standardní
+
+            // Glazes (jen pro standard)
+            if (glazeIds != null && !glazeIds.isEmpty()) {
+                Set<Glaze> glazes = glazeIds.stream()
+                        .map(glazeService::findById) // Opraveno na findById
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toSet());
+                product.setAvailableGlazes(glazes); //
+            } else {
+                product.setAvailableGlazes(Set.of()); //
+            }
+            // Designs (jen pro standard)
+            if (designIds != null && !designIds.isEmpty()) {
+                Set<Design> designs = designIds.stream()
+                        .map(designService::findById) // Opraveno na findById
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toSet());
+                product.setAvailableDesigns(designs); //
+            } else {
+                product.setAvailableDesigns(Set.of()); //
+            }
+
+            // RoofColors (jen pro standard)
+            if (roofColorIds != null && !roofColorIds.isEmpty()) {
+                Set<RoofColor> roofColors = roofColorIds.stream()
+                        .map(roofColorService::findById) // Opraveno na findById
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toSet());
+                product.setAvailableRoofColors(roofColors); //
+            } else {
+                product.setAvailableRoofColors(Set.of()); //
+            }
+        }
+    }
+
+
+    // --- Metody pro obrázky (zůstávají víceméně stejné) ---
+
+    @PostMapping("/{productId}/images/upload")
+    public String uploadImage(@PathVariable Long productId,
+                              @RequestParam("imageFile") MultipartFile imageFile,
+                              @RequestParam(required = false) String altText,
+                              @RequestParam(required = false) String titleText,
+                              @RequestParam(required = false) Integer displayOrder,
+                              RedirectAttributes redirectAttributes) {
+        log.info("Attempting to upload image for product ID: {}", productId);
+        if (imageFile.isEmpty()) {
+            redirectAttributes.addFlashAttribute("imageError", "Vyberte prosím soubor k nahrání.");
+            return "redirect:/admin/products/" + productId + "/edit";
+        }
+        try {
+            // Uložíme obrázek pomocí ProductService, který použije FileStorageService
+            Image savedImage = productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder); //
+            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek '" + imageFile.getOriginalFilename() + "' byl úspěšně nahrán.");
+            log.info("Image successfully uploaded for product {}, image ID: {}", productId, savedImage.getId()); //
+        } catch (IOException e) {
+            log.error("Failed to store image file for product {}: {}", productId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Nahrání obrázku selhalo: " + e.getMessage());
+        } catch (EntityNotFoundException e) {
+            log.warn("Product ID {} not found when trying to upload image.", productId);
+            redirectAttributes.addFlashAttribute("errorMessage", "Produkt nebyl nalezen pro nahrání obrázku.");
+            return "redirect:/admin/products"; // Přesměrování na seznam, pokud produkt neexistuje
+        } catch (Exception e) {
+            log.error("Unexpected error uploading image for product {}: {}", productId, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("imageError", "Nahrání obrázku selhalo z neočekávaného důvodu.");
+        }
+        // Po úspěšném nahrání přesměrujeme na editaci produktu
         return "redirect:/admin/products/" + productId + "/edit";
     }
 
+
+    // Příklad úpravy deleteImage
     @PostMapping("/images/{imageId}/delete")
-    public String deleteProductImage(@PathVariable Long imageId, RedirectAttributes redirectAttributes) {
-        log.warn("Attempting to DELETE image ID: {}", imageId);
-        Long productId = null;
+    @ResponseBody // Důležité pro AJAX odpověď
+    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) { // Odebrán RedirectAttributes
+        log.warn("Attempting to delete image with ID: {}", imageId);
         try {
-            Optional<Image> imageOpt = imageRepository.findById(imageId);
-            if (imageOpt.isPresent() && imageOpt.get().getProduct() != null) {
-                productId = imageOpt.get().getProduct().getId();
-            }
-
-            productService.deleteImage(imageId);
-            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek byl úspěšně smazán.");
-            log.info("Image ID {} deleted successfully.", imageId);
-
+            // Získání ID produktu není nutné pro samotnou odpověď AJAXu,
+            // ale může být užitečné pro logování nebo jiné operace.
+            productService.deleteImage(imageId); // Zavolá service metodu pro smazání
+            log.info("Image ID {} deleted successfully via AJAX.", imageId);
+            return ResponseEntity.ok().build(); // Nebo noContent()
         } catch (EntityNotFoundException e) {
-            log.warn("Cannot delete image. Image not found: ID={}", imageId, e);
-            redirectAttributes.addFlashAttribute("imageError", e.getMessage());
-            return "redirect:/admin/products";
+            log.warn("Cannot delete image ID {}. Not found.", imageId, e);
+            // Můžeš vrátit i text v body(), pokud chceš zobrazit detailnější chybu v JS
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error deleting image ID {}: {}", imageId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Při mazání obrázku nastala chyba: " + e.getMessage());
+            // Můžeš vrátit i text v body()
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
+        // Přesměrování zde není potřeba
     }
 
     @PostMapping("/images/update-order")
-    @Transactional
-    public String updateImageOrder(@RequestParam Map<String, String> params, RedirectAttributes redirectAttributes) {
-        Long productId = null;
-        log.info("Attempting to update image display order. Params: {}", params);
+    @ResponseBody // Důležité
+    public ResponseEntity<?> updateImageOrder(@RequestBody ImageOrderUpdateRequest request) { // Přijímá JSON
+        log.info("Updating image order via AJAX for product ID: {}", request.getProductId());
         try {
-            for (Map.Entry<String, String> entry : params.entrySet()) {
-                if (entry.getKey().startsWith("displayOrder_")) {
-                    Long imageId = Long.parseLong(entry.getKey().substring("displayOrder_".length()));
-                    Integer order = null;
-                    try {
-                        order = Integer.parseInt(entry.getValue());
-                        if (order < 0) order = 0;
-                    } catch (NumberFormatException e) {
-                        log.warn("Invalid display order value '{}' for image ID {}. Skipping.", entry.getValue(), imageId);
-                        continue;
-                    }
-
-                    Image image = imageRepository.findById(imageId)
-                            .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
-                    if (productId == null && image.getProduct() != null) {
-                        productId = image.getProduct().getId();
-                    }
-                    if (!Objects.equals(image.getDisplayOrder(), order)) {
-                        image.setDisplayOrder(order);
-                        imageRepository.save(image);
-                        log.debug("Updated display order for image ID {} to {}", imageId, order);
-                    }
-                }
-            }
-            redirectAttributes.addFlashAttribute("imageSuccess", "Pořadí obrázků bylo aktualizováno.");
-            log.info("Image display order update process finished.");
-
+            // Zavolej upravenou service metodu, která přijme mapu ID->pořadí
+            productService.updateImageDisplayOrder(request.getProductId(), request.getOrderMap());
+            log.info("Image order updated successfully via AJAX for product ID: {}", request.getProductId());
+            return ResponseEntity.ok().body("Pořadí obrázků aktualizováno."); // Můžeš poslat zprávu zpět
         } catch (EntityNotFoundException e) {
-            log.warn("Cannot update image order. Image not found.", e);
-            redirectAttributes.addFlashAttribute("imageError", e.getMessage());
-            return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
+            log.warn("Product ID {} not found when updating image order via AJAX.", request.getProductId());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Produkt nenalezen.");
         } catch (Exception e) {
-            log.error("Error updating image order: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Při aktualizaci pořadí obrázků nastala chyba.");
-        }
-        return productId != null ? "redirect:/admin/products/" + productId + "/edit" : "redirect:/admin/products";
-    }
-
-    // *** Metoda createProduct - OPRAVENO: Typy parametrů a odstraněno @Valid ***
-    @PostMapping
-    public String createProduct(@ModelAttribute("product") Product product, // Odstraněno @Valid
-                                @RequestParam(required = false) List<Long> designIds,   // <-- Změněno zpět na List
-                                @RequestParam(required = false) List<Long> glazeIds,    // <-- Změněno zpět na List
-                                @RequestParam(required = false) List<Long> roofColorIds,// <-- Změněno zpět na List
-                                @RequestParam(required = false) List<Long> addonIds,    // <-- Změněno zpět na List
-                                @RequestParam(required = false) Set<Long> taxRateIds,    // <-- Zůstává Set
-                                BindingResult bindingResult,
-                                RedirectAttributes redirectAttributes,
-                                Model model) {
-        log.info("Attempting to create new product: {}", product.getName());
-        boolean hasErrors = false;
-
-        // Manuální validace základních polí
-        if (!StringUtils.hasText(product.getName())) {
-            bindingResult.rejectValue("name", "NotBlank", "Název produktu nesmí být prázdný.");
-            hasErrors = true;
-        }
-        // Zde můžeš přidat validaci pro product.getShortDescription()
-
-        // Pokus o nastavení asociací
-        try {
-            // Voláme původní metodu s List<Long>
-            updateAssociationsFromIds(product, designIds, glazeIds, roofColorIds, addonIds);
-            // Voláme NOVOU metodu se Set<Long>
-            updateTaxRateAssociationsFromIds(product, taxRateIds);
-        } catch (IllegalArgumentException | EntityNotFoundException e) {
-            bindingResult.reject("global.error", e.getMessage());
-            log.warn("Error setting associations: {}", e.getMessage());
-            hasErrors = true;
-        }
-
-        // Dodatečná kontrola pro TaxRates (pro jistotu)
-        if (!hasErrors && (product.getAvailableTaxRates() == null || product.getAvailableTaxRates().isEmpty())) {
-            bindingResult.reject("global.error", "Musí být vybrána alespoň jedna daňová sazba.");
-            hasErrors = true;
-        }
-
-        // Kontrola chyb a návrat formuláře
-        if (bindingResult.hasErrors() || hasErrors) {
-            log.warn("Validation errors creating product: {}", bindingResult.getAllErrors());
-            ensureCollectionsInitialized(product);
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            // Přidáme IDčka zpět do modelu
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList()); // List
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList()); // List
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList()); // List
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList()); // List
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet()); // Set
-            model.addAttribute("pageTitle", "Vytvořit nový produkt (Chyba)");
-            return "admin/product-form";
-        }
-
-        // Volání service
-        try {
-            Product savedProduct = productService.createProduct(product);
-            redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + savedProduct.getName() + "' byl úspěšně vytvořen.");
-            log.info("Product '{}' created successfully with ID: {}", savedProduct.getName(), savedProduct.getId());
-            return "redirect:/admin/products";
-        } catch (IllegalArgumentException e) {
-            log.warn("Error creating product '{}': {}", product.getName(), e.getMessage());
-            if (e.getMessage().contains("slug")) {
-                bindingResult.rejectValue("slug", "error.product.duplicateSlug", e.getMessage());
-            } else {
-                bindingResult.reject("global.error", e.getMessage());
-            }
-            // Návrat formuláře s chybou
-            ensureCollectionsInitialized(product);
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Vytvořit nový produkt (Chyba)");
-            return "admin/product-form";
-        }
-        catch (Exception e) {
-            log.error("Unexpected error creating product '{}': {}", product.getName(), e.getMessage(), e);
-            ensureCollectionsInitialized(product);
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            model.addAttribute("errorMessage", "Při vytváření produktu nastala neočekávaná chyba: " + e.getMessage());
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Vytvořit nový produkt (Chyba)");
-            return "admin/product-form";
+            log.error("Error updating image order via AJAX for product {}: {}", request.getProductId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Aktualizace pořadí selhala.");
         }
     }
 
-    // *** Metoda updateProduct - OPRAVENO: Odstraněno @Valid z Product productData ***
-    @PostMapping("/{id}")
-    public String updateProduct(@PathVariable Long id,
-                                @ModelAttribute("product") Product productData, // <-- ZDE BYLO ODSTRANĚNO @Valid
-                                BindingResult bindingResult, // Zůstává pro zachycení databinding chyb (např. špatný formát čísla) a manuálních chyb
-                                @RequestParam(required = false) List<Long> designIds,
-                                @RequestParam(required = false) List<Long> glazeIds,
-                                @RequestParam(required = false) List<Long> roofColorIds,
-                                @RequestParam(required = false) List<Long> addonIds,
-                                @RequestParam(required = false) Set<Long> taxRateIds,
-                                RedirectAttributes redirectAttributes,
-                                Model model) {
-        log.info("Attempting to update product ID: {}", id);
-        productData.setId(id); // Nastavíme ID pro případné zobrazení chyb
-        boolean hasAssociationErrors = false; // Příznak pro chyby z asociací
-
-        // Kontrola základních databinding chyb (např. špatný formát čísla pro cenu)
-        // @Valid jsme odstranili, takže musíme případně validovat manuálně nebo spoléhat na DB/Service
-        // Příklad manuální validace názvu:
-        if (!StringUtils.hasText(productData.getName())) {
-            bindingResult.rejectValue("name", "NotBlank", "Název produktu nesmí být prázdný.");
-            // Nastavíme i hasAssociationErrors, abychom přeskočili další kroky, pokud je název prázdný
-            hasAssociationErrors = true;
-        }
-        // Zde můžeš přidat další manuální validace základních polí productData...
-
-
-        if (bindingResult.hasErrors()) {
-            log.warn("Data binding errors updating product {}: {}", id, bindingResult.getAllErrors());
-            // Vracíme formulář hned
-            ensureCollectionsInitialized(productData); // Použijeme data z formuláře pro zobrazení
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            // Přidáme i vybraná ID zpět, aby checkboxy zůstaly
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            // Předáme productData zpět, aby se zobrazily chyby z bindingResult
-            model.addAttribute("product", productData);
-            return "admin/product-form";
-        }
-
-        Product existingProduct = null;
-        try {
-            // Načteme existující produkt pro nastavení asociací PŘED voláním service
-            existingProduct = productService.getProductById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen pro aktualizaci."));
-
-            // Aktualizujeme asociace na načteném existujícím produktu
-            updateAssociationsFromIds(existingProduct, designIds, glazeIds, roofColorIds, addonIds);
-            // Aktualizujeme daňové sazby - vyhodí výjimku, pokud taxRateIds je prázdné/neplatné
-            updateTaxRateAssociationsFromIds(existingProduct, taxRateIds);
-
-        } catch (IllegalArgumentException | EntityNotFoundException e) {
-            // Chyba při načítání produktu nebo nastavování asociací
-            bindingResult.reject("global.error", e.getMessage()); // Přidáme jako globální chybu
-            log.warn("Error setting associations during update for product ID {}: {}", id, e.getMessage());
-            hasAssociationErrors = true;
-        }
-
-        // Zkontrolujeme chyby z asociací
-        if (hasAssociationErrors) {
-            // Vrátíme formulář s chybami asociací
-            log.warn("Returning form due to association errors: {}", bindingResult.getAllErrors());
-            ensureCollectionsInitialized(productData); // Pro zobrazení formuláře použijeme data z formuláře
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Upravit produkt (Chyba asociací)");
-            // Přidáme globální chybu do modelu, pokud ještě není
-            if (!model.containsAttribute("errorMessage") && bindingResult.hasGlobalErrors()){
-                model.addAttribute("errorMessage", bindingResult.getGlobalError().getDefaultMessage());
-            }
-            // Vrátíme productData, aby se zobrazila data z formuláře
-            model.addAttribute("product", productData);
-            return "admin/product-form";
-        }
-
-        // Pokud nejsou chyby validace ani asociací, voláme service
-        try {
-            // Voláme service s daty z formuláře (productData) a s načtenou/upravenou entitou (existingProduct)
-            // ProductService si z productData vezme základní pole a z existingProduct asociace
-            Product updatedProduct = productService.updateProduct(id, productData, existingProduct)
-                    .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen pro aktualizaci (po pokusu o update)."));
-
-            redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + updatedProduct.getName() + "' byl úspěšně aktualizován.");
-            log.info("Product ID {} updated successfully.", id);
-            return "redirect:/admin/products";
-
-        } catch (EntityNotFoundException e) { // Chyba z productService.updateProduct
-            log.warn("Cannot update product. Product not found: ID={}", id, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/products";
-        } catch (IllegalArgumentException e) { // Chyba z productService.updateProduct (např. slug)
-            log.warn("Error updating product ID {}: {}", id, e.getMessage());
-            if (e.getMessage().contains("slug")) {
-                bindingResult.rejectValue("slug", "error.product.duplicateSlug", e.getMessage());
-            } else {
-                bindingResult.reject("global.error", e.getMessage()); // Obecná chyba
-            }
-            // Návrat formuláře s chybou
-            ensureCollectionsInitialized(productData);
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            // Vrátíme productData, aby se zobrazila data z formuláře a chyby z bindingResult
-            model.addAttribute("product", productData);
-            return "admin/product-form";
-        }
-        catch (Exception e) { // Neočekávané chyby
-            log.error("Unexpected error updating product ID {}: {}", id, e.getMessage(), e);
-            ensureCollectionsInitialized(productData);
-            addCommonFormAttributes(model);
-            addAssociationAttributesToModel(model);
-            model.addAttribute("errorMessage", "Při aktualizaci produktu nastala neočekávaná chyba: " + e.getMessage());
-            model.addAttribute("selectedDesignIds", designIds != null ? designIds : Collections.emptyList());
-            model.addAttribute("selectedGlazeIds", glazeIds != null ? glazeIds : Collections.emptyList());
-            model.addAttribute("selectedRoofColorIds", roofColorIds != null ? roofColorIds : Collections.emptyList());
-            model.addAttribute("selectedAddonIds", addonIds != null ? addonIds : Collections.emptyList());
-            model.addAttribute("selectedTaxRateIds", taxRateIds != null ? taxRateIds : Collections.emptySet());
-            model.addAttribute("pageTitle", "Upravit produkt (chyba)");
-            model.addAttribute("product", productData); // Vracíme data z formuláře
-            return "admin/product-form";
-        }
-    }
-
-    // Pomocná metoda pro aktualizaci asociací na Product entitě (očekává List)
-    private void updateAssociationsFromIds(Product product, List<Long> designIds, List<Long> glazeIds, List<Long> roofColorIds, List<Long> addonIds) {
-        // Získáme množiny entit podle předaných ID
-        Set<Design> designs = CollectionUtils.isEmpty(designIds) ? Collections.emptySet() : new HashSet<>(designRepository.findAllById(designIds));
-        Set<Glaze> glazes = CollectionUtils.isEmpty(glazeIds) ? Collections.emptySet() : new HashSet<>(glazeRepository.findAllById(glazeIds));
-        Set<RoofColor> roofColors = CollectionUtils.isEmpty(roofColorIds) ? Collections.emptySet() : new HashSet<>(roofColorRepository.findAllById(roofColorIds));
-        Set<Addon> addons = CollectionUtils.isEmpty(addonIds) ? Collections.emptySet() : new HashSet<>(addonsRepository.findAllById(addonIds));
-
-        // Zde můžeš přidat kontrolu, zda velikost nalezených entit odpovídá velikosti seznamů ID, pokud chceš být přísnější
-
-        // Nastavíme načtené entity na produkt
-        product.setAvailableDesigns(designs);
-        product.setAvailableGlazes(glazes);
-        product.setAvailableRoofColors(roofColors);
-        product.setAvailableAddons(addons); // Toto se aplikuje jen pokud je produkt customisable (řeší ProductService)
-        log.debug("Updated associations for product {}: designs={}, glazes={}, roofColors={}, addons={}",
-                product.getId(), designIds, glazeIds, roofColorIds, addonIds);
-    }
-
-    // *** PŘIDÁNA CHYBĚJÍCÍ METODA ***
-    // Pomocná metoda pro aktualizaci asociací TaxRates (očekává Set)
-    private void updateTaxRateAssociationsFromIds(Product product, Set<Long> taxRateIds) {
-        if (CollectionUtils.isEmpty(taxRateIds)) {
-            // Pokud se vyžaduje alespoň jedna sazba, vyhodíme zde výjimku
-            throw new IllegalArgumentException("Produkt musí mít vybránu alespoň jednu daňovou sazbu.");
-        }
-        Set<TaxRate> taxRates = new HashSet<>(taxRateRepository.findAllById(taxRateIds));
-        // Kontrola, zda byly nalezeny všechny požadované sazby
-        if (taxRates.size() != taxRateIds.size()) {
-            Set<Long> foundIds = taxRates.stream().map(TaxRate::getId).collect(Collectors.toSet());
-            Set<Long> missingIds = new HashSet<>(taxRateIds);
-            missingIds.removeAll(foundIds);
-            log.warn("Could not find all tax rates for IDs: {}", missingIds);
-            throw new EntityNotFoundException("Některé vybrané daňové sazby nebyly nalezeny: " + missingIds);
-        }
-        product.setAvailableTaxRates(taxRates);
-        log.debug("Updated available tax rates for product {}: {}", product.getId(), taxRateIds);
-    }
-
-    private void ensureCollectionsInitialized(Product product) {
-        if (product == null) return;
-        if (product.getAvailableDesigns() == null) product.setAvailableDesigns(new HashSet<>());
-        if (product.getAvailableGlazes() == null) product.setAvailableGlazes(new HashSet<>());
-        if (product.getAvailableRoofColors() == null) product.setAvailableRoofColors(new HashSet<>());
-        if (product.getAvailableAddons() == null) product.setAvailableAddons(new HashSet<>());
-        if (product.getAvailableTaxRates() == null) product.setAvailableTaxRates(new HashSet<>());
-        if (product.getImages() == null) product.setImages(new HashSet<>());
-        if (product.getDiscounts() == null) product.setDiscounts(new HashSet<>());
-
-        // --- PŘIDÁNO ---
-        if (product.getConfigurator() == null) {
-            // Pouze inicializujeme, pokud je null. Nenastavujeme default hodnoty zde.
-            product.setConfigurator(new ProductConfigurator());
-        }
-        // --- KONEC PŘIDÁNÍ ---
-    }
-
-    // --- Delete Product (zůstává stejné) ---
+    // --- Metoda pro smazání produktu (soft delete) ---
     @PostMapping("/{id}/delete")
     public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         log.warn("Attempting to SOFT DELETE product ID: {}", id);
         try {
-            productService.deleteProduct(id);
+            productService.deleteProduct(id); // Zavolá soft delete
             redirectAttributes.addFlashAttribute("successMessage", "Produkt byl úspěšně deaktivován.");
-            log.info("Product ID {} successfully deactivated (soft deleted).", id);
+            log.info("Product ID {} successfully deactivated.", id);
         } catch (EntityNotFoundException e) {
-            log.warn("Cannot delete product. Product not found: ID={}", id, e);
+            log.warn("Cannot deactivate product. Product not found: ID={}", id, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error deactivating product ID {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při deaktivaci produktu nastala chyba: " + e.getMessage());
         }
         return "redirect:/admin/products";
     }
-
 }

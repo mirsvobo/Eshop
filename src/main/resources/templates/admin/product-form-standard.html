@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout/admin-layout}">
+<head>
+  <title th:text="${product.id == null} ? 'Přidat standardní produkt' : 'Upravit standardní produkt: ' + ${product.name}">Přidat/Upravit Standardní Produkt</title>
+  <meta name="_csrf" th:content="${_csrf?.token}"/>
+  <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
+  <style>
+    /* Styly pro náhledy obrázků a tlačítko smazání */
+    .image-preview { position: relative; display: inline-block; margin: 5px; vertical-align: top; }
+    .image-preview img { max-width: 100px; max-height: 100px; display: block; border: 1px solid #ddd; }
+    .alert-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+    .invalid-feedback.d-block { display: block !important; }
+    #imageMessages .alert { margin-top: 10px; }
+    .spinner-border-sm { width: 1rem; height: 1rem; border-width: .2em; }
+  </style>
+</head>
+<body>
+<div layout:fragment="content">
+  <h1 th:text="${product.id == null} ? 'Přidat standardní produkt' : 'Upravit standardní produkt'"></h1>
+  <p class="text-muted">Formulář pro produkty s pevně danými parametry a volitelnými atributy (lazura, design, střecha).</p>
+
+  <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+  <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+
+  <form th:action="${product.id == null} ? @{/admin/products/standard} : @{/admin/products/{id}(id=${product.id})}"
+        th:object="${product}" method="post" enctype="multipart/form-data" id="productFormStandard">
+
+    <input type="hidden" th:field="*{id}" />
+    <input type="hidden" th:field="*{version}" />
+    <input type="hidden" th:field="*{customisable}" th:value="false"/>
+
+    <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger" role="alert">
+      Prosím opravte následující chyby:
+      <ul>
+        <li th:each="err : ${#fields.errors('*')}" th:text="${err}"></li>
+        <li th:each="err : ${#fields.globalErrors()}" th:text="${err}"></li>
+      </ul>
+    </div>
+
+    <div class="mb-3">
+      <label for="name" class="form-label">Název produktu:</label>
+      <input type="text" class="form-control" id="name" th:field="*{name}" required>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+    </div>
+    <div class="mb-3">
+      <label for="shortDescription" class="form-label">Krátký popis (max 500 znaků):</label>
+      <textarea class="form-control" id="shortDescription" th:field="*{shortDescription}" rows="3" maxlength="500"></textarea>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('shortDescription')}" th:errors="*{shortDescription}"></div>
+    </div>
+    <div class="mb-3">
+      <label for="description" class="form-label">Hlavní Popis:</label>
+      <textarea class="form-control" id="description" th:field="*{description}" rows="5"></textarea>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="basePriceCZK" class="form-label">Základní cena CZK (bez DPH): <span class="text-danger">*</span></label>
+        <input type="number" step="0.01" min="0" class="form-control" id="basePriceCZK" th:field="*{basePriceCZK}" required>
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('basePriceCZK')}" th:errors="*{basePriceCZK}"></div>
+      </div>
+      <div class="col-md-6">
+        <label for="basePriceEUR" class="form-label">Základní cena EUR (bez DPH):</label>
+        <input type="number" step="0.01" min="0" class="form-control" id="basePriceEUR" th:field="*{basePriceEUR}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('basePriceEUR')}" th:errors="*{basePriceEUR}"></div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="model" class="form-label">Model:</label>
+        <input type="text" class="form-control" id="model" th:field="*{model}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('model')}" th:errors="*{model}"></div>
+      </div>
+      <div class="col-md-6">
+        <label for="material" class="form-label">Materiál:</label>
+        <input type="text" class="form-control" id="material" th:field="*{material}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('material')}" th:errors="*{material}"></div>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3">
+        <label for="length" class="form-label">Standardní Délka (cm):</label>
+        <input type="number" step="0.01" min="0" class="form-control" id="length" th:field="*{length}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('length')}" th:errors="*{length}"></div>
+      </div>
+      <div class="col-md-3">
+        <label for="width" class="form-label">Standardní Šířka/Hloubka (cm):</label>
+        <input type="number" step="0.01" min="0" class="form-control" id="width" th:field="*{width}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('width')}" th:errors="*{width}"></div>
+      </div>
+      <div class="col-md-3">
+        <label for="height" class="form-label">Standardní Výška (cm):</label>
+        <input type="number" step="0.01" min="0" class="form-control" id="height" th:field="*{height}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('height')}" th:errors="*{height}"></div>
+      </div>
+      <div class="col-md-3">
+        <label for="roofOverstep" class="form-label">Přesah střechy:</label>
+        <input type="text" class="form-control" id="roofOverstep" th:field="*{roofOverstep}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('roofOverstep')}" th:errors="*{roofOverstep}"></div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label for="slug" class="form-label">URL Slug (nepovinné, vygeneruje se z názvu):</label>
+      <input type="text" class="form-control" id="slug" th:field="*{slug}">
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}"></div>
+    </div>
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="active" th:field="*{active}">
+      <label class="form-check-label" for="active">Aktivní (viditelný v e-shopu)</label>
+    </div>
+
+    <hr>
+    <h4>Daňové sazby <span class="text-danger">*</span></h4>
+    <div class="mb-3">
+      <label class="form-label">Přiřazené daňové sazby (alespoň jedna):</label>
+      <div th:each="rate : ${allTaxRates}" class="form-check">
+        <input class="form-check-input" type="checkbox" name="availableTaxRates" th:value="${rate.id}" th:id="'taxRate_' + ${rate.id}"
+               th:checked="${#sets.contains(product.availableTaxRates, rate)}">
+        <label class="form-check-label" th:for="'taxRate_' + ${rate.id}" th:text="${rate.name + ' (' + #numbers.formatDecimal(rate.rate * 100, 0, 'POINT', 0, 'COMMA') + ' %)'}"></label>
+      </div>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableTaxRates')}" th:errors="*{availableTaxRates}"></div>
+      <th:block th:if="${#fields.hasGlobalErrors()}">
+        <div class="text-danger small mt-1" th:each="err : ${#fields.globalErrors()}" th:if="${#strings.containsIgnoreCase(err, 'tax rate')}" th:text="${err}"></div>
+      </th:block>
+    </div>
+
+    <hr>
+    <h4>Standardní konfigurace</h4>
+    <div class="mb-3">
+      <label class="form-label">Dostupné lazury:</label>
+      <div th:each="glaze : ${allGlazes}" class="form-check">
+        <input class="form-check-input" type="checkbox" name="availableGlazes" th:value="${glaze.id}" th:id="'glaze_' + ${glaze.id}"
+               th:checked="${#sets.contains(product.availableGlazes, glaze)}">
+        <label class="form-check-label" th:for="'glaze_' + ${glaze.id}" th:text="${glaze.name}"></label>
+      </div>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableGlazes')}" th:errors="*{availableGlazes}"></div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Dostupné designy:</label>
+      <div th:each="design : ${allDesigns}" class="form-check">
+        <input class="form-check-input" type="checkbox" name="availableDesigns" th:value="${design.id}" th:id="'design_' + ${design.id}"
+               th:checked="${#sets.contains(product.availableDesigns, design)}">
+        <label class="form-check-label" th:for="'design_' + ${design.id}" th:text="${design.name}"></label>
+      </div>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableDesigns')}" th:errors="*{availableDesigns}"></div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Dostupné barvy střechy:</label>
+      <div th:each="roofColor : ${allRoofColors}" class="form-check">
+        <input class="form-check-input" type="checkbox" name="availableRoofColors" th:value="${roofColor.id}" th:id="'roofColor_' + ${roofColor.id}"
+               th:checked="${#sets.contains(product.availableRoofColors, roofColor)}">
+        <label class="form-check-label" th:for="'roofColor_' + ${roofColor.id}" th:text="${roofColor.name}"></label>
+      </div>
+      <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableRoofColors')}" th:errors="*{availableRoofColors}"></div>
+    </div>
+
+    <hr>
+    <h4>SEO</h4>
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="metaTitle" class="form-label">Meta Title:</label>
+        <input type="text" class="form-control" id="metaTitle" th:field="*{metaTitle}">
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('metaTitle')}" th:errors="*{metaTitle}"></div>
+      </div>
+      <div class="col-md-6">
+        <label for="metaDescription" class="form-label">Meta Description:</label>
+        <textarea class="form-control" id="metaDescription" th:field="*{metaDescription}" rows="2"></textarea>
+        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('metaDescription')}" th:errors="*{metaDescription}"></div>
+      </div>
+    </div>
+
+    <hr>
+    <h4>Obrázky produktu</h4>
+    <div class="mb-3 border p-3 rounded">
+      <label class="form-label d-block">Aktuální obrázky:</label>
+      <div id="imageMessages"> <div th:if="${imageError}" class="alert alert-danger alert-sm mt-2" role="alert" th:text="${imageError}"></div>
+        <div th:if="${imageSuccess}" class="alert alert-success alert-sm mt-2" role="alert" th:text="${imageSuccess}"></div>
+      </div>
+
+      <div id="currentImages">
+        <div th:if="${#lists.isEmpty(product.images)}" class="text-muted mb-2" id="noImagesText">Žádné obrázky nebyly nahrány.</div>
+        <div th:each="image : ${product.images}" class="image-preview d-flex align-items-center mb-2 border-bottom pb-2" th:id="'image-preview-' + ${image.id}">
+          <img th:src="@{${image.url}}" th:alt="${image.altText ?: 'Náhled'}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 10px;">
+          <div class="flex-grow-1">
+            <input type="number" class="form-control form-control-sm mb-1 image-order-input" th:value="${image.displayOrder}" min="0" placeholder="Pořadí" th:data-image-id="${image.id}">
+            <small th:text="${image.url}"></small>
+          </div>
+          <button type="button" class="btn btn-danger btn-sm ms-2 delete-image-btn" title="Smazat obrázek" th:data-image-id="${image.id}" th:data-product-id="${product.id}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+      <button type="button" id="updateImageOrderBtn" class="btn btn-outline-secondary btn-sm mt-2" th:styleappend="${#lists.isEmpty(product.images)} ? 'display: none;' : ''" th:if="${product.id != null}">Aktualizovat pořadí</button>
+
+
+      <div class="mt-3 pt-3 border-top" th:if="${product.id != null}">
+        <h5>Nahrát nový obrázek</h5>
+        <div class="mb-2">
+          <label for="newImageFile" class="form-label">Soubor:</label>
+          <input type="file" class="form-control form-control-sm" id="newImageFile" name="imageFile" accept="image/png, image/jpeg, image/webp, image/gif">
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label for="newAltText" class="form-label">Alt text:</label>
+            <input type="text" class="form-control form-control-sm" id="newAltText" name="altText">
+          </div>
+          <div class="col-md-4">
+            <label for="newTitleText" class="form-label">Title text:</label>
+            <input type="text" class="form-control form-control-sm" id="newTitleText" name="titleText">
+          </div>
+          <div class="col-md-4">
+            <label for="newDisplayOrder" class="form-label">Pořadí:</label>
+            <input type="number" class="form-control form-control-sm" id="newDisplayOrder" name="displayOrder" placeholder="Auto">
+          </div>
+        </div>
+        <button type="button" id="uploadImageBtnAjax" class="btn btn-success btn-sm mt-2">
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style="display: none;"></span>
+          <i class="bi bi-upload"></i> Nahrát obrázek
+        </button>
+      </div>
+    </div> <hr>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> [[${product.id == null ? 'Vytvořit produkt' : 'Uložit změny'}]]</button>
+    <a th:href="@{/admin/products}" class="btn btn-secondary">Zrušit</a>
+
+  </form> </div><script th:inline="javascript">
+  /*<![CDATA[*/
+  document.addEventListener('DOMContentLoaded', function() {
+
+    // --- CSRF a Zprávy ---
+    const csrfToken = document.querySelector("meta[name='_csrf']")?.getAttribute("content");
+    const csrfHeader = document.querySelector("meta[name='_csrf_header']")?.getAttribute("content");
+    const imageMessagesDiv = document.getElementById('imageMessages');
+    const currentImagesDiv = document.getElementById('currentImages');
+    const noImagesTextDiv = document.getElementById('noImagesText'); // Div se zprávou "Žádné obrázky"
+    const updateOrderButton = document.getElementById('updateImageOrderBtn');
+    const productId = document.querySelector('#productFormStandard input[name="id"]')?.value; // Získání ID produktu z formuláře #productFormStandard
+
+    function showImageMessage(message, isSuccess = true) {
+      if (!imageMessagesDiv) return;
+      const alertClass = isSuccess ? 'alert-success' : 'alert-danger';
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `alert ${alertClass} alert-sm mt-2`;
+      messageDiv.setAttribute('role', 'alert');
+      messageDiv.textContent = message;
+      imageMessagesDiv.innerHTML = ''; // Vymaže předchozí
+      imageMessagesDiv.appendChild(messageDiv);
+      setTimeout(() => { messageDiv.remove(); }, 5000); // Skryje po 5s
+    }
+
+    // Funkce pro vytvoření HTML náhledu obrázku
+    function createImagePreviewHTML(image) {
+      const imageId = image.id;
+      // Potenciální problém: image.url může být absolutní nebo relativní. Potřebujeme zajistit správnou cestu.
+      // Předpoklad: Kontroler vrací cestu relativní ke kořeni webu.
+      const imageUrl = image.url.startsWith('/') ? image.url : /*[[@{/}]]*/ '/' + image.url;
+      const altText = image.altText || 'Náhled';
+      const displayOrder = image.displayOrder || 0;
+
+      return `
+            <div class="image-preview d-flex align-items-center mb-2 border-bottom pb-2" id="image-preview-${imageId}">
+                <img src="${imageUrl}" alt="${altText}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 10px;">
+                <div class="flex-grow-1">
+                    <input type="number" class="form-control form-control-sm mb-1 image-order-input" value="${displayOrder}" min="0" placeholder="Pořadí" data-image-id="${imageId}">
+                    <small>${image.url}</small>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm ms-2 delete-image-btn" title="Smazat obrázek" data-image-id="${imageId}" data-product-id="${productId}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>`;
+    }
+
+    // ---- Kontrola stavu na začátku ----
+    function checkImagesState() {
+      const hasImages = currentImagesDiv.querySelector('.image-preview') !== null;
+      if (noImagesTextDiv) {
+        noImagesTextDiv.style.display = hasImages ? 'none' : 'block';
+      }
+      if (updateOrderButton) {
+        updateOrderButton.style.display = hasImages ? 'inline-block' : 'none';
+      }
+    }
+    // Spustíme pouze pokud jsme v editaci (productId existuje a není prázdné)
+    if (productId) {
+      checkImagesState();
+    }
+
+
+    // ---- Obsluha smazání obrázku ----
+    // Funguje pouze pokud jsme v editaci (productId existuje)
+    if (productId && currentImagesDiv) {
+      currentImagesDiv.addEventListener('click', function(event) {
+        const deleteButton = event.target.closest('.delete-image-btn');
+        if (deleteButton) {
+          event.preventDefault();
+          const imageId = deleteButton.dataset.imageId;
+          const imagePreviewDiv = document.getElementById(`image-preview-${imageId}`);
+
+          if (!imageId) { showImageMessage('Chyba: Nelze identifikovat obrázek pro smazání.', false); return; }
+
+          if (confirm('Opravdu smazat tento obrázek?')) {
+            const url = /*[[@{/admin/products/images/}]]*/ '/admin/products/images/' + imageId + '/delete';
+            fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', [csrfHeader]: csrfToken } })
+                    .then(response => {
+                      if (response.ok) {
+                        if(imagePreviewDiv) { imagePreviewDiv.remove(); }
+                        showImageMessage('Obrázek byl úspěšně smazán.', true);
+                        checkImagesState(); // Aktualizuje zobrazení
+                      } else {
+                        response.text().then(text => showImageMessage(`Smazání selhalo: ${response.statusText} ${text ? '('+text+')' : ''}`, false));
+                      }
+                    })
+                    .catch(error => showImageMessage('Chyba sítě při mazání: ' + error.message, false));
+          }
+        }
+      });
+    }
+
+    // ---- Obsluha aktualizace pořadí obrázků ----
+    // Funguje pouze pokud jsme v editaci (productId existuje)
+    if (productId && updateOrderButton) {
+      updateOrderButton.addEventListener('click', function(event) {
+        event.preventDefault();
+
+        const imageOrderInputs = document.querySelectorAll('.image-order-input');
+        const imageOrderData = {};
+        imageOrderInputs.forEach(input => {
+          const imageId = input.dataset.imageId;
+          if (imageId) {
+            const orderValue = parseInt(input.value, 10);
+            imageOrderData[imageId] = isNaN(orderValue) ? 0 : orderValue;
+          }
+        });
+
+        if (Object.keys(imageOrderData).length === 0) {
+          showImageMessage('Nebyly nalezeny žádné obrázky k aktualizaci.', false); return;
+        }
+
+        const url = /*[[@{/admin/products/images/update-order}]]*/ '/admin/products/images/update-order';
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', [csrfHeader]: csrfToken },
+          body: JSON.stringify({ productId: productId, orderMap: imageOrderData })
+        })
+                .then(response => {
+                  if (response.ok) {
+                    showImageMessage('Pořadí obrázků bylo úspěšně aktualizováno.', true);
+                  } else {
+                    response.text().then(text => showImageMessage(`Aktualizace pořadí selhala: ${response.statusText} ${text ? '('+text+')' : ''}`, false));
+                  }
+                })
+                .catch(error => showImageMessage('Chyba sítě při aktualizaci pořadí: ' + error.message, false));
+      });
+    }
+
+    // ---- Obsluha AJAX nahrání obrázku ----
+    const uploadButtonAjax = document.getElementById('uploadImageBtnAjax');
+    const fileInput = document.getElementById('newImageFile');
+    const altTextInput = document.getElementById('newAltText');
+    const titleTextInput = document.getElementById('newTitleText');
+    const displayOrderInput = document.getElementById('newDisplayOrder');
+    const uploadSpinner = uploadButtonAjax?.querySelector('.spinner-border');
+
+    // Funguje jen při editaci (productId existuje)
+    if (productId && uploadButtonAjax && fileInput) {
+      uploadButtonAjax.addEventListener('click', function() {
+        const file = fileInput.files[0];
+        if (!file) {
+          showImageMessage('Nebyl vybrán žádný soubor k nahrání.', false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('imageFile', file);
+        formData.append('altText', altTextInput.value);
+        formData.append('titleText', titleTextInput.value);
+        formData.append('displayOrder', displayOrderInput.value);
+
+        const url = /*[[@{/admin/products/}]]*/ '/admin/products/' + productId + '/images/upload';
+
+        if (uploadSpinner) uploadSpinner.style.display = 'inline-block';
+        uploadButtonAjax.disabled = true;
+        showImageMessage('Nahrávám obrázek...', true);
+
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', [csrfHeader]: csrfToken },
+          body: formData
+        })
+                .then(response => {
+                  if (response.ok) { return response.json(); }
+                  else { return response.text().then(text => Promise.reject(new Error(`Chyba ${response.status}: ${response.statusText} ${text ? '('+text+')' : ''}`))); }
+                })
+                .then(savedImageData => {
+                  console.log('Obrázek úspěšně nahrán:', savedImageData);
+                  const newImageHTML = createImagePreviewHTML(savedImageData);
+                  if (noImagesTextDiv) noImagesTextDiv.style.display = 'none';
+                  currentImagesDiv.insertAdjacentHTML('beforeend', newImageHTML);
+                  fileInput.value = ''; altTextInput.value = ''; titleTextInput.value = ''; displayOrderInput.value = '';
+                  showImageMessage('Obrázek byl úspěšně nahrán.', true);
+                  checkImagesState();
+                })
+                .catch(error => {
+                  console.error('Chyba při nahrávání obrázku:', error);
+                  showImageMessage(error.message || 'Nahrání obrázku selhalo.', false);
+                })
+                .finally(() => {
+                  if (uploadSpinner) uploadSpinner.style.display = 'none';
+                  uploadButtonAjax.disabled = false;
+                });
+      });
+    }
+
+    // --- Logování hlavního formuláře ---
+    const theForm = document.getElementById('productFormStandard');
+    if (theForm) {
+      console.log('[LOG] Hlavní formulář (#productFormStandard) nalezen.');
+      theForm.addEventListener('submit', function(event) {
+        console.log('[LOG] HLAVNÍ FORM SUBMIT EVENT TRIGGERED! Odesílám na:', theForm.action);
+      });
+    } else {
+      console.error('[ERROR] Nepodařilo se najít hlavní formulář (#productFormStandard)!');
+    }
+
+  });
+  /*]]>*/
+</script>
+
+</body>
+</html>

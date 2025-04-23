@@ -10,6 +10,7 @@ import org.example.eshop.config.PriceConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -368,28 +369,33 @@ public class ProductService implements PriceConstants {
     }
 
     @Caching(evict = {
+            // Invalidace cache při aktualizaci
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
             @CacheEvict(value = "productDetails", key = "#id"),
-            @CacheEvict(value = "productBySlug", allEntries = true) // Invalidate all slugs on update for simplicity
+            @CacheEvict(value = "productBySlug", allEntries = true) // Jednodušší invalidovat všechny slugy
     })
     @Transactional
-    public Optional<Product> updateProduct(Long id, Product productData, Product productToUpdate) {
-        logger.info(">>> [ProductService] Vstupuji do updateProduct (s přednačtenou entitou). ID: {}", id);
-        try {
-            // productToUpdate is the existing entity from DB
-            // productData contains new data from the form
+    public Optional<Product> updateProduct(Long id, Product productData, Product existingProduct) {
+        // Použijeme existingProduct jako hlavní entitu, kterou budeme měnit a ukládat
+        // a productData jako zdroj nových hodnot z formuláře.
+        logger.info(">>> [ProductService] Vstupuji do updateProduct. ID: {}, Aktualizuji entitu: {}", id, existingProduct);
 
+        Product productToUpdate = existingProduct; // Alias pro lepší čitelnost
+
+        try {
             // --- Slug Update & Validation ---
             String newSlug = StringUtils.hasText(productData.getSlug()) ? generateSlug(productData.getSlug()) : generateSlug(productData.getName());
             if (!newSlug.equalsIgnoreCase(productToUpdate.getSlug())) {
-                productRepository.findBySlugIgnoreCaseAndIdNot(newSlug, id).ifPresent(existing -> {
+                productRepository.findBySlugIgnoreCaseAndIdNot(newSlug, id).ifPresent(existingWithSlug -> {
+                    // Slug již existuje pro jiný produkt
                     throw new IllegalArgumentException("Produkt se slugem '" + newSlug + "' již existuje.");
                 });
                 productToUpdate.setSlug(newSlug);
-                logger.debug("Updating slug for product ID {} to '{}'", id, newSlug);
+                logger.debug("Aktualizuji slug pro produkt ID {} na '{}'", id, newSlug);
             }
 
             // --- Update Basic Fields ---
+            // Kopírujeme hodnoty z productData (formulář) do productToUpdate (databáze)
             productToUpdate.setName(productData.getName());
             if (productData.getShortDescription() != null && productData.getShortDescription().length() > 500) {
                 throw new IllegalArgumentException("Krátký popis nesmí být delší než 500 znaků.");
@@ -400,84 +406,132 @@ public class ProductService implements PriceConstants {
             productToUpdate.setBasePriceEUR(productData.getBasePriceEUR());
             productToUpdate.setModel(productData.getModel());
             productToUpdate.setMaterial(productData.getMaterial());
+            // Tyto rozměry jsou pro Standard produkt, u Custom se neukládají zde
             productToUpdate.setHeight(productData.getHeight());
             productToUpdate.setLength(productData.getLength());
             productToUpdate.setWidth(productData.getWidth());
-            productToUpdate.setRoofOverstep(productData.getRoofOverstep());
+            productToUpdate.setRoofOverstep(productData.getRoofOverstep()); // Předpokládám, že toto je také jen pro standard
             productToUpdate.setActive(productData.isActive());
             productToUpdate.setMetaTitle(productData.getMetaTitle());
             productToUpdate.setMetaDescription(productData.getMetaDescription());
 
-            // --- Handle Customisable Flag Change ---
+            // --- Handle Customisable Flag Change & Configurator Update ---
             boolean wasCustom = productToUpdate.isCustomisable();
-            boolean isCustom = productData.isCustomisable();
+            boolean isCustom = productData.isCustomisable(); // Bereme hodnotu z formuláře
+
             if (wasCustom != isCustom) {
-                logger.info("Product ID {} customisable status changed from {} to {}", id, wasCustom, isCustom);
+                logger.info("Produkt ID {} mění stav 'customisable' z {} na {}", id, wasCustom, isCustom);
                 productToUpdate.setCustomisable(isCustom);
-                if (isCustom) { // Becoming custom
-                    // Ensure configurator exists and is updated/created
-                    if (productToUpdate.getConfigurator() == null) {
-                        ProductConfigurator newConfig = (productData.getConfigurator() != null) ? productData.getConfigurator() : new ProductConfigurator();
-                        newConfig.setProduct(productToUpdate);
-                        initializeDefaultConfiguratorValues(newConfig); // Apply defaults/form data
-                        productToUpdate.setConfigurator(newConfig);
-                        logger.debug("Creating/Initializing configurator for newly customisable product ID {}", id);
-                    } else if (productData.getConfigurator() != null) {
-                        updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
-                        logger.debug("Updating existing configurator for product ID {}", id);
-                    }
-                    // Clear standard attributes, keep addons/tax rates
-                    productToUpdate.getAvailableDesigns().clear();
-                    productToUpdate.getAvailableGlazes().clear();
-                    productToUpdate.getAvailableRoofColors().clear();
-                    logger.debug("Clearing standard attributes for product ID {} (became custom)", id);
-                } else { // Becoming standard
-                    productToUpdate.setConfigurator(null); // Remove configurator
-                    productToUpdate.getAvailableAddons().clear(); // Clear addons
-                    logger.debug("Removing configurator and addons for product ID {} (became standard)", id);
-                }
-            } else if (isCustom && productData.getConfigurator() != null) {
-                // Still custom, update configurator data if provided
-                if (productToUpdate.getConfigurator() != null) {
-                    updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
-                    logger.debug("Updating configurator for existing custom product ID {}", id);
-                } else {
-                    // Should not happen if consistency is maintained, but handle it
-                    ProductConfigurator newConfig = productData.getConfigurator();
-                    newConfig.setProduct(productToUpdate);
-                    initializeDefaultConfiguratorValues(newConfig);
+            }
+
+            // Aktualizace nebo vytvoření/smazání konfigurátoru podle isCustom
+            if (isCustom) { // Produkt je nebo se stává Custom
+                if (productToUpdate.getConfigurator() == null) {
+                    // Pokud konfigurátor neexistoval, vytvoříme nový z dat formuláře nebo defaultní
+                    ProductConfigurator newConfig = (productData.getConfigurator() != null) ? productData.getConfigurator() : new ProductConfigurator();
+                    newConfig.setProduct(productToUpdate); // Propojení
+                    initializeDefaultConfiguratorValues(newConfig); // Nastavení defaultů, pokud chybí
                     productToUpdate.setConfigurator(newConfig);
-                    logger.warn("Configurator was null for custom product ID {}. Creating new one based on form data.", id);
+                    logger.debug("Vytvářím/Inicializuji konfigurátor pro nově/stále custom produkt ID {}", id);
+                } else if (productData.getConfigurator() != null) {
+                    // Pokud konfigurátor existoval a přišla data z formuláře, aktualizujeme ho
+                    updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
+                    logger.debug("Aktualizuji existující konfigurátor pro custom produkt ID {}", id);
+                }
+                // Poznámka: Pokud productData.getConfigurator() je null, ale produkt je custom,
+                // stávající konfigurátor v productToUpdate se nemění (není přepsán null hodnotou).
+            } else { // Produkt je nebo se stává Standard
+                productToUpdate.setConfigurator(null); // Standardní produkt nemá konfigurátor
+            }
+
+            // --- OPRAVA: Explicitní aktualizace kolekcí asociací ---
+            // Předpokládáme, že handleAssociations v controlleru správně nastavila kolekce na productData
+
+            // Tax Rates (musí být vždy)
+            if (productData.getAvailableTaxRates() != null) {
+                if (CollectionUtils.isEmpty(productData.getAvailableTaxRates())) {
+                    // Toto by mělo být zachyceno už v handleAssociations, ale pro jistotu
+                    throw new IllegalArgumentException("Produkt ID " + id + " musí mít přiřazenu alespoň jednu daňovou sazbu.");
+                }
+                // Vždy aktualizujeme, protože handleAssociations je nastaví podle formuláře
+                productToUpdate.setAvailableTaxRates(new HashSet<>(productData.getAvailableTaxRates()));
+            } else {
+                // Pokud by productData nemělo nastavené TaxRates (což by byla chyba v controlleru)
+                if(CollectionUtils.isEmpty(productToUpdate.getAvailableTaxRates())) {
+                    // Pokud ani existující produkt nemá sazby (což by nemělo nastat), hodíme chybu
+                    throw new IllegalStateException("Chyba: Produkt ID " + id + " nemá přiřazené žádné daňové sazby.");
+                }
+                // Jinak ponecháme stávající sazby z productToUpdate
+                logger.warn("ProductData nemělo nastavené TaxRates pro produkt ID {}. Ponechávám stávající.", id);
+            }
+
+
+            // Ostatní asociace podle typu produktu
+            if (isCustom) {
+                // Nastavení Addons pro Custom produkt
+                if (productData.getAvailableAddons() != null) {
+                    productToUpdate.setAvailableAddons(new HashSet<>(productData.getAvailableAddons()));
+                    logger.debug("Nastavuji Addons pro custom produkt ID {}: {}", id, productToUpdate.getAvailableAddons().stream().map(Addon::getId).collect(Collectors.toSet()));
+                } else {
+                    productToUpdate.setAvailableAddons(new HashSet<>()); // Pokud nejsou v datech, nastaví se prázdný set
+                    logger.debug("ProductData nemělo nastavené Addons pro custom produkt ID {}. Nastavuji prázdný Set.", id);
+                }
+                // Vyčištění standardních atributů pro Custom produkt
+                if (productToUpdate.getAvailableDesigns() == null) productToUpdate.setAvailableDesigns(new HashSet<>()); else productToUpdate.getAvailableDesigns().clear();
+                if (productToUpdate.getAvailableGlazes() == null) productToUpdate.setAvailableGlazes(new HashSet<>()); else productToUpdate.getAvailableGlazes().clear();
+                if (productToUpdate.getAvailableRoofColors() == null) productToUpdate.setAvailableRoofColors(new HashSet<>()); else productToUpdate.getAvailableRoofColors().clear();
+                logger.debug("Vyčistil jsem standardní atributy (Design, Glaze, RoofColor) pro custom produkt ID {}", id);
+
+            } else { // Produkt je Standard
+                // Vyčištění Addons pro Standardní produkt
+                if (productToUpdate.getAvailableAddons() == null) productToUpdate.setAvailableAddons(new HashSet<>()); else productToUpdate.getAvailableAddons().clear();
+                logger.debug("Vyčistil jsem Addons pro standard produkt ID {}", id);
+
+                // Nastavení standardních atributů (Glazes, Designs, RoofColors)
+                if (productData.getAvailableGlazes() != null) {
+                    productToUpdate.setAvailableGlazes(new HashSet<>(productData.getAvailableGlazes()));
+                    logger.debug("Nastavuji Glazes pro standard produkt ID {}: {}", id, productToUpdate.getAvailableGlazes().stream().map(Glaze::getId).collect(Collectors.toSet()));
+                } else {
+                    productToUpdate.setAvailableGlazes(new HashSet<>());
+                    logger.debug("ProductData nemělo nastavené Glazes pro standard produkt ID {}. Nastavuji prázdný Set.", id);
+                }
+
+                if (productData.getAvailableDesigns() != null) {
+                    productToUpdate.setAvailableDesigns(new HashSet<>(productData.getAvailableDesigns()));
+                    logger.debug("Nastavuji Designs pro standard produkt ID {}: {}", id, productToUpdate.getAvailableDesigns().stream().map(Design::getId).collect(Collectors.toSet()));
+                } else {
+                    productToUpdate.setAvailableDesigns(new HashSet<>());
+                    logger.debug("ProductData nemělo nastavené Designs pro standard produkt ID {}. Nastavuji prázdný Set.", id);
+                }
+
+                if (productData.getAvailableRoofColors() != null) {
+                    productToUpdate.setAvailableRoofColors(new HashSet<>(productData.getAvailableRoofColors()));
+                    logger.debug("Nastavuji RoofColors pro standard produkt ID {}: {}", id, productToUpdate.getAvailableRoofColors().stream().map(RoofColor::getId).collect(Collectors.toSet()));
+                } else {
+                    productToUpdate.setAvailableRoofColors(new HashSet<>());
+                    logger.debug("ProductData nemělo nastavené RoofColors pro standard produkt ID {}. Nastavuji prázdný Set.", id);
                 }
             }
+            // Kolekce jako Images, Discounts se zde nemění, předpokládáme, že jsou spravovány jinde (AJAX, speciální formuláře)
+            // nebo se automaticky zachovají z existingProduct (productToUpdate).
 
-            // --- Update Associations (TaxRates, Addons, Designs, etc.) ---
-            // These are typically handled by the controller which fetches IDs from the form,
-            // loads the entities, and sets them on productToUpdate *before* calling this service method.
-            // Example: productToUpdate.setAvailableTaxRates(loadedTaxRates);
-            //          productToUpdate.setAvailableAddons(loadedAddons);
-            // Ensure collections are not null before saving
-            ensureCollectionsInitialized(productToUpdate);
-
-            // Validation: Check if standard product has standard attributes if needed
-            if (!isCustom && (CollectionUtils.isEmpty(productToUpdate.getAvailableDesigns()) || CollectionUtils.isEmpty(productToUpdate.getAvailableGlazes()) || CollectionUtils.isEmpty(productToUpdate.getAvailableRoofColors()))) {
-                logger.warn("Standard product ID {} might be missing some standard attributes (Designs/Glazes/RoofColors).", id);
-                // Depending on requirements, you might throw an exception or allow saving.
-            }
-            // Validation: Check if at least one tax rate is present
-            if (CollectionUtils.isEmpty(productToUpdate.getAvailableTaxRates())) {
-                throw new IllegalArgumentException("Produkt ID " + id + " musí mít přiřazenu alespoň jednu daňovou sazbu.");
-            }
-
-            // --- Save ---
+            // --- Uložení ---
+            // Díky @Transactional by měl Hibernate detekovat změny na productToUpdate a uložit je.
+            // Explicitní save může být pro jistotu.
             Product savedProduct = productRepository.save(productToUpdate);
-            logger.info("[ProductService] Produkt ID {} úspěšně aktualizován.", id);
+            logger.info("[ProductService] Produkt ID {} úspěšně aktualizován v DB.", id);
             return Optional.of(savedProduct);
 
         } catch (IllegalArgumentException | EntityNotFoundException e) {
+            // Logování probíhá v controlleru nebo výše
             logger.warn("!!! [ProductService] Chyba validace nebo nenalezení entity v updateProduct pro ID {}: {} !!!", id, e.getMessage());
-            throw e; // Re-throw
-        } catch (Exception e) {
+            throw e; // Propagujeme dál
+        } catch (DataIntegrityViolationException e) {
+            // Specifické logování pro chyby integrity (např. NOT NULL constrainty)
+            logger.error("!!! [ProductService] Chyba integrity dat v updateProduct pro ID {}: {} !!!", id, e.getMessage(), e);
+            throw e; // Propagujeme dál
+        }
+        catch (Exception e) {
             logger.error("!!! [ProductService] Neočekávaná chyba v updateProduct pro ID {}: {} !!!", id, e.getMessage(), e);
             throw new RuntimeException("Neočekávaná chyba při aktualizaci produktu ID " + id + ": " + e.getMessage(), e);
         }
@@ -513,15 +567,6 @@ public class ProductService implements PriceConstants {
         existingConfig.setPricePerCmWidthCZK(dataConfig.getPricePerCmWidthCZK()); // Assumes renamed field
         existingConfig.setPricePerCmWidthEUR(dataConfig.getPricePerCmWidthEUR()); // Assumes renamed field
 
-        // Prices for old hardcoded features (might be obsolete if these are addons now)
-        existingConfig.setDesignPriceCZK(dataConfig.getDesignPriceCZK());
-        existingConfig.setDesignPriceEUR(dataConfig.getDesignPriceEUR());
-        existingConfig.setDividerPricePerCmDepthCZK(dataConfig.getDividerPricePerCmDepthCZK());
-        existingConfig.setDividerPricePerCmDepthEUR(dataConfig.getDividerPricePerCmDepthEUR());
-        existingConfig.setGutterPriceCZK(dataConfig.getGutterPriceCZK());
-        existingConfig.setGutterPriceEUR(dataConfig.getGutterPriceEUR());
-        existingConfig.setShedPriceCZK(dataConfig.getShedPriceCZK());
-        existingConfig.setShedPriceEUR(dataConfig.getShedPriceEUR());
 
         logger.trace("Product ID {}: Updated configurator settings.", productId);
     }
@@ -550,18 +595,12 @@ public class ProductService implements PriceConstants {
         configurator.setPricePerCmHeightCZK(Optional.ofNullable(configurator.getPricePerCmHeightCZK()).orElse(new BigDecimal("14.00")));
         configurator.setPricePerCmLengthCZK(Optional.ofNullable(configurator.getPricePerCmLengthCZK()).orElse(new BigDecimal("99.00")));
         configurator.setPricePerCmWidthCZK(Optional.ofNullable(configurator.getPricePerCmWidthCZK()).orElse(new BigDecimal("25.00"))); // Assumes renamed field
-        configurator.setDividerPricePerCmDepthCZK(Optional.ofNullable(configurator.getDividerPricePerCmDepthCZK()).orElse(new BigDecimal("13.00")));
-        configurator.setDesignPriceCZK(Optional.ofNullable(configurator.getDesignPriceCZK()).orElse(BigDecimal.ZERO));
-        configurator.setGutterPriceCZK(Optional.ofNullable(configurator.getGutterPriceCZK()).orElse(new BigDecimal("1000.00")));
-        configurator.setShedPriceCZK(Optional.ofNullable(configurator.getShedPriceCZK()).orElse(new BigDecimal("5000.00")));
 
         configurator.setPricePerCmHeightEUR(Optional.ofNullable(configurator.getPricePerCmHeightEUR()).orElse(new BigDecimal("0.56")));
         configurator.setPricePerCmLengthEUR(Optional.ofNullable(configurator.getPricePerCmLengthEUR()).orElse(new BigDecimal("3.96")));
         configurator.setPricePerCmWidthEUR(Optional.ofNullable(configurator.getPricePerCmWidthEUR()).orElse(new BigDecimal("1.00"))); // Assumes renamed field
-        configurator.setDividerPricePerCmDepthEUR(Optional.ofNullable(configurator.getDividerPricePerCmDepthEUR()).orElse(new BigDecimal("0.52")));
-        configurator.setDesignPriceEUR(Optional.ofNullable(configurator.getDesignPriceEUR()).orElse(BigDecimal.ZERO));
-        configurator.setGutterPriceEUR(Optional.ofNullable(configurator.getGutterPriceEUR()).orElse(new BigDecimal("40.00")));
-        configurator.setShedPriceEUR(Optional.ofNullable(configurator.getShedPriceEUR()).orElse(new BigDecimal("200.00")));
+
+
 
         configurator.setStepLength(Optional.ofNullable(configurator.getStepLength()).orElse(BigDecimal.TEN));
         configurator.setStepWidth(Optional.ofNullable(configurator.getStepWidth()).orElse(BigDecimal.TEN));
@@ -718,5 +757,85 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím deleteProduct (soft delete). ID: {}", id);
     }
 
+    @Caching(evict = {
+            // Invaliduje cache související s produkty, protože se mění data obrázků
+            @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
+            @CacheEvict(value = "productDetails", key = "#productId"),
+            @CacheEvict(value = "productBySlug", allEntries = true) // Jednodušší invalidovat všechny slugy
+    })
+    @Transactional // Zajistí, že všechny změny se uloží nebo žádná
+    public void updateImageDisplayOrder(Long productId, Map<String, Integer> orderMap) {
+        logger.info(">>> [ProductService] Vstupuji do updateImageDisplayOrder. Product ID: {}, Počet položek v mapě: {}", productId, orderMap != null ? orderMap.size() : "null");
 
+        if (orderMap == null) {
+            throw new IllegalArgumentException("Mapa pořadí (orderMap) nesmí být null.");
+        }
+
+        // 1. Najdi produkt včetně jeho obrázků
+        // Použijeme findByIdWithDetails, abychom měli jistotu, že obrázky jsou načtené
+        Product product = productRepository.findByIdWithDetails(productId)
+                .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + productId + " nenalezen pro aktualizaci pořadí obrázků."));
+
+        Set<Image> images = product.getImages();
+        if (images == null || images.isEmpty()) {
+            logger.warn("[ProductService] Produkt ID {} nemá žádné obrázky k aktualizaci pořadí.", productId);
+            // Není co dělat, pokud nejsou obrázky
+            return;
+        }
+
+        // 2. Projdi mapu a aktualizuj pořadí u nalezených obrázků
+        int updatedCount = 0;
+        for (Map.Entry<String, Integer> entry : orderMap.entrySet()) {
+            String imageIdStr = entry.getKey();
+            Integer newOrder = entry.getValue();
+
+            if (newOrder == null) {
+                logger.warn("[ProductService] Přeskakuji obrázek ID '{}' - hodnota pořadí je null.", imageIdStr);
+                continue; // Přeskoč, pokud je pořadí null
+            }
+
+            try {
+                Long imageId = Long.parseLong(imageIdStr);
+
+                // Najdi obrázek v kolekci produktu (efektivnější než dotaz do DB pro každý obrázek)
+                Optional<Image> imageOpt = images.stream()
+                        .filter(img -> img.getId().equals(imageId))
+                        .findFirst();
+
+                if (imageOpt.isPresent()) {
+                    Image imageToUpdate = imageOpt.get();
+                    // Zkontroluj, zda se aktuální pořadí liší od nového
+                    if (!newOrder.equals(imageToUpdate.getDisplayOrder())) {
+                        imageToUpdate.setDisplayOrder(newOrder);
+                        logger.debug("[ProductService] Aktualizuji pořadí obrázku ID {} na {}.", imageId, newOrder);
+                        updatedCount++;
+                        // Změna se uloží automaticky na konci transakce díky dirty checking
+                        // nebo explicitním save níže
+                    } else {
+                        logger.trace("[ProductService] Pořadí obrázku ID {} se nezměnilo ({}).", imageId, newOrder);
+                    }
+                } else {
+                    logger.warn("[ProductService] Obrázek s ID {} nebyl nalezen v kolekci obrázků produktu ID {}. Přeskakuji.", imageId, productId);
+                }
+
+            } catch (NumberFormatException e) {
+                logger.error("!!! [ProductService] Neplatný formát ID obrázku '{}' v mapě pořadí. Přeskakuji.", imageIdStr);
+            }
+        }
+
+        // 3. Ulož změny (volitelné, pokud spoléháš na @Transactional a dirty checking,
+        // ale explicitní save může být jistější nebo nutné podle konfigurace)
+        // Pokud máš CascadeType.MERGE nebo ALL na kolekci images v Product entitě,
+        // uložení produktu by mělo stačit. Jinak můžeš uložit přímo změněné obrázky (méně efektivní).
+        if (updatedCount > 0) {
+            // productRepository.save(product); // Zkus tuto variantu, pokud máš kaskádování
+            // Alternativně: imageRepository.saveAll(images); // Pokud chceš uložit všechny obrázky znovu
+            logger.info("[ProductService] Pořadí bylo aktualizováno pro {} obrázků produktu ID {}. Změny budou uloženy.", updatedCount, productId);
+        } else {
+            logger.info("[ProductService] Nebyly provedeny žádné změny v pořadí obrázků pro produkt ID {}.", productId);
+        }
+
+
+        logger.info(">>> [ProductService] Opouštím updateImageDisplayOrder. Product ID: {}", productId);
+    }
 } // Konec třídy ProductService

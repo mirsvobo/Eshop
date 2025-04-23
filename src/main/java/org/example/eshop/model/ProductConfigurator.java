@@ -48,13 +48,4 @@ public class ProductConfigurator {
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthCZK;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthEUR;
 
-    // Ceny za volitelné prvky
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceCZK = BigDecimal.ZERO;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal designPriceEUR = BigDecimal.ZERO;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthCZK;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal dividerPricePerCmDepthEUR;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceCZK;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal gutterPriceEUR;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceCZK;
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal shedPriceEUR;
 }
