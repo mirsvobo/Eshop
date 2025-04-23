@@ -62,32 +62,43 @@ public class AdminAddonsController {
                               RedirectAttributes redirectAttributes,
                               Model model) {
         log.info("Attempting to create new addon: {}", addon.getName());
-        // Dodatečná validace cen (musí být kladné)
-        if (addon.getPriceCZK() == null || addon.getPriceCZK().compareTo(BigDecimal.ZERO) <= 0) {
-            bindingResult.rejectValue("priceCZK", "Positive", "Cena CZK musí být kladná.");
-        }
-        if (addon.getPriceEUR() == null || addon.getPriceEUR().compareTo(BigDecimal.ZERO) <= 0) {
-            bindingResult.rejectValue("priceEUR", "Positive", "Cena EUR musí být kladná.");
-        }
 
         if (bindingResult.hasErrors()) {
-            log.warn("Validation errors creating addon: {}", bindingResult.getAllErrors());
+            // Logování zde zachytí chyby z @Valid (@AssertTrue v Addon.java)
+            log.warn("Validation errors creating addon (from @Valid): {}", bindingResult.getAllErrors());
             model.addAttribute("pageTitle", "Vytvořit nový doplněk (Chyba)");
             return "admin/addon-form";
         }
         try {
-            Addon savedAddon = addonsService.createAddon(addon); // createAddon vrací Addon
+            // createAddon v AddonsService provede vlastní validaci (validateAddonCommonFields, validateAndNormalizePrices)
+            Addon savedAddon = addonsService.createAddon(addon);
             redirectAttributes.addFlashAttribute("successMessage", "Doplněk '" + savedAddon.getName() + "' byl úspěšně vytvořen.");
             log.info("Addon '{}' created successfully with ID: {}", savedAddon.getName(), savedAddon.getId());
             return "redirect:/admin/addons";
         } catch (IllegalArgumentException e) {
+            // Chytáme validační chyby z AddonsService
             log.warn("Error creating addon '{}': {}", addon.getName(), e.getMessage());
+            // Zde můžeš stále rozlišovat chyby podle zprávy, pokud chceš
             if (e.getMessage().contains("názvem")) {
                 bindingResult.rejectValue("name", "error.addon.duplicate.name", e.getMessage());
             } else if (e.getMessage().contains("SKU")) {
                 bindingResult.rejectValue("sku", "error.addon.duplicate.sku", e.getMessage());
-            } else {
-                model.addAttribute("errorMessage", e.getMessage());
+            } else if (e.getMessage().contains("musí být kladná")) {
+                // Chyby ohledně cen přicházející ze service
+                if (e.getMessage().contains("'Cena CZK'")) {
+                    bindingResult.rejectValue("priceCZK", "Positive", e.getMessage());
+                } else if (e.getMessage().contains("'Cena EUR'")) {
+                    bindingResult.rejectValue("priceEUR", "Positive", e.getMessage());
+                } else if (e.getMessage().contains("'Cena za jednotku CZK'")) {
+                    bindingResult.rejectValue("pricePerUnitCZK", "Positive", e.getMessage());
+                } else if (e.getMessage().contains("'Cena za jednotku EUR'")) {
+                    bindingResult.rejectValue("pricePerUnitEUR", "Positive", e.getMessage());
+                } else {
+                    model.addAttribute("errorMessage", e.getMessage()); // Obecná validační chyba ze service
+                }
+            }
+            else {
+                model.addAttribute("errorMessage", e.getMessage()); // Jiné IllegalArgumentExceptions
             }
             model.addAttribute("pageTitle", "Vytvořit nový doplněk (Chyba)");
             return "admin/addon-form";

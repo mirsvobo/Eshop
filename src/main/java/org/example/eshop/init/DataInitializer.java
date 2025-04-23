@@ -14,6 +14,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.Ordered;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -81,17 +82,21 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             createRoofColor("Tmavě hnědá", null, null, null);
             createRoofColor("Vlastní", "Zákazník specifikuje v poznámce objednávky", null, null);
 
+            // V metodě run() třídy DataInitializer
+
             // 3. Addons
             log.info("Creating addons...");
-            // *** Pass null for EUR, createAddon method will handle it ***
-            createAddon("Polička 130 cm", null, new BigDecimal("1815.00"), null, "POL130", true);
-            createAddon("Polička 90 cm", null, new BigDecimal("1452.00"), null, "POL90", true);
-            createAddon("Držáky 2 páry", null, new BigDecimal("580.00"), null, "DRZ2P", true);
-            createAddon("Příčka 1x", null, new BigDecimal("1500.00"), null, "PRICKA1", true);
-            createAddon("Příčka 2x", null, new BigDecimal("3000.00"), null, "PRICKA2", true);
-            createAddon("Příčka 3x", null, new BigDecimal("4500.00"), null, "PRICKA3", true);
-            createAddon("Okap", null, new BigDecimal("5000.00"), null, "OKAP", true);
-
+            // Předpokládáme, že všechny stávající jsou typu FIXED
+            // Přidány kategorie a null pro dimenzionální ceny
+            createAddon("Polička 130 cm", null, "Poličky", "FIXED", new BigDecimal("1815.00"), null, null, null, "POL130", true);
+            createAddon("Polička 90 cm", null, "Poličky", "FIXED", new BigDecimal("1452.00"), null, null, null, "POL90", true);
+            createAddon("Držáky 2 páry", null, "Montážní materiál", "FIXED", new BigDecimal("580.00"), null, null, null, "DRZ2P", true);
+            createAddon("Příčka 1x", "Dřevěná příčka", "Konstrukce", "FIXED", new BigDecimal("1500.00"), null, null, null, "PRICKA1", true);
+            createAddon("Příčka 2x", "Dřevěná příčka", "Konstrukce", "FIXED", new BigDecimal("3000.00"), null, null, null, "PRICKA2", true);
+            createAddon("Příčka 3x", "Dřevěná příčka", "Konstrukce", "FIXED", new BigDecimal("4500.00"), null, null, null, "PRICKA3", true);
+            createAddon("Okap", "Kompletní okapový systém", "Střecha", "FIXED", new BigDecimal("5000.00"), null, null, null, "OKAP", true);
+            // Příklad dimenzionálního addonu (např. cena za cm šířky)
+            // createAddon("Extra nátěr", "Speciální nátěr", "Povrchová úprava", "PER_CM_WIDTH", null, null, new BigDecimal("5.50"), new BigDecimal("0.22"), "NATERSIRKA", true);
             // 4. Products - None initially
             log.info("Skipping initial product creation as requested.");
 
@@ -236,9 +241,19 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
                 });
     }
 
-    // --- Helper for Addons (Updated to set EUR to ZERO if null) ---
-    private Addon createAddon(String name, String desc, BigDecimal czk, BigDecimal eur, String sku, boolean active) {
-        // Check by name first
+    // V třídě DataInitializer
+
+    // --- Helper for Addons (NOVÁ VERZE S KATEGORIÍ A TYPEM CENY) ---
+    private Addon createAddon(String name, String desc, String category, String pricingType,
+                              BigDecimal priceCZK, BigDecimal priceEUR,
+                              BigDecimal pricePerUnitCZK, BigDecimal pricePerUnitEUR,
+                              String sku, boolean active) {
+
+        // Default values if null
+        category = StringUtils.hasText(category) ? category : "Ostatní";
+        pricingType = StringUtils.hasText(pricingType) ? pricingType : "FIXED";
+
+        // Check by name first (case-insensitive)
         Optional<Addon> existingByName = addonsRepository.findByNameIgnoreCase(name);
         if (existingByName.isPresent()) {
             log.warn("Addon with name '{}' already exists. Skipping creation.", name);
@@ -246,24 +261,39 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
         }
         // Check by SKU if provided and name doesn't exist
         if (sku != null && !sku.trim().isEmpty()) {
-            Optional<Object> existingBySku = addonsRepository.findBySkuIgnoreCase(sku.trim());
-            if (existingBySku.isPresent() && existingBySku.get() instanceof Addon) {
+            // Použijeme opravenou metodu z AddonsRepository
+            Optional<Addon> existingBySku = addonsRepository.findBySkuIgnoreCase(sku.trim());
+            if (existingBySku.isPresent()) {
                 log.warn("Addon with SKU '{}' already exists. Skipping creation.", sku.trim());
-                return (Addon) existingBySku.get();
+                return existingBySku.get();
             }
         }
+
         // Create new if not found
         Addon addon = new Addon();
         addon.setName(name);
         addon.setDescription(desc);
-        // Ensure CZK price is not null if required by DB (can default to ZERO)
-        addon.setPriceCZK(czk != null ? czk : BigDecimal.ZERO);
-        // *** UPDATED HERE: Set EUR to ZERO if null ***
-        addon.setPriceEUR(eur != null ? eur : BigDecimal.ZERO);
+        addon.setCategory(category.trim());
+        addon.setPricingType(pricingType);
+
+        // Set prices based on type
+        if ("FIXED".equals(pricingType)) {
+            addon.setPriceCZK(priceCZK != null ? priceCZK : BigDecimal.ZERO); // Default to 0 if null
+            addon.setPriceEUR(priceEUR != null ? priceEUR : BigDecimal.ZERO); // Default to 0 if null
+            addon.setPricePerUnitCZK(null);
+            addon.setPricePerUnitEUR(null);
+        } else {
+            addon.setPriceCZK(null);
+            addon.setPriceEUR(null);
+            addon.setPricePerUnitCZK(pricePerUnitCZK != null ? pricePerUnitCZK : BigDecimal.ZERO); // Default to 0
+            addon.setPricePerUnitEUR(pricePerUnitEUR != null ? pricePerUnitEUR : BigDecimal.ZERO); // Default to 0
+        }
+
         addon.setSku(sku != null ? sku.trim() : null);
         addon.setActive(active);
-        log.debug("Creating Addon: Name='{}', SKU='{}', CZK='{}', EUR='{}'",
-                name, sku, addon.getPriceCZK(), addon.getPriceEUR());
+
+        log.debug("Creating Addon: Name='{}', Category='{}', Type='{}', SKU='{}', CZK='{}', EUR='{}', UnitCZK='{}', UnitEUR='{}'",
+                name, category, pricingType, sku, addon.getPriceCZK(), addon.getPriceEUR(), addon.getPricePerUnitCZK(), addon.getPricePerUnitEUR());
         return addonsRepository.save(addon);
     }
 

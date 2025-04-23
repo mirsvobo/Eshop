@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-// Importy pro cachování zůstávají stejné
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -30,9 +29,6 @@ import java.util.*; // Import pro Set, Map atd.
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-// Odstraněn import 'log' z CustomerService, používáme logger definovaný zde
-// import static org.example.eshop.service.CustomerService.log;
-
 
 @Service
 public class ProductService implements PriceConstants {
@@ -40,7 +36,6 @@ public class ProductService implements PriceConstants {
     private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
     @Autowired private FileStorageService fileStorageService;
 
-    // Konstanty pro generování slugu
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
     private static final Pattern MULTIPLE_DASHES = Pattern.compile("-{2,}");
@@ -51,7 +46,7 @@ public class ProductService implements PriceConstants {
     @Autowired private ImageRepository imageRepository;
     @Autowired private TaxRateRepository taxRateRepository;
     @Autowired private DiscountService discountService;
-    // @Autowired private CacheManager cacheManager; // Pokud potřebuješ manuální invalidaci
+
 
     @Cacheable(value = "activeProductsPage", key = "#pageable.toString()")
     @Transactional(readOnly = true)
@@ -83,9 +78,7 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    // Upraveno getProductById -> findByIdWithDetails pro konzistenci s admin controllerem
-    // @Cacheable(value = "productById", key = "#id", unless = "#result == null or !#result.isPresent()") // Původní
-    @Cacheable(value = "productDetails", key = "#id", unless = "#result == null or !#result.isPresent()") // Změna názvu cache na "productDetails"
+    @Cacheable(value = "productDetails", key = "#id", unless = "#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Product> getProductById(Long id){
         logger.info(">>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: {}", id);
@@ -100,7 +93,6 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    // Metoda pro získání produktu podle slug, upraven název cache
     @Cacheable(value = "productBySlug", key = "T(String).valueOf(#slug).toLowerCase()", unless="#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Product> getActiveProductBySlug(String slug) {
@@ -116,8 +108,6 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-
-    // Zůstává stejné
     @Transactional(readOnly = true)
     public Page<Product> getAllProducts(Pageable pageable) {
         logger.info(">>> [ProductService] Vstupuji do getAllProducts(Pageable: {}) <<<", pageable);
@@ -132,7 +122,6 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    // Zůstává stejné
     @Cacheable("allProductsList")
     @Transactional(readOnly = true)
     public List<Product> getAllProductsList() {
@@ -148,7 +137,6 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    // Zůstává stejné (výpočet ceny standardního produktu)
     @Transactional(readOnly = true)
     public Map<String, Object> calculateFinalProductPrice(Product product, String currency) {
         Map<String, Object> priceInfo = new HashMap<>();
@@ -201,7 +189,113 @@ public class ProductService implements PriceConstants {
         return priceInfo;
     }
 
-    // Zůstává stejné (vytvoření produktu)
+    // --- START: Simplified calculateDynamicProductPrice ---
+    /**
+     * Calculates the BASE price for a customizable product based ONLY on its dimensions
+     * and the per-unit prices defined in its ProductConfigurator.
+     * Prices for selected attributes (Design, Glaze, RoofColor) and Addons
+     * are handled separately (client-side or during cart/order processing).
+     *
+     * @param product The customizable product.
+     * @param dimensions A map containing "length", "width", and "height" keys with BigDecimal values.
+     * @param currency The target currency ("CZK" or "EUR").
+     * @return The calculated base price based on dimensions.
+     * @throws IllegalArgumentException if product is null, inactive, not customizable,
+     * missing configurator, dimensions map is null or missing keys,
+     * or dimensions are outside the configured range.
+     * @throws IllegalStateException if required price configurations are missing in ProductConfigurator.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal calculateDynamicProductPrice(Product product, Map<String, BigDecimal> dimensions,
+                                                   String currency) {
+        logger.info(">>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: {}, Currency: {}", product != null ? product.getId() : "null", currency);
+        BigDecimal basePrice = BigDecimal.ZERO;
+        try {
+            // --- Input Validations ---
+            if (product == null) throw new IllegalArgumentException("Product cannot be null.");
+            if (!product.isActive()) throw new IllegalArgumentException("Cannot calculate price for inactive product ID: " + product.getId());
+            if (!product.isCustomisable()) throw new IllegalArgumentException("Product ID " + product.getId() + " is not customisable.");
+            if (product.getConfigurator() == null) throw new IllegalArgumentException("Product ID " + product.getId() + " is missing configurator.");
+            if (dimensions == null) throw new IllegalArgumentException("Dimensions map cannot be null.");
+
+            ProductConfigurator config = product.getConfigurator();
+            BigDecimal length = dimensions.get("length");
+            BigDecimal width = dimensions.get("width"); // Expecting 'width' key for depth/width
+            BigDecimal height = dimensions.get("height");
+
+            if (length == null || width == null || height == null) {
+                throw new IllegalArgumentException("Missing one or more dimensions (length, width, height) for custom product calculation.");
+            }
+
+            // --- Dimension Range Validation ---
+            validateDimension("Length (Délka)", length, config.getMinLength(), config.getMaxLength());
+            validateDimension("Width (Šířka/Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
+            validateDimension("Height (Výška)", height, config.getMinHeight(), config.getMaxHeight());
+
+            // --- Price Calculation from Dimensions ---
+            BigDecimal pricePerCmH = getPriceForCurrency(config.getPricePerCmHeightCZK(), config.getPricePerCmHeightEUR(), currency, "Height Price/cm");
+            BigDecimal pricePerCmL = getPriceForCurrency(config.getPricePerCmLengthCZK(), config.getPricePerCmLengthEUR(), currency, "Length Price/cm");
+            BigDecimal pricePerCmW = getPriceForCurrency(config.getPricePerCmWidthCZK(), config.getPricePerCmWidthEUR(), currency, "Width Price/cm");
+
+            basePrice = height.multiply(pricePerCmH)
+                    .add(length.multiply(pricePerCmL))
+                    .add(width.multiply(pricePerCmW));
+
+            basePrice = basePrice.setScale(PRICE_SCALE, ROUNDING_MODE);
+            basePrice = basePrice.max(BigDecimal.ZERO); // Ensure price is not negative
+
+            logger.debug("[ProductService] Calculated BASE price from dimensions ({}): {}", currency, basePrice);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            logger.error("!!! [ProductService] Validation/Configuration Error in calculateDynamicProductPrice for Product ID {} ({}): {} !!!",
+                    product != null ? product.getId() : "null", currency, e.getMessage());
+            throw e; // Re-throw validation/state exceptions
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Unexpected Error in calculateDynamicProductPrice for Product ID {} ({}): {} !!!",
+                    product != null ? product.getId() : "null", currency, e.getMessage(), e);
+            // Re-throw as a runtime exception or a more specific custom exception if needed
+            throw new RuntimeException("Unexpected error calculating dynamic base price for product " + (product != null ? product.getId() : "null"), e);
+        }
+        logger.info(">>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: {}, Currency: {}. Vypočtená ZÁKLADNÍ cena: {}",
+                product != null ? product.getId() : "null", currency, basePrice);
+        return basePrice;
+    }
+    // --- END: Simplified calculateDynamicProductPrice ---
+
+    // --- Helper method: getPriceForCurrency (Remains the same) ---
+    private BigDecimal getPriceForCurrency(BigDecimal priceCZK, BigDecimal priceEUR, String currency, String priceName) {
+        BigDecimal price = EURO_CURRENCY.equals(currency) ? priceEUR : priceCZK;
+        if (price == null) {
+            // Differentiate between optional (e.g., fixed addon price) and required (e.g., price per cm)
+            boolean isRequired = priceName.contains("/cm") || priceName.contains("Unit"); // Assume unit/cm prices are required
+            if (isRequired) {
+                logger.error("CRITICAL: Required price configuration '{}' missing for currency {}. Cannot proceed.", priceName, currency);
+                throw new IllegalStateException(String.format("Required price configuration '%s' missing for currency %s", priceName, currency));
+            } else {
+                logger.warn("Optional price '{}' missing for currency {}. Using 0.", priceName, currency);
+                return BigDecimal.ZERO;
+            }
+        }
+        return price;
+    }
+
+    // --- Helper method: validateDimension (Remains the same) ---
+    private void validateDimension(String name, BigDecimal value, BigDecimal min, BigDecimal max) {
+        if (min == null || max == null) {
+            logger.error("Config error for dimension '{}': Missing min ({}) or max ({}) limit.", name, min, max);
+            throw new IllegalStateException("Config error: Missing limits for dimension " + name);
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Dimension " + name + " cannot be null.");
+        }
+        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
+            throw new IllegalArgumentException(String.format("%s (%s cm) is outside allowed range [%s, %s] cm.",
+                    name,
+                    value.stripTrailingZeros().toPlainString(),
+                    min.stripTrailingZeros().toPlainString(), max.stripTrailingZeros().toPlainString()));
+        }
+    }
+
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
             @CacheEvict(value = "productDetails", key = "#result.id", condition="#result != null"),
@@ -221,11 +315,15 @@ public class ProductService implements PriceConstants {
             } else {
                 product.setSlug(generateSlug(product.getSlug()));
             }
-            if (productRepository.existsBySlugIgnoreCase(product.getSlug())) {
-                throw new IllegalArgumentException("Produkt se slugem '" + product.getSlug() + "' již existuje.");
-            }
+            // Check for slug uniqueness before saving
+            productRepository.findBySlugIgnoreCase(product.getSlug()).ifPresent(existing -> {
+                throw new IllegalArgumentException("Produkt se slugem '" + product.getSlug() + "' již existuje (ID: " + existing.getId() + ").");
+            });
 
-            if (product.getAvailableTaxRates() == null || product.getAvailableTaxRates().isEmpty()) {
+            // Ensure at least one tax rate is assigned
+            if (CollectionUtils.isEmpty(product.getAvailableTaxRates())) {
+                // Attempt to load from IDs if provided, otherwise throw error
+                // This logic is usually handled in the controller before calling service
                 throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu daňovou sazbu.");
             }
 
@@ -233,70 +331,66 @@ public class ProductService implements PriceConstants {
                 if (product.getConfigurator() == null) {
                     ProductConfigurator defaultConfig = new ProductConfigurator();
                     defaultConfig.setProduct(product);
-                    // Nastavení výchozích hodnot, pokud nejsou z formuláře (příklad)
-                    initializeDefaultConfiguratorValues(defaultConfig); // Použití pomocné metody
+                    initializeDefaultConfiguratorValues(defaultConfig);
                     product.setConfigurator(defaultConfig);
                     logger.info("Creating default configurator for customisable product '{}'", product.getName());
                 } else {
                     product.getConfigurator().setProduct(product);
+                    // Maybe validate configurator values here?
+                    initializeDefaultConfiguratorValues(product.getConfigurator()); // Ensure defaults are set if some fields are null
                 }
+                // Clear standard attributes when creating a custom product
                 product.setAvailableDesigns(Collections.emptySet());
                 product.setAvailableGlazes(Collections.emptySet());
                 product.setAvailableRoofColors(Collections.emptySet());
-                logger.debug("Clearing standard attributes for customisable product '{}'", product.getName());
+                logger.debug("Clearing standard attributes for new customisable product '{}'", product.getName());
             } else {
+                // Clear custom attributes when creating a standard product
                 product.setConfigurator(null);
                 product.setAvailableAddons(Collections.emptySet());
-                logger.debug("Removing configurator and addons for standard product '{}'", product.getName());
+                logger.debug("Removing configurator and addons for new standard product '{}'", product.getName());
             }
 
-            ensureCollectionsInitialized(product);
+            ensureCollectionsInitialized(product); // Initialize all collection fields if null
 
             savedProduct = productRepository.save(product);
             logger.info(">>> [ProductService] Produkt '{}' úspěšně vytvořen s ID: {}. Opouštím createProduct.", savedProduct.getName(), savedProduct.getId());
 
         } catch (IllegalArgumentException | EntityNotFoundException e) {
             logger.warn("!!! [ProductService] Chyba validace nebo nenalezení entity v createProduct pro '{}': {} !!!", product.getName(), e.getMessage());
-            throw e;
+            throw e; // Re-throw to be handled by controller/advice
         } catch (Exception e) {
             logger.error("!!! [ProductService] Neočekávaná chyba v createProduct pro '{}': {} !!!", product.getName(), e.getMessage(), e);
+            // Wrap in a runtime exception or handle appropriately
             throw new RuntimeException("Neočekávaná chyba při vytváření produktu: " + e.getMessage(), e);
         }
         return savedProduct;
     }
 
-
-    // Zůstává stejné (aktualizace produktu)
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
-            // Invalidujeme podle ID a také podle SLUGU (protože se mohl změnit)
             @CacheEvict(value = "productDetails", key = "#id"),
-            // Pro slug potřebujeme načíst produkt NEBO použít složitější SpEL
-            // Pokud máme #productToUpdate, můžeme použít jeho slug
-            @CacheEvict(value = "productBySlug", key = "T(String).valueOf(#productToUpdate.slug).toLowerCase()", condition = "#productToUpdate != null"),
-            // Případně invalidovat všechny slugy (méně efektivní):
-            // @CacheEvict(value = "productBySlug", allEntries = true)
+            @CacheEvict(value = "productBySlug", allEntries = true) // Invalidate all slugs on update for simplicity
     })
     @Transactional
     public Optional<Product> updateProduct(Long id, Product productData, Product productToUpdate) {
         logger.info(">>> [ProductService] Vstupuji do updateProduct (s přednačtenou entitou). ID: {}", id);
         try {
-            // productToUpdate je entita načtená v controlleru, má nastavené ID a asociace (včetně TaxRates)
-            // productData obsahuje data z formuláře
+            // productToUpdate is the existing entity from DB
+            // productData contains new data from the form
 
-            // --- Validace slugu (pokud se mění) ---
+            // --- Slug Update & Validation ---
             String newSlug = StringUtils.hasText(productData.getSlug()) ? generateSlug(productData.getSlug()) : generateSlug(productData.getName());
             if (!newSlug.equalsIgnoreCase(productToUpdate.getSlug())) {
-                if (productRepository.existsBySlugIgnoreCaseAndIdNot(newSlug, id)) {
+                productRepository.findBySlugIgnoreCaseAndIdNot(newSlug, id).ifPresent(existing -> {
                     throw new IllegalArgumentException("Produkt se slugem '" + newSlug + "' již existuje.");
-                }
+                });
                 productToUpdate.setSlug(newSlug);
                 logger.debug("Updating slug for product ID {} to '{}'", id, newSlug);
             }
 
-            // --- Aktualizace základních polí z productData ---
+            // --- Update Basic Fields ---
             productToUpdate.setName(productData.getName());
-
             if (productData.getShortDescription() != null && productData.getShortDescription().length() > 500) {
                 throw new IllegalArgumentException("Krátký popis nesmí být delší než 500 znaků.");
             }
@@ -314,126 +408,124 @@ public class ProductService implements PriceConstants {
             productToUpdate.setMetaTitle(productData.getMetaTitle());
             productToUpdate.setMetaDescription(productData.getMetaDescription());
 
-            // --- Zpracování změny Customisable ---
+            // --- Handle Customisable Flag Change ---
             boolean wasCustom = productToUpdate.isCustomisable();
-            boolean isCustom = productData.isCustomisable(); // Překlep opraven na customisable
+            boolean isCustom = productData.isCustomisable();
             if (wasCustom != isCustom) {
                 logger.info("Product ID {} customisable status changed from {} to {}", id, wasCustom, isCustom);
-                productToUpdate.setCustomisable(isCustom); // Překlep opraven na customisable
-                if (isCustom) { // Stal se custom
-                    if (productData.getConfigurator() != null) {
-                        if (productToUpdate.getConfigurator() != null) {
-                            updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
-                            logger.debug("Updating existing configurator for product ID {}", id);
-                        } else {
-                            ProductConfigurator newConfig = productData.getConfigurator();
-                            newConfig.setProduct(productToUpdate); // Nastavíme vazbu
-                            productToUpdate.setConfigurator(newConfig);
-                            logger.debug("Creating new configurator for product ID {}", id);
-                        }
-                    } else if (productToUpdate.getConfigurator() == null) {
-                        ProductConfigurator defaultConfig = new ProductConfigurator();
-                        defaultConfig.setProduct(productToUpdate); // Nastavíme vazbu
-                        initializeDefaultConfiguratorValues(defaultConfig); // Inicializujeme hodnoty
-                        productToUpdate.setConfigurator(defaultConfig);
-                        logger.debug("Creating default configurator for newly customisable product ID {}", id);
+                productToUpdate.setCustomisable(isCustom);
+                if (isCustom) { // Becoming custom
+                    // Ensure configurator exists and is updated/created
+                    if (productToUpdate.getConfigurator() == null) {
+                        ProductConfigurator newConfig = (productData.getConfigurator() != null) ? productData.getConfigurator() : new ProductConfigurator();
+                        newConfig.setProduct(productToUpdate);
+                        initializeDefaultConfiguratorValues(newConfig); // Apply defaults/form data
+                        productToUpdate.setConfigurator(newConfig);
+                        logger.debug("Creating/Initializing configurator for newly customisable product ID {}", id);
+                    } else if (productData.getConfigurator() != null) {
+                        updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
+                        logger.debug("Updating existing configurator for product ID {}", id);
                     }
+                    // Clear standard attributes, keep addons/tax rates
                     productToUpdate.getAvailableDesigns().clear();
                     productToUpdate.getAvailableGlazes().clear();
                     productToUpdate.getAvailableRoofColors().clear();
-                    logger.debug("Clearing standard attributes for product ID {}", id);
-                } else { // Stal se standardním
-                    productToUpdate.setConfigurator(null);
-                    productToUpdate.getAvailableAddons().clear();
-                    logger.debug("Removing configurator and addons for newly standard product ID {}", id);
+                    logger.debug("Clearing standard attributes for product ID {} (became custom)", id);
+                } else { // Becoming standard
+                    productToUpdate.setConfigurator(null); // Remove configurator
+                    productToUpdate.getAvailableAddons().clear(); // Clear addons
+                    logger.debug("Removing configurator and addons for product ID {} (became standard)", id);
                 }
             } else if (isCustom && productData.getConfigurator() != null) {
-                // Pokud zůstal custom a přišla data konfigurátoru, aktualizujeme je
+                // Still custom, update configurator data if provided
                 if (productToUpdate.getConfigurator() != null) {
                     updateConfiguratorData(productToUpdate.getConfigurator(), productData.getConfigurator());
                     logger.debug("Updating configurator for existing custom product ID {}", id);
                 } else {
+                    // Should not happen if consistency is maintained, but handle it
                     ProductConfigurator newConfig = productData.getConfigurator();
-                    newConfig.setProduct(productToUpdate); // Nastavíme vazbu
+                    newConfig.setProduct(productToUpdate);
+                    initializeDefaultConfiguratorValues(newConfig);
                     productToUpdate.setConfigurator(newConfig);
                     logger.warn("Configurator was null for custom product ID {}. Creating new one based on form data.", id);
                 }
             }
 
-            // --- Aktualizace Asociací (včetně TaxRates) ---
-            // Předpokládáme, že asociace byly nastaveny na `productToUpdate` v controlleru
-
+            // --- Update Associations (TaxRates, Addons, Designs, etc.) ---
+            // These are typically handled by the controller which fetches IDs from the form,
+            // loads the entities, and sets them on productToUpdate *before* calling this service method.
+            // Example: productToUpdate.setAvailableTaxRates(loadedTaxRates);
+            //          productToUpdate.setAvailableAddons(loadedAddons);
+            // Ensure collections are not null before saving
             ensureCollectionsInitialized(productToUpdate);
 
-            // --- Uložení ---
+            // Validation: Check if standard product has standard attributes if needed
+            if (!isCustom && (CollectionUtils.isEmpty(productToUpdate.getAvailableDesigns()) || CollectionUtils.isEmpty(productToUpdate.getAvailableGlazes()) || CollectionUtils.isEmpty(productToUpdate.getAvailableRoofColors()))) {
+                logger.warn("Standard product ID {} might be missing some standard attributes (Designs/Glazes/RoofColors).", id);
+                // Depending on requirements, you might throw an exception or allow saving.
+            }
+            // Validation: Check if at least one tax rate is present
+            if (CollectionUtils.isEmpty(productToUpdate.getAvailableTaxRates())) {
+                throw new IllegalArgumentException("Produkt ID " + id + " musí mít přiřazenu alespoň jednu daňovou sazbu.");
+            }
+
+            // --- Save ---
             Product savedProduct = productRepository.save(productToUpdate);
-            logger.info("[ProductService] Produkt ID {} aktualizován.", id);
+            logger.info("[ProductService] Produkt ID {} úspěšně aktualizován.", id);
             return Optional.of(savedProduct);
 
         } catch (IllegalArgumentException | EntityNotFoundException e) {
             logger.warn("!!! [ProductService] Chyba validace nebo nenalezení entity v updateProduct pro ID {}: {} !!!", id, e.getMessage());
-            throw e;
+            throw e; // Re-throw
         } catch (Exception e) {
             logger.error("!!! [ProductService] Neočekávaná chyba v updateProduct pro ID {}: {} !!!", id, e.getMessage(), e);
             throw new RuntimeException("Neočekávaná chyba při aktualizaci produktu ID " + id + ": " + e.getMessage(), e);
         }
     }
 
-
-    // *** Začátek upravené metody ***
-    // Pomocná metoda pro update konfigurátoru - použije správné settery
+    // Pomocná metoda pro update konfigurátoru
     private void updateConfiguratorData(ProductConfigurator existingConfig, ProductConfigurator dataConfig) {
         if (existingConfig == null || dataConfig == null) {
             logger.warn("Skipping configurator update due to null existing or data object.");
             return;
         }
-        // Můžeme přidat logování ID produktu pro lepší sledování
         Long productId = (existingConfig.getProduct() != null) ? existingConfig.getProduct().getId() : null;
         logger.debug("Updating ProductConfigurator data for product ID: {}", productId);
 
-        // Limity rozměrů
         existingConfig.setMinLength(dataConfig.getMinLength());
         existingConfig.setMaxLength(dataConfig.getMaxLength());
-        existingConfig.setMinWidth(dataConfig.getMinWidth());   // Použije setMinWidth
-        existingConfig.setMaxWidth(dataConfig.getMaxWidth());   // Použije setMaxWidth
+        existingConfig.setMinWidth(dataConfig.getMinWidth());
+        existingConfig.setMaxWidth(dataConfig.getMaxWidth());
         existingConfig.setMinHeight(dataConfig.getMinHeight());
         existingConfig.setMaxHeight(dataConfig.getMaxHeight());
-        logger.trace("Product ID {}: Updated dimension limits.", productId);
 
-        // Kroky a výchozí hodnoty
         existingConfig.setStepLength(dataConfig.getStepLength());
-        existingConfig.setStepWidth(dataConfig.getStepWidth());   // Použije setStepWidth
+        existingConfig.setStepWidth(dataConfig.getStepWidth());
         existingConfig.setStepHeight(dataConfig.getStepHeight());
         existingConfig.setDefaultLength(dataConfig.getDefaultLength());
-        existingConfig.setDefaultWidth(dataConfig.getDefaultWidth());   // Použije setDefaultWidth
+        existingConfig.setDefaultWidth(dataConfig.getDefaultWidth());
         existingConfig.setDefaultHeight(dataConfig.getDefaultHeight());
-        logger.trace("Product ID {}: Updated dimension steps and defaults.", productId);
 
-        // Ceny za rozměry (za cm) - použije setPricePerCmWidth* (po přejmenování v entitě)
         existingConfig.setPricePerCmHeightCZK(dataConfig.getPricePerCmHeightCZK());
         existingConfig.setPricePerCmHeightEUR(dataConfig.getPricePerCmHeightEUR());
         existingConfig.setPricePerCmLengthCZK(dataConfig.getPricePerCmLengthCZK());
         existingConfig.setPricePerCmLengthEUR(dataConfig.getPricePerCmLengthEUR());
-        existingConfig.setPricePerCmWidthCZK(dataConfig.getPricePerCmWidthCZK()); // PŘEDPOKLÁDÁ PŘEJMENOVÁNÍ v entitě
-        existingConfig.setPricePerCmWidthEUR(dataConfig.getPricePerCmWidthEUR()); // PŘEDPOKLÁDÁ PŘEJMENOVÁNÍ v entitě
-        logger.trace("Product ID {}: Updated dimension prices.", productId);
+        existingConfig.setPricePerCmWidthCZK(dataConfig.getPricePerCmWidthCZK()); // Assumes renamed field
+        existingConfig.setPricePerCmWidthEUR(dataConfig.getPricePerCmWidthEUR()); // Assumes renamed field
 
-        // Ceny za volitelné prvky
+        // Prices for old hardcoded features (might be obsolete if these are addons now)
         existingConfig.setDesignPriceCZK(dataConfig.getDesignPriceCZK());
         existingConfig.setDesignPriceEUR(dataConfig.getDesignPriceEUR());
-        // Cena příčky stále používá 'Depth' - zkontroluj, zda je to záměr a zda pole existuje
         existingConfig.setDividerPricePerCmDepthCZK(dataConfig.getDividerPricePerCmDepthCZK());
         existingConfig.setDividerPricePerCmDepthEUR(dataConfig.getDividerPricePerCmDepthEUR());
         existingConfig.setGutterPriceCZK(dataConfig.getGutterPriceCZK());
         existingConfig.setGutterPriceEUR(dataConfig.getGutterPriceEUR());
         existingConfig.setShedPriceCZK(dataConfig.getShedPriceCZK());
         existingConfig.setShedPriceEUR(dataConfig.getShedPriceEUR());
-        logger.trace("Product ID {}: Updated feature prices.", productId);
+
+        logger.trace("Product ID {}: Updated configurator settings.", productId);
     }
-    // *** Konec upravené metody ***
 
-
-    // Zůstává stejné (inicializace kolekcí)
     private void ensureCollectionsInitialized(Product product) {
         if (product == null) return;
         if (product.getAvailableDesigns() == null) product.setAvailableDesigns(new HashSet<>());
@@ -443,160 +535,11 @@ public class ProductService implements PriceConstants {
         if (product.getAvailableTaxRates() == null) product.setAvailableTaxRates(new HashSet<>());
         if (product.getImages() == null) product.setImages(new HashSet<>());
         if (product.getDiscounts() == null) product.setDiscounts(new HashSet<>());
-        // Inicializace konfigurátoru se teď děje v controlleru nebo create/update metodách service
-        // if (product.getConfigurator() == null && product.isCustomisable()) {
-        //     product.setConfigurator(new ProductConfigurator()); // Neinicializujeme zde, aby se nepřepsala načtená data
-        // }
     }
 
-    // Zůstává stejné (soft delete)
-    @Caching(evict = {
-            @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
-            @CacheEvict(value = "productDetails", key = "#id"),
-            // Manuální invalidace podle slugu (složitější, pokud neznáme slug)
-            // @CacheEvict(value = "productBySlug", key = "#{#root.target.getProductSlug(#id)}", condition="#id != null")
-            // Jednodušší, ale méně efektivní:
-            @CacheEvict(value = "productBySlug", allEntries = true)
-    })
-    @Transactional
-    public void deleteProduct(Long id) {
-        logger.info(">>> [ProductService] Vstupuji do deleteProduct (soft delete). ID: {}", id);
-        try {
-            Product product = productRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Product with id " + id + " not found for deletion."));
-            if (!product.isActive()) {
-                logger.warn("[ProductService] Produkt ID {} ('{}') je již neaktivní.", id, product.getName());
-                return;
-            }
-            product.setActive(false);
-            productRepository.save(product);
-            logger.info("[ProductService] Produkt ID {} ('{}') označen jako neaktivní (soft delete).", id, product.getName());
-        } catch (EntityNotFoundException e) {
-            logger.error("!!! [ProductService] Produkt ID {} nenalezen pro smazání (soft delete).", id);
-            throw e;
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v deleteProduct (soft delete) pro ID {}: {} !!!", id, e.getMessage(), e);
-            throw new RuntimeException("Error deactivating product ID " + id, e); // Zabalíme do RuntimeException
-        }
-        logger.info(">>> [ProductService] Opouštím deleteProduct (soft delete). ID: {}", id);
-    }
-
-
-    // --- Výpočet ceny produktu "Na míru" - PŘEJMENOVÁNO ---
-    // *** Začátek upravené metody ***
-    @Transactional(readOnly = true)
-    public BigDecimal calculateDynamicProductPrice(Product product, Map<String, BigDecimal> dimensions,
-                                                   String customDesign, boolean hasDivider, // Tyto parametry pro doplňky mohou být zastaralé, pokud řešíme doplňky jinak
-                                                   boolean hasGutter, boolean hasGardenShed, // Tyto parametry pro doplňky mohou být zastaralé
-                                                   String currency) {
-        logger.info(">>> [ProductService] Vstupuji do calculateDynamicProductPrice. Product ID: {}, Currency: {}", product != null ? product.getId() : "null", currency);
-        BigDecimal finalPrice = BigDecimal.ZERO;
-        try {
-            if (product == null) throw new IllegalArgumentException("Product cannot be null.");
-            if (!product.isActive()) throw new IllegalArgumentException("Cannot calculate price for inactive product ID: " + product.getId());
-            if (!product.isCustomisable() || product.getConfigurator() == null) throw new IllegalArgumentException("Product ID " + product.getId() + " is not customisable or missing configurator.");
-            if (dimensions == null) throw new IllegalArgumentException("Dimensions map cannot be null.");
-
-            ProductConfigurator config = product.getConfigurator();
-            BigDecimal length = dimensions.get("length");
-            BigDecimal width = dimensions.get("width"); // Očekáváme 'width'
-            BigDecimal height = dimensions.get("height");
-
-            if (length == null || width == null || height == null) {
-                throw new IllegalArgumentException("Missing one or more dimensions (length, width, height) for custom product calculation.");
-            }
-
-            // Validace rozměrů - opraven label pro šířku
-            validateDimension("Length (Délka)", length, config.getMinLength(), config.getMaxLength());
-            validateDimension("Width (Šířka/Hloubka)", width, config.getMinWidth(), config.getMaxWidth()); // Opraven label
-            validateDimension("Height (Výška)", height, config.getMinHeight(), config.getMaxHeight());
-
-            // Načtení cenových konstant - opraveno na pricePerCmWidth*
-            BigDecimal pricePerCmH = getPriceForCurrency(config.getPricePerCmHeightCZK(), config.getPricePerCmHeightEUR(), currency, "Height Price/cm");
-            BigDecimal pricePerCmL = getPriceForCurrency(config.getPricePerCmLengthCZK(), config.getPricePerCmLengthEUR(), currency, "Length Price/cm");
-            BigDecimal pricePerCmW = getPriceForCurrency(config.getPricePerCmWidthCZK(), config.getPricePerCmWidthEUR(), currency, "Width Price/cm"); // Opraveno
-
-            // Výpočet ceny z rozměrů - opraveno na pricePerCmW
-            BigDecimal priceFromDimensions = height.multiply(pricePerCmH)
-                    .add(length.multiply(pricePerCmL))
-                    .add(width.multiply(pricePerCmW)); // Opraveno
-
-            // --- Zpracování cen za doplňky (tato část může být zastaralá, pokud doplňky řešíš jinak) ---
-            BigDecimal designPrice = getPriceForCurrency(config.getDesignPriceCZK(), config.getDesignPriceEUR(), currency, "Design Price");
-            BigDecimal dividerPrice = BigDecimal.ZERO;
-            if (hasDivider) {
-                BigDecimal dividerRate = getPriceForCurrency(config.getDividerPricePerCmDepthCZK(), config.getDividerPricePerCmDepthEUR(), currency, "Divider Price/cm");
-                dividerPrice = width.multiply(dividerRate); // Cena příčky podle šířky/hloubky
-            }
-            BigDecimal gutterPrice = BigDecimal.ZERO;
-            if (hasGutter) {
-                gutterPrice = getPriceForCurrency(config.getGutterPriceCZK(), config.getGutterPriceEUR(), currency, "Gutter Price");
-            }
-            BigDecimal shedPrice = BigDecimal.ZERO;
-            if (hasGardenShed) {
-                shedPrice = getPriceForCurrency(config.getShedPriceCZK(), config.getShedPriceEUR(), currency, "Shed Price");
-            }
-            // --- Konec zpracování cen za doplňky ---
-
-            logger.debug("[ProductService] Price from dimensions ({}): {}", currency, priceFromDimensions.setScale(PRICE_SCALE, ROUNDING_MODE));
-            // Logování cen doplňků (pokud se používají)
-            logger.debug("[ProductService] Price for design '{}' ({}): {}", customDesign, currency, designPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-            logger.debug("[ProductService] Price for divider ({}): {}", currency, dividerPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-            logger.debug("[ProductService] Price for gutter ({}, fixed): {}", currency, gutterPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-            logger.debug("[ProductService] Price for garden shed ({}, fixed): {}", currency, shedPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-
-            // Celková cena = rozměry + (ceny doplňků, pokud se používají)
-            finalPrice = priceFromDimensions.add(designPrice).add(dividerPrice).add(gutterPrice).add(shedPrice);
-            finalPrice = finalPrice.setScale(PRICE_SCALE, ROUNDING_MODE);
-            finalPrice = finalPrice.max(BigDecimal.ZERO);
-
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v calculateDynamicProductPrice pro Produkt ID {} ({}): {} !!!",
-                    product != null ? product.getId() : "null", currency, e.getMessage(), e);
-            throw e; // Rethrow
-        }
-        logger.info(">>> [ProductService] Opouštím calculateDynamicProductPrice. Product ID: {}, Currency: {}. Vypočtená cena: {}",
-                product != null ? product.getId() : "null", currency, finalPrice);
-        return finalPrice;
-    }
-    // *** Konec upravené metody ***
-
-
-    // Zůstává stejné
-    private BigDecimal getPriceForCurrency(BigDecimal priceCZK, BigDecimal priceEUR, String currency, String priceName) {
-        BigDecimal price = EURO_CURRENCY.equals(currency) ? priceEUR : priceCZK;
-        if (price == null) {
-            if (!priceName.contains("/cm")) {
-                logger.warn("Optional price '{}' missing for currency {}. Using 0.", priceName, currency);
-                return BigDecimal.ZERO;
-            } else {
-                throw new IllegalStateException(String.format("Required price configuration '%s' missing for currency %s", priceName, currency));
-            }
-        }
-        return price;
-    }
-
-
-    // *** Začátek upravené metody ***
-    // Pomocná metoda pro validaci rozměru - upraven label v chybě
-    private void validateDimension(String name, BigDecimal value, BigDecimal min, BigDecimal max) {
-        if (min == null || max == null) throw new IllegalStateException("Config error: Missing limits for dimension " + name);
-        if (value == null) throw new IllegalArgumentException("Dimension " + name + " cannot be null.");
-        if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
-            // Použije název dimenze (např. "Width (Šířka/Hloubka)") v chybové zprávě
-            throw new IllegalArgumentException(String.format("%s (%s cm) is outside allowed range [%s, %s] cm.",
-                    name, // Obsahuje název dimenze
-                    value.stripTrailingZeros().toPlainString(),
-                    min.stripTrailingZeros().toPlainString(), max.stripTrailingZeros().toPlainString()));
-        }
-    }
-    // *** Konec upravené metody ***
-
-
-    // Zůstává stejné (výchozí hodnoty konfigurátoru)
     private void initializeDefaultConfiguratorValues(ProductConfigurator configurator) {
-        if (configurator == null) return; // Pojistka
-        // Příklad hodnot, upravte podle reality
+        if (configurator == null) return;
+        // Apply defaults only if the field is currently null
         configurator.setMinLength(Optional.ofNullable(configurator.getMinLength()).orElse(new BigDecimal("100.00")));
         configurator.setMaxLength(Optional.ofNullable(configurator.getMaxLength()).orElse(new BigDecimal("500.00")));
         configurator.setMinWidth(Optional.ofNullable(configurator.getMinWidth()).orElse(new BigDecimal("50.00")));
@@ -604,38 +547,40 @@ public class ProductService implements PriceConstants {
         configurator.setMinHeight(Optional.ofNullable(configurator.getMinHeight()).orElse(new BigDecimal("150.00")));
         configurator.setMaxHeight(Optional.ofNullable(configurator.getMaxHeight()).orElse(new BigDecimal("300.00")));
 
-        // Ceny - použijí se přejmenovaná pole *Width*
         configurator.setPricePerCmHeightCZK(Optional.ofNullable(configurator.getPricePerCmHeightCZK()).orElse(new BigDecimal("14.00")));
         configurator.setPricePerCmLengthCZK(Optional.ofNullable(configurator.getPricePerCmLengthCZK()).orElse(new BigDecimal("99.00")));
-        configurator.setPricePerCmWidthCZK(Optional.ofNullable(configurator.getPricePerCmWidthCZK()).orElse(new BigDecimal("25.00"))); // Opraveno zde
-        configurator.setDividerPricePerCmDepthCZK(Optional.ofNullable(configurator.getDividerPricePerCmDepthCZK()).orElse(new BigDecimal("13.00"))); // Pro příčku zůstává Depth?
+        configurator.setPricePerCmWidthCZK(Optional.ofNullable(configurator.getPricePerCmWidthCZK()).orElse(new BigDecimal("25.00"))); // Assumes renamed field
+        configurator.setDividerPricePerCmDepthCZK(Optional.ofNullable(configurator.getDividerPricePerCmDepthCZK()).orElse(new BigDecimal("13.00")));
         configurator.setDesignPriceCZK(Optional.ofNullable(configurator.getDesignPriceCZK()).orElse(BigDecimal.ZERO));
         configurator.setGutterPriceCZK(Optional.ofNullable(configurator.getGutterPriceCZK()).orElse(new BigDecimal("1000.00")));
         configurator.setShedPriceCZK(Optional.ofNullable(configurator.getShedPriceCZK()).orElse(new BigDecimal("5000.00")));
 
         configurator.setPricePerCmHeightEUR(Optional.ofNullable(configurator.getPricePerCmHeightEUR()).orElse(new BigDecimal("0.56")));
         configurator.setPricePerCmLengthEUR(Optional.ofNullable(configurator.getPricePerCmLengthEUR()).orElse(new BigDecimal("3.96")));
-        configurator.setPricePerCmWidthEUR(Optional.ofNullable(configurator.getPricePerCmWidthEUR()).orElse(new BigDecimal("1.00"))); // Opraveno zde
-        configurator.setDividerPricePerCmDepthEUR(Optional.ofNullable(configurator.getDividerPricePerCmDepthEUR()).orElse(new BigDecimal("0.52"))); // Pro příčku zůstává Depth?
+        configurator.setPricePerCmWidthEUR(Optional.ofNullable(configurator.getPricePerCmWidthEUR()).orElse(new BigDecimal("1.00"))); // Assumes renamed field
+        configurator.setDividerPricePerCmDepthEUR(Optional.ofNullable(configurator.getDividerPricePerCmDepthEUR()).orElse(new BigDecimal("0.52")));
         configurator.setDesignPriceEUR(Optional.ofNullable(configurator.getDesignPriceEUR()).orElse(BigDecimal.ZERO));
         configurator.setGutterPriceEUR(Optional.ofNullable(configurator.getGutterPriceEUR()).orElse(new BigDecimal("40.00")));
         configurator.setShedPriceEUR(Optional.ofNullable(configurator.getShedPriceEUR()).orElse(new BigDecimal("200.00")));
 
-        // Kroky a výchozí hodnoty
         configurator.setStepLength(Optional.ofNullable(configurator.getStepLength()).orElse(BigDecimal.TEN));
         configurator.setStepWidth(Optional.ofNullable(configurator.getStepWidth()).orElse(BigDecimal.TEN));
         configurator.setStepHeight(Optional.ofNullable(configurator.getStepHeight()).orElse(BigDecimal.valueOf(5)));
-        // Pro výchozí hodnoty je lepší nechat null, pokud nejsou explicitně zadány,
-        // aby se použil minimální rozměr, pokud není default nastaven.
-        // configurator.setDefaultLength(Optional.ofNullable(configurator.getDefaultLength()).orElse(configurator.getMinLength()));
-        // configurator.setDefaultWidth(Optional.ofNullable(configurator.getDefaultWidth()).orElse(configurator.getMinWidth()));
-        // configurator.setDefaultHeight(Optional.ofNullable(configurator.getDefaultHeight()).orElse(configurator.getMinHeight()));
 
+        // Default dimensions should only be set if within min/max range, otherwise leave null (JS will use min)
+        if (configurator.getDefaultLength() != null && (configurator.getMinLength() != null && configurator.getDefaultLength().compareTo(configurator.getMinLength()) < 0 || configurator.getMaxLength() != null && configurator.getDefaultLength().compareTo(configurator.getMaxLength()) > 0)) {
+            configurator.setDefaultLength(null); // Invalidate if out of range
+        }
+        if (configurator.getDefaultWidth() != null && (configurator.getMinWidth() != null && configurator.getDefaultWidth().compareTo(configurator.getMinWidth()) < 0 || configurator.getMaxWidth() != null && configurator.getDefaultWidth().compareTo(configurator.getMaxWidth()) > 0)) {
+            configurator.setDefaultWidth(null); // Invalidate if out of range
+        }
+        if (configurator.getDefaultHeight() != null && (configurator.getMinHeight() != null && configurator.getDefaultHeight().compareTo(configurator.getMinHeight()) < 0 || configurator.getMaxHeight() != null && configurator.getDefaultHeight().compareTo(configurator.getMaxHeight()) > 0)) {
+            configurator.setDefaultHeight(null); // Invalidate if out of range
+        }
 
-        logger.info("Initialized default values for configurator linked to product ID {}", configurator.getProduct() != null ? configurator.getProduct().getId() : "(unlinked)");
+        logger.info("Applied/verified default values for configurator linked to product ID {}", configurator.getProduct() != null ? configurator.getProduct().getId() : "(unlinked)");
     }
 
-    // Zůstává stejné (generování slugu)
     public static String generateSlug(String input) {
         if (input == null || input.trim().isEmpty()) {
             logger.warn("Attempted to generate slug from empty or null input. Returning empty string.");
@@ -655,11 +600,10 @@ public class ProductService implements PriceConstants {
         return slug;
     }
 
-    // Zůstává stejné (přidání obrázku)
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
             @CacheEvict(value = "productDetails", key = "#productId"),
-            @CacheEvict(value = "productBySlug", allEntries = true) // Jednodušší invalidace pro slug
+            @CacheEvict(value = "productBySlug", allEntries = true)
     })
     @Transactional
     public Image addImageToProduct(Long productId, MultipartFile file, String altText, String titleText, Integer displayOrder) throws IOException {
@@ -668,57 +612,44 @@ public class ProductService implements PriceConstants {
             throw new IllegalArgumentException("Cannot add an empty image file.");
         }
 
-        String fileUrl = fileStorageService.storeFile(file, "products");
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId + " when adding image."));
+
+        String fileUrl = fileStorageService.storeFile(file, "products"); // Assuming file storage service returns URL or path
 
         Image newImage = new Image();
-        newImage.setUrl(fileUrl);
+        newImage.setUrl(fileUrl); // Store the URL/path returned by storage service
         newImage.setAltText(altText);
         newImage.setTitleText(titleText);
-        // Výpočet displayOrder přesuneme do addProductImage(Long, Image)
+        newImage.setProduct(product);
 
-        Image savedImage = addProductImage(productId, newImage);
-        logger.info(">>> [ProductService] Image successfully added and associated with product ID: {}", productId);
-        return savedImage;
-    }
-
-    // Zůstává stejné (pomocná metoda pro přidání obrázku)
-    @Transactional
-    public Image addProductImage(Long productId, Image image) {
-        logger.info(">>> [ProductService] Vstupuji do addProductImage (Image entity). Product ID: {}", productId);
-        Image savedImage = null;
-        try {
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId));
-            if (image == null || !StringUtils.hasText(image.getUrl())) {
-                throw new IllegalArgumentException("Image or URL missing.");
-            }
-            if (image.getDisplayOrder() == null) {
-                int maxOrder = product.getImages().stream()
-                        .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
-                        .max()
-                        .orElse(-1);
-                image.setDisplayOrder(maxOrder + 1);
-                logger.debug("Calculated next displayOrder: {}", image.getDisplayOrder());
-            }
-
-            image.setProduct(product);
-            savedImage = imageRepository.save(image);
-
-            // Explicitní přidání do kolekce produktu zde není nutné kvůli CascadeType.ALL a orphanRemoval=true
-
-            logger.info("[ProductService] Obrázek (Image entity) uložen (ID: {}) a přiřazen k produktu ID: {}", savedImage.getId(), productId);
-        } catch (Exception e) {
-            logger.error("!!! [ProductService] Chyba v addProductImage (Image entity) pro Produkt ID {}: {} !!!", productId, e.getMessage(), e);
-            throw e; // Propagujeme výjimku
+        // Calculate display order if not provided
+        if (displayOrder == null) {
+            int maxOrder = product.getImages().stream()
+                    .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
+                    .max()
+                    .orElse(-1);
+            newImage.setDisplayOrder(maxOrder + 1);
+            logger.debug("Calculated next displayOrder for new image: {}", newImage.getDisplayOrder());
+        } else {
+            newImage.setDisplayOrder(displayOrder);
         }
-        logger.info(">>> [ProductService] Opouštím addProductImage (Image entity). Product ID: {}", productId);
+
+        // Save the image entity
+        Image savedImage = imageRepository.save(newImage);
+        // Add to the product's collection (important if not using CascadeType.PERSIST/MERGE from Product side)
+        // product.getImages().add(savedImage); // Might not be needed if cascade/mappedBy is correct
+        logger.info(">>> [ProductService] Image successfully saved (ID: {}) and associated with product ID: {}", savedImage.getId(), productId);
         return savedImage;
     }
 
-    // Zůstává stejné (smazání obrázku)
+    // addProductImage might be redundant if addImageToProduct does the full logic
+    // @Transactional
+    // public Image addProductImage(Long productId, Image image) { ... }
+
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
-            @CacheEvict(value = "productDetails", allEntries = true), // Pro jistotu invalidujeme všechny detaily
+            @CacheEvict(value = "productDetails", allEntries = true),
             @CacheEvict(value = "productBySlug", allEntries = true)
     })
     @Transactional
@@ -729,20 +660,21 @@ public class ProductService implements PriceConstants {
                     .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
 
             String fileUrl = image.getUrl();
+            Long productId = image.getProduct() != null ? image.getProduct().getId() : null;
 
-            // Smazání entity z DB
-            // Pokud je Product.images nastaveno s orphanRemoval=true, stačí odebrat z kolekce
-            // Pokud ne, musíme smazat přímo
-            if (image.getProduct() != null) {
-                // Je bezpečnější nejdřív odebrat z kolekce (pokud je spravovaná)
-                // a pak smazat, nebo nechat na orphanRemoval
-                logger.debug("Deleting image {} associated with product ID {}", imageId, image.getProduct().getId());
-            }
+            // Explicitly remove from owning side if necessary (depends on mapping)
+            // if (image.getProduct() != null) {
+            //     image.getProduct().getImages().remove(image);
+            // }
+
+            // Delete the entity
             imageRepository.delete(image);
-            logger.info("[ProductService] Image entity ID {} deleted from database.", imageId);
+            logger.info("[ProductService] Image entity ID {} deleted from database (associated with product ID {}).", imageId, productId);
 
+            // Delete the physical file
             if (StringUtils.hasText(fileUrl)) {
-                fileStorageService.deleteFile(fileUrl);
+                fileStorageService.deleteFile(fileUrl); // Assumes deleteFile works with the stored URL/path
+                logger.info("[ProductService] Physical file deleted for image ID {}: {}", imageId, fileUrl);
             } else {
                 logger.warn("Cannot delete physical file for image ID {}: URL is missing.", imageId);
             }
@@ -757,21 +689,34 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Image deletion process finished for ID: {}", imageId);
     }
 
-
-    // Zůstává stejné (pomocná metoda pro načtení TaxRates)
-    private Set<TaxRate> loadAndAssignTaxRates(Set<Long> taxRateIds) {
-        if (CollectionUtils.isEmpty(taxRateIds)) {
-            throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu daňovou sazbu.");
+    // --- NOVĚ PŘIDANÁ METODA deleteProduct ---
+    @Caching(evict = {
+            @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
+            @CacheEvict(value = "productDetails", key = "#id"),
+            @CacheEvict(value = "productBySlug", allEntries = true) // Jednodušší invalidace pro slug
+    })
+    @Transactional
+    public void deleteProduct(Long id) {
+        logger.info(">>> [ProductService] Vstupuji do deleteProduct (soft delete). ID: {}", id);
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Product with id " + id + " not found for deletion."));
+            if (!product.isActive()) {
+                logger.warn("[ProductService] Produkt ID {} ('{}') je již neaktivní.", id, product.getName());
+                return; // Není co dělat
+            }
+            product.setActive(false); // Označíme jako neaktivní
+            productRepository.save(product); // Uložíme změnu
+            logger.info("[ProductService] Produkt ID {} ('{}') označen jako neaktivní (soft delete).", id, product.getName());
+        } catch (EntityNotFoundException e) {
+            logger.error("!!! [ProductService] Produkt ID {} nenalezen pro smazání (soft delete).", id);
+            throw e; // Propagujeme výjimku
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v deleteProduct (soft delete) pro ID {}: {} !!!", id, e.getMessage(), e);
+            throw new RuntimeException("Error deactivating product ID " + id, e); // Zabalíme do RuntimeException
         }
-        List<TaxRate> foundRates = taxRateRepository.findAllById(taxRateIds);
-        if (foundRates.size() != taxRateIds.size()) {
-            Set<Long> foundIds = foundRates.stream().map(TaxRate::getId).collect(Collectors.toSet());
-            Set<Long> missingIds = new HashSet<>(taxRateIds); // Vytvoříme kopii pro úpravu
-            missingIds.removeAll(foundIds);
-            logger.warn("Some tax rates were not found when assigning to product: IDs {}", missingIds);
-            throw new EntityNotFoundException("One or more tax rates not found: " + missingIds);
-        }
-        return new HashSet<>(foundRates);
+        logger.info(">>> [ProductService] Opouštím deleteProduct (soft delete). ID: {}", id);
     }
+
 
 } // Konec třídy ProductService

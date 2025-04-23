@@ -629,23 +629,22 @@ public class OrderService implements PriceConstants {
             return 0L;
         }
     }
-    // UPRAVENÁ METODA: Odebrán argument customDesign z volání productService
+    // V třídě OrderService
+
+    // UPRAVENÁ METODA: Volá productService.calculateDynamicProductPrice s novou signaturou
     private BigDecimal calculateBaseUnitPrice(Product product, CartItemDto itemDto, String currency) {
         if (itemDto.isCustom()) {
             if (itemDto.getCustomDimensions() == null) {
                 log.error("!!! Missing custom dimensions for price calculation of product ID {}", product.getId());
                 throw new IllegalArgumentException("Custom dimensions missing for price calculation.");
             }
-            // Volání BEZ customDesign Stringu
+            // --- OPRAVENÉ VOLÁNÍ calculateDynamicProductPrice ---
             BigDecimal dynamicPrice = productService.calculateDynamicProductPrice(
                     product,
-                    itemDto.getCustomDimensions(),
-                    null, // <-- customDesign String je nyní null
-                    itemDto.isCustomHasDivider(),
-                    itemDto.isCustomHasGutter(),
-                    itemDto.isCustomHasGardenShed(),
-                    currency
+                    itemDto.getCustomDimensions(), // Mapa rozměrů
+                    currency                       // Měna
             );
+            // --- KONEC OPRAVY ---
             return Optional.ofNullable(dynamicPrice).orElse(BigDecimal.ZERO);
         } else {
             BigDecimal price = EURO_CURRENCY.equals(currency) ? product.getBasePriceEUR() : product.getBasePriceCZK();

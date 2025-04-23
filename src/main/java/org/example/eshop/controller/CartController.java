@@ -139,7 +139,8 @@ public class CartController implements PriceConstants {
         return "kosik"; // Return the name of the cart view template
     }
 
-    // --- Kompletní metoda addToCart - OPRAVENO pro výběr DPH a generateCartItemId ---
+    // V třídě CartController
+
     @PostMapping("/pridat")
     public String addToCart(@ModelAttribute("cartItemForm") @Valid CartItemDto cartItemDto,
                             BindingResult bindingResult,
@@ -282,22 +283,29 @@ public class CartController implements PriceConstants {
             if (selectedRoofColor.getPriceSurchargeEUR() != null) attributeSurchargeEUR = attributeSurchargeEUR.add(selectedRoofColor.getPriceSurchargeEUR());
             log.debug("Calculated attribute surcharges: CZK={}, EUR={}", attributeSurchargeCZK, attributeSurchargeEUR);
 
-            // Výpočet základní ceny (kód zůstává)
+            // Výpočet základní ceny
             if (cartItemDto.isCustom()) {
                 if (product.getConfigurator() == null) {
                     throw new IllegalStateException("Produkt '" + product.getName() + "' je konfigurovatelný, ale chybí data konfigurátoru.");
                 }
                 // Nastavení custom atributů na CartItem
                 cartItem.setCustomDimensions(cartItemDto.getCustomDimensions());
-                cartItem.setCustomRoofOverstep(cartItemDto.getCustomRoofOverstep());
-                cartItem.setCustomHasDivider(cartItemDto.isCustomHasDivider());
-                cartItem.setCustomHasGutter(cartItemDto.isCustomHasGutter());
-                cartItem.setCustomHasGardenShed(cartItemDto.isCustomHasGardenShed());
+                // Poznámka: Odstranili jsme nastavování customHasDivider atd. zde,
+                // protože tyto by měly být reprezentovány jako AddonDto v cartItemDto.getSelectedAddons()
 
-                // Výpočet dynamické ceny
-                baseUnitPriceCZK = productService.calculateDynamicProductPrice(product, cartItem.getCustomDimensions(), null, cartItem.isCustomHasDivider(), cartItem.isCustomHasGutter(), cartItem.isCustomHasGardenShed(), "CZK");
-                baseUnitPriceEUR = productService.calculateDynamicProductPrice(product, cartItem.getCustomDimensions(), null, cartItem.isCustomHasDivider(), cartItem.isCustomHasGutter(), cartItem.isCustomHasGardenShed(), "EUR");
-                log.debug("Calculated dynamic base price for custom product: CZK={}, EUR={}", baseUnitPriceCZK, baseUnitPriceEUR);
+                // --- OPRAVENÉ VOLÁNÍ calculateDynamicProductPrice ---
+                baseUnitPriceCZK = productService.calculateDynamicProductPrice(
+                        product,
+                        cartItem.getCustomDimensions(), // Mapa rozměrů
+                        "CZK"                           // Měna
+                );
+                baseUnitPriceEUR = productService.calculateDynamicProductPrice(
+                        product,
+                        cartItem.getCustomDimensions(), // Mapa rozměrů
+                        "EUR"                           // Měna
+                );
+                // --- KONEC OPRAVY ---
+                log.debug("Calculated dynamic BASE price for custom product: CZK={}, EUR={}", baseUnitPriceCZK, baseUnitPriceEUR);
 
             } else {
                 // Standardní produkt
@@ -333,16 +341,21 @@ public class CartController implements PriceConstants {
                         // Přidáme addon, jen pokud existuje v DB, je aktivní A je povolený pro produkt
                         if (dbAddon != null && allowedAddonIds.contains(dbAddon.getId())) {
                             reqAddon.setAddonName(dbAddon.getName()); // Uložíme název
-                            processedAddons.add(reqAddon);
-                            // Přičteme cenu
-                            if (dbAddon.getPriceCZK() != null) addonsPriceCZK = addonsPriceCZK.add(dbAddon.getPriceCZK().multiply(BigDecimal.valueOf(reqAddon.getQuantity())));
-                            if (dbAddon.getPriceEUR() != null) addonsPriceEUR = addonsPriceEUR.add(dbAddon.getPriceEUR().multiply(BigDecimal.valueOf(reqAddon.getQuantity())));
+                            // Vypočteme cenu addonu ZDE (předpokládáme FIXNÍ cenu addonu pro jednoduchost)
+                            // TODO: Rozšířit pro dimenzionální ceny addonů, pokud je třeba
+                            BigDecimal addonUnitPriceCzk = dbAddon.getPriceCZK() != null ? dbAddon.getPriceCZK() : BigDecimal.ZERO;
+                            BigDecimal addonUnitPriceEur = dbAddon.getPriceEUR() != null ? dbAddon.getPriceEUR() : BigDecimal.ZERO;
+
+                            addonsPriceCZK = addonsPriceCZK.add(addonUnitPriceCzk.multiply(BigDecimal.valueOf(reqAddon.getQuantity())));
+                            addonsPriceEUR = addonsPriceEUR.add(addonUnitPriceEur.multiply(BigDecimal.valueOf(reqAddon.getQuantity())));
+
+                            processedAddons.add(reqAddon); // Přidáme do seznamu zpracovaných
                         } else {
                             log.warn("Requested addon ID {} is not valid, not active, or not allowed for product ID {}. Skipping.", reqAddon.getAddonId(), product.getId());
                         }
                     }
                     cartItem.setSelectedAddons(processedAddons);
-                    log.debug("Total addon prices calculated: CZK={}, EUR={}", addonsPriceCZK, addonsPriceEUR);
+                    log.debug("Total addon prices calculated (assuming FIXED pricing): CZK={}, EUR={}", addonsPriceCZK, addonsPriceEUR);
                 } else { cartItem.setSelectedAddons(Collections.emptyList()); }
             } else { cartItem.setSelectedAddons(Collections.emptyList()); }
 
@@ -367,10 +380,13 @@ public class CartController implements PriceConstants {
                     cartItem.getSelectedRoofColorName(), // String selectedRoofColorName
                     cartItem.getCustomDimensions(),      // Map<String, BigDecimal> customDimensions
                     cartItem.getSelectedTaxRateId(),     // Long selectedTaxRateId  <-- NOVÝ PARAMETR
-                    cartItem.getCustomRoofOverstep(),    // String customRoofOverstep
-                    cartItem.isCustomHasDivider(),       // boolean customHasDivider
-                    cartItem.isCustomHasGutter(),        // boolean customHasGutter
-                    cartItem.isCustomHasGardenShed(),    // boolean customHasGardenShed
+                    // --- Zde předáváme hodnoty z cartItem, které by měly reprezentovat dříve vybrané Addony ---
+                    // Je třeba zajistit, aby `cartItem.getSelectedAddons()` obsahoval DTOs pro Divider, Gutter, Shed, pokud byly vybrány jako Addony
+                    // Pro zjednodušení zde PŘEDPOKLÁDÁME, že tyto informace už nejsou relevantní pro ID košíku, pokud jsou řešeny genericky přes Addons
+                    cartItem.getCustomRoofOverstep(),    // String customRoofOverstep (pokud zůstává)
+                    false, // cartItem.isCustomHasDivider()  // Nahrazeno Addonem? Předáme false
+                    false, // cartItem.isCustomHasGutter()   // Nahrazeno Addonem? Předáme false
+                    false, // cartItem.isCustomHasGardenShed()// Nahrazeno Addonem? Předáme false
                     cartItem.getSelectedAddons()         // List<AddonDto> selectedAddons
             );
             cartItem.setCartItemId(generatedCartItemId);

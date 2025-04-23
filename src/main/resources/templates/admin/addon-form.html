@@ -5,7 +5,9 @@
 <head>
     <title th:text="${pageTitle ?: 'Správa Doplňku'}">Správa Doplňku</title>
     <style>
-        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+        .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block !important; /* Ensure feedback is shown */ margin-top: 0.25rem; }
+        .price-field-group { border: 1px solid #eee; padding: 1rem; margin-bottom: 1rem; border-radius: .25rem; background-color: #f8f9fa; }
+        .hidden-fields { display: none; }
     </style>
 </head>
 <body>
@@ -29,54 +31,129 @@
           th:action="${addon.id == null} ? @{/admin/addons} : @{/admin/addons/{id}(id=${addon.id})}"
           method="post" novalidate>
 
+        <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger" role="alert">
+            Prosím opravte následující chyby:
+            <ul>
+                <li th:each="err : ${#fields.errors('*')}" th:text="${err}"></li>
+            </ul>
+        </div>
         <input type="hidden" name="_method" th:if="${addon.id != null}" value="POST"/>
+        <input type="hidden" th:field="*{id}" /> <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
+                <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
+            </div>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Název <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" th:errorclass="is-invalid" id="name" th:field="*{name}" required>
-                    <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback" th:errors="*{name}">Chyba názvu</div>
-                </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">Kategorie <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" th:errorclass="is-invalid" id="category" th:field="*{category}" required placeholder="Např. Poličky, Nátěr, Montáž...">
+                <div id="categoryHelp" class="form-text">Slouží ke grupování doplňků v konfigurátoru.</div>
+                <div th:if="${#fields.hasErrors('category')}" class="invalid-feedback" th:errors="*{category}">Chyba kategorie</div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="sku" class="form-label">SKU</label>
-                    <input type="text" class="form-control" th:errorclass="is-invalid" id="sku" th:field="*{sku}">
-                    <div id="skuHelp" class="form-text">Unikátní kód produktu (nepovinné).</div>
-                    <div th:if="${#fields.hasErrors('sku')}" class="invalid-feedback" th:errors="*{sku}">Chyba SKU</div>
-                </div>
+            <div class="mb-3">
+                <label for="sku" class="form-label">SKU</label>
+                <input type="text" class="form-control" th:errorclass="is-invalid" id="sku" th:field="*{sku}">
+                <div id="skuHelp" class="form-text">Unikátní kód produktu (nepovinné).</div>
+                <div th:if="${#fields.hasErrors('sku')}" class="invalid-feedback" th:errors="*{sku}">Chyba SKU</div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="description" class="form-label">Popis</label>
-                    <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
-                    <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}">Chyba popisu</div>
-                </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Popis</label>
+                <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                <div th:if="${#fields.hasErrors('description')}" class="invalid-feedback" th:errors="*{description}">Chyba popisu</div>
+            </div>
 
+            <hr>
+            <h5>Cenotvorba</h5>
+
+            <div class="mb-3">
+                <label for="pricingType" class="form-label">Typ ceny <span class="text-danger">*</span></label>
+                <select class="form-select" th:errorclass="is-invalid" id="pricingType" th:field="*{pricingType}" required onchange="togglePriceFields()">
+                    <option value="FIXED">Fixní cena</option>
+                    <option value="PER_CM_WIDTH">Cena za cm šířky/hloubky</option>
+                    <option value="PER_CM_LENGTH">Cena za cm délky</option>
+                    <option value="PER_CM_HEIGHT">Cena za cm výšky</option>
+                    <option value="PER_SQUARE_METER">Cena za m² (délka * šířka/hloubka)</option>
+                </select>
+                <div th:if="${#fields.hasErrors('pricingType')}" class="invalid-feedback" th:errors="*{pricingType}">Chyba typu ceny</div>
+            </div>
+
+            <div id="fixedPriceFields" class="price-field-group">
+                <h6>Fixní cena</h6>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="priceCZK" class="form-label">Cena CZK (bez DPH) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceCZK" th:field="*{priceCZK}" required placeholder="Např. 350.00">
+                        <label for="priceCZK" class="form-label">Cena CZK (bez DPH)</label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceCZK" th:field="*{priceCZK}" placeholder="Např. 350.00">
                         <div th:if="${#fields.hasErrors('priceCZK')}" class="invalid-feedback" th:errors="*{priceCZK}">Chyba ceny CZK</div>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="priceEUR" class="form-label">Cena EUR (bez DPH) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceEUR" th:field="*{priceEUR}" required placeholder="Např. 15.00">
+                        <label for="priceEUR" class="form-label">Cena EUR (bez DPH)</label>
+                        <input type="number" step="0.01" class="form-control" th:errorclass="is-invalid" id="priceEUR" th:field="*{priceEUR}" placeholder="Např. 15.00">
                         <div th:if="${#fields.hasErrors('priceEUR')}" class="invalid-feedback" th:errors="*{priceEUR}">Chyba ceny EUR</div>
                     </div>
                 </div>
+                <div th:if="${#fields.hasErrors('fixedPriceValid')}" class="alert alert-warning p-2 mt-2 error" th:errors="*{fixedPriceValid}"></div>
+            </div>
 
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
-                    <label class="form-check-label" for="active">Aktivní</label>
+            <div id="dimensionalPriceFields" class="price-field-group hidden-fields">
+                <h6>Cena za jednotku</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="pricePerUnitCZK" class="form-label">Cena za jednotku CZK (bez DPH)</label>
+                        <input type="number" step="0.0001" class="form-control" th:errorclass="is-invalid" id="pricePerUnitCZK" th:field="*{pricePerUnitCZK}" placeholder="Např. 0.5000">
+                        <div id="unitHelpCZK" class="form-text">Jednotka závisí na Typu ceny (cm nebo m²).</div>
+                        <div th:if="${#fields.hasErrors('pricePerUnitCZK')}" class="invalid-feedback" th:errors="*{pricePerUnitCZK}">Chyba ceny za jedn. CZK</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="pricePerUnitEUR" class="form-label">Cena za jednotku EUR (bez DPH)</label>
+                        <input type="number" step="0.0001" class="form-control" th:errorclass="is-invalid" id="pricePerUnitEUR" th:field="*{pricePerUnitEUR}" placeholder="Např. 0.0200">
+                        <div id="unitHelpEUR" class="form-text">Jednotka závisí na Typu ceny (cm nebo m²).</div>
+                        <div th:if="${#fields.hasErrors('pricePerUnitEUR')}" class="invalid-feedback" th:errors="*{pricePerUnitEUR}">Chyba ceny za jedn. EUR</div>
+                    </div>
                 </div>
+                <div th:if="${#fields.hasErrors('dimensionalPriceValid')}" class="alert alert-warning p-2 mt-2 error" th:errors="*{dimensionalPriceValid}"></div>
+            </div>
 
-                <div class="d-flex justify-content-end">
-                    <a th:href="@{/admin/addons}" class="btn btn-secondary me-2">Zrušit</a>
-                    <button type="submit" class="btn btn-primary">Uložit Doplněk</button>
-                </div>
+            <hr>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
+                <label class="form-check-label" for="active">Aktivní</label>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <a th:href="@{/admin/addons}" class="btn btn-secondary me-2">Zrušit</a>
+                <button type="submit" class="btn btn-primary">Uložit Doplněk</button>
             </div>
         </div>
+    </div>
     </form>
+
+    <script>
+        function togglePriceFields() {
+            const pricingType = document.getElementById('pricingType').value;
+            const fixedFields = document.getElementById('fixedPriceFields');
+            const dimensionalFields = document.getElementById('dimensionalPriceFields');
+
+            if (pricingType === 'FIXED') {
+                fixedFields.classList.remove('hidden-fields');
+                dimensionalFields.classList.add('hidden-fields');
+                // Optionally clear dimensional fields
+                // document.getElementById('pricePerUnitCZK').value = '';
+                // document.getElementById('pricePerUnitEUR').value = '';
+            } else {
+                fixedFields.classList.add('hidden-fields');
+                dimensionalFields.classList.remove('hidden-fields');
+                // Optionally clear fixed fields
+                // document.getElementById('priceCZK').value = '';
+                // document.getElementById('priceEUR').value = '';
+            }
+        }
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', togglePriceFields);
+    </script>
 </section>
 
 </body>

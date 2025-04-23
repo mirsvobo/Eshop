@@ -45,5 +45,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // findAllByActiveTrue() - OPRAVENO: odstraněn "taxRate" z EntityGraph
     @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"}) // <-- Odstraněno "taxRate"
     List<Product> findAllByActiveTrue();
+
+    Optional<Object> findBySlugIgnoreCaseAndIdNot(String newSlug, Long id);
 }
 

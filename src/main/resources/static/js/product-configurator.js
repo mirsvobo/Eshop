@@ -1,8 +1,8 @@
 // Soubor: src/main/resources/static/js/product-configurator.js
-// Verze: 1.9 - Odstraněna kontrola existence elementů v calculatePriceApiCall + logika pro select atributy
+// Verze: 2.0 - Podpora pro seskupené doplňky a různé typy cenotvorby
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("[LOG] Configurator script starting (v1.9)...");
+    console.log("[LOG] Configurator script starting (v2.0)...");
 
     const formElement = document.getElementById('add-to-cart-form');
     if (!formElement) {
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     console.log("[LOG] Form element found.");
 
-    // --- Cache pro elementy (PŘESUNUTO NAHORU) ---
+    // --- Cache pro elementy ---
     console.log("[LOG] Caching UI elements...");
     const priceDisplay = document.getElementById('product-price-display');
     const spinner = document.getElementById('price-spinner');
@@ -24,25 +24,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const lengthValueDisplay = document.getElementById('customLengthValueDisplay');
     const widthValueDisplay = document.getElementById('customWidthValueDisplay');
     const heightValueDisplay = document.getElementById('customHeightValueDisplay');
-    const designSelect = document.getElementById('designSelect');       // Pro <select>
-    const glazeSelect = document.getElementById('glazeSelect');         // Pro <select>
-    const roofColorSelect = document.getElementById('roofColorSelect'); // Pro <select>
-    const hasDividerCheckbox = document.getElementById('customHasDivider');
-    const hasGutterCheckbox = document.getElementById('customHasGutter');
-    const hasShedCheckbox = document.getElementById('customHasGardenShed');
-    console.log("[LOG] UI elements cached.");
-    // Zkontrolujeme, jestli se našly klíčové elementy pro cenu
-    if (!priceDisplay || !spinner || !errorDiv || !submitButton) {
-        console.error("[ERROR] One or more core UI elements for price display/control not found during init!");
-        // Můžeme zde zobrazit nějakou obecnou chybu uživateli, pokud prvky chybí
-    }
-    if (!lengthSlider || !widthSlider || !heightSlider || !lengthValueDisplay || !widthValueDisplay || !heightValueDisplay) {
-        console.warn("[WARN] One or more dimension slider/display elements not found.");
-    }
-    if (!designSelect || !glazeSelect || !roofColorSelect) {
-        console.warn("[WARN] One or more attribute select elements not found.");
-    }
+    const designSelect = document.getElementById('designSelect');
+    const glazeSelect = document.getElementById('glazeSelect');
+    const roofColorSelect = document.getElementById('roofColorSelect');
+    // Element pro skrytá pole vybraných doplňků
+    const hiddenAddonsContainer = document.getElementById('hidden-selected-addons');
 
+    console.log("[LOG] UI elements cached.");
+    // Kontrola klíčových prvků
+    if (!priceDisplay || !spinner || !errorDiv || !submitButton || !hiddenAddonsContainer) {
+        console.error("[ERROR] One or more core UI elements for price/control/hidden fields not found during init!");
+    }
+    // ... (další kontroly prvků) ...
 
     // --- Načtení dat z data-* atributů ---
     const productJsData = { id: formElement.dataset.productId ? parseInt(formElement.dataset.productId, 10) : null };
@@ -54,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const initialErrorFromServer = formElement.dataset.initialError || null;
     const calculatePriceUrl = formElement.dataset.calculateUrl || '/api/product/calculate-price';
     const currencySymbol = formElement.dataset.currencySymbol || 'Kč';
-    const currentGlobalCurrency = currencySymbol === '€' ? 'EUR' : 'CZK'; // Odvození kódu měny
+    const currentGlobalCurrency = currencySymbol === '€' ? 'EUR' : 'CZK';
     console.log(`[LOG] Parsed Data: productID=${productJsData.id}, initialUnitCZK=${currentUnitPriceCZK}, initialUnitEUR=${currentUnitPriceEUR}, initialError=${initialErrorFromServer}, apiURL=${calculatePriceUrl}, currencySymbol=${currencySymbol}, globalCurrency=${currentGlobalCurrency}`);
 
     if (!productJsData || !productJsData.id) {
@@ -68,31 +61,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const DEBOUNCE_DELAY = 400; // ms
 
     // --- Funkce pro UI ---
-    function changeMainImage(thumbElement) {
-        // console.log("[LOG] changeMainImage called for element:", thumbElement);
-        if (!thumbElement) return;
-        const imageUrl = thumbElement.getAttribute('data-img-url');
-        const mainImage = document.getElementById('mainProductImage');
-        if (imageUrl && mainImage) {
-            // console.log(`[LOG] Setting main image src to: ${imageUrl}`);
-            mainImage.src = imageUrl;
-            document.querySelectorAll('.product-thumbnails img').forEach(img => img.classList.remove('active'));
-            thumbElement.classList.add('active');
-        } else {
-            console.warn("[WARN] Could not change main image. Image URL or main image element missing.");
-        }
-    }
-    window.changeMainImage = changeMainImage;
-
+    // ... (changeMainImage, updateRangeValueDisplay, formatCurrency - zůstávají stejné) ...
     function updateRangeValueDisplay(sliderElement, displayElement) {
         if (sliderElement && displayElement) {
             const valueCm = parseFloat(sliderElement.value);
             if (!isNaN(valueCm)) {
-                const formattedValue = valueCm.toFixed(1).replace('.', ',');
+                // Použijeme toFixed(0) pro celá čísla, pokud krok je celé číslo, jinak toFixed(1)
+                const step = parseFloat(sliderElement.step) || 1;
+                const decimals = (step % 1 === 0) ? 0 : 1;
+                const formattedValue = valueCm.toFixed(decimals).replace('.', ',');
                 displayElement.textContent = formattedValue;
             } else {
                 console.warn(`[WARN] Invalid value from slider ${sliderElement.id}: ${sliderElement.value}`);
-                displayElement.textContent = '???,?';
+                displayElement.textContent = '???';
             }
         }
     }
@@ -105,28 +86,12 @@ document.addEventListener('DOMContentLoaded', function() {
         catch (e) { console.error("[ERROR] Error formatting currency:", { amount, currencyCode, locale }, e); const fixedAmount = amount.toFixed(2).replace('.', ','); return `${fixedAmount} ${currencyCode === 'EUR' ? '€' : 'Kč'}`; }
     }
 
-    function getSelectedFixedAddonsPrice(currency) {
-        // console.log(`[LOG] Calculating fixed addons price for currency: ${currency}`);
-        let totalAddonPrice = 0;
-        document.querySelectorAll('.fixed-addon-checkbox:checked').forEach(checkbox => {
-            const addonId = checkbox.value;
-            const priceInputId = currency === 'EUR' ? `addon_price_eur_${addonId}` : `addon_price_czk_${addonId}`;
-            const priceInput = document.getElementById(priceInputId);
-            if (priceInput?.value) {
-                const price = parseFloat(priceInput.value);
-                if (!isNaN(price) && price > 0) { totalAddonPrice += price; }
-                else { /* console.warn(`[WARN] Invalid or zero price for addon ${addonId} (${currency}): ${priceInput.value}`); */ }
-            } else { /* console.warn(`[WARN] Price input not found for addon ${addonId} (${currency}): ${priceInputId}`); */ }
-        });
-        // console.log(`[LOG] Total fixed addons price (${currency}): ${totalAddonPrice.toFixed(2)}`);
-        return totalAddonPrice;
-    }
+    // --- Funkce pro výpočet ceny ---
 
     function getSelectedAttributeSurcharge(currency) {
         let totalSurcharge = 0;
         const selects = [designSelect, glazeSelect, roofColorSelect];
         // console.log(`[LOG] Calculating attribute surcharge for currency: ${currency}`);
-
         selects.forEach(select => {
             if (select && select.value && select.selectedIndex >= 0) {
                 const selectedOption = select.options[select.selectedIndex];
@@ -135,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     const price = parseFloat(selectedOption.getAttribute(priceAttr) || '0');
                     if (!isNaN(price) && price > 0) {
                         totalSurcharge += price;
-                        // console.log(`[LOG] Surcharge added for ${select.id} (${currency}): ${price.toFixed(2)}`);
                     }
                 }
             }
@@ -144,26 +108,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return totalSurcharge;
     }
 
+    // NOVÁ FUNKCE pro výpočet ceny doplňků
+    function getSelectedAddonsPrice(currency) {
+        console.log(`[LOG] Calculating addons price for currency: ${currency}`);
+        let totalAddonPrice = 0;
+        const addonSelects = document.querySelectorAll('.addon-category-select');
+
+        addonSelects.forEach(select => {
+            if (select.value && select.selectedIndex > 0) { // Index > 0 to skip '-- Bez doplňku --'
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption) {
+                    const pricingType = selectedOption.getAttribute('data-pricing-type');
+                    const priceAttr = currency === 'EUR' ? 'data-price-eur' : 'data-price-czk';
+                    const pricePerUnitAttr = currency === 'EUR' ? 'data-price-per-unit-eur' : 'data-price-per-unit-czk';
+
+                    if (pricingType === 'FIXED') {
+                        const price = parseFloat(selectedOption.getAttribute(priceAttr) || '0');
+                        if (!isNaN(price)) {
+                            totalAddonPrice += price;
+                            console.log(`[LOG] Addon FIXED price added (${currency}): ${price.toFixed(2)} for ${select.id}`);
+                        }
+                    } else if (pricingType.startsWith('PER_CM_')) {
+                        const pricePerUnit = parseFloat(selectedOption.getAttribute(pricePerUnitAttr) || '0');
+                        if (!isNaN(pricePerUnit)) {
+                            let dimensionValue = 0;
+                            if (pricingType === 'PER_CM_WIDTH' && widthSlider) {
+                                dimensionValue = parseFloat(widthSlider.value) || 0;
+                            } else if (pricingType === 'PER_CM_LENGTH' && lengthSlider) {
+                                dimensionValue = parseFloat(lengthSlider.value) || 0;
+                            } else if (pricingType === 'PER_CM_HEIGHT' && heightSlider) {
+                                dimensionValue = parseFloat(heightSlider.value) || 0;
+                            }
+                            if (dimensionValue > 0) {
+                                const addonDimPrice = dimensionValue * pricePerUnit;
+                                totalAddonPrice += addonDimPrice;
+                                console.log(`[LOG] Addon DIMENSIONAL price added (${currency}): ${addonDimPrice.toFixed(2)} (${dimensionValue} * ${pricePerUnit}) for ${select.id}`);
+                            }
+                        }
+                    } else if (pricingType === 'PER_SQUARE_METER') {
+                        const pricePerUnit = parseFloat(selectedOption.getAttribute(pricePerUnitAttr) || '0');
+                        if (!isNaN(pricePerUnit) && lengthSlider && widthSlider) {
+                            const lengthCm = parseFloat(lengthSlider.value) || 0;
+                            const widthCm = parseFloat(widthSlider.value) || 0;
+                            if(lengthCm > 0 && widthCm > 0) {
+                                const areaM2 = (lengthCm / 100.0) * (widthCm / 100.0); // Convert cm to m
+                                const addonAreaPrice = areaM2 * pricePerUnit;
+                                totalAddonPrice += addonAreaPrice;
+                                console.log(`[LOG] Addon AREA price added (${currency}): ${addonAreaPrice.toFixed(4)} (${areaM2.toFixed(4)}m2 * ${pricePerUnit}) for ${select.id}`);
+                            }
+                        }
+                    }
+                    // Add other pricing types here if needed
+                }
+            }
+        });
+        console.log(`[LOG] Total addons price (${currency}): ${totalAddonPrice.toFixed(2)}`);
+        // Round final addon price to 2 decimal places for currency
+        return parseFloat(totalAddonPrice.toFixed(PRICE_SCALE));
+    }
+
+
     function updateDisplayPrice() {
         console.log("[LOG] updateDisplayPrice called");
         if (!priceDisplay) { console.error("[ERROR] Price display element not found!"); return; }
 
         const quantity = quantityInput ? (parseInt(quantityInput.value, 10) || 1) : 1;
-        const addonsPriceCZK = getSelectedFixedAddonsPrice('CZK');
-        const addonsPriceEUR = getSelectedFixedAddonsPrice('EUR');
+
+        // Získáme příplatky za atributy a NOVĚ za doplňky
         const attributeSurchargeCZK = getSelectedAttributeSurcharge('CZK');
         const attributeSurchargeEUR = getSelectedAttributeSurcharge('EUR');
+        const addonsPriceCZK = getSelectedAddonsPrice('CZK'); // Použití nové funkce
+        const addonsPriceEUR = getSelectedAddonsPrice('EUR'); // Použití nové funkce
 
+        // Základní cena z API (nebo počáteční)
         const unitCZK = !isNaN(currentUnitPriceCZK) ? currentUnitPriceCZK : 0;
         const unitEUR = !isNaN(currentUnitPriceEUR) ? currentUnitPriceEUR : 0;
 
+        // Finální cena za kus = základ + atributy + doplňky
         const finalUnitCZK = unitCZK + attributeSurchargeCZK + addonsPriceCZK;
         const finalUnitEUR = unitEUR + attributeSurchargeEUR + addonsPriceEUR;
 
+        // Celková cena = cena za kus * množství
         const totalCZK = quantity * finalUnitCZK;
         const totalEUR = quantity * finalUnitEUR;
 
-        console.log(`[LOG] updateDisplayPrice - unitCZK=${unitCZK.toFixed(2)}, attrSurCZK=${attributeSurchargeCZK.toFixed(2)}, addonsCZK=${addonsPriceCZK.toFixed(2)}, finalUnitCZK=${finalUnitCZK.toFixed(2)}, quantity=${quantity}, totalCZK=${totalCZK.toFixed(2)}`);
+        console.log(`[LOG] updateDisplayPrice - baseUnitCZK=${unitCZK.toFixed(2)}, attrSurCZK=${attributeSurchargeCZK.toFixed(2)}, addonsCZK=${addonsPriceCZK.toFixed(2)}, finalUnitCZK=${finalUnitCZK.toFixed(2)}, quantity=${quantity}, totalCZK=${totalCZK.toFixed(2)}`);
 
         if (isNaN(totalCZK) || isNaN(totalEUR)) {
             console.error("[ERROR] NaN detected in total price calculation.");
@@ -171,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             const czkHtml = formatCurrency(totalCZK, 'CZK');
             const eurHtml = formatCurrency(totalEUR, 'EUR');
-            priceDisplay.innerHTML = `${czkHtml} <span class="price-eur">/ ${eurHtml}</span>`;
+            priceDisplay.innerHTML = `<span id="price-value">${czkHtml}</span> <span class="price-eur">/ ${eurHtml}</span>`;
             if (spinner) spinner.classList.add('d-none');
             if (errorDiv) errorDiv.style.display = 'none';
             priceDisplay.classList.remove('calculating');
@@ -191,26 +220,54 @@ document.addEventListener('DOMContentLoaded', function() {
         if (submitButton) submitButton.disabled = true;
     }
 
-    // --- Kalkulace ceny - volání API ---
+    // --- Kalkulace ZÁKLADNÍ ceny - volání API ---
     function handleCustomConfigChange(event) {
         const targetId = event?.target?.id || 'unknown';
-        console.log(`[EVENT] Configuration changed by element: ${targetId}. Scheduling API call...`);
-        if (event && event.target && event.target.matches('.dimension-slider')) {
-            const displayId = event.target.id + 'ValueDisplay';
-            const displayElement = document.getElementById(displayId);
-            updateRangeValueDisplay(event.target, displayElement);
+        console.log(`[EVENT] Configuration changed by element: ${targetId}. Scheduling API call or display update...`);
+
+        let requiresApiCall = false;
+        if (event && event.target) {
+            // Dimension sliders always trigger API call
+            if (event.target.matches('.dimension-slider')) {
+                requiresApiCall = true;
+                const displayId = event.target.id + 'ValueDisplay';
+                const displayElement = document.getElementById(displayId);
+                updateRangeValueDisplay(event.target, displayElement);
+            }
+            // Addon selects with dimensional pricing trigger API call (or full recalculation)
+            else if (event.target.matches('.addon-category-select')) {
+                const selectedOption = event.target.options[event.target.selectedIndex];
+                const pricingType = selectedOption?.getAttribute('data-pricing-type');
+                if (pricingType && pricingType !== 'FIXED' && pricingType !== 'NONE') {
+                    // Dimensional addons affect price based on dimensions,
+                    // but the base price from API doesn't change.
+                    // We just need to update the displayed price.
+                    // Let's keep it simple: ALL addon changes just update the display.
+                    // requiresApiCall = true; // Potentially, if base price depended on addons
+                }
+            }
         }
+
         if (priceDisplay) priceDisplay.classList.add('calculating');
-        if (spinner) spinner.classList.remove('d-none');
+        if (spinner) spinner.classList.remove('d-none'); // Hide spinner initially for non-API updates
         if (submitButton) submitButton.disabled = true;
         if (errorDiv) errorDiv.style.display = 'none';
+
         clearTimeout(calculationTimeout);
-        calculationTimeout = setTimeout(calculatePriceApiCall, DEBOUNCE_DELAY);
+
+        if (requiresApiCall) {
+            console.log("[LOG] Change requires API call (dimensions changed). Debouncing...");
+            if (spinner) spinner.classList.remove('d-none'); // Show spinner for API call
+            calculationTimeout = setTimeout(calculatePriceApiCall, DEBOUNCE_DELAY);
+        } else {
+            console.log("[LOG] Change does NOT require API call (attribute/addon/quantity). Updating display directly...");
+            // Update display immediately or with minimal debounce
+            calculationTimeout = setTimeout(updateDisplayPrice, 50); // Small delay for responsiveness
+        }
     }
 
     function calculatePriceApiCall() {
-        console.log("[API_CALL] Debounce timeout finished. Starting API call to calculate unit price...");
-        // ODSTRANĚNA KONTROLA ELEMENTŮ ZDE
+        console.log("[API_CALL] Debounce timeout finished. Starting API call to calculate BASE unit price...");
 
         const lengthValue = lengthSlider?.value;
         const widthValue = widthSlider?.value;
@@ -223,12 +280,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 width: widthValue ? Number(widthValue).toFixed(2) : null,
                 height: heightValue ? Number(heightValue).toFixed(2) : null
             },
-            // Atributy (design, lazura, barva) se už neposílají
-            customHasDivider: hasDividerCheckbox?.checked || false,
-            customHasGutter: hasGutterCheckbox?.checked || false,
-            customHasGardenShed: hasShedCheckbox?.checked || false
+            // Boolean flags for specific features are no longer sent/used by backend for base price
+            // customHasDivider: false, // Example: Not needed anymore
+            // customHasGutter: false,
+            // customHasGardenShed: false
         };
-        console.log("[LOG] Constructed request payload:", requestPayload);
+        console.log("[LOG] Constructed request payload for BASE price:", requestPayload);
 
         const dims = requestPayload.customDimensions;
         if (dims.length === null || dims.width === null || dims.height === null || isNaN(parseFloat(dims.length)) || isNaN(parseFloat(dims.width)) || isNaN(parseFloat(dims.height))) {
@@ -251,41 +308,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                console.log("[API_CALL] Received data:", data);
+                console.log("[API_CALL] Received BASE price data:", data);
                 if (data.errorMessage) {
                     console.warn("[API_CALL] API returned error message:", data.errorMessage);
                     throw { message: data.errorMessage };
                 }
                 const czk = parseFloat(data.priceCZK);
                 const eur = parseFloat(data.priceEUR);
-                console.log(`[LOG] Parsed unit prices from API: CZK=${czk}, EUR=${eur}`);
+                console.log(`[LOG] Parsed BASE unit prices from API: CZK=${czk}, EUR=${eur}`);
                 currentUnitPriceCZK = !isNaN(czk) ? czk : 0;
                 currentUnitPriceEUR = !isNaN(eur) ? eur : 0;
-                console.log(`[LOG] Stored global unit prices: CZK=${currentUnitPriceCZK}, EUR=${currentUnitPriceEUR}`);
-                console.log("[LOG] Calling updateDisplayPrice after successful API call.");
-                updateDisplayPrice(); // Zde se přičtou i příplatky atributů
+                console.log(`[LOG] Stored global BASE unit prices: CZK=${currentUnitPriceCZK}, EUR=${currentUnitPriceEUR}`);
+                console.log("[LOG] Calling updateDisplayPrice after successful API call to add addons/attributes.");
+                updateDisplayPrice(); // Přepočítá celkovou cenu včetně doplňků a atributů
             })
             .catch(error => {
                 console.error('[API_CALL] Fetch error or API error:', error);
-                const message = error.errorMessage || error.message || 'Neznámá chyba při výpočtu ceny.';
+                const message = error.errorMessage || error.message || 'Neznámá chyba při výpočtu základní ceny.';
                 displayCalculationError(message);
             });
     }
 
-    // Funkce volaná při změně množství, addonů NEBO VÝBĚRU ATRIBUTU
-    function handlePriceInfluencingChange(event) {
-        const targetId = event?.target?.id || 'unknown';
-        console.log(`[EVENT] Price influencing change detected (Quantity/Addon/Attribute Select): ${targetId}. Updating display price...`);
-        updateDisplayPrice(); // Jen přepočítá zobrazenou cenu
+    // --- Funkce pro přípravu dat formuláře ---
+    function prepareAddonsForSubmission() {
+        if (!hiddenAddonsContainer) return;
+        console.log("[LOG] Preparing selected addons for form submission...");
+        hiddenAddonsContainer.innerHTML = ''; // Clear previous hidden inputs
+        const addonSelects = document.querySelectorAll('.addon-category-select');
+        let index = 0;
+
+        addonSelects.forEach(select => {
+            if (select.value && select.selectedIndex > 0) { // Only selected addons (not 'none')
+                const addonId = select.value;
+                // Create hidden input for the addon ID
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                // Name format matches expected CartItemDto.selectedAddons list structure
+                input.name = `selectedAddons[${index}].addonId`;
+                input.value = addonId;
+                hiddenAddonsContainer.appendChild(input);
+
+                // Add quantity (assuming always 1 for select-based addons)
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'hidden';
+                qtyInput.name = `selectedAddons[${index}].quantity`;
+                qtyInput.value = 1; // Default to 1 for selected addons
+                hiddenAddonsContainer.appendChild(qtyInput);
+
+                console.log(`[LOG] Added hidden input for addonId=${addonId}, index=${index}`);
+                index++;
+            }
+        });
+        console.log(`[LOG] Finished preparing ${index} selected addons.`);
     }
 
     // --- Inicializace Event Listenerů ---
     console.log("[LOG] Attaching event listeners...");
-    // Slidery a checkboxy volitelných prvků spouští API call
-    document.querySelectorAll('.dimension-slider, .custom-feature-checkbox').forEach(input => {
+
+    // Všechny prvky ovlivňující cenu (slidery, selecty atributů, selecty doplňků, množství)
+    // nyní volají handleCustomConfigChange, která rozhodne, zda volat API nebo jen update displaye.
+    // Přidána třída 'config-input' ke všem relevantním prvkům v HTML.
+    document.querySelectorAll('.config-input').forEach(input => {
         const eventType = input.matches('.dimension-slider') ? 'input' : 'change';
-        console.log(`[LOG] Attaching '${eventType}' listener to config element: ${input.id}`);
+        console.log(`[LOG] Attaching '${eventType}' listener to config element: ${input.id || input.name || 'addonSelect'} using class '.config-input'`);
         input.addEventListener(eventType, handleCustomConfigChange);
+
+        // Initial display update for sliders
         if (input.matches('.dimension-slider')) {
             const displayId = input.id + 'ValueDisplay';
             const displayElement = document.getElementById(displayId);
@@ -293,19 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Selecty atributů a checkboxy addonů aktualizují jen zobrazenou cenu
-    // Přidána třída 'config-input-select' k selectům v HTML
-    document.querySelectorAll('.config-input-select, .fixed-addon-checkbox').forEach(input => {
-        console.log(`[LOG] Attaching 'change' listener to price influencing element: ${input.id}`);
-        input.addEventListener('change', handlePriceInfluencingChange);
-    });
-
-    // Množství aktualizuje jen zobrazenou cenu
-    if (quantityInput) {
-        console.log("[LOG] Attaching 'change' and 'input' listeners to quantity input.");
-        quantityInput.addEventListener('change', handlePriceInfluencingChange);
-        quantityInput.addEventListener('input', handlePriceInfluencingChange);
-    } else { console.warn("[WARN] Quantity input not found!"); }
+    // Listener pro odeslání formuláře - naplní skryté inputy doplňků
+    formElement.addEventListener('submit', prepareAddonsForSubmission);
 
     // --- Nastavení počáteční ceny ---
     console.log("[LOG] Setting initial price state...");
@@ -315,13 +392,17 @@ document.addEventListener('DOMContentLoaded', function() {
             displayCalculationError(initialErrorFromServer);
         } else {
             console.log("[LOG] Initial state: No server error. Displaying initial price or calculating...");
-            updateDisplayPrice(); // Zobrazí cenu na základě aktuálních hodnot (včetně příp. počátečních příplatků)
+            // Spustíme první výpočet pro zobrazení ceny s výchozími hodnotami doplňků/atributů
+            updateDisplayPrice();
+            // Pokud je základní cena 0 (což by měla být po úpravě backendu), zavoláme API pro její načtení
             if (!(currentUnitPriceCZK > 0 || currentUnitPriceEUR > 0)) {
-                console.log("[LOG] Initial unit prices are zero or invalid. Triggering initial API call...");
-                calculatePriceApiCall();
-            } else if (submitButton) {
-                submitButton.disabled = false;
-                console.log("[LOG] Valid initial price detected. Submit button enabled.");
+                console.log("[LOG] Initial base unit prices are zero or invalid. Triggering initial API call...");
+                // Delay API call slightly to allow UI to render?
+                setTimeout(calculatePriceApiCall, 100);
+            } else {
+                // Pokud jsme měli nenulovou počáteční cenu z backendu (což už by nemělo nastat)
+                console.log("[LOG] Non-zero initial base price detected (unexpected?). Enabling submit button.");
+                if (submitButton) submitButton.disabled = false;
             }
         }
     } else {
@@ -329,5 +410,5 @@ document.addEventListener('DOMContentLoaded', function() {
         if(submitButton) submitButton.disabled = true;
     }
 
-    console.log("[LOG] Configurator initialization complete.");
+    console.log("[LOG] Configurator initialization complete (v2.0).");
 }); // End DOMContentLoaded
