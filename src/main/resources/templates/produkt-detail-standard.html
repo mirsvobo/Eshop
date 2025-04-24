@@ -1,220 +1,319 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="cs" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
+
 <head>
-    <title th:text="${product.metaTitle != null ? product.metaTitle : product.name}">Název Produktu</title>
-    <meta name="description" th:content="${product.metaDescription != null ? product.metaDescription : (#strings.isEmpty(product.shortDescription) ? #strings.abbreviate(product.description, 160) : product.shortDescription)}" layout:fragment="meta-description"/>
+    <title th:text="${product.name} + ' | Dřevníky Kolář'">Detail produktu</title>
 
     <th:block layout:fragment="css">
         <style>
-            .product-image { max-height: 500px; object-fit: contain; } /* Zvětšený obrázek */
-            .product-thumbnails { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; /* Centrování náhledů */ margin-top: 15px; }
-            .product-thumbnails img { width: 80px; height: 80px; object-fit: cover; border: 2px solid #dee2e6; cursor: pointer; opacity: 0.7; border-radius: 0.25rem; transition: opacity 0.2s ease-in-out, border-color 0.2s ease-in-out; }
-            .product-thumbnails img:hover { opacity: 1.0; }
-            .product-thumbnails img.active { border-color: var(--bs-primary); opacity: 1.0; }
-            .price-container-detail { /* Můžete přidat specifické styly pro detail, pokud je třeba */ }
-            .original-price-detail { font-size: 1.1em; color: #6c757d; text-decoration: line-through; margin-right: 0.75rem; }
-            .final-price-detail { font-size: 1.8em; color: var(--bs-danger); /* Změna barvy */ font-weight: bold; }
-            .discount-badge-detail { font-size: 0.8em; vertical-align: middle; margin-left: 0.5rem; }
-            .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
-            /* Styl pro chyby u selectů */
-            .attribute-select-error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+            /* --- Zde jsou stejné CSS styly jako v předchozí verzi --- */
+            /* Základní styly pro produktovou stránku (Standard) */
+            .product-detail-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+            /* Obrázky */
+            .main-product-image { max-width: 100%; height: auto; border: 1px solid #dee2e6; margin-bottom: 1rem; }
+            .thumbnail-images img { width: 80px; height: 80px; object-fit: cover; cursor: pointer; border: 1px solid #dee2e6; margin-right: 0.5rem; margin-bottom: 0.5rem; opacity: 0.7; transition: opacity 0.2s ease-in-out; }
+            .thumbnail-images img.active, .thumbnail-images img:hover { opacity: 1; border-color: #007bff; }
+            /* Informace o produktu */
+            .product-title { margin-bottom: 0.5rem; }
+            .product-price-section .price { font-size: 1.8rem; font-weight: bold; color: #28a745; }
+            .product-price-section .price-note { font-size: 0.9rem; color: #6c757d; margin-bottom: 1rem; }
+            .product-short-description { margin-top: 1rem; margin-bottom: 1.5rem; color: #495057; }
+            /* Formulář variant */
+            .product-options-form .form-label { font-weight: bold; }
+            .product-options-form .form-select, .product-options-form .form-control { margin-bottom: 1rem; }
+            /* Informace o DPH */
+            .tax-selection .form-check { margin-bottom: 0.5rem; }
+            .tax-info-icon { cursor: pointer; color: #007bff; margin-left: 5px; }
+            .tax-info-details { font-size: 0.85rem; color: #6c757d; margin-left: 1.5rem; margin-bottom: 1rem; display: none; border-left: 3px solid #007bff; padding-left: 10px; }
+            .tax-selection .form-check:has(input:checked) + .tax-info-details { display: block; }
+            /* Množství a tlačítko košíku */
+            .quantity-input { width: 80px; }
+            .add-to-cart-btn { padding: 0.75rem 1.5rem; font-size: 1.1rem; }
+            /* Klíčové informace */
+            .key-info-banner { background-color: #e9f5ff; border-left: 5px solid #007bff; padding: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+            .key-info-banner p { margin-bottom: 0.5rem; font-weight: 500; }
+            .key-info-banner i { margin-right: 0.5rem; color: #007bff; }
+            /* Popis a galerie variant */
+            .product-long-description { margin-top: 2rem; clear: both; }
+            .product-long-description h3 { margin-top: 1.5rem; margin-bottom: 1rem; }
+            .variation-gallery { margin-top: 1rem; margin-bottom: 2rem; }
+            .variation-gallery h4 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+            .variation-gallery img { width: 100px; height: 100px; object-fit: cover; margin-right: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #dee2e6; cursor: pointer; }
+            .variation-gallery img:hover { border-color: #007bff; }
+            /* Sekce výhod */
+            .advantages-section { background-color: #f8f9fa; padding: 2rem 1rem; margin-top: 2rem; border-radius: 5px; }
+            .advantages-section h3 { text-align: center; margin-bottom: 1.5rem; }
+            .advantages-section ul { list-style: none; padding-left: 0; }
+            .advantages-section li { display: flex; align-items: center; margin-bottom: 1rem; font-size: 1.1rem; }
+            .advantages-section i { color: #28a745; font-size: 1.5rem; margin-right: 1rem; width: 30px; text-align: center; }
+            /* Responzivita pro desktop */
+            @media (min-width: 768px) {
+                .product-images-column { position: sticky; top: 80px; /* Upraveno kvůli fixed-top navbaru */ max-height: calc(100vh - 100px); overflow-y: auto; padding-right: 1rem; }
+                .product-info-column { padding-left: 1rem; }
+                .product-long-description { margin-top: 0; }
+                .advantages-section { padding: 2rem; }
+            }
+            /* Úprava odsazení kvůli fixed-top navbaru */
+            body { padding-top: 70px; /* Výška navbaru + malé odsazení */ }
         </style>
     </th:block>
 </head>
+
 <body>
 
 <section layout:fragment="content">
-    <div class="container mt-4 mb-5">
+    <div class="container product-detail-container">
 
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a th:href="@{/}">Domů</a></li>
-                <li class="breadcrumb-item"><a th:href="@{/produkty}">Produkty</a></li>
-                <li class="breadcrumb-item active" aria-current="page" th:text="${product.name}">Název Produktu</li>
-            </ol>
-        </nav>
+        <div class="row">
+            <div class="col-md-6 product-images-column">
+                <img th:src="@{${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered().get(0).url}}"
+                     th:alt="${product.getImagesOrdered().isEmpty() ? product.name : (product.getImagesOrdered().get(0).altText ?: product.name)}"
+                     class="main-product-image img-fluid" id="mainProductImage">
 
-        <div th:if="${cartSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <span th:text="${cartSuccess}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${cartError}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <span th:text="${cartError}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${productError}" class="alert alert-warning" role="alert" th:text="${productError}">
-            Produkt nelze objednat.
-        </div>
-
-        <div class="row g-4" th:if="${product != null and productError == null}">
-            <div class="col-lg-6 text-center">
-                <img th:src="${not #lists.isEmpty(product.getImagesOrdered()) ? product.getImagesOrdered()[0].url : '/images/placeholder.png'}"
-                     class="img-fluid rounded shadow-sm product-image" id="mainProductImageStandard"
-                     th:alt="${not #lists.isEmpty(product.getImagesOrdered()) and product.getImagesOrdered()[0].altText != null ? product.getImagesOrdered()[0].altText : product.name}">
-                <div class="product-thumbnails mt-3" th:if="${product.images != null and #lists.size(product.images) > 1}">
-                    <img th:each="img, iter : ${product.getImagesOrdered()}"
-                         th:src="${img.url}"
-                         th:alt="|${product.name} - náhled ${iter.index + 1}|"
-                         th:class="${iter.index == 0} ? 'active' : ''"
-                         th:onclick="|document.getElementById('mainProductImageStandard').src='${img.url}'; document.querySelectorAll('.product-thumbnails img').forEach(el => el.classList.remove('active')); this.classList.add('active');|"
-                    />
+                <div class="thumbnail-images" th:if="${product.getImagesOrdered().size() > 1}">
+                    <img th:each="img, iterStat : ${product.getImagesOrdered()}"
+                         th:src="@{${img.url}}"
+                         th:alt="${img.altText ?: 'Náhled ' + (iterStat.index + 1)}"
+                         th:classappend="${iterStat.index == 0} ? 'active'"
+                         th:onclick="'changeMainImage(\'' + @{${img.url}} + '\', this)'"
+                         class="img-thumbnail">
                 </div>
             </div>
 
-            <div class="col-lg-6">
-                <h1 th:text="${product.name}">Název Produktu</h1>
-                <p class="lead text-muted" th:if="${product.shortDescription != null}" th:text="${product.shortDescription}">Krátký popis produktu.</p>
+            <div class="col-md-6 product-info-column">
+                <h1 class="product-title" th:text="${product.name}">Název Produktu</h1>
 
-                <div class="my-3 price-container-detail">
-                    <div th:if="${priceInfo != null}">
-                        <small class="original-price-detail"
-                               th:if="${priceInfo.discountedPrice != null}"
-                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'POINT', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}">
-                        </small>
-                        <span class="final-price-detail">
-                             <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'POINT', 2, 'COMMA')}"></span>&nbsp;<span th:text="${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}"></span>
-                         </span>
-                        <span th:if="${priceInfo.discountApplied != null}"
-                              class="badge bg-danger discount-badge-detail"
-                              th:title="${priceInfo.discountApplied.name}">
-                               SLEVA
-                         </span>
-                        <span class="text-muted ms-1">(bez DPH)</span>
-                    </div>
-                    <div th:unless="${priceInfo != null}">
-                        <span class="h3 fw-bold text-primary">Cena na dotaz</span>
-                        <span class="text-muted ms-1">(bez DPH)</span>
-                    </div>
+                <div class="product-price-section">
+                    <span class="price" id="productPrice"
+                          th:data-base-price-czk="${product.basePriceCZK}"
+                          th:data-base-price-eur="${product.basePriceEUR}"
+                          th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK, 1, 'COMMA', 2, 'POINT')}">
+                        Cena
+                    </span>
+                    <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
+                    <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
                 </div>
-                <hr>
 
-                <form th:action="@{/kosik/pridat}" method="post" th:object="${cartItemDto}" id="addToCartFormStandard">
-                    <input type="hidden" th:field="*{productId}" />
-                    <input type="hidden" th:field="*{custom}" value="false" /> <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+                <div class="product-short-description" th:if="${product.shortDescription}" th:text="${product.shortDescription}">
+                    Krátký popis produktu zde...
+                </div>
 
-                    <div class="mb-3" th:if="${availableDesigns != null and not #lists.isEmpty(availableDesigns)}">
-                        <label for="designSelect" class="form-label fw-bold">Design:</label>
-                        <select class="form-select" id="designSelect" th:field="*{selectedDesignId}" required>
-                            <option value="" disabled selected>-- Vyberte design --</option>
-                            <option th:each="design : ${availableDesigns}"
+                <div class="key-info-banner">
+                    <p><i class="bi bi-tools"></i> Montáž ZDARMA po celé ČR.</p>
+                    <p><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</p>
+                </div>
+
+                <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form">
+                    <input type="hidden" name="productId" th:value="${product.id}" />
+                    <input type="hidden" name="isCustom" value="false" />
+
+                    <div class="mb-3" th:if="${!product.availableDesigns.isEmpty()}">
+                        <label for="design" class="form-label">Design:</label>
+                        <select id="design" name="selectedDesignId" class="form-select" required>
+                            <option value="" selected disabled>Vyberte design</option>
+                            <option th:each="design : ${product.availableDesigns}"
                                     th:value="${design.id}"
-                                    th:with="priceCzk=${design.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${design.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                    th:text="|${design.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
+                                    th:text="${design.name} + (${design.priceSurchargeCZK > 0 || design.priceSurchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(design.priceSurchargeEUR, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(design.priceSurchargeCZK, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-surcharge-czk="${design.priceSurchargeCZK}"
+                                    th:data-surcharge-eur="${design.priceSurchargeEUR}">
+                                Název designu
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedDesignId')}" class="attribute-select-error">Vyberte prosím design.</div>
                     </div>
 
-                    <div class="mb-3" th:if="${availableGlazes != null and not #lists.isEmpty(availableGlazes)}">
-                        <label for="glazeSelect" class="form-label fw-bold">Lazura:</label>
-                        <select class="form-select" id="glazeSelect" th:field="*{selectedGlazeId}" required>
-                            <option value="" disabled selected>-- Vyberte lazuru --</option>
-                            <option th:each="glaze : ${availableGlazes}"
+                    <div class="mb-3" th:if="${!product.availableGlazes.isEmpty()}">
+                        <label for="glaze" class="form-label">Lazura:</label>
+                        <select id="glaze" name="selectedGlazeId" class="form-select" required>
+                            <option value="" selected disabled>Vyberte lazuru</option>
+                            <option th:each="glaze : ${product.availableGlazes}"
                                     th:value="${glaze.id}"
-                                    th:with="priceCzk=${glaze.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${glaze.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                    th:text="|${glaze.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
+                                    th:text="${glaze.name} + (${glaze.priceSurchargeCZK > 0 || glaze.priceSurchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(glaze.priceSurchargeEUR, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(glaze.priceSurchargeCZK, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-surcharge-czk="${glaze.priceSurchargeCZK}"
+                                    th:data-surcharge-eur="${glaze.priceSurchargeEUR}">
+                                Název lazury
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedGlazeId')}" class="attribute-select-error">Vyberte prosím lazuru.</div>
                     </div>
 
-                    <div class="mb-3" th:if="${availableRoofColors != null and not #lists.isEmpty(availableRoofColors)}">
-                        <label for="roofColorSelect" class="form-label fw-bold">Barva střechy:</label>
-                        <select class="form-select" id="roofColorSelect" th:field="*{selectedRoofColorId}" required>
-                            <option value="" disabled selected>-- Vyberte barvu střechy --</option>
-                            <option th:each="color : ${availableRoofColors}"
-                                    th:value="${color.id}"
-                                    th:with="priceCzk=${color.priceSurchargeCZK ?: T(java.math.BigDecimal).ZERO}, priceEur=${color.priceSurchargeEUR ?: T(java.math.BigDecimal).ZERO}, priceToShow=${currentGlobalCurrency == 'EUR' ? priceEur : priceCzk}"
-                                    th:text="|${color.name} ${ priceToShow.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '(+ ' + #numbers.formatDecimal(priceToShow, 1, 'POINT', 2, 'COMMA') + ' ' + (currentGlobalCurrency == 'EUR' ? '€' : 'Kč') + ')' : '' }|">
+                    <div class="mb-3" th:if="${!product.availableRoofColors.isEmpty()}">
+                        <label for="roofColor" class="form-label">Barva střechy:</label>
+                        <select id="roofColor" name="selectedRoofColorId" class="form-select" required>
+                            <option value="" selected disabled>Vyberte barvu střechy</option>
+                            <option th:each="roofColor : ${product.availableRoofColors}"
+                                    th:value="${roofColor.id}"
+                                    th:text="${roofColor.name} + (${roofColor.priceSurchargeCZK > 0 || roofColor.priceSurchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(roofColor.priceSurchargeEUR, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(roofColor.priceSurchargeCZK, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-surcharge-czk="${roofColor.priceSurchargeCZK}"
+                                    th:data-surcharge-eur="${roofColor.priceSurchargeEUR}">
+                                Název barvy střechy
                             </option>
                         </select>
-                        <div th:if="${#fields.hasErrors('selectedRoofColorId')}" class="attribute-select-error">Vyberte prosím barvu střechy.</div>
                     </div>
 
-                    <div th:if="${availableTaxRates != null and not #lists.isEmpty(availableTaxRates)}" class="mb-3">
-                        <label for="taxRateSelect" class="form-label fw-bold">Režim DPH <span class="text-danger">*</span></label>
-                        <select class="form-select" id="taxRateSelect" th:field="*{selectedTaxRateId}" required>
-                            <option value="" disabled th:text="'-- Vyberte režim DPH --'" th:if="${#lists.size(availableTaxRates) > 1}" th:selected="${cartItemDto.selectedTaxRateId == null}"></option>
-                            <option th:each="rate : ${availableTaxRates}"
-                                    th:value="${rate.id}"
-                                    th:text="|${rate.name} (${#numbers.formatDecimal(rate.rate.multiply(100), 1, 'POINT', 0, 'POINT')}%) ${rate.reverseCharge ? '(PDP)' : ''}|"
-                                    th:selected="${#lists.size(availableTaxRates) == 1 or (cartItemDto.selectedTaxRateId != null and cartItemDto.selectedTaxRateId == rate.id)}">
-                                Sazba DPH (Režim)
-                            </option>
-                        </select>
-                        <div th:if="${#fields.hasErrors('selectedTaxRateId')}" class="attribute-select-error">
-                            Vyberte prosím režim DPH.
+                    <div class="mb-3 tax-selection" th:if="${product.availableTaxRates != null and !product.availableTaxRates.isEmpty()}">
+                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i> </label>
+                        <div class="form-check" th:each="taxRate, iterStat : ${product.availableTaxRates}">
+                            <input class="form-check-input" type="radio" name="selectedTaxRateId" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" th:checked="${iterStat.index == 0}" required>
+                            <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}" th:text="${taxRate.name}">
+                                Název sazby
+                            </label>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">
+                                Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong>
+                            </div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">
+                                Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.
+                            </div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">
+                                Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.
+                            </div>
                         </div>
                     </div>
-                    <div th:if="${availableTaxRates == null or #lists.isEmpty(availableTaxRates)}" class="alert alert-warning small p-2">
-                        Pro tento produkt nejsou definovány žádné daňové sazby. Kontaktujte prosím podporu.
-                    </div>
-                    <div class="row align-items-center mb-3">
-                        <label for="quantity" class="col-auto col-form-label fw-bold">Množství:</label>
-                        <div class="col-auto">
-                            <input type="number" class="form-control" id="quantity" th:field="*{quantity}" value="1" min="1" max="10" style="width: 80px;" required>
-                        </div>
-                        <div th:if="${#fields.hasErrors('quantity')}" class="col error">Zadejte platné množství.</div>
+                    <div class="alert alert-warning" th:if="${product.availableTaxRates == null or product.availableTaxRates.isEmpty()}">
+                        Pro tento produkt nejsou definovány sazby DPH. Prosím kontaktujte nás.
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success btn-lg" th:disabled="${productError != null}"> <i class="bi bi-cart-plus-fill me-2"></i> Přidat do košíku
-                        </button>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Množství:</label>
+                        <input type="number" id="quantity" name="quantity" class="form-control quantity-input" value="1" min="1" required>
                     </div>
+
+                    <button type="submit" class="btn btn-success add-to-cart-btn w-100"
+                            th:disabled="${product.availableTaxRates == null or product.availableTaxRates.isEmpty()}">
+                        <i class="bi bi-cart-plus"></i> Přidat do košíku
+                    </button>
                 </form>
+            </div>
+        </div><div class="row">
+        <div class="col-12 product-long-description">
+            <hr class="my-4">
+            <h3>Podrobný popis produktu</h3>
+            <div th:utext="${product.description}">
+                Zde bude hlavní popis produktu z backendu...
+            </div>
 
-                <hr class="my-4">
-                <h4>Popis</h4>
-                <div th:if="${product.description != null}" th:utext="${product.description}"> Popis produktu zde... </div>
-                <div th:unless="${product.description != null}"> <p>Popis není k dispozici.</p> </div>
-
-                <div th:if="${product.length != null or product.width != null or product.height != null or product.material != null}">
-                    <hr class="my-4">
-                    <h4>Parametry</h4>
-                    <ul class="list-unstyled">
-                        <li th:if="${product.length}"><strong class="me-2">Délka:</strong> <span th:text="${#numbers.formatDecimal(product.length, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
-                        <li th:if="${product.width}"><strong class="me-2">Hloubka:</strong> <span th:text="${#numbers.formatDecimal(product.width, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
-                        <li th:if="${product.height}"><strong class="me-2">Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'POINT', 0, 'COMMA')} + ' cm'"></span></li>
-                        <li th:if="${product.material}"><strong class="me-2">Materiál:</strong> <span th:text="${product.material}"></span></li>
-                        <li th:if="${product.roofOverstep}"><strong class="me-2">Přesah střechy:</strong> <span th:text="${product.roofOverstep}"></span></li>
-                        <li th:if="${product.model}"><strong class="me-2">Model:</strong> <span th:text="${product.model}"></span></li>
-                        <li th:if="${availableTaxRates != null and #lists.size(availableTaxRates) == 1}">
-                            <strong class="me-2" th:text="${availableTaxRates[0].reverseCharge ? 'Režim DPH:' : 'Sazba DPH:'}"></strong>
-                            <span th:text="${availableTaxRates[0].name} + ' (' + ${#numbers.formatDecimal(availableTaxRates[0].rate.multiply(100), 1, 'POINT', 0, 'POINT')} + '%)'"></span>
-                            <span th:if="${availableTaxRates[0].reverseCharge}" class="ms-1">(PDP)</span>
-                        </li>
-                    </ul>
+            <div class="variation-gallery mt-4">
+                <div th:if="${!product.availableDesigns.isEmpty()}" class="mb-4">
+                    <h4>Možné designy</h4>
+                    <img th:each="design : ${product.availableDesigns}"
+                         th:src="@{${design.imageUrl} ?: '/images/placeholder.png'}"
+                         th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
                 </div>
+                <div th:if="${!product.availableGlazes.isEmpty()}" class="mb-4">
+                    <h4>Dostupné lazury</h4>
+                    <img th:each="glaze : ${product.availableGlazes}"
+                         th:src="@{${glaze.imageUrl} ?: '/images/placeholder.png'}"
+                         th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
+                </div>
+                <div th:if="${!product.availableRoofColors.isEmpty()}" class="mb-4">
+                    <h4>Barvy střešní krytiny</h4>
+                    <img th:each="roofColor : ${product.availableRoofColors}"
+                         th:src="@{${roofColor.imageUrl} ?: '/images/placeholder.png'}"
+                         th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
+                </div>
+            </div>
+        </div>
+    </div>
 
+        <div class="row">
+            <div class="col-12">
+                <section class="advantages-section">
+                    <h3>Proč dřevník od Koláře?</h3>
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <ul>
+                                <li><i class="bi bi-gem"></i> Nešetříme na kvalitních materiálech.</li>
+                                <li><i class="bi bi-tools"></i> Dřevník sestrojíme a umístíme zdarma.</li>
+                                <li><i class="bi bi-pencil-square"></i> Dřevník upravíme na míru (barva, rozměry, doplňky).</li>
+                                <li><i class="bi bi-shield-check"></i> 20+ let zkušeností a poctivé řemeslo.</li>
+                                <li><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
 
-    </div>
-</section>
+        <script type="application/ld+json" th:inline="javascript">
+            {
+                "@context": "https://schema.org/",
+                "@type": "Product",
+                "name": /*[[${product.name}]]*/ "Název Dřevníku",
+                "description": /*[[${product.shortDescription ?: #strings.abbreviate(product.description, 250)}]]*/ "Popis dřevníku...",
+                "image": [
+                    th:each="img : ${product.getImagesOrdered()}" th:text="${#request.scheme + '://' + #request.serverName + #request.contextPath + img.url} + ${!imgStat.last ? ',' : ''}"
+                ],
+                "sku": /*[[${product.slug}]]*/ "SKU123",
+                "brand": { "@type": "Brand", "name": "Dřevníky Kolář" },
+                "offers": {
+                    "@type": "Offer",
+                    "url": /*[[${#request.requestURL}]]*/ "URL produktu",
+                    "price": /*[[${currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK}]]*/ "15000.00",
+                    "priceCurrency": /*[[${currentGlobalCurrency}]]*/ "CZK",
+                    "availability": "https://schema.org/InStock",
+                    "priceValidUntil": /*[[${#dates.format(#dates.createNow().plusDays(90), 'yyyy-MM-dd')}]]*/ "2025-12-31",
+                    "itemCondition": "https://schema.org/NewCondition"
+                },
+                "additionalProperty": [
+                    {"@type": "PropertyValue", "name": "Materiál", "value": /*[[${product.material} ?: 'Smrkové dřevo']]*/ "Smrkové dřevo"},
+                    {"@type": "PropertyValue", "name": "Montáž zdarma", "value": "Ano"},
+                    {"@type": "PropertyValue", "name": "Dodání do", "value": "5 týdnů"}
+                ]
+            }
+        </script>
+
+    </div> </section>
 
 <th:block layout:fragment="javascript">
     <script>
-        // Jednoduchý skript pro aktivaci náhledů, pokud existují
-        document.addEventListener('DOMContentLoaded', () => {
-            const thumbnails = document.querySelectorAll('.product-thumbnails img');
-            const mainImage = document.getElementById('mainProductImageStandard');
-            if (thumbnails.length > 0 && mainImage) {
-                thumbnails.forEach(thumb => {
-                    thumb.addEventListener('click', function() {
-                        mainImage.src = this.src;
-                        // Odstranění aktivní třídy ze všech a přidání na kliknutý
-                        thumbnails.forEach(el => el.classList.remove('active'));
-                        this.classList.add('active');
-                    });
-                });
-                // Zajistíme, že první náhled je aktivní po načtení
-                if (!document.querySelector('.product-thumbnails img.active')) {
-                    thumbnails[0].classList.add('active');
+        // Funkce pro změnu hlavního obrázku po kliknutí na náhled
+        function changeMainImage(newImageUrl, thumbnailElement) {
+            const mainImg = document.getElementById('mainProductImage');
+            if (mainImg) mainImg.src = newImageUrl;
+            document.querySelectorAll('.thumbnail-images img').forEach(img => img.classList.remove('active'));
+            if (thumbnailElement) thumbnailElement.classList.add('active');
+        }
+
+        // Funkce pro aktualizaci zobrazené ceny na základě vybraných variant
+        function updateDisplayedPrice() {
+            const priceElement = document.getElementById('productPrice');
+            if (!priceElement) return; // Ochrana, pokud element neexistuje
+
+            const basePriceCZK = parseFloat(priceElement.getAttribute('data-base-price-czk')) || 0;
+            const basePriceEUR = parseFloat(priceElement.getAttribute('data-base-price-eur')) || 0;
+            const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK';
+            let totalSurchargeCZK = 0;
+            let totalSurchargeEUR = 0;
+
+            document.querySelectorAll('#add-to-cart-form select').forEach(select => {
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    totalSurchargeCZK += parseFloat(selectedOption.getAttribute('data-surcharge-czk')) || 0;
+                    totalSurchargeEUR += parseFloat(selectedOption.getAttribute('data-surcharge-eur')) || 0;
                 }
-            }
+            });
+
+            const finalPrice = currency === 'EUR' ? (basePriceEUR + totalSurchargeEUR) : (basePriceCZK + totalSurchargeCZK);
+            priceElement.textContent = finalPrice.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Přidat posluchače událostí na selecty pro aktualizaci ceny
+        document.querySelectorAll('#add-to-cart-form select').forEach(select => {
+            select.addEventListener('change', updateDisplayedPrice);
         });
+
+        // Inicializace tooltipů
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Volitelné: Zavolat updateDisplayedPrice() i při načtení stránky, pokud by mohly být předvybrané hodnoty
+        // document.addEventListener('DOMContentLoaded', updateDisplayedPrice);
+
     </script>
 </th:block>
 
