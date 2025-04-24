@@ -8,11 +8,18 @@
     <th:block layout:fragment="css">
         <style>
             /* --- Styly pro konfigurátor --- */
-            /* (Ponechány původní styly, které jste měli) */
-            body { padding-top: 70px; } /* Kvůli fixnímu navbaru */
+            /* (Ponechány původní styly, které jste měli - některé se možná budou muset doladit) */
+            body { padding-top: 73px; } /* Kvůli fixnímu navbaru - Zkontrolujte skutečnou výšku! */
             .product-detail-container { padding-top: 2rem; padding-bottom: 2rem; }
-            .configurator-section { background-color: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid #dee2e6; }
-            .configurator-section h2 { text-align: center; margin-bottom: 2rem; color: #343a40; }
+
+            /* Původní .configurator-section styl nyní aplikován na levý sloupec */
+            .configurator-column {
+                /* background-color: #f8f9fa; Můžete ponechat nebo odstranit podle designu */
+                /* padding: 2rem; */
+                /* border-radius: 8px; */
+                /* border: 1px solid #dee2e6; */
+            }
+            .configurator-column h2 { text-align: center; margin-bottom: 2rem; color: #343a40; }
             .configurator-step { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef; }
             .configurator-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
             .configurator-step h4 { margin-bottom: 1rem; color: #007bff; font-weight: 500; }
@@ -21,21 +28,39 @@
             .dimension-value { font-weight: bold; background-color: #e9ecef; padding: 0.2rem 0.5rem; border-radius: 4px; min-width: 60px; text-align: right; }
             .form-range { margin-bottom: 1rem; }
             .addon-category { margin-bottom: 1.5rem; }
-            .addon-category h5 { font-size: 1.1rem; margin-bottom: 0.8rem; color: #495057; } /* Tento styl se teď asi nepoužije */
             .tax-selection .form-check { margin-bottom: 0.5rem; }
             .tax-info-icon { cursor: pointer; color: #007bff; margin-left: 5px; }
             .tax-info-details { font-size: 0.85rem; color: #6c757d; margin-left: 1.5rem; margin-bottom: 1rem; display: none; border-left: 3px solid #007bff; padding-left: 10px; }
             .tax-selection .form-check:has(input:checked) + .tax-info-details { display: block; }
-            .price-summary { margin-top: 2rem; text-align: center; }
-            .price-summary .price-label { font-size: 1.2rem; color: #6c757d; }
-            /* Přidána třída pro snadnější manipulaci v JS */
-            .price-summary .price-value-container { font-size: 2.2rem; font-weight: bold; color: #28a745; display: block; margin-bottom: 0.5rem; position: relative; /* Pro spinner */ min-height: 40px; /* Aby neskákala výška při načítání */ }
-            .price-summary .price-value { /* Cena samotná */ }
-            .price-summary .price-loading .price-value { opacity: 0.5; } /* Zprůhlednění při načítání */
-            .price-summary .price-note { font-size: 0.9rem; color: #6c757d; margin-bottom: 1.5rem; }
-            .add-to-cart-btn { padding: 0.8rem 2rem; font-size: 1.2rem; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; display: block; }
-            .price-loading-spinner { display: none; margin-left: 10px; }
-            .price-summary.price-loading .price-loading-spinner { display: inline-block; } /* Zobrazení spinneru */
+
+            /* Styly pro pravý "sticky" sloupec souhrnu */
+            .summary-column {
+                /* Styly pro pravý sloupec, pokud jsou potřeba nad rámec sticky */
+            }
+            #config-summary-sticky {
+                background-color: #f8f9fa;
+                padding: 1.5rem;
+                border-radius: 8px;
+                border: 1px solid #dee2e6;
+            }
+            #config-summary-sticky h2 {
+                margin-bottom: 1.5rem;
+                font-size: 1.5rem;
+                color: #343a40;
+                text-align: center;
+            }
+
+            .price-summary { margin-top: 1rem; text-align: center; } /* Upraven margin-top */
+            .price-summary .price-label { font-size: 1.1rem; color: #6c757d; }
+            .price-summary .price-value-container { font-size: 2rem; font-weight: bold; color: #28a745; display: block; margin-bottom: 0.5rem; position: relative; min-height: 36px; }
+            .price-summary .price-value {}
+            .price-summary .price-loading .price-value { opacity: 0.5; }
+            .price-summary .price-loading-spinner { display: none; margin-left: 10px; }
+            .price-summary.price-loading .price-loading-spinner { display: inline-block; }
+            .price-summary .price-note { font-size: 0.85rem; color: #6c757d; margin-bottom: 1rem; }
+            .add-to-cart-btn { padding: 0.7rem 1.5rem; font-size: 1.1rem; width: 100%; margin-top: 1.5rem; }
+
+            /* Ostatní styly zůstávají */
             .product-description-section, .variation-gallery, .advantages-section-custom { margin-top: 2rem; }
             .product-description-section h3, .variation-gallery h3, .advantages-section-custom h3 { margin-bottom: 1.5rem; }
             .variation-gallery img { width: 100px; height: 100px; object-fit: cover; margin-right: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #dee2e6; }
@@ -61,10 +86,10 @@
             <input type="hidden" name="isCustom" value="true" />
             <div id="hidden-selected-addons"></div>
 
-            <section class="configurator-section">
-                <h2>Nakonfigurujte si dřevník podle svých představ</h2>
+            <div class="row">
 
-                <div class="configurator-step" th:if="${product.configurator != null}">
+                <div class="col-lg-7 mb-4 mb-lg-0 configurator-column">
+                    <h2 class="d-none d-lg-block">Nakonfigurujte si dřevník</h2> <h2 class="d-lg-none text-center mb-4">Nakonfigurujte si dřevník</h2> <div class="configurator-step" th:if="${product.configurator != null}">
                     <h4>1. Zadejte rozměry (v cm)</h4>
                     <div class="mb-3">
                         <label for="length" class="form-label dimension-slider-label">
@@ -106,141 +131,148 @@
                         </div>
                     </div>
                 </div>
-                <div class="alert alert-danger" th:if="${product.configurator == null}">
-                    Chyba: Pro tento produkt na míru chybí data konfigurátoru. Produkt nelze nakonfigurovat.
-                </div>
-
-                <div class="configurator-step" th:if="${availableDesigns != null and !availableDesigns.isEmpty()}">
-                    <h4>2. Vyberte design</h4>
-                    <label for="designSelect" class="form-label">Design:</label>
-                    <select class="form-select config-input" id="designSelect" name="selectedDesignId" required>
-                        <option value="" disabled selected>-- Vyberte design --</option>
-                        <option th:each="design : ${availableDesigns}"
-                                th:value="${design.id}"
-                                th:text="${design.name} + (${design.surchargeCZK > 0 or design.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(design.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(design.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
-                                th:data-price-czk="${design.surchargeCZK ?: 0}"
-                                th:data-price-eur="${design.surchargeEUR ?: 0}">
-                            Název Designu
-                        </option>
-                    </select>
-                    <div class="invalid-feedback">Prosím, vyberte design.</div>
-                </div>
-                <div class="alert alert-warning" th:if="${availableDesigns == null or availableDesigns.isEmpty()}">
-                    Pro tento produkt nejsou dostupné žádné designy. </div>
-
-                <div class="configurator-step" th:if="${availableGlazes != null and !availableGlazes.isEmpty()}">
-                    <h4>3. Vyberte lazuru</h4>
-                    <label for="glazeSelect" class="form-label">Lazura:</label>
-                    <select class="form-select config-input" id="glazeSelect" name="selectedGlazeId" required>
-                        <option value="" disabled selected>-- Vyberte lazuru --</option>
-                        <option th:each="glaze : ${availableGlazes}"
-                                th:value="${glaze.id}"
-                                th:text="${glaze.name} + (${glaze.surchargeCZK > 0 or glaze.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(glaze.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(glaze.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
-                                th:data-price-czk="${glaze.surchargeCZK ?: 0}"
-                                th:data-price-eur="${glaze.surchargeEUR ?: 0}">
-                            Název Lazury
-                        </option>
-                    </select>
-                    <div class="invalid-feedback">Prosím, vyberte lazuru.</div>
-                </div>
-                <div class="alert alert-warning" th:if="${availableGlazes == null or availableGlazes.isEmpty()}">
-                    Pro tento produkt nejsou dostupné žádné lazury. </div>
-
-                <div class="configurator-step" th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}">
-                    <h4>4. Vyberte barvu střechy</h4>
-                    <label for="roofColorSelect" class="form-label">Barva střechy:</label>
-                    <select class="form-select config-input" id="roofColorSelect" name="selectedRoofColorId" required>
-                        <option value="" disabled selected>-- Vyberte barvu střechy --</option>
-                        <option th:each="roofColor : ${availableRoofColors}"
-                                th:value="${roofColor.id}"
-                                th:text="${roofColor.name} + (${roofColor.surchargeCZK > 0 or roofColor.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(roofColor.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(roofColor.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
-                                th:data-price-czk="${roofColor.surchargeCZK ?: 0}"
-                                th:data-price-eur="${roofColor.surchargeEUR ?: 0}">
-                            Název Barvy
-                        </option>
-                    </select>
-                    <div class="invalid-feedback">Prosím, vyberte barvu střechy.</div>
-                </div>
-                <div class="alert alert-warning" th:if="${availableRoofColors == null or availableRoofColors.isEmpty()}">
-                    Pro tento produkt nejsou dostupné žádné barvy střechy. </div>
-
-                <div class="configurator-step" th:if="${!groupedAddons.isEmpty()}">
-                    <h4>5. Vyberte doplňky</h4> <div th:each="categoryEntry : ${groupedAddons}" class="addon-category mb-3">
-                    <label th:for="'addonCategory-' + ${categoryEntry.key}" th:text="${categoryEntry.key}" class="form-label"></label>
-                    <select class="form-select addon-select config-input"
-                            th:id="'addonCategory-' + ${categoryEntry.key}"
-                            th:name="'selectedAddonInCategory_' + ${categoryEntry.key}"
-                            data-is-addon-category-select="true">
-                        <option value="0" selected>Ne</option>
-                        <option th:each="addon : ${categoryEntry.value}"
-                                th:value="${addon.id}"
-                                th:text="${addon.name}"
-                                th:data-addon-id="${addon.id}"
-                                th:data-pricing-type="${addon.pricingType}"
-                                th:data-price-czk="${addon.priceCZK ?: 0}"
-                                th:data-price-eur="${addon.priceEUR ?: 0}"
-                                th:data-price-per-unit-czk="${addon.pricePerUnitCZK ?: 0}"
-                                th:data-price-per-unit-eur="${addon.pricePerUnitEUR ?: 0}">
-                            Název doplňku
-                        </option>
-                    </select>
-                </div>
-                </div>
-                <div class="configurator-step alert alert-info" th:if="${groupedAddons.isEmpty()}">
-                    Pro tento produkt nejsou aktuálně k dispozici žádné volitelné doplňky.
-                </div>
-
-                <div class="configurator-step tax-selection" th:if="${availableTaxRates != null and !availableTaxRates.isEmpty()}">
-                    <h4>6. Zvolte režim DPH</h4> <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i></label>
-                    <div class="form-check" th:each="taxRate, iterStat : ${availableTaxRates}">
-                        <input class="form-check-input tax-rate-radio config-input" type="radio" name="selectedTaxRateId" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" th:checked="${iterStat.index == 0}" required>
-                        <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}" th:text="${taxRate.name}"></label>
-                        <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
-                        <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
-                        <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                    <div class="alert alert-danger" th:if="${product.configurator == null}">
+                        Chyba: Pro tento produkt na míru chybí data konfigurátoru. Produkt nelze nakonfigurovat.
                     </div>
-                </div>
-                <div class="configurator-step alert alert-warning" th:if="${availableTaxRates == null or availableTaxRates.isEmpty()}">
-                    Pro tento produkt nejsou definovány sazby DPH. Prosím kontaktujte nás.
-                </div>
 
-                <div class="configurator-step">
-                    <h4>7. Počet kusů</h4> <label for="quantity" class="form-label">Množství:</label>
-                    <input type="number" id="quantity" name="quantity" class="form-control config-input" value="1" min="1" style="max-width: 100px;" required>
-                </div>
-
-                <div class="price-summary mt-4" id="price-summary-section">
-                    <span class="price-label">Odhadovaná cena konfigurace:</span>
-                    <div class="price-value-container">
-                         <span id="calculatedPrice" class="price-value"
-                               th:data-initial-price-czk="${initialCustomPriceCZK}"
-                               th:data-initial-price-eur="${initialCustomPriceEUR}"
-                               th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
-                        <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
-                        <span class="spinner-border spinner-border-sm price-loading-spinner" role="status" aria-hidden="true"></span>
+                    <div class="configurator-step" th:if="${availableDesigns != null and !availableDesigns.isEmpty()}">
+                        <h4>2. Vyberte design</h4>
+                        <label for="designSelect" class="form-label">Design:</label>
+                        <select class="form-select config-input" id="designSelect" name="selectedDesignId" required>
+                            <option value="" disabled selected>-- Vyberte design --</option>
+                            <option th:each="design : ${availableDesigns}"
+                                    th:value="${design.id}"
+                                    th:text="${design.name} + (${design.surchargeCZK > 0 or design.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(design.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(design.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-price-czk="${design.surchargeCZK ?: 0}"
+                                    th:data-price-eur="${design.surchargeEUR ?: 0}">
+                                Název Designu
+                            </option>
+                        </select>
+                        <div class="invalid-feedback">Prosím, vyberte design.</div>
                     </div>
-                    <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
-                    <p class="small text-muted">Cena je orientační. Přesná cena bude potvrzena po odeslání poptávky/objednávky.</p>
-                    <div id="customPriceErrorDisplay" class="text-danger mt-2" style="display: none;"></div>
-                </div>
+                    <div class="alert alert-warning" th:if="${availableDesigns == null or availableDesigns.isEmpty()}">
+                        Pro tento produkt nejsou dostupné žádné designy. </div>
 
-                <div class="mt-4 text-center">
-                    <button type="submit" class="btn btn-success add-to-cart-btn"
-                            th:disabled="${product.availableTaxRates == null or product.availableTaxRates.isEmpty() or product.configurator == null}">
-                        <i class="bi bi-cart-plus"></i> Přidat do košíku
-                    </button>
-                </div>
+                    <div class="configurator-step" th:if="${availableGlazes != null and !availableGlazes.isEmpty()}">
+                        <h4>3. Vyberte lazuru</h4>
+                        <label for="glazeSelect" class="form-label">Lazura:</label>
+                        <select class="form-select config-input" id="glazeSelect" name="selectedGlazeId" required>
+                            <option value="" disabled selected>-- Vyberte lazuru --</option>
+                            <option th:each="glaze : ${availableGlazes}"
+                                    th:value="${glaze.id}"
+                                    th:text="${glaze.name} + (${glaze.surchargeCZK > 0 or glaze.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(glaze.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(glaze.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-price-czk="${glaze.surchargeCZK ?: 0}"
+                                    th:data-price-eur="${glaze.surchargeEUR ?: 0}">
+                                Název Lazury
+                            </option>
+                        </select>
+                        <div class="invalid-feedback">Prosím, vyberte lazuru.</div>
+                    </div>
+                    <div class="alert alert-warning" th:if="${availableGlazes == null or availableGlazes.isEmpty()}">
+                        Pro tento produkt nejsou dostupné žádné lazury. </div>
 
-            </section>
-        </form> <section class="product-description-section">
-        <hr class="my-4">
-        <h3>Popis produktu</h3>
-        <div th:utext="${product.description}">Základní popis...</div>
-        <div class="key-info-banner mt-4">
-            <p><i class="bi bi-tools"></i> Montáž ZDARMA po celé ČR.</p>
-            <p><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</p>
-        </div>
-    </section>
+                    <div class="configurator-step" th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}">
+                        <h4>4. Vyberte barvu střechy</h4>
+                        <label for="roofColorSelect" class="form-label">Barva střechy:</label>
+                        <select class="form-select config-input" id="roofColorSelect" name="selectedRoofColorId" required>
+                            <option value="" disabled selected>-- Vyberte barvu střechy --</option>
+                            <option th:each="roofColor : ${availableRoofColors}"
+                                    th:value="${roofColor.id}"
+                                    th:text="${roofColor.name} + (${roofColor.surchargeCZK > 0 or roofColor.surchargeEUR > 0} ? ' (' + (${currentGlobalCurrency == 'EUR' ? '+ ' + #numbers.formatDecimal(roofColor.surchargeEUR ?: 0, 0, 'COMMA', 2, 'POINT') + ' €' : '+ ' + #numbers.formatDecimal(roofColor.surchargeCZK ?: 0, 0, 'COMMA', 2, 'POINT') + ' Kč'}) + ')' : '')"
+                                    th:data-price-czk="${roofColor.surchargeCZK ?: 0}"
+                                    th:data-price-eur="${roofColor.surchargeEUR ?: 0}">
+                                Název Barvy
+                            </option>
+                        </select>
+                        <div class="invalid-feedback">Prosím, vyberte barvu střechy.</div>
+                    </div>
+                    <div class="alert alert-warning" th:if="${availableRoofColors == null or availableRoofColors.isEmpty()}">
+                        Pro tento produkt nejsou dostupné žádné barvy střechy. </div>
+
+                    <div class="configurator-step" th:if="${!groupedAddons.isEmpty()}">
+                        <h4>5. Vyberte doplňky</h4>
+                        <div th:each="categoryEntry : ${groupedAddons}" class="addon-category mb-3">
+                            <label th:for="'addonCategory-' + ${categoryEntry.key}" th:text="${categoryEntry.key}" class="form-label"></label>
+                            <select class="form-select addon-select config-input"
+                                    th:id="'addonCategory-' + ${categoryEntry.key}"
+                                    th:name="'selectedAddonInCategory_' + ${categoryEntry.key}"
+                                    data-is-addon-category-select="true">
+                                <option value="0" selected>Ne</option>
+                                <option th:each="addon : ${categoryEntry.value}"
+                                        th:value="${addon.id}"
+                                        th:text="${addon.name}"
+                                        th:data-addon-id="${addon.id}"
+                                        th:data-pricing-type="${addon.pricingType}"
+                                        th:data-price-czk="${addon.priceCZK ?: 0}"
+                                        th:data-price-eur="${addon.priceEUR ?: 0}"
+                                        th:data-price-per-unit-czk="${addon.pricePerUnitCZK ?: 0}"
+                                        th:data-price-per-unit-eur="${addon.pricePerUnitEUR ?: 0}">
+                                    Název doplňku
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="configurator-step alert alert-info" th:if="${groupedAddons.isEmpty()}">
+                        Pro tento produkt nejsou aktuálně k dispozici žádné volitelné doplňky.
+                    </div>
+
+                    <div class="configurator-step tax-selection" th:if="${availableTaxRates != null and !availableTaxRates.isEmpty()}">
+                        <h4>6. Zvolte režim DPH</h4>
+                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i></label>
+                        <div class="form-check" th:each="taxRate, iterStat : ${availableTaxRates}">
+                            <input class="form-check-input tax-rate-radio config-input" type="radio" name="selectedTaxRateId" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" th:checked="${iterStat.index == 0}" required>
+                            <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}" th:text="${taxRate.name}"></label>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                        </div>
+                    </div>
+                    <div class="configurator-step alert alert-warning" th:if="${availableTaxRates == null or availableTaxRates.isEmpty()}">
+                        Pro tento produkt nejsou definovány sazby DPH. Prosím kontaktujte nás.
+                    </div>
+
+                    <div class="configurator-step">
+                        <h4>7. Počet kusů</h4>
+                        <label for="quantity" class="form-label">Množství:</label>
+                        <input type="number" id="quantity" name="quantity" class="form-control config-input" value="1" min="1" style="max-width: 100px;" required>
+                    </div>
+
+                </div>
+                <div class="col-lg-5 summary-column">
+                    <div id="config-summary-sticky"> <h2>Souhrn konfigurace</h2>
+
+                        <div class="price-summary" id="price-summary-section">
+                            <span class="price-label">Odhadovaná cena konfigurace:</span>
+                            <div class="price-value-container">
+                                 <span id="calculatedPrice" class="price-value"
+                                       th:data-initial-price-czk="${initialCustomPriceCZK}"
+                                       th:data-initial-price-eur="${initialCustomPriceEUR}"
+                                       th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                                <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
+                                <span class="spinner-border spinner-border-sm price-loading-spinner" role="status" aria-hidden="true"></span>
+                            </div>
+                            <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
+                            <p class="small text-muted">Cena je orientační. Přesná cena bude potvrzena po odeslání poptávky/objednávky.</p>
+                            <div id="customPriceErrorDisplay" class="text-danger mt-2" style="display: none;"></div>
+                        </div>
+
+                        <div class="mt-3 text-center"> <button type="submit" class="btn btn-success add-to-cart-btn"
+                                                               th:disabled="${product.availableTaxRates == null or product.availableTaxRates.isEmpty() or product.configurator == null}">
+                            <i class="bi bi-cart-plus"></i> Přidat do košíku
+                        </button>
+                        </div>
+
+                    </div></div>
+            </div> </form>
+        <section class="product-description-section">
+            <hr class="my-4">
+            <h3>Popis produktu</h3>
+            <div th:utext="${product.description}">Základní popis...</div>
+            <div class="key-info-banner mt-4">
+                <p><i class="bi bi-tools"></i> Montáž ZDARMA po celé ČR.</p>
+                <p><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</p>
+            </div>
+        </section>
 
         <section class="variation-gallery">
             <h3>Galerie inspirace a materiálů</h3>
@@ -274,21 +306,19 @@
     <script th:src="@{/js/product-configurator.js}"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
-        // Definice globálních proměnných pro product-configurator.js
+        // Definice globálních proměnných pro product-configurator.js (zůstává stejné)
         const calculatePriceUrl = /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price';
         const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK';
-        // CSRF tokeny, pokud používáte Spring Security
         const csrfToken = /*[[${_csrf != null ? _csrf.token : null}]]*/ null;
         const csrfHeaderName = /*[[${_csrf != null ? _csrf.headerName : null}]]*/ null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Inicializace tooltipů pro info ikony DPH
+            // Inicializace tooltipů (zůstává stejné)
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
 
-            // Zde už by měl běžet kód z product-configurator.js, který se připojí
-            // na DOMContentLoaded a nastaví listenery a počáteční stav.
-            // Logy z product-configurator.js by se měly objevit v konzoli.
+            // Kód z product-configurator.js by měl stále fungovat,
+            // protože ID prvků a formuláře zůstala zachována.
         });
         /*]]>*/
     </script>

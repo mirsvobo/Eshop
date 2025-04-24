@@ -947,3 +947,32 @@ main {
         margin-top: 0; /* Pokud byl nějaký margin */
     }
 }
+/* === Styly pro Sticky Summary v Konfigurátoru === */
+
+@media (min-width: 992px) { /* Použije se pro large (lg) breakpoint a větší */
+    #config-summary-sticky {
+        position: sticky;
+        top: 90px; /* Uprav podle výšky tvého fixního navbaru + odsazení */
+        /* Můžeš přidat např. `max-height: calc(100vh - 110px); overflow-y: auto;`
+           pokud by obsah souhrnu mohl být příliš vysoký pro obrazovku */
+        z-index: 100; /* Aby byl nad ostatním obsahem při scrollu, pokud je potřeba */
+    }
+}
+
+/* Přidání mezery pod sticky sloupcem na menších obrazovkách, kde není sticky */
+@media (max-width: 991.98px) {
+    .summary-column #config-summary-sticky {
+        margin-bottom: 2rem; /* Nebo jiná vhodná hodnota */
+    }
+}
+
+/* Můžeš také upravit původní styly pro .configurator-section, pokud se některé už nehodí,
+   nebo je přejmenovat a aplikovat na .configurator-column, jak jsem naznačil ve <style> bloku výše */
+
+/* Např. odstranění borderu a pozadí z původní sekce, pokud je nyní aplikováno na sloupce */
+/* .configurator-section {
+   background-color: transparent;
+   padding: 0;
+   border: none;
+   margin-bottom: 0;
+} */
