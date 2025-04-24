@@ -241,14 +241,39 @@
                 <div class="col-lg-5 summary-column">
                     <div id="config-summary-sticky"> <h2>Souhrn konfigurace</h2>
 
-                        <div class="price-summary" id="price-summary-section">
-                            <span class="price-label">Odhadovaná cena konfigurace:</span>
+                        <div id="price-breakdown" class="mt-3 mb-3 border-top pt-3 small">
+                            <h5 class="mb-2">Rozpis ceny (bez DPH):</h5>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Základní cena (rozměry):</span>
+                                <span id="breakdown-base-price" class="fw-bold">Načítání...</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-design-row" style="display: none;"> <span>Příplatek Design:</span>
+                                <span id="breakdown-design-price" class="fw-bold"></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-glaze-row" style="display: none;"> <span>Příplatek Lazura:</span>
+                                <span id="breakdown-glaze-price" class="fw-bold"></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-roof-color-row" style="display: none;"> <span>Příplatek Střecha:</span>
+                                <span id="breakdown-roof-color-price" class="fw-bold"></span>
+                            </div>
+                            <div id="breakdown-addons-container" class="mt-2" style="display: none;">
+                                <h6>Doplňky:</h6>
+                                <div id="breakdown-addons-list">
+                                </div>
+                            </div>
+                            <div id="breakdown-loading" class="text-muted text-center" style="display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Načítání rozpisu...</span>
+                                </div>
+                                <span class="ms-1">Načítání rozpisu...</span>
+                            </div>
+                        </div>
+                        <div class="price-summary border-top pt-3" id="price-summary-section"> <span class="price-label">Celková cena konfigurace:</span>
                             <div class="price-value-container">
                                  <span id="calculatedPrice" class="price-value"
                                        th:data-initial-price-czk="${initialCustomPriceCZK}"
                                        th:data-initial-price-eur="${initialCustomPriceEUR}"
-                                       th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
-                                <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
+                                 >0.00</span> <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
                                 <span class="spinner-border spinner-border-sm price-loading-spinner" role="status" aria-hidden="true"></span>
                             </div>
                             <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
@@ -256,11 +281,14 @@
                             <div id="customPriceErrorDisplay" class="text-danger mt-2" style="display: none;"></div>
                         </div>
 
-                        <div class="mt-3 text-center"> <button type="submit" class="btn btn-success add-to-cart-btn"
-                                                               th:disabled="${product.availableTaxRates == null or product.availableTaxRates.isEmpty() or product.configurator == null}">
-                            <i class="bi bi-cart-plus"></i> Přidat do košíku
-                        </button>
+                        <div class="mt-3 text-center">
+                            <button type="submit" class="btn btn-success add-to-cart-btn"
+                                    th:disabled="${product.availableTaxRates == null or product.availableTaxRates.isEmpty() or product.configurator == null}">
+                                <i class="bi bi-cart-plus"></i> Přidat do košíku
+                            </button>
                         </div>
+
+                    </div>
 
                     </div></div>
             </div> </form>
