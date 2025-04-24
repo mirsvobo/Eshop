@@ -3,65 +3,105 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>O nás - Dřevníky Kolář</title>
+    <title>O nás - Dřevníky Kolář | Kvalita, Tradice a Inovace</title>
     <meta name="description"
-          content="Zjistěte více o firmě Dřevníky Kolář, naší historii, hodnotách a procesu výroby kvalitních dřevníků na míru i standardních modelů."
+          content="Poznejte příběh Dřevníků Kolář. Přes 20 let zkušeností, specializace na dřevníky, individuální přístup a závazek k maximální kvalitě a spokojenosti zákazníka."
           layout:fragment="meta-description"/>
+    <th:block layout:fragment="css">
+    </th:block>
 </head>
 <body>
 
 <section layout:fragment="content">
     <div class="container mt-5 mb-5">
 
-        <div class="about-hero rounded">
-            <h1 class="display-4 fw-bold">O nás</h1>
-            <p class="lead">Vyrábíme kvalitní dřevníky na míru s důrazem na detail a dlouhou životnost.</p>
-        </div>
-
-        <div class="row mb-5 align-items-center">
-            <div class="col-md-6 mb-4 mb-md-0">
-                <h2>Náš příběh</h2>
-                <hr class="border-primary border-2 opacity-75 mb-3" style="width: 50px;">
-                <p>
-                    <strong>VYPLŇTE TEXT:</strong> Zde popište historii vaší firmy... Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.
-                </p>
-                <p>
-                    <strong>VYPLŇTE TEXT:</strong> Pokračujte v příběhu... Cras mattis consectetur purus sit amet fermentum. Cum sociis natoque penatibus et magnis dis parturient montes.
-                </p>
-            </div>
-            <div class="col-md-6 text-center">
-                <img th:src="@{/images/o-nas-pribeh.webp}" class="img-fluid rounded shadow-sm" alt="Historie firmy nebo dílna" loading="lazy">
+        <div class="row mb-3 pb-4">
+            <div class="col-12 text-center">
+                <h1 class="display-4 fw-bold mb-3">O nás</h1>
+                <p class="lead text-muted col-lg-9 mx-auto">Vítejte u Dřevníků Kolář, kde snoubíme tradiční truhlářské řemeslo s moderními řešeními. Již přes 20 let pracujeme se dřevem a s vášní pro detail vytváříme kvalitní české výrobky.</p>
             </div>
         </div>
 
-        <div class="row mb-5 bg-light py-5 rounded">
-            <div class="col-12 text-center mb-4">
-                <h2>Naše hodnoty</h2>
+        <div class="row mb-5 align-items-center bg-light p-4 p-md-5 rounded shadow-sm">
+            <div class="col-md-7 order-md-1">
+                <h2 class="fw-light mb-3"><i class="bi bi-book me-2 text-primary"></i>Náš příběh: Od řemesla k specializaci</h2>
+                <p>Vycházíme z <strong>více než 20leté truhlářské tradice</strong>, kde základem byla vždy poctivá práce se dřevem a důraz na kvalitu.</p>
+                <p>Před několika lety jsme zareagovali na rostoucí zájem o <strong>praktické a zároveň designové dřevníky</strong>. Rozhodli jsme se proto využít naše zkušenosti a specializovat se právě na ně.</p>
+                <p>Díky naslouchání zákazníkům a neustálému zdokonalování dnes nabízíme špičkové dřevníky a zahradní stavby, které kombinují funkčnost, odolnost a moderní vzhled.</p>
             </div>
-            <div class="col-md-4 text-center icon-box mb-4 mb-md-0">
-                <i class="bi bi-tools"></i>
-                <h5 class="fw-bold">Kvalitní řemeslo</h5>
-                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Dbáme na precizní zpracování a výběr kvalitních materiálů.</p>
-            </div>
-            <div class="col-md-4 text-center icon-box mb-4 mb-md-0">
-                <i class="bi bi-person-check-fill"></i>
-                <h5 class="fw-bold">Individuální přístup</h5>
-                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Každému zákazníkovi se věnujeme osobně a hledáme nejlepší řešení.</p>
-            </div>
-            <div class="col-md-4 text-center icon-box">
-                <i class="bi bi-shield-fill-check"></i>
-                <h5 class="fw-bold">Spolehlivost a servis</h5>
-                <p class="text-muted"><strong>VYPLŇTE TEXT:</strong> Dodržujeme termíny a poskytujeme záruční i pozáruční servis.</p>
+            <div class="col-md-5 text-center order-md-2 mt-4 mt-md-0">
+                <img th:src="@{/images/o-nas-pribeh.webp}" class="img-fluid rounded shadow" alt="Práce v dílně Dřevníky Kolář" loading="lazy" style="height: 65%;width: 65%">
             </div>
         </div>
+
+
+        <div class="row mb-5 text-center justify-content-center"> <div class="col-12 mb-4">
+            <h2 class="fw-light">Proč si vybrat dřevník od nás?</h2>
+            <hr class="border-primary border-2 opacity-75 mt-3 mx-auto" style="width: 80px;">
+        </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-gem"></i></div>
+                        <h5 class="card-title fw-bold">Špičková kvalita</h5>
+                        <p class="card-text text-muted">Používáme pečlivě vybrané dřevo a osvědčené postupy. Naše dřevníky jsou stavěny tak, aby vydržely.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-tools"></i></div>
+                        <h5 class="card-title fw-bold">20+ let zkušeností</h5>
+                        <p class="card-text text-muted">Navazujeme na dlouholetou truhlářskou tradici. Víme, jak pracovat se dřevem, aby výsledek byl perfektní.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-person-check-fill"></i></div>
+                        <h5 class="card-title fw-bold">Řešení na míru</h5>
+                        <p class="card-text text-muted">Ať už potřebujete standardní rozměr nebo unikátní design, přizpůsobíme se vašim potřebám.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-lightbulb-fill"></i></div>
+                        <h5 class="card-title fw-bold">Nejen dřevníky</h5>
+                        <p class="card-text text-muted">Naše vášeň pro dřevo nás vede dál. Vyrábíme i zahradní domky, venkovní sprchy nebo designové kryty na klimatizace.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+                        <h5 class="card-title fw-bold">Osobní záruka</h5>
+                        <p class="card-text text-muted">Jsme malý tým, který osobně dohlíží na každý detail výroby. Za naši práci ručíme.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card card-feature w-100">
+                    <div class="card-body">
+                        <div class="feature-icon"><i class="bi bi-calendar-check-fill"></i></div>
+                        <h5 class="card-title fw-bold">Dodržení termínů</h5>
+                        <p class="card-text text-muted">Vážíme si vašeho času. Zakázky dodáváme spolehlivě v dohodnutém termínu (standardně do 5 týdnů).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <div class="row mb-5 timeline-section">
-            <div class="col-12 text-center mb-4"> <h2>Jak probíhá výroba vašeho dřevníku</h2>
+            <div class="col-12 text-center mb-4"> <h2><i class="bi bi-diagram-3 me-2 text-primary"></i>Jak probíhá výroba vašeho dřevníku</h2>
             </div>
             <div class="col-12 timeline-wrapper">
                 <div class="timeline-line d-none d-md-block"></div>
                 <div class="timeline-line d-md-none"></div>
-
                 <div class="timeline-steps">
                     <div class="timeline-step">
                         <div class="icon">
@@ -96,19 +136,85 @@
                 </div>
             </div>
         </div>
-        <div class="text-center mt-5">
-            <h2>Máte dotaz nebo zájem o dřevník?</h2>
-            <p class="lead mb-4">Neváhejte nás kontaktovat nebo si prohlédněte naši nabídku.</p>
-            <a th:href="@{/produkty}" class="btn btn-primary btn-lg me-2">
+
+        <div class="row mb-5 align-items-center pt-4 border-top">
+            <div class="col-md-5 text-center order-md-2">
+                <img th:src="@{/images/o-nas-zavazek.webp}" class="img-fluid rounded shadow-sm mb-4 mb-md-0" alt="Závazek kvality Dřevníky Kolář" loading="lazy">
+            </div>
+            <div class="col-md-7 order-md-1">
+                <h2 class="fw-light mb-3"><i class="bi bi-patch-check-fill me-2 text-primary"></i>Náš závazek: Kvalita a vaše spokojenost</h2>
+                <p>Naším cílem je vaše <strong>dlouhodobá spokojenost</strong>, která pro nás nekončí předáním dřevníku. Klademe důraz na <strong>precizní výrobu</strong>, kvalitní materiály a <strong>funkční design</strong>, který vydrží roky.</p>
+                <p>Jsme hrdí na <strong>stovky realizovaných projektů</strong> a spokojených zákazníků. Neustále sledujeme nové trendy, abychom vám vždy nabízeli ta nejlepší řešení.</p>
+                <p>Zakládáme si na <strong>osobním přístupu</strong> a férovém jednání. Jsme tu pro vás s podporou i po dokončení zakázky.</p>
+            </div>
+        </div>
+
+
+        <div class="text-center mt-5 pt-5 border-top">
+            <h2 class="fw-light">Máte otázky nebo konkrétní představu?</h2>
+            <p class="lead mb-4 text-muted col-lg-8 mx-auto">Jsme tu pro vás. Rádi vám poradíme a připravíme nezávaznou nabídku přesně podle vašich potřeb.</p>
+            <a th:href="@{/produkty}" class="btn btn-primary btn-lg me-2 mb-2 mb-md-0">
                 <i class="bi bi-grid-3x3-gap-fill me-1"></i> Zobrazit produkty
             </a>
-            <a href="/#kontaktni-udaje" class="btn btn-outline-secondary btn-lg">
-                <i class="bi bi-telephone-fill me-1"></i> Kontaktovat nás
+            <a href="/#kontaktni-udaje" class="btn btn-outline-secondary btn-lg mb-2 mb-md-0">
+                <i class="bi bi-telephone-fill me-1"></i> Kontaktujte nás
             </a>
         </div>
 
     </div>
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "HomeAndConstructionBusiness",
+            "name": "Dřevníky Kolář",
+            "description": "Výroba a prodej kvalitních dřevníků standardních rozměrů i na míru. Tradice, zkušenosti a individuální přístup.",
+            "url": "https://www.drevniknamiru.cz/o-nas",
+            "logo": "https://www.drevniknamiru/images/logo.webp",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "Družstevní 304",
+                "addressLocality": "Řečany nad Labem",
+                "postalCode": "533 13",
+                "addressCountry": "CZ"
+            },
+            "founder": {
+                "@type": "Person",
+                "name": "Martin Kolář"
+            },
+            "vatID": "CZ8204183086",
+            "taxID": "73589292",
+            "telephone": "+420773961824",
+            "email": "info@drevniky-kolar.cz",
+            "openingHours": "Mo-Fr 08:00-16:00",
+            "paymentAccepted": [
+                "Bank Transfer",
+                "Cash on Delivery"
+            ],
+            "currenciesAccepted": "CZK, EUR",
+            "areaServed": [
+                {
+                    "@type": "Country",
+                    "name": "Czech Republic"
+                },
+                {
+                    "@type": "Country",
+                    "name": "Slovakia"
+                }
+            ],
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "5",
+                "bestRating": "5",
+                "ratingCount": "12"
+            }
+        }
+    </script>
+
 </section>
+
+<th:block layout:fragment="javascript">
+</th:block>
 
 </body>
 </html>

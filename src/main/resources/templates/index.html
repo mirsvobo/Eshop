@@ -416,19 +416,23 @@
              style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6;">
         <div class="container">
             <div class="row align-items-stretch">
-                <div class="col-lg-7 mb-4 mb-lg-0 d-flex flex-column justify-content-center py-5">
+                <div class="col-lg-7 mb-4 mb-lg-0 d-flex flex-column justify-content-center py-5 text-center">
                     <div>
                         <h2 class="display-6 fw-bold mb-3">Máte specifické požadavky?</h2>
                         <p class="lead mb-4">Nakonfigurujte si dřevník přesně podle vašich představ! Zvolte si rozměry,
                             design, barvu lazury, typ střechy a přidejte praktické doplňky.</p>
-                        <a th:href="@{/produkt/na-miru}" class="btn btn-success btn-lg align-self-start">
+
+                        <p class="small text-muted mt-3 mb-4">
+                            <i class="bi bi-info-circle-fill me-1"></i> Upozornění: U produktů konfigurovaných na míru je vyžadována záloha 50 % z celkové ceny. Zálohu prosím uhraďte až po obdržení zálohové faktury, kterou Vám zašleme emailem po potvrzení Vaší objednávky.
+                        </p>
+
+                        <a th:href="@{/produkt/na-miru}" class="btn btn-success btn-lg">
                             <i class="bi bi-pencil-square me-2"></i> Spustit konfigurátor
                         </a>
                     </div>
                 </div>
                 <div class="col-lg-5 p-0 cta-image-column">
                     <div class="cta-image-background-container">
-                        <div style="min-height: 400px;"></div>
                     </div>
                 </div>
             </div>
@@ -760,6 +764,112 @@
                     }
                 }
             ]
+        }
+    </script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "Jaké rozměry dřevníku si mohu objednat?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Nabízíme několik standardních rozměrů, které naleznete v naší nabídce. Pokud vám standardní rozměry nevyhovují, rádi pro vás vyrobíme dřevník přesně na míru vašim požadavkům. Stačí využít náš online konfigurátor nebo nás kontaktovat s vašimi představami."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Z jakého materiálu jsou dřevníky vyrobeny?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Naše dřevníky vyrábíme primárně z kvalitního smrkového nebo modřínového dřeva. Používáme pevné KVH hranoly a odolné palubky. Veškerý spojovací materiál je pozinkovaný pro maximální odolnost proti korozi."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Je montáž dřevníku zahrnuta v ceně?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Ano, odborná montáž dřevníku na vámi připravený podklad je zdarma v rámci celé České a Slovenské republiky. Dopravu účtujeme zvlášť dle vzdálenosti, cenu si můžete snadno spočítat v pokladně po zadání adresy."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Jak dlouho trvá dodání a montáž?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Standardní doba dodání se pohybuje obvykle mezi 2-4 týdny od potvrzení objednávky a případné úhrady zálohy (u produktů na míru). Termín montáže s vámi domluvíme individuálně po dokončení výroby. Samotná montáž obvykle trvá několik hodin."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Jaký podklad je potřeba pro montáž dřevníku?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Dřevník je nutné usadit na pevný a rovný podklad. Ideální jsou betonové patky, zámková dlažba nebo betonová deska. Podklad si zákazník zajišťuje sám dle našich doporučení, která vám rádi poskytneme. Důležité je, aby byl podklad v rovině."
+                    }
+                }
+            ]
+        }
+    </script>
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Dřevníky Kolář",
+            "url": "https://www.drevniknamiru.cz/",
+            "description": "Vyrábíme kvalitní dřevníky standardních rozměrů i zcela na míru vašim požadavkům. Široký výběr designů, lazur a střešních krytin.",
+        }
+    </script>
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "HomeAndConstructionBusiness",
+            "name": "Dřevníky Kolář",
+            "description": "Výroba a prodej kvalitních dřevníků standardních rozměrů i na míru. Tradice, zkušenosti a individuální přístup.",
+            "url": "https://www.drevniknamiru.cz/",
+            "logo": "https://www.drevniknamiru/images/logo.webp",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "Družstevní 304",
+                "addressLocality": "Řečany nad Labem",
+                "postalCode": "533 13",
+                "addressCountry": "CZ"
+            },
+            "founder": {
+                "@type": "Person",
+                "name": "Martin Kolář"
+            },
+            "vatID": "CZ8204183086",
+            "taxID": "73589292",
+            "telephone": "+420773961824",
+            "email": "info@drevniky-kolar.cz",
+            "openingHours": "Mo-Fr 08:00-16:00",
+            "paymentAccepted": [
+                "Bank Transfer",
+                "Cash on Delivery"
+            ],
+            "currenciesAccepted": "CZK, EUR",
+            "areaServed": [
+                {
+                    "@type": "Country",
+                    "name": "Czech Republic"
+                },
+                {
+                    "@type": "Country",
+                    "name": "Slovakia"
+                }
+            ],
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "5",
+                "bestRating": "5",
+                "ratingCount": "12"
+            }
         }
     </script>
 

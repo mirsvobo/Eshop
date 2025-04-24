@@ -1,5 +1,5 @@
 /* src/main/resources/static/css/custom.css */
-/* Verze: 2025-04-16 - Opraven hover efekt v navbaru */
+/* Verze: 2025-04-24 - Odstraněny duplicitní bloky */
 
 /* Definice vlastních CSS proměnných inspirovaných originálem a Bootstrapem */
 :root {
@@ -151,7 +151,7 @@
     background-size: cover;
     color: #fff;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
-    min-height: calc(100vh - 73px);
+    min-height: calc(100vh - 73px); /* Výška navbaru - upravit podle skutečné výšky */
     padding: 5rem 1rem;
     display: flex;
     flex-direction: column;
@@ -162,7 +162,7 @@
 }
 
 .hero-section h1 {
-    font-size: 3.5rem;
+    font-size: 3.5rem; /* Velikost nadpisu */
 }
 
 @media (min-width: 768px) {
@@ -173,14 +173,14 @@
 
 .hero-section .lead {
     font-size: 1.5rem;
-    margin-bottom: 2.5rem !important;
+    margin-bottom: 2.5rem !important; /* Větší mezera pod popiskem */
 }
 
 #typed-output {
-    border-bottom: 4px solid var(--bs-primary);
+    border-bottom: 4px solid var(--bs-primary); /* Podtržení primární barvou */
     padding-bottom: 4px;
-    font-weight: 500;
-    font-size: 1.1em;
+    font-weight: 500; /* Mírně tučnější */
+    font-size: 1.1em; /* Mírně větší */
 }
 
 .typed-cursor {
@@ -204,11 +204,12 @@
 .hero-section .btn-lg i.bi {
     font-size: 1.2em;
     vertical-align: middle;
-    margin-top: -2px;
+    margin-top: -2px; /* Jemné doladění pozice ikony */
 }
 
+/* Šipka dolů - animace */
 .hero-section::after {
-    content: '\F282';
+    content: '\F282'; /* Bootstrap Ikona šipky dolů */
     font-family: 'bootstrap-icons';
     position: absolute;
     bottom: 2rem;
@@ -217,7 +218,7 @@
     font-size: 2.5rem;
     color: rgba(255, 255, 255, 0.7);
     animation: bounce 2s infinite;
-    cursor: pointer;
+    cursor: pointer; /* Naznačuje možnost kliknutí (i když JS zatím není) */
 }
 
 @keyframes bounce {
@@ -263,26 +264,59 @@
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-.cta-image-background-container {
-    background-image: url('../images/Banner - proces výroby 600px.webp');
-    background-size: contain;
-    background-position: center center;
-    background-repeat: no-repeat;
-    border-radius: 0 .375rem .375rem 0;
-}
-
 /* === Sekce CTA "Na míru" (pro index.html) === */
 .cta-section {
-    text-align: center;
-    background-color: #f8f9fa;
+    /* background-color: #f8f9fa; Odstraněno, protože sloupce mají vlastní styly */
     border-top: 1px solid #dee2e6;
     border-bottom: 1px solid #dee2e6;
-    overflow: hidden;
+    overflow: hidden; /* Aby obrázek nepřesahoval */
+}
+/* Styly pro textovou část CTA */
+.cta-section .col-lg-7 { /* Přizpůsobeno pro layout s obrázkem vpravo */
+    padding: 4rem 1rem;
+    background-color: #f8f9fa; /* Pozadí pro textovou část */
 }
 
-.cta-section .col-lg-6:first-child {
-    padding: 4rem 1rem;
+/* Sloupec s obrázkem na pozadí */
+.cta-image-column {
+    position: relative;
+    /* overflow: hidden; Již na .cta-section */
+    min-height: 400px; /* Minimální výška pro obrázek */
 }
+
+/* Kontejner pro obrázek na pozadí */
+.cta-image-background-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('../images/Banner - proces výroby 600px.webp'); /* Správná cesta? */
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    /* border-radius: 0 .375rem .375rem 0; /* Odstraněno - aplikováno na .cta-image-column */
+}
+
+/* Úpravy pro menší obrazovky */
+@media (max-width: 991.98px) {
+    .cta-image-column {
+        min-height: 300px; /* Menší výška na tabletech/mobilech */
+        position: relative; /* Změna pozicování */
+    }
+    .cta-image-background-container {
+        position: absolute; /* Zůstává absolutní, aby pokrylo .cta-image-column */
+        /* border-radius: 0 0 .375rem .375rem; Může být potřeba upravit radius */
+    }
+    .cta-section .col-lg-7 {
+        text-align: center; /* Vycentrování textu na mobilu */
+    }
+    .cta-section .btn-lg {
+        width: auto; /* Tlačítko se přizpůsobí obsahu */
+        align-self: center !important; /* Vycentruje tlačítko */
+    }
+}
+
 
 /* === Sekce Variant Produktů (pro index.html) === */
 .product-variants-section {
@@ -318,7 +352,7 @@
 .product-variants-section .card-body {
     display: flex;
     flex-direction: column;
-    min-height: 180px;
+    min-height: 180px; /* Zajistí konzistentní výšku karet */
     padding: 1rem;
 }
 
@@ -329,19 +363,15 @@
 }
 
 .product-variants-section .card-text {
-    flex-grow: 1;
+    flex-grow: 1; /* Popis zabere zbylé místo */
     margin-bottom: 0;
 }
-#kontaktni-udaje {
-    background-color: var(--bs-light);
-}
 
-
-/* === Sekce Google Recenzí (placeholder) === */
+/* === Sekce Google Recenzí (placeholder - možná zastaralé?) === */
+/* Pokud nepoužíváš tuto sekci s #google-reviews-widget, můžeš ji smazat */
 .reviews-section {
     padding: 4rem 0;
 }
-
 #google-reviews-widget {
     border: 1px solid #eee;
     padding: 1.5rem;
@@ -354,130 +384,16 @@
     color: #6c757d;
 }
 
-/* === Sekce Kontakt s ikonami (pro index.html) === */
-.contact-section-icons {
-    background-color: #ffffff;
-    padding: 4rem 0;
-    border-top: 1px solid #dee2e6;
-}
 
-.contact-block {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.contact-block i {
-    font-size: 2.8rem;
-    color: var(--bs-primary);
-    margin-bottom: 1rem;
-    display: block;
-}
-
-.contact-block h5 {
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    font-size: 1.1rem;
-}
-
-.contact-block p {
-    color: var(--bs-secondary);
-    line-height: 1.5;
-    font-size: 0.95em;
-    margin-bottom: 0.3rem;
-}
-
-.contact-block a {
-    color: var(--bs-primary);
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.contact-block a:hover {
-    text-decoration: underline;
-}
-
-.contact-block .small {
-    font-size: 0.85em;
-    color: #6c757d;
-    line-height: 1.3;
-}
-
-
-/* === Patička === */
-.footer {
-    background-color: var(--bs-dark);
-    color: rgba(255, 255, 255, 0.7);
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-    font-size: 0.9em;
-}
-
-.footer a {
-    color: rgba(255, 255, 255, 0.9);
-    text-decoration: none;
-}
-
-.footer a:hover {
-    color: #fff;
-    text-decoration: underline;
-}
-
-.footer .bi {
-    margin-right: 0.5rem;
-}
-
-/* === Globální úpravy === */
-body {
-    padding-top: 73px;
-    font-family: var(--bs-body-font-family);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-main {
-    flex: 1 0 auto;
-}
-
-.footer {
-    flex-shrink: 0;
-}
-
-/* === Responzivita === */
-@media (min-width: 768px) {
-    .hero-section {
-        padding: 8rem 1rem;
-    }
-
-    .hero-section .btn-lg {
-        padding: 1rem 2.2rem;
-        font-size: 1.2rem;
-    }
-}
-
-@media (max-width: 991.98px) {
-    body {
-        padding-top: 56px;
-    }
-
-    .hero-section {
-        min-height: calc(100vh - 56px);
-        margin-top: 0;
-    }
-}
-
-/* === STYLY PRO KARTY VARIANT (pro index.html) === */
-/* ... (stávající styly pro product-variants-section) ... */
-
-/* === STYLY PRO SEKCI RECENZÍ (pro index.html) === */
+/* === STYLY PRO SEKCI RECENZÍ (index.html - nová verze se Swiperem) === */
 .reviews-section-new {
     padding: 4rem 0;
-    background-color: #ffffff;
+    background-color: #ffffff; /* Bílé pozadí */
 }
 
-.review-summary {
+.review-summary { /* Shrnutí vlevo na desktopu */
     text-align: center;
-    padding-right: 2rem;
+    padding-right: 2rem; /* Odsazení od slideru */
     margin-bottom: 2rem;
 }
 
@@ -488,7 +404,7 @@ main {
 }
 
 .review-summary .stars {
-    color: #ffc107;
+    color: #ffc107; /* Zlatá pro hvězdy */
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
 }
@@ -500,54 +416,54 @@ main {
 }
 
 .review-summary .google-logo img {
-    height: 40px;
+    height: 40px; /* Výška Google loga */
     width: auto;
 }
 
-.review-slider-container {
+.review-slider-container { /* Kontejner pro Swiper a šipky */
     position: relative;
-    padding: 0 45px;
+    padding: 0 45px; /* Prostor pro šipky po stranách */
     margin: 0 auto;
     max-width: 100%;
-    overflow: hidden;
+    overflow: hidden; /* Skryje části slidů mimo kontejner */
 }
 
-.swiper-review {
+.swiper-review { /* Samotný Swiper */
     width: 100%;
-    height: auto;
-    padding-bottom: 1.5rem;
-    position: static;
+    height: auto; /* Výška se přizpůsobí obsahu */
+    padding-bottom: 1.5rem; /* Prostor pod slidery (např. pro paginaci, pokud by byla) */
+    position: static; /* Důležité pro správné fungování šipek */
 }
 
-.swiper-slide {
-    height: auto;
-    display: flex;
-    width: auto;
+.swiper-slide { /* Jednotlivý slide ve Swiperu */
+    height: auto; /* Výška se přizpůsobí kartě */
+    display: flex; /* Zarovnání karty uvnitř */
+    width: auto; /* Šířka se přizpůsobí, pokud máš slidesPerView: 'auto' */
 }
 
-.review-card-new {
+.review-card-new { /* Karta s recenzí */
     width: 100%;
-    height: 100%;
-    border: none;
-    background-color: #f8f9fa;
-    border-radius: 0.375rem;
-    padding: 1.5rem;
+    height: 100%; /* Karta vyplní slide */
+    border: none; /* Bez rámečku */
+    background-color: #f8f9fa; /* Světlé pozadí karty */
+    border-radius: 0.375rem; /* Zaoblené rohy */
+    padding: 1.5rem; /* Vnitřní odsazení */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Obsah pod sebou */
 }
 
-.review-card-new .review-header {
+.review-card-new .review-header { /* Hlavička karty */
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
 }
 
-.review-card-new .reviewer-avatar {
+.review-card-new .reviewer-avatar { /* Avatar recenzenta */
     width: 40px;
     height: 40px;
     border-radius: 50%;
     margin-right: 0.75rem;
-    background-color: var(--bs-secondary);
+    background-color: var(--bs-secondary); /* Záložní barva */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -556,75 +472,75 @@ main {
     font-size: 1.1rem;
     overflow: hidden;
 }
-
-.review-card-new .reviewer-avatar img {
+.review-card-new .reviewer-avatar img { /* Obrázek v avataru */
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover; /* Vyplní avatar bez deformace */
 }
 
-.review-card-new .reviewer-info {
-    flex-grow: 1;
+.review-card-new .reviewer-info { /* Info vedle avataru */
+    flex-grow: 1; /* Zabere zbylé místo */
 }
 
-.review-card-new .review-name {
+.review-card-new .review-name { /* Jméno recenzenta */
     font-weight: 600;
     margin-bottom: 0;
     font-size: 0.95rem;
 }
 
-.review-card-new .review-date {
+.review-card-new .review-date { /* Datum recenze */
     font-size: 0.75em;
     color: #6c757d;
 }
 
-.review-card-new .google-icon {
-    height: 40px;
+.review-card-new .google-icon { /* Malé Google logo */
+    height: 40px; /* Shodná výška s velkým logem */
     width: auto;
     margin-left: 0.5rem;
 }
 
-.review-card-new .stars {
+.review-card-new .stars { /* Hvězdičky v kartě */
     color: #ffc107;
-    font-size: 1rem;
+    font-size: 1rem; /* Menší než ve shrnutí */
     margin-bottom: 0.75rem;
 }
 
-.review-card-new .review-text {
+.review-card-new .review-text { /* Text recenze */
     font-size: 0.9rem;
     line-height: 1.5;
     color: #495057;
     margin-bottom: 1rem;
-    overflow: hidden;
-    display: block;
-    min-height: calc(1.5 * 0.9rem);
+    overflow: hidden; /* Skryje přebytečný text */
+    display: block; /* Potřeba pro -webkit-line-clamp */
+    min-height: calc(1.5 * 0.9rem * 3); /* Výška pro 3 řádky - upravit podle potřeby */
 }
 
-.review-card-new .review-text.truncated {
+.review-card-new .review-text.truncated { /* Oříznutý text */
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 3; /* Zobrazí max 3 řádky */
     -webkit-box-orient: vertical;
-    text-overflow: ellipsis;
+    text-overflow: ellipsis; /* Přidá ... na konec */
 }
 
-.review-card-new .read-more {
+.review-card-new .read-more { /* Odkaz "Přečíst více" */
     font-size: 0.85em;
     color: var(--bs-primary);
     text-decoration: none;
     font-weight: 500;
     cursor: pointer;
     display: inline-block;
-    margin-top: 0.5rem;
+    margin-top: auto; /* Posune odkaz na spodek karty */
 }
 
 .review-card-new .read-more:hover {
     text-decoration: underline;
 }
 
-.review-card-new .read-more.hidden {
+.review-card-new .read-more.hidden { /* Skrytí odkazu */
     display: none;
 }
 
+/* Šipky Swiperu */
 .review-slider-container .swiper-button-prev,
 .review-slider-container .swiper-button-next {
     position: absolute;
@@ -632,13 +548,13 @@ main {
     transform: translateY(-50%);
     width: 44px;
     height: 44px;
-    margin-top: 0;
+    margin-top: 0; /* Reset výchozího marginu */
     background-color: rgba(255, 255, 255, 0.85);
     border-radius: 50%;
     color: var(--bs-primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
-    z-index: 10;
+    z-index: 10; /* Nad slidery */
 }
 
 .review-slider-container .swiper-button-prev:hover,
@@ -649,20 +565,19 @@ main {
 }
 
 .review-slider-container .swiper-button-prev {
-    left: 0px;
+    left: 0px; /* Pozice levé šipky */
 }
-
 .review-slider-container .swiper-button-next {
-    right: 0px;
+    right: 0px; /* Pozice pravé šipky */
 }
 
 .review-slider-container .swiper-button-prev::after,
 .review-slider-container .swiper-button-next::after {
-    font-size: 18px;
+    font-size: 18px; /* Velikost ikony v šipce */
     font-weight: bold;
 }
 
-.review-slider-container .swiper-button-disabled {
+.review-slider-container .swiper-button-disabled { /* Neaktivní šipka */
     opacity: 0.25;
     pointer-events: none;
 }
@@ -691,11 +606,91 @@ main {
     font-size: 0.95em;
     line-height: 1.6;
 }
-/* === Styly specifické pro stránku O nás === */
 
-/* --- Hero sekce O nás --- */
+/* === Sekce Kontakt s ikonami (pro index.html) === */
+.contact-section-icons {
+    background-color: #ffffff; /* Bílé pozadí */
+    padding: 4rem 0;
+    border-top: 1px solid #dee2e6;
+}
+
+.contact-block {
+    text-align: center;
+    margin-bottom: 2rem; /* Mezera mezi bloky */
+}
+
+.contact-block i {
+    font-size: 2.8rem; /* Velikost ikony */
+    color: var(--bs-primary);
+    margin-bottom: 1rem;
+    display: block; /* Ikona nad textem */
+}
+
+.contact-block h5 {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.contact-block p {
+    color: var(--bs-secondary);
+    line-height: 1.5;
+    font-size: 0.95em;
+    margin-bottom: 0.3rem;
+}
+
+.contact-block a {
+    color: var(--bs-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.contact-block a:hover {
+    text-decoration: underline;
+}
+
+.contact-block .small { /* Doplňující informace (IČ, DIČ, Po-Pá) */
+    font-size: 0.85em;
+    color: #6c757d;
+    line-height: 1.3;
+}
+#kontaktni-udaje { /* Zajištění ID pro odkaz z navbaru */
+    background-color: #ffffff; /* Sjednocení pozadí s .contact-section-icons */
+}
+
+
+/* === Styly specifické pro stránku O nás === */
+.feature-icon { /* Ikony v kartách na O nás */
+    font-size: 2.5rem;
+    color: var(--bs-primary);
+    margin-bottom: 1rem;
+}
+
+.card-feature { /* Karty na O nás */
+    border: 1px solid #eee;
+    background-color: #fff;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    height: 100%; /* Karty budou stejně vysoké */
+}
+
+.card-feature:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.card-feature .card-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-feature .card-text {
+    margin-top: auto; /* Text se přichytí dolů, pokud je karta vyšší */
+}
+
+/* --- Hero sekce O nás (pokud existuje) --- */
 .about-hero {
-    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('../images/o-nas-banner.webp');
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), url('../images/o-nas-banner.webp'); /* Zkontroluj cestu */
     background-repeat: no-repeat;
     background-position: center center;
     background-size: cover;
@@ -707,147 +702,124 @@ main {
     margin-bottom: 3rem;
 }
 
-/* --- Ikony v sekci Hodnoty --- */
+/* --- Ikony v sekci Hodnoty (pokud existuje na O nás) --- */
 .icon-box i {
     font-size: 3rem;
     color: var(--bs-primary);
     margin-bottom: 1rem;
 }
 
-/* --- Časová Osa Výroby (Opraveno zarovnání čáry - v3) --- */
-
-/* Hlavní kontejner sekce osy */
+/* --- Časová Osa Výroby --- */
 .timeline-section {
     padding: 40px 0 40px 0;
-    overflow: hidden; /* Zajistí, že nic nepřesahuje */
+    overflow: hidden;
 }
 
 .timeline-section h2 {
-    margin-bottom: 3rem !important; /* Mezera pod nadpisem */
+    margin-bottom: 3rem !important;
 }
 
-/* Wrapper přidaný v HTML (.col-12) - klíčový pro pozicování čáry */
 .timeline-wrapper {
-    position: relative; /* Nastaví kontext pro absolutní pozicování čáry */
+    position: relative;
 }
 
-/* Kontejner pro samotné kroky */
 .timeline-steps {
     display: flex;
     justify-content: space-between;
-    width: 90%; /* Šířka rozložení kroků */
-    margin: 0 auto; /* Vycentrování */
-    padding-top: 20px; /* Odsazení shora (pro ikony) */
-    padding-bottom: 30px; /* Odsazení zdola */
-    position: relative; /* Přidáno zpět pro jistotu, pokud by to bylo potřeba pro jiné vnořené prvky */
+    width: 90%;
+    margin: 0 auto;
+    padding-top: 20px;
+    padding-bottom: 30px;
+    position: relative;
 }
 
-/* Horizontální čára (Desktop/Tablet) - pozicovaná vůči timeline-wrapper */
 .timeline-line.d-none.d-md-block {
     display: block !important;
     position: absolute;
-    left: 5%; /* Začátek čáry (vzhledem k .timeline-wrapper) */
-    right: 5%; /* Konec čáry (vzhledem k .timeline-wrapper) */
-    /* Vertikální pozice středu čáry (zarovnáno se středem puntíků) */
-    top: calc(20px + 60px + 10px); /* padding-top steps + výška ikony + mezera k puntíku */
-    transform: translateY(-50%); /* Vertikálně vycentruje čáru */
-    height: 2px; /* Tloušťka čáry */
-    background-color: var(--bs-primary); /* Barva čáry */
-    z-index: 1; /* Vrstva: pod puntíky a ikonami */
+    left: 5%;
+    right: 5%;
+    top: calc(20px + 60px + 10px); /* padding + ikona + mezera k puntíku */
+    transform: translateY(-50%);
+    height: 2px;
+    background-color: var(--bs-primary);
+    z-index: 1;
+}
+.timeline-line.d-md-none { /* Skrytí vertikální čáry na desktopu */
+    display: none !important;
 }
 
-/* Jednotlivý krok */
+
 .timeline-step {
-    text-align: center; /* Zarovnání textu */
-    width: 18%; /* Šířka jednoho kroku (cca 1/5) */
-    position: relative; /* Nutné pro absolutní pozicování ikony a ::after */
-    /* Horní padding pro vytvoření místa pro ikonu, puntík a mezeru */
-    padding-top: calc(60px + 10px + 16px / 2 + 10px); /* ikona(60) + mezera(10) + pulka puntiku(8) + mezera k textu(10) */
+    text-align: center;
+    width: 18%;
+    position: relative;
+    padding-top: calc(60px + 10px + 16px / 2 + 10px); /* ikona + mezera + pulka puntiku + mezera k textu */
 }
 
-/* Ikona kroku */
 .timeline-step .icon {
-    display: inline-flex; /* Chování jako blokový prvek, ale s možností centrování */
-    align-items: center; /* Vertikální centrování obsahu (ikony) */
-    justify-content: center; /* Horizontální centrování obsahu (ikony) */
-    width: 60px; /* Šířka */
-    height: 60px; /* Výška */
-    background-color: #ffffff; /* Bílé pozadí (překryje čáru za ikonou) */
-    border: 3px solid var(--bs-primary); /* Orámování */
-    border-radius: 50%; /* Kulatý tvar */
-    font-size: 1.8rem; /* Velikost písma ikony */
-    color: var(--bs-primary); /* Barva ikony */
-    position: absolute; /* Absolutní pozice vůči .timeline-step */
-    top: 0; /* Umístění na horní okraj .timeline-step */
-    left: 50%; /* Horizontální posun na střed */
-    transform: translateX(-50%); /* Přesné horizontální vycentrování */
-    z-index: 3; /* Vrstva: nejvýše (nad čárou a puntíkem) */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background-color: #ffffff;
+    border: 3px solid var(--bs-primary);
+    border-radius: 50%;
+    font-size: 1.8rem;
+    color: var(--bs-primary);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
 }
 
-/* Puntík na časové ose (Desktop/Tablet) - generovaný obsah ::after */
-.timeline-step::after {
-    content: ''; /* Nutné pro pseudo-element */
-    position: absolute; /* Absolutní pozice vůči .timeline-step */
-    width: 16px; /* Šířka puntíku */
-    height: 16px; /* Výška puntíku */
-    background-color: #ffffff; /* Pozadí puntíku (překryje čáru) */
-    border: 3px solid var(--bs-primary); /* Orámování = barva puntíku */
-    border-radius: 50%; /* Kulatý tvar */
-    /* Vertikální pozice středu puntíku */
+.timeline-step::after { /* Puntík na desktopu */
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background-color: #ffffff;
+    border: 3px solid var(--bs-primary);
+    border-radius: 50%;
     top: calc(60px + 10px); /* výška ikony + mezera */
-    left: 50%; /* Horizontální posun na střed */
-    transform: translate(-50%, -50%); /* Přesné vycentrování puntíku */
-    z-index: 2; /* Vrstva: nad čárou, pod ikonou */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
 }
 
-/* Popisek kroku */
 .timeline-step .step-label {
-    font-weight: 600; /* Tučnost písma */
-    font-size: 0.9rem; /* Velikost písma */
-    display: block; /* Zajistí správné chování */
-    color: var(--bs-body-color); /* Barva textu */
-    /* Margin top není potřeba, řešeno paddingem na .timeline-step */
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: block;
+    color: var(--bs-body-color);
 }
 
 
 /* --- Responsivita pro časovou osu --- */
-
-/* Tablet (šířka < 992px) */
 @media (max-width: 991.98px) {
-    /* Horizontální čára (Tablet) - menší ikona = posun nahoru */
     .timeline-line.d-none.d-md-block {
-        top: calc(20px + 50px + 10px); /* Ikona 50px => střed puntíků cca 80px */
+        top: calc(20px + 50px + 10px); /* Menší ikona */
     }
-
-    /* Krok (Tablet) - menší padding pro menší ikonu */
     .timeline-step {
-        padding-top: calc(50px + 10px + 14px / 2 + 10px); /* Ikona 50px, puntík 14px */
+        padding-top: calc(50px + 10px + 14px / 2 + 10px); /* Menší ikona/puntík */
     }
-
-    /* Ikona (Tablet) - menší rozměry */
     .timeline-step .icon {
         width: 50px;
         height: 50px;
-        font-size: 1.5rem; /* Menší ikona */
+        font-size: 1.5rem;
     }
-
-    /* Puntík (Tablet) - menší rozměry a posun nahoru */
     .timeline-step::after {
         width: 14px;
         height: 14px;
-        top: calc(50px + 10px); /* Střed puntíku = 60px pod padding-boxem kroku */
+        top: calc(50px + 10px);
     }
-
-    /* Popisek (Tablet) - menší písmo */
     .timeline-step .step-label {
         font-size: 0.8rem;
     }
 }
 
-/* ===== MOBILNÍ ČASOVÁ OSA (Osa více vlevo od středu, Text vpravo) ===== */
 @media (max-width: 767.98px) {
-
-    /* === Kontejner celé sekce === */
     .timeline-section {
         padding-top: 30px;
         padding-bottom: 10px;
@@ -857,91 +829,59 @@ main {
         font-size: 1.6rem;
         text-align: center;
     }
-
-    /* === Wrapper pro osu a kroky === */
     .timeline-wrapper {
         position: relative;
-        /* Můžeme přidat boční padding pro celý blok */
-        padding: 0 5%; /* Např. 5% z každé strany */
-        /* Nebo nechat padding 0 a řídit pozici osy left */
-        /* padding: 0; */
+        padding: 0 5%;
     }
-
-    /* === Vertikální čára (Mobil) === */
-    .timeline-line.d-md-none {
+    .timeline-line.d-md-none { /* Zobrazení vertikální čáry na mobilu */
         display: block !important;
         position: absolute;
-        /* Změna: Posunuto více ke středu */
-        left: 25%; /* Osa bude na 35% šířky wrapperu */
-        transform: translateX(-50%); /* Centruje čáru */
+        left: 25%; /* Posun osy */
+        transform: translateX(-50%);
         top: 0;
         bottom: 0;
         width: 3px;
         background-color: var(--bs-primary);
         z-index: 1;
     }
-    .timeline-line.d-none.d-md-block { display: none !important; }
-
-    /* === Kontejner pro kroky === */
+    .timeline-line.d-none.d-md-block { display: none !important; } /* Skrytí horizontální */
     .timeline-steps {
         display: block;
         width: 100%;
         padding: 0;
         margin: 0;
     }
-
-    /* === Jednotlivý krok (Mobil) === */
     .timeline-step {
         width: 100%;
         text-align: left;
         position: relative;
         margin-bottom: 2.5rem;
-        min-height: 60px;
+        min-height: 60px; /* Výška kroku */
         padding: 5px 0;
     }
     .timeline-step:last-child { margin-bottom: 0; }
-
-    /* === Ikona kroku (Mobil) === */
     .timeline-step .icon {
-        width: 60px;
+        width: 60px; /* Velikost ikony na mobilu */
         height: 60px;
-        font-size: 2rem;
+        font-size: 2rem; /* Velikost fontu ikony */
         border-width: 3px;
         position: absolute;
-        /* Změna: Posunuto více ke středu */
-        left: 25%; /* Stejná pozice X jako čára */
-        top: 50%;
-        transform: translate(-50%, -50%); /* Centruje ikonu */
+        left: 25%; /* Stejná pozice jako čára */
+        top: 50%; /* Vertikálně na střed kroku */
+        transform: translate(-50%, -50%);
         z-index: 3;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #ffffff;
-        border-style: solid;
-        border-color: var(--bs-primary);
-        border-radius: 50%;
-        color: var(--bs-primary);
+        /* Opakování kvůli specificitě? */
+        display: inline-flex; align-items: center; justify-content: center; background-color: #ffffff; border-style: solid; border-color: var(--bs-primary); border-radius: 50%; color: var(--bs-primary);
     }
-
-    /* === Puntík (Mobil) - skrytý === */
-    .timeline-step::after { display: none; }
-
-    /* === Popisek kroku (Mobil) === */
+    .timeline-step::after { display: none; } /* Skrytí puntíku na mobilu */
     .timeline-step .step-label {
         display: flex;
         align-items: center;
-        min-height: 60px;
-        /* Změna: Přepočítané odsazení zleva */
-        /* Musí být větší než pozice osy (35%) + polovina ikony (30px) + mezera */
-        /* Zkusíme kombinaci % a px pomocí calc() nebo větší pevnou hodnotu */
-        /* Varianta s calc(): 35% + 30px (okraj ikony) + 20px (mezera) */
-        padding-left: calc(25% + 55px);
-        /* Varianta s pevnou hodnotou (musí se otestovat na různých šířkách) */
-        /* padding-left: 180px; */
-        padding-right: 5%; /* Odsazení od pravého okraje */
-        /* Styl textu */
-        font-size: 1.15rem; /* Větší písmo */
-        font-weight: 600; /* Tučnější */
+        min-height: 60px; /* Shodná s ikonou */
+        padding-left: calc(25% + 55px); /* Odsazení textu od osy/ikony */
+        padding-right: 5%;
+        font-size: 1.15rem;
+        font-weight: 600;
         color: var(--bs-dark);
         line-height: 1.45;
         text-align: left;
@@ -949,6 +889,61 @@ main {
         padding-top: 2px; padding-bottom: 2px;
     }
 }
-/* ===== KONEC MOBILNÍ ČASOVÉ OSY (Více centrované) ===== */
 
-/* --- Konec stylů pro O nás --- */
+
+/* === Patička === */
+.footer {
+    background-color: var(--bs-dark);
+    color: rgba(255, 255, 255, 0.7);
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    font-size: 0.9em;
+    margin-top: auto; /* Přilepení patičky dolů */
+}
+
+.footer a {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.footer .bi {
+    margin-right: 0.5rem;
+}
+
+/* === Globální úpravy === */
+html {
+    scroll-behavior: smooth; /* Plynulé skrolování pro kotvy */
+    height: 100%;
+}
+
+body {
+    padding-top: 73px; /* Výška fixního navbaru - zkontrolovat */
+    font-family: var(--bs-body-font-family);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%; /* Změna z 100vh na 100% pro lepší kompatibilitu s flex */
+}
+
+main {
+    flex: 1 0 auto; /* Hlavní obsah zabere dostupné místo */
+}
+
+/* footer { /* Neaplikovat na .footer, ale na element footer, pokud je použit */
+/* flex-shrink: 0; /* Patička se nesmrští */
+/* } */
+
+/* === Responzivita - Globální === */
+@media (max-width: 991.98px) {
+    body {
+        padding-top: 56px; /* Nižší navbar na mobilu */
+    }
+    .hero-section {
+        min-height: calc(100vh - 56px); /* Přizpůsobení výšky hero sekce */
+        margin-top: 0; /* Pokud byl nějaký margin */
+    }
+}
