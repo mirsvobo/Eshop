@@ -34,9 +34,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 // Odebrán import java.util.List, protože se nepoužívá přímo
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -60,14 +58,98 @@ public class AdminProductController {
         return request.getRequestURI();
     }
 
-    // Načtení společných dat pro formuláře
+    // Metoda pro načtení společných dat (předpokládáme, že funguje správně)
     private void loadCommonFormData(Model model) {
-        // Použití opravených názvů metod
-        model.addAttribute("allTaxRates", taxRateService.getAllTaxRates()); //
-        model.addAttribute("allAddons", addonsService.getAllActiveAddons()); // Předpoklad existence metody
-        model.addAttribute("allDesigns", designService.getAllDesignsSortedByName()); //
-        model.addAttribute("allGlazes", glazeService.getAllGlazesSortedByName()); //
-        model.addAttribute("allRoofColors", roofColorService.getAllRoofColorsSortedByName()); //
+        log.info("Načítám společná data pro formulář...");
+        // Použití OPRAVENÝCH názvů metod podle poskytnutých service tříd:
+        model.addAttribute("allTaxRates", taxRateService.getAllTaxRates());                     // Opraveno z getAllActiveTaxRatesSorted()
+        model.addAttribute("allAddons", addonsService.getAllActiveAddons());                  // Opraveno z findAllActive()
+        model.addAttribute("allDesigns", designService.getAllDesignsSortedByName());         // Opraveno z findAllActive()
+        model.addAttribute("allGlazes", glazeService.getAllGlazesSortedByName());           // Opraveno z findAllActive()
+        model.addAttribute("allRoofColors", roofColorService.getAllRoofColorsSortedByName()); // Opraveno z findAllActive()
+        log.info("Společná data načtena.");
+    }
+
+    // --- Opravená metoda pro zobrazení EDITAČNÍHO formuláře ---
+    @GetMapping("/{id}/edit")
+    @Transactional(readOnly = true) // Načítáme asociace
+    public String showEditForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        log.info("Requesting edit form for product ID: {}", id);
+        try {
+            // 1. Načtení produktu
+            Product product = productService.getProductById(id) // Používáme findByIdWithDetails nebo ekvivalent z productService
+                    .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
+
+            // 2. Načtení všech seznamů pro výběr (lazury, designy atd.)
+            loadCommonFormData(model); // Tato metoda načte allDesigns, allGlazes, allRoofColors atd.
+
+            // 3. Seřazení obrázků produktu
+            List<Image> sortedImages = new ArrayList<>();
+            if (product.getImages() != null) {
+                sortedImages = product.getImages().stream()
+                        .sorted(Comparator.comparing(
+                                Image::getDisplayOrder,
+                                Comparator.nullsLast(Comparator.naturalOrder()) // Řadí null hodnoty na konec
+                        ).thenComparing(Image::getId, Comparator.nullsLast(Comparator.naturalOrder()))) // Sekundární řazení podle ID
+                        .collect(Collectors.toList());
+                log.debug("Seřazeno {} obrázků pro produkt ID {}", sortedImages.size(), id);
+            }
+
+            // 4. Přidání produktu a seřazených obrázků do modelu
+            model.addAttribute("product", product);
+            model.addAttribute("sortedImages", sortedImages); // Přidání seřazeného seznamu
+
+            // 5. Určení správné šablony a titulku
+            if (product.isCustomisable()) {
+                model.addAttribute("pageTitle", "Upravit produkt na míru: " + product.getName());
+                log.debug("Returning custom product form for ID: {}", id);
+                return "admin/product-form-custom";
+            } else {
+                model.addAttribute("pageTitle", "Upravit standardní produkt: " + product.getName());
+                log.debug("Returning standard product form for ID: {}", id);
+                return "admin/product-form-standard";
+            }
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Product with ID {} not found for editing.", id);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/products";
+        } catch (Exception e) {
+            log.error("Error loading product ID {} for edit: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Nepodařilo se načíst produkt k úpravě.");
+            return "redirect:/admin/products";
+        }
+    }
+
+
+    // --- Opravená metoda pro zobrazení formuláře pro PŘIDÁNÍ CUSTOM produktu ---
+    @GetMapping("/new/custom")
+    public String showCreateCustomForm(Model model) {
+        log.info("Requesting new CUSTOM product form.");
+        if (!model.containsAttribute("product")) {
+            Product product = new Product();
+            product.setCustomisable(true); // Přednastavení pro custom produkt
+            product.setActive(true);      // Výchozí aktivní
+            // Inicializace konfigurátoru, pokud neexistuje
+            if (product.getConfigurator() == null) {
+                product.setConfigurator(new ProductConfigurator());
+                product.getConfigurator().setProduct(product); // Propojení
+                // Zde by bylo vhodné zavolat metodu, která nastaví defaultní hodnoty konfigurátoru
+                // např. productService.initializeDefaultConfiguratorValues(product.getConfigurator());
+                log.info("Initialized new default ProductConfigurator for custom product.");
+            }
+            model.addAttribute("product", product);
+        }
+
+        // Načtení všech seznamů pro výběr
+        loadCommonFormData(model);
+
+        // Přidání prázdného seznamu pro obrázky (pro konzistenci s editací)
+        model.addAttribute("sortedImages", new ArrayList<Image>());
+
+        model.addAttribute("pageTitle", "Přidat produkt na míru");
+        log.debug("Returning new custom product form.");
+        return "admin/product-form-custom";
     }
 
     @GetMapping
@@ -94,24 +176,6 @@ public class AdminProductController {
         return "admin/product-form-standard";
     }
 
-    @GetMapping("/new/custom")
-    public String showCreateCustomForm(Model model) {
-        log.info("Requesting new CUSTOM product form.");
-        if (!model.containsAttribute("product")) {
-            Product product = new Product(); //
-            product.setCustomisable(true); // Přednastavení pro custom produkt
-            // Je potřeba inicializovat konfigurátor, pokud neexistuje
-            if (product.getConfigurator() == null) { //
-                product.setConfigurator(new ProductConfigurator()); //
-                product.getConfigurator().setProduct(product); // Propojení
-            }
-            model.addAttribute("product", product);
-        }
-        loadCommonFormData(model);
-        model.addAttribute("pageTitle", "Přidat produkt na míru");
-        // Předpokládá se existence šablony product-form-custom.html
-        return "admin/product-form-custom";
-    }
 
     // --- NOVÉ POST METODY PRO VYTVOŘENÍ ---
 
@@ -273,39 +337,7 @@ public class AdminProductController {
 
     // --- UPRAVENÉ METODY PRO EDITACI ---
 
-    @GetMapping("/{id}/edit")
-    @Transactional(readOnly = true) // Načítáme asociace
-    public String showEditForm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
-        log.info("Requesting edit form for product ID: {}", id);
-        try {
-            Product product = productService.getProductById(id) //
-                    .orElseThrow(() -> new EntityNotFoundException("Produkt s ID " + id + " nenalezen."));
 
-            model.addAttribute("product", product);
-            loadCommonFormData(model); // Načteme všechny možnosti pro checkboxy/selecty
-
-            if (product.isCustomisable()) { //
-                model.addAttribute("pageTitle", "Upravit produkt na míru: " + product.getName()); //
-                log.debug("Returning custom product form for ID: {}", id);
-                // Předpokládá se existence šablony product-form-custom.html
-                return "admin/product-form-custom";
-            } else {
-                model.addAttribute("pageTitle", "Upravit standardní produkt: " + product.getName()); //
-                log.debug("Returning standard product form for ID: {}", id);
-                // Předpokládá se existence šablony product-form-standard.html
-                return "admin/product-form-standard";
-            }
-
-        } catch (EntityNotFoundException e) {
-            log.warn("Product with ID {} not found for editing.", id);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/products";
-        } catch (Exception e) {
-            log.error("Error loading product ID {} for edit: {}", id, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Nepodařilo se načíst produkt k úpravě.");
-            return "redirect:/admin/products";
-        }
-    }
 
     // Jedna POST metoda pro update - rozliší typ podle příchozího productData.isCustomisable()
     @PostMapping("/{id}")
@@ -421,86 +453,143 @@ public class AdminProductController {
         }
     }
 
-    // --- Pomocná metoda pro zpracování asociací ---
-    // Aktualizováno pro použití findById a rozbalení Optional
     private void handleAssociations(Product product,
                                     Set<Long> taxRateIds, Set<Long> addonIds,
                                     Set<Long> glazeIds, Set<Long> designIds,
                                     Set<Long> roofColorIds) {
-        // Tax Rates (jsou povinné)
+
+        log.debug(">>> [handleAssociations] Vstupuji. Produkt ID: {}, Custom: {}. Příchozí ID: TaxRates={}, Addons={}, Glazes={}, Designs={}, RoofColors={}",
+                product.getId() != null ? product.getId() : "NOVÝ",
+                product.isCustomisable(),
+                taxRateIds, addonIds, glazeIds, designIds, roofColorIds);
+
+        // --- Daňové sazby (povinné pro všechny typy) ---
         if (taxRateIds != null && !taxRateIds.isEmpty()) {
             Set<TaxRate> rates = taxRateIds.stream()
                     .map(taxRateService::getTaxRateById) // Vrací Optional<TaxRate>
-                    .filter(Optional::isPresent)        // Zkontroluje, zda Optional obsahuje hodnotu
-                    .map(Optional::get)                 // Získá hodnotu z Optional
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
                     .collect(Collectors.toSet());
-            if (rates.isEmpty()) {
-                // Můžeme zde hodit výjimku nebo přidat chybu do BindingResult v volající metodě
-                log.error("No valid TaxRates found for provided IDs: {}", taxRateIds);
-                throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu platnou daňovou sazbu.");
+            if (rates.isEmpty() && taxRateIds.size() > 0) {
+                // Pokud jsme měli IDčka, ale žádné jsme nenašli, je to chyba
+                log.error("Nebyly nalezeny žádné platné TaxRates pro poskytnutá ID: {}", taxRateIds);
+                throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu platnou daňovou sazbu (zadaná ID nebyla nalezena).");
             }
-            product.setAvailableTaxRates(rates); //
+            // Inicializujeme, pokud je null, před přidáním
+            if (product.getAvailableTaxRates() == null) {
+                product.setAvailableTaxRates(new HashSet<>());
+            }
+            product.getAvailableTaxRates().clear(); // Vyčistíme staré
+            product.getAvailableTaxRates().addAll(rates); // Přidáme nové
+            log.debug("[handleAssociations] Přiřazené TaxRates (ID): {}", rates.stream().map(TaxRate::getId).collect(Collectors.toSet()));
         } else {
-            // Pokud jsou taxRateIds null nebo prázdné, vyvoláme chybu (nebo ji řeší @Valid @NotEmpty v modelu)
-            log.error("No TaxRate IDs provided for product association.");
+            log.error("Nebyly poskytnuty žádné TaxRate IDs pro přiřazení k produktu.");
+            // Pokud jsou taxRateIds null nebo prázdné, vyvoláme chybu (validace @NotEmpty by to měla také chytit)
             throw new IllegalArgumentException("Musí být vybrána alespoň jedna daňová sazba.");
         }
 
-        // Addons (jen pro custom)
-        if (product.isCustomisable()) { //
-            if (addonIds != null && !addonIds.isEmpty()) {
+        // --- Doplňky (Addons) - pouze pro custom ---
+        if (product.isCustomisable()) {
+            if (addonIds != null) { // Umožníme i prázdný set pro odebrání všech
                 Set<Addon> addons = addonIds.stream()
                         .map(addonsService::getAddonById) // Předpoklad: vrací Optional<Addon>
                         .filter(Optional::isPresent)
                         .map(Optional::get)
                         .collect(Collectors.toSet());
-                product.setAvailableAddons(addons); //
+                // Inicializujeme, pokud je null, před přidáním
+                if (product.getAvailableAddons() == null) {
+                    product.setAvailableAddons(new HashSet<>());
+                }
+                product.getAvailableAddons().clear();
+                product.getAvailableAddons().addAll(addons);
+                log.debug("[handleAssociations] Přiřazené Addons (ID): {}", addons.stream().map(Addon::getId).collect(Collectors.toSet()));
             } else {
-                product.setAvailableAddons(Set.of()); // Prázdný set, ne null
+                // Pokud addonIds je null (což by nemělo nastat s @RequestParam), pro jistotu vyčistíme
+                if (product.getAvailableAddons() != null) {
+                    product.getAvailableAddons().clear();
+                } else {
+                    product.setAvailableAddons(new HashSet<>()); // Nebo Set.of() pokud preferuješ nemodifikovatelný
+                }
+                log.debug("[handleAssociations] Nebyly poskytnuty Addon IDs, kolekce vyčištěna/inicializována.");
             }
-            // Standardní atributy by měly být prázdné pro custom
-            product.setAvailableGlazes(Set.of()); //
-            product.setAvailableDesigns(Set.of()); //
-            product.setAvailableRoofColors(Set.of()); //
-
-        } else { // Pro standardní produkt
-            product.setAvailableAddons(Set.of()); // Zajistíme prázdný set pro standardní
-
-            // Glazes (jen pro standard)
-            if (glazeIds != null && !glazeIds.isEmpty()) {
-                Set<Glaze> glazes = glazeIds.stream()
-                        .map(glazeService::findById) // Opraveno na findById
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .collect(Collectors.toSet());
-                product.setAvailableGlazes(glazes); //
+        } else {
+            // Pro standardní produkt zajistíme, že nemá žádné custom doplňky
+            if (product.getAvailableAddons() == null) {
+                product.setAvailableAddons(new HashSet<>());
             } else {
-                product.setAvailableGlazes(Set.of()); //
+                product.getAvailableAddons().clear();
             }
-            // Designs (jen pro standard)
-            if (designIds != null && !designIds.isEmpty()) {
-                Set<Design> designs = designIds.stream()
-                        .map(designService::findById) // Opraveno na findById
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .collect(Collectors.toSet());
-                product.setAvailableDesigns(designs); //
-            } else {
-                product.setAvailableDesigns(Set.of()); //
-            }
-
-            // RoofColors (jen pro standard)
-            if (roofColorIds != null && !roofColorIds.isEmpty()) {
-                Set<RoofColor> roofColors = roofColorIds.stream()
-                        .map(roofColorService::findById) // Opraveno na findById
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .collect(Collectors.toSet());
-                product.setAvailableRoofColors(roofColors); //
-            } else {
-                product.setAvailableRoofColors(Set.of()); //
-            }
+            log.debug("[handleAssociations] Standardní produkt - kolekce Addons vyčištěna.");
         }
+
+        // --- Designy, Lazury, Barvy střechy ---
+        // Zpracováváme je pro *oba* typy produktů, pokud přijdou ID z formuláře.
+        // Formulář `product-form-standard.html` by je neměl posílat,
+        // formulář `product-form-custom.html` je posílat může.
+
+        // Glazes (Lazury)
+        if (glazeIds != null) { // Zpracujeme, pokud přišel parametr (i prázdný)
+            Set<Glaze> glazes = glazeIds.stream()
+                    .map(glazeService::findById) // Předpoklad: vrací Optional<Glaze>
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            if (product.getAvailableGlazes() == null) {
+                product.setAvailableGlazes(new HashSet<>());
+            }
+            product.getAvailableGlazes().clear();
+            product.getAvailableGlazes().addAll(glazes);
+            log.debug("[handleAssociations] Přiřazené Glazes (ID): {}", glazes.stream().map(Glaze::getId).collect(Collectors.toSet()));
+        } else {
+            // Pokud parametr nepřišel vůbec, necháme kolekci být (pro update)
+            // nebo inicializujeme pro nový produkt
+            if (product.getAvailableGlazes() == null) {
+                product.setAvailableGlazes(new HashSet<>());
+            }
+            log.debug("[handleAssociations] Nebyly poskytnuty Glaze IDs, kolekce ponechána/inicializována.");
+        }
+
+        // Designs
+        if (designIds != null) {
+            Set<Design> designs = designIds.stream()
+                    .map(designService::findById) // Předpoklad: vrací Optional<Design>
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            if (product.getAvailableDesigns() == null) {
+                product.setAvailableDesigns(new HashSet<>());
+            }
+            product.getAvailableDesigns().clear();
+            product.getAvailableDesigns().addAll(designs);
+            log.debug("[handleAssociations] Přiřazené Designs (ID): {}", designs.stream().map(Design::getId).collect(Collectors.toSet()));
+        } else {
+            if (product.getAvailableDesigns() == null) {
+                product.setAvailableDesigns(new HashSet<>());
+            }
+            log.debug("[handleAssociations] Nebyly poskytnuty Design IDs, kolekce ponechána/inicializována.");
+        }
+
+        // RoofColors (Barvy střechy)
+        if (roofColorIds != null) {
+            Set<RoofColor> roofColors = roofColorIds.stream()
+                    .map(roofColorService::findById) // Předpoklad: vrací Optional<RoofColor>
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+            if (product.getAvailableRoofColors() == null) {
+                product.setAvailableRoofColors(new HashSet<>());
+            }
+            product.getAvailableRoofColors().clear();
+            product.getAvailableRoofColors().addAll(roofColors);
+            log.debug("[handleAssociations] Přiřazené RoofColors (ID): {}", roofColors.stream().map(RoofColor::getId).collect(Collectors.toSet()));
+        } else {
+            if (product.getAvailableRoofColors() == null) {
+                product.setAvailableRoofColors(new HashSet<>());
+            }
+            log.debug("[handleAssociations] Nebyly poskytnuty RoofColor IDs, kolekce ponechána/inicializována.");
+        }
+
+        log.debug("<<< [handleAssociations] Opouštím. Produkt ID: {}", product.getId() != null ? product.getId() : "NOVÝ");
     }
 
 

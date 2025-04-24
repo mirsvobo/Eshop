@@ -3,10 +3,12 @@ package org.example.eshop.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -45,16 +47,23 @@ public class Glaze {
     @ManyToMany(mappedBy = "availableGlazes", fetch = FetchType.LAZY)
     private Set<Product> products;
 
+    // V Glaze.java
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        // Kontrola null a třídy, ale pozor na proxy objekty Hibernate! Bezpečnější je:
+        // if (o == null || !(o instanceof Glaze)) return false;
+        // Nebo pokud používáš Hibernate specifické kontroly:
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
         Glaze glaze = (Glaze) o;
+        // Porovnáváme podle ID, jen pokud není null a je nenulové (tj. entita je perzistovaná)
         return id != null && id.equals(glaze.id);
     }
 
     @Override
     public int hashCode() {
-        return getClass().hashCode();
-    }
-}
+        // Hash kód založený na třídě, pokud není ID (pro transientní instance)
+        // Nebo lépe použít konstantu, pokud ID není null
+        return id != null ? Objects.hash(id) : getClass().hashCode();
+        // Alternativně: return getClass().hashCode(); // Jednodušší, ale méně optimální pro Set operace PŘED uložením
+    }}

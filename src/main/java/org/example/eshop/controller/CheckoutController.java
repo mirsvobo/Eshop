@@ -792,23 +792,35 @@ public class CheckoutController implements PriceConstants {
         }
     }
 
+    // V třídě CheckoutController.java
     private CartItemDto mapCartItemToDto(CartItem cartItem) {
         CartItemDto dto = new CartItemDto();
         dto.setProductId(cartItem.getProductId());
         dto.setQuantity(cartItem.getQuantity());
         dto.setCustom(cartItem.isCustom());
-        dto.setSelectedDesignId(cartItem.getSelectedDesignId()); // Ponechat
-        dto.setSelectedGlazeId(cartItem.getSelectedGlazeId());   // Ponechat
-        dto.setSelectedRoofColorId(cartItem.getSelectedRoofColorId()); // Ponechat
+        dto.setSelectedDesignId(cartItem.getSelectedDesignId());
+        dto.setSelectedGlazeId(cartItem.getSelectedGlazeId());
+        dto.setSelectedRoofColorId(cartItem.getSelectedRoofColorId());
+        dto.setSelectedTaxRateId(cartItem.getSelectedTaxRateId()); // Přidáno mapování TaxRateId
         dto.setCustomDimensions(cartItem.getCustomDimensions());
-        // ODEBRAT: dto.setCustomGlaze(cartItem.getCustomGlaze());
-        // ODEBRAT: dto.setCustomRoofColor(cartItem.getCustomRoofColor());
-        dto.setCustomRoofOverstep(cartItem.getCustomRoofOverstep()); // Ponechat
-        // ODEBRAT: dto.setCustomDesign(cartItem.getCustomDesign());
-        dto.setCustomHasDivider(cartItem.isCustomHasDivider()); // Ponechat
-        dto.setCustomHasGutter(cartItem.isCustomHasGutter());   // Ponechat
-        dto.setCustomHasGardenShed(cartItem.isCustomHasGardenShed()); // Ponechat
-        dto.setSelectedAddons(cartItem.getSelectedAddons()); // Ponechat
+        dto.setCustomRoofOverstep(cartItem.getCustomRoofOverstep());
+        dto.setCustomHasDivider(cartItem.isCustomHasDivider());
+        dto.setCustomHasGutter(cartItem.isCustomHasGutter());
+        dto.setCustomHasGardenShed(cartItem.isCustomHasGardenShed());
+
+        // *** OPRAVA ZDE: Mapování List<AddonDto> na List<Long> ***
+        if (cartItem.getSelectedAddons() != null) {
+            List<Long> addonIds = cartItem.getSelectedAddons().stream()
+                    .filter(Objects::nonNull)
+                    .map(AddonDto::getAddonId) // Získáme ID z AddonDto
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            dto.setSelectedAddonIds(addonIds); // Nastavíme seznam IDček
+        } else {
+            dto.setSelectedAddonIds(Collections.emptyList());
+        }
+        // *** KONEC OPRAVY ***
+
         return dto;
     }
 

@@ -2,7 +2,6 @@ package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.config.PriceConstants;
-import org.example.eshop.dto.AddonDto;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CreateOrderRequest;
 import org.example.eshop.model.*; // Import všech modelů
@@ -381,7 +380,8 @@ public class OrderService implements PriceConstants {
     }
 
 
-    // *** VÝRAZNĚ UPRAVENO: processCartItem ***
+    // V třídě OrderService.java
+
     private OrderItem processCartItem(CartItemDto itemDto, Order order, String currency) {
         log.debug("Starting processCartItem for Product ID: {}, TaxRate ID: {}", itemDto.getProductId(), itemDto.getSelectedTaxRateId());
         Product product = productRepository.findByIdWithDetails(itemDto.getProductId()) // Načteme s detaily včetně asociací
@@ -390,20 +390,13 @@ public class OrderService implements PriceConstants {
 
         // --- Načtení a validace vybrané TaxRate ---
         if (itemDto.getSelectedTaxRateId() == null) {
-            // Tato chyba by měla být zachycena už v CartController, ale pro jistotu
             throw new IllegalArgumentException("Chybí ID vybrané daňové sazby pro produkt: " + product.getName());
         }
         TaxRate selectedTaxRate = taxRateRepository.findById(itemDto.getSelectedTaxRateId())
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Daňová sazba nenalezena: ID " + itemDto.getSelectedTaxRateId()));
 
-        // Ověření, zda je vybraná sazba povolena pro produkt
-        // Předpokládáme, že product byl načten s findByIdWithDetails, takže má availableTaxRates
         java.util.Set<TaxRate> availableRates = product.getAvailableTaxRates();
-        if (availableRates == null || availableRates.isEmpty()) { // Pojistka
-            log.error("Produkt ID {} nemá definované žádné povolené daňové sazby!", product.getId());
-            throw new IllegalStateException("Konfigurační chyba: Produktu '" + product.getName() + "' chybí přiřazení daňových sazeb.");
-        }
-        if (!availableRates.contains(selectedTaxRate)) {
+        if (availableRates == null || availableRates.isEmpty() || !availableRates.contains(selectedTaxRate)) {
             log.error("Selected TaxRate ID {} ('{}') is not available for Product ID {}", selectedTaxRate.getId(), selectedTaxRate.getName(), product.getId());
             throw new IllegalArgumentException("Vybraná daňová sazba '" + selectedTaxRate.getName() + "' není pro produkt '" + product.getName() + "' povolena.");
         }
@@ -413,86 +406,150 @@ public class OrderService implements PriceConstants {
 
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
-        orderItem.setProduct(product); // Reference na produkt
+        orderItem.setProduct(product);
         orderItem.setCount(itemDto.getQuantity());
         orderItem.setCustomConfigured(itemDto.isCustom());
 
         // --- Uložení vybrané sazby DPH do OrderItem ---
-        orderItem.setTaxRate(selectedTaxRate.getRate()); // Hodnota 0.xx
-        orderItem.setReverseCharge(selectedTaxRate.isReverseCharge()); // boolean
-        orderItem.setSelectedTaxRateId(selectedTaxRate.getId()); // ID pro referenci
-        orderItem.setSelectedTaxRateName(selectedTaxRate.getName()); // Název pro referenci/zobrazení
+        orderItem.setTaxRate(selectedTaxRate.getRate());
+        orderItem.setReverseCharge(selectedTaxRate.isReverseCharge());
+        orderItem.setSelectedTaxRateId(selectedTaxRate.getId());
+        orderItem.setSelectedTaxRateName(selectedTaxRate.getName());
         // --- Konec uložení sazby DPH ---
 
         // Načtení vybraných atributů (Design, Glaze, RoofColor)
-        Design selectedDesign = null; Glaze selectedGlaze = null; RoofColor selectedRoofColor = null;
-        java.math.BigDecimal attributeSurcharge = java.math.BigDecimal.ZERO;
-
-        // Předpokládáme, že ID atributů jsou v DTO validní (NotNull anotace)
-        selectedDesign = designRepository.findById(itemDto.getSelectedDesignId())
+        Design selectedDesign = designRepository.findById(itemDto.getSelectedDesignId())
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Design nenalezen: ID " + itemDto.getSelectedDesignId()));
-        selectedGlaze = glazeRepository.findById(itemDto.getSelectedGlazeId())
+        Glaze selectedGlaze = glazeRepository.findById(itemDto.getSelectedGlazeId())
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Lazura nenalezena: ID " + itemDto.getSelectedGlazeId()));
-        selectedRoofColor = roofColorRepository.findById(itemDto.getSelectedRoofColorId())
+        RoofColor selectedRoofColor = roofColorRepository.findById(itemDto.getSelectedRoofColorId())
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Barva střechy nenalezena: ID " + itemDto.getSelectedRoofColorId()));
 
         // Výpočet příplatků za atributy podle měny objednávky
-        java.math.BigDecimal surchargeCZK = (java.util.Optional.ofNullable(selectedDesign.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO))
-                .add(java.util.Optional.ofNullable(selectedGlaze.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO))
-                .add(java.util.Optional.ofNullable(selectedRoofColor.getPriceSurchargeCZK()).orElse(java.math.BigDecimal.ZERO));
-        java.math.BigDecimal surchargeEUR = (java.util.Optional.ofNullable(selectedDesign.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO))
-                .add(java.util.Optional.ofNullable(selectedGlaze.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO))
-                .add(java.util.Optional.ofNullable(selectedRoofColor.getPriceSurchargeEUR()).orElse(java.math.BigDecimal.ZERO));
+        BigDecimal attributeSurcharge = BigDecimal.ZERO;
+        BigDecimal surchargeCZK = (Optional.ofNullable(selectedDesign.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO))
+                .add(Optional.ofNullable(selectedGlaze.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO))
+                .add(Optional.ofNullable(selectedRoofColor.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO));
+        BigDecimal surchargeEUR = (Optional.ofNullable(selectedDesign.getPriceSurchargeEUR()).orElse(BigDecimal.ZERO))
+                .add(Optional.ofNullable(selectedGlaze.getPriceSurchargeEUR()).orElse(BigDecimal.ZERO))
+                .add(Optional.ofNullable(selectedRoofColor.getPriceSurchargeEUR()).orElse(BigDecimal.ZERO));
         attributeSurcharge = EURO_CURRENCY.equals(currency) ? surchargeEUR : surchargeCZK;
         log.debug("Attribute surcharge calculated for currency {}: {}", currency, attributeSurcharge);
 
-        // Uložení historických dat (název produktu, SKU, varianty, atd.)
+        // Výpočet základní jednotkové ceny bez DPH (závisí na custom/standard)
+        BigDecimal baseUnitPriceNoTax;
+        List<OrderItemAddon> orderItemAddonsToSave = new ArrayList<>(); // Přejmenováno
+        BigDecimal totalAddonPriceNoTax = BigDecimal.ZERO;
+
+        if (itemDto.isCustom()) {
+            // --- Custom produkt ---
+            Map<String, BigDecimal> dimensionsMap = itemDto.getCustomDimensions();
+            if (dimensionsMap == null || dimensionsMap.get("length") == null || dimensionsMap.get("width") == null || dimensionsMap.get("height") == null) {
+                throw new IllegalArgumentException("Chybí kompletní rozměry v mapě customDimensions pro custom produkt.");
+            }
+            baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency); // Volá metodu pracující s mapou
+            log.debug("[processCartItem] Custom Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
+
+            // Nastavení rozměrů na OrderItem
+            orderItem.setLength(dimensionsMap.get("length"));
+            orderItem.setWidth(dimensionsMap.get("width"));
+            orderItem.setHeight(dimensionsMap.get("height"));
+
+            // Zpracování addonů podle ID z DTO
+            // *** ZDE JE OPRAVA: Používáme getSelectedAddonIds() ***
+            List<Long> selectedAddonIds = itemDto.getSelectedAddonIds();
+            if (selectedAddonIds != null && !selectedAddonIds.isEmpty()) {
+                log.debug("[processCartItem] Processing addons for custom item. Addon IDs from DTO: {}", selectedAddonIds);
+                Set<Long> requestedAddonIds = new HashSet<>(selectedAddonIds);
+                Map<Long, Addon> addonsMap = addonsRepository.findAllById(requestedAddonIds).stream() // Předpoklad: addonsRepository existuje
+                        .filter(Addon::isActive) // Jen aktivní
+                        .collect(Collectors.toMap(Addon::getId, a -> a));
+                log.debug("[processCartItem] Found active addons from DB for custom item: {}", addonsMap.keySet());
+
+                // Získáme povolené addony pro tento produkt
+                Set<Long> allowedAddonIds = Optional.ofNullable(product.getAvailableAddons())
+                        .orElse(Collections.emptySet())
+                        .stream()
+                        .map(Addon::getId).collect(Collectors.toSet());
+                log.debug("[processCartItem] Allowed addon IDs for product {}: {}", product.getId(), allowedAddonIds);
+
+                // *** ZMĚNA ZDE: Iterujeme přes selectedAddonIds ***
+                for (Long addonId : selectedAddonIds) {
+                    Addon addon = addonsMap.get(addonId);
+                    if (addon != null && allowedAddonIds.contains(addon.getId())) {
+                        log.debug("[processCartItem] Processing valid addon for OrderItem: ID={}, Name={}", addon.getId(), addon.getName());
+                        OrderItemAddon oia = new OrderItemAddon();
+                        oia.setOrderItem(orderItem);
+                        oia.setAddon(addon);
+                        oia.setAddonName(addon.getName());
+                        oia.setQuantity(1); // Předpokládáme množství 1
+
+                        BigDecimal addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
+                        if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                            log.error("Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
+                            throw new IllegalStateException("Invalid price configuration for addon " + addon.getName() + " in " + currency);
+                        }
+                        oia.setAddonPriceWithoutTax(addonUnitPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
+                        BigDecimal addonLineTotal = addonUnitPrice.multiply(BigDecimal.valueOf(oia.getQuantity())).setScale(PRICE_SCALE, ROUNDING_MODE);
+                        oia.setTotalPriceWithoutTax(addonLineTotal);
+                        log.debug("[processCartItem] Addon '{}' line total price ({}): {}", addon.getName(), currency, addonLineTotal);
+
+                        orderItemAddonsToSave.add(oia);
+                        totalAddonPriceNoTax = totalAddonPriceNoTax.add(addonLineTotal);
+                    } else {
+                        log.warn("[processCartItem] Requested addon ID {} is invalid, inactive, or not allowed for product {}. Skipping.", addonId, product.getId());
+                    }
+                }
+                log.debug("[processCartItem] Total calculated addon price for item ({}): {}", currency, totalAddonPriceNoTax);
+            } else {
+                log.debug("[processCartItem] No addons selected for custom item.");
+            }
+            // *** OPRAVA ZDE: Používáme správný setter ***
+            orderItem.setSelectedAddons(orderItemAddonsToSave);
+
+        } else {
+            // --- Standardní produkt ---
+            baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency);
+            log.debug("[processCartItem] Standard Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
+            orderItem.setLength(product.getLength());
+            orderItem.setWidth(product.getWidth());
+            orderItem.setHeight(product.getHeight());
+            // *** OPRAVA ZDE: Používáme správný setter ***
+            orderItem.setSelectedAddons(Collections.emptyList());
+        }
+
+        // Uložení historických dat
         saveHistoricalItemData(orderItem, product, itemDto, selectedDesign, selectedGlaze, selectedRoofColor);
 
-        // Výpočet základní jednotkové ceny bez DPH (závisí na custom/standard)
-        java.math.BigDecimal baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency);
-        log.debug("Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
-
-        // Aplikace nejlepší procentuální slevy PŘÍMO NA PRODUKT (pokud existuje)
-        // Sleva z kupónu se aplikuje až na celkový subtotal objednávky
-        java.math.BigDecimal unitPriceAfterDiscountNoTax = java.util.Optional.ofNullable(discountService.applyBestPercentageDiscount(baseUnitPriceNoTax, product))
+        // Aplikace slevy na produkt
+        BigDecimal unitPriceAfterDiscountNoTax = Optional.ofNullable(discountService.applyBestPercentageDiscount(baseUnitPriceNoTax, product))
                 .orElse(baseUnitPriceNoTax);
         if (unitPriceAfterDiscountNoTax.compareTo(baseUnitPriceNoTax) != 0) {
-            log.debug("Unit Price after Product Discount applied: {}", unitPriceAfterDiscountNoTax);
-        } else {
-            log.trace("No applicable product discount for product ID {}", product.getId());
+            log.debug("[processCartItem] Unit Price after Product Discount applied: {}", unitPriceAfterDiscountNoTax);
         }
 
-        // Zpracování Addonů a výpočet jejich celkové ceny bez DPH (pouze pro custom)
-        java.math.BigDecimal totalFixedAddonsPriceNoTax = java.math.BigDecimal.ZERO;
-        if (itemDto.isCustom()) {
-            totalFixedAddonsPriceNoTax = processAndCalculateAddons(orderItem, itemDto, currency);
-            log.debug("Total Fixed Addons Price (No Tax, Currency: {}): {}", currency, totalFixedAddonsPriceNoTax);
-        }
-
-        // Finální jednotková cena bez DPH = (Základ po slevě) + Příplatky_Atributů + Cena_Addonů
-        java.math.BigDecimal finalUnitPriceNoTax = unitPriceAfterDiscountNoTax
+        // Finální jednotková cena bez DPH
+        BigDecimal finalUnitPriceNoTax = unitPriceAfterDiscountNoTax
                 .add(attributeSurcharge)
-                .add(totalFixedAddonsPriceNoTax);
-        log.debug("Final Unit Price (No Tax, Currency: {}): {}", currency, finalUnitPriceNoTax);
+                .add(totalAddonPriceNoTax);
+        log.debug("[processCartItem] Final Unit Price (No Tax, Currency: {}): {}", currency, finalUnitPriceNoTax);
 
-        // Výpočet DPH z finální jednotkové ceny bez DPH (použije sazbu z orderItem.getTaxRate())
-        java.math.BigDecimal unitTaxAmount = finalUnitPriceNoTax
-                .multiply(orderItem.getTaxRate()) // Použije sazbu 0.xx uloženou v OrderItem
+        // Výpočet DPH
+        BigDecimal unitTaxAmount = finalUnitPriceNoTax
+                .multiply(orderItem.getTaxRate())
                 .setScale(PRICE_SCALE, ROUNDING_MODE);
-        log.debug("Unit Tax Amount calculated using rate {}: {}", orderItem.getTaxRate(), unitTaxAmount);
+        log.debug("[processCartItem] Unit Tax Amount calculated using rate {}: {}", orderItem.getTaxRate(), unitTaxAmount);
 
-        // Jednotková cena s DPH
-        java.math.BigDecimal unitPriceWithTax = finalUnitPriceNoTax.add(unitTaxAmount);
-        log.debug("Unit Price With Tax: {}", unitPriceWithTax);
+        BigDecimal unitPriceWithTax = finalUnitPriceNoTax.add(unitTaxAmount);
+        log.debug("[processCartItem] Unit Price With Tax: {}", unitPriceWithTax);
 
-        // Nastavení vypočtených cen na OrderItem (zaokrouhleno)
+        // Nastavení cen na OrderItem
         orderItem.setUnitPriceWithoutTax(finalUnitPriceNoTax.setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setUnitTaxAmount(unitTaxAmount.setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setUnitPriceWithTax(unitPriceWithTax.setScale(PRICE_SCALE, ROUNDING_MODE));
 
-        // Výpočet celkových cen pro řádek (cena * množství)
-        java.math.BigDecimal quantity = java.math.BigDecimal.valueOf(itemDto.getQuantity());
+        // Výpočet celkových cen pro řádek
+        BigDecimal quantity = BigDecimal.valueOf(itemDto.getQuantity());
         orderItem.setTotalPriceWithoutTax(orderItem.getUnitPriceWithoutTax().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setTotalTaxAmount(orderItem.getUnitTaxAmount().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
         orderItem.setTotalPriceWithTax(orderItem.getUnitPriceWithTax().multiply(quantity).setScale(PRICE_SCALE, ROUNDING_MODE));
@@ -1029,78 +1086,6 @@ public class OrderService implements PriceConstants {
                 yield "transfer";
             }
         };
-    }
-    private BigDecimal processAndCalculateAddons(OrderItem orderItem, CartItemDto itemDto, String currency) {
-        log.debug("Processing addons for OrderItem (Product ID: {}), Currency: {}", orderItem.getProduct().getId(), currency);
-        BigDecimal totalAddonPrice = BigDecimal.ZERO;
-        // Addony se zpracovávají pouze pro custom produkty
-        if (!itemDto.isCustom() || CollectionUtils.isEmpty(itemDto.getSelectedAddons())) {
-            orderItem.setSelectedAddons(Collections.emptyList()); // Zajistit prázdný seznam
-            log.debug("No addons to process or product is not custom.");
-            return totalAddonPrice;
-        }
-
-        // Odfiltrujeme neplatné DTO (bez ID nebo s nulovým množstvím)
-        List<AddonDto> validAddonDtos = itemDto.getSelectedAddons().stream()
-                .filter(dto -> dto != null && dto.getAddonId() != null && dto.getQuantity() > 0)
-                .collect(Collectors.toList());
-
-        if (validAddonDtos.isEmpty()) {
-            orderItem.setSelectedAddons(Collections.emptyList());
-            log.debug("No valid addons found in DTO.");
-            return totalAddonPrice;
-        }
-
-        // Načteme všechny potřebné addony z DB najednou
-        Set<Long> requestedAddonIds = validAddonDtos.stream().map(AddonDto::getAddonId).collect(Collectors.toSet());
-        log.debug("Requested addon IDs: {}", requestedAddonIds);
-        Map<Long, Addon> addonsMap = addonsRepository.findAllById(requestedAddonIds).stream()
-                .collect(Collectors.toMap(Addon::getId, a -> a));
-        log.debug("Found addons from DB: {}", addonsMap.keySet());
-
-        // Získáme povolené addony pro tento produkt
-        Set<Long> allowedAddonIds = Optional.ofNullable(orderItem.getProduct().getAvailableAddons())
-                .orElse(Collections.emptySet())
-                .stream()
-                .map(Addon::getId).collect(Collectors.toSet());
-        log.debug("Allowed addon IDs for this product: {}", allowedAddonIds);
-
-        List<OrderItemAddon> addonsToSave = new ArrayList<>();
-        for (AddonDto addonDto : validAddonDtos) {
-            Addon addon = addonsMap.get(addonDto.getAddonId());
-            // Ověříme, zda addon existuje, je aktivní a je povolený pro produkt
-            if (addon != null && addon.isActive() && allowedAddonIds.contains(addon.getId())) {
-                log.debug("Processing valid addon: ID={}, Name={}", addon.getId(), addon.getName());
-                OrderItemAddon oia = new OrderItemAddon();
-                oia.setOrderItem(orderItem);
-                oia.setAddon(addon); // Uložíme referenci na původní addon
-                oia.setAddonName(addon.getName());
-                oia.setQuantity(addonDto.getQuantity());
-
-                // Získáme cenu addonu pro správnou měnu
-                BigDecimal addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
-                if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
-                    // Cena musí být definována a nesmí být záporná
-                    log.error("!!! Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
-                    throw new IllegalStateException("Invalid price configuration for addon " + addon.getName() + " in " + currency);
-                }
-                log.debug("Addon unit price ({}): {}", currency, addonUnitPrice);
-
-                oia.setAddonPriceWithoutTax(addonUnitPrice.setScale(PRICE_SCALE, ROUNDING_MODE));
-                BigDecimal addonLineTotal = addonUnitPrice.multiply(BigDecimal.valueOf(addonDto.getQuantity())).setScale(PRICE_SCALE, ROUNDING_MODE);
-                oia.setTotalPriceWithoutTax(addonLineTotal);
-                log.debug("Addon line total price ({}): {}", currency, addonLineTotal);
-
-                addonsToSave.add(oia);
-                totalAddonPrice = totalAddonPrice.add(addonLineTotal); // Přičteme k celkové ceně addonů
-
-            } else {
-                log.warn("Requested addon ID {} is invalid, inactive, or not allowed for product {}. Skipping.", addonDto.getAddonId(), orderItem.getProduct().getId());
-            }
-        }
-        orderItem.setSelectedAddons(addonsToSave); // Přiřadíme seznam vytvořených OrderItemAddon k OrderItem
-        log.debug("Finished processing addons. Total addon price ({}): {}", currency, totalAddonPrice);
-        return totalAddonPrice.setScale(PRICE_SCALE, ROUNDING_MODE); // Vrátíme celkovou cenu addonů
     }
     // ----- NOVÁ POMOCNÁ METODA PRO KUPÓN -----
     /**

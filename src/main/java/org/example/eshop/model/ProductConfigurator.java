@@ -7,6 +7,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Getter
 @Setter
@@ -48,4 +49,19 @@ public class ProductConfigurator {
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthCZK;
     @Column(nullable = false, precision = 10, scale = 2) private BigDecimal pricePerCmWidthEUR;
 
+    // V ProductConfigurator.java (přidej tyto metody na konec třídy)
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ProductConfigurator that = (ProductConfigurator) o;
+        // Konfigurátor sdílí ID s produktem, takže porovnání podle ID je spolehlivé
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? Objects.hash(id) : getClass().hashCode();
+        // Alternativně: return getClass().hashCode();
+    }
 }

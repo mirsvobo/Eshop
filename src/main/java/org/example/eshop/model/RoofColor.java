@@ -3,10 +3,12 @@ package org.example.eshop.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -45,16 +47,18 @@ public class RoofColor {
     @ManyToMany(mappedBy = "availableRoofColors", fetch = FetchType.LAZY)
     private Set<Product> products;
 
+    // V RoofColor.java
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false; // Použití Hibernate proxy-safe kontroly
         RoofColor roofColor = (RoofColor) o;
         return id != null && id.equals(roofColor.id);
     }
 
     @Override
     public int hashCode() {
-        return getClass().hashCode();
+        return id != null ? Objects.hash(id) : getClass().hashCode();
+        // Alternativně: return getClass().hashCode();
     }
 }

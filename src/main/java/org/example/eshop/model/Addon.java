@@ -11,6 +11,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Set;
 
 @Setter
@@ -70,5 +71,22 @@ public class Addon {
 
     @ManyToMany(mappedBy = "availableAddons", fetch = FetchType.LAZY)
     private Set<Product> products;
+
+    // V Addon.java (přidej tyto metody na konec třídy)
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false; // Jednodušší kontrola, nemusí být proxy-safe
+        Addon addon = (Addon) o;
+        // Pokud máš unikátní business klíč (třeba SKU), můžeš porovnávat podle něj
+        // Jinak standardně podle ID, pokud není null
+        return id != null && id.equals(addon.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? Objects.hash(id) : getClass().hashCode();
+        // Alternativně: return getClass().hashCode();
+    }
 
 }
