@@ -1,26 +1,25 @@
 package org.example.eshop.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List; // Import pro List
 import java.util.Map;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class CustomPriceRequestDto {
 
-    @NotNull(message = "Product ID is required.")
     private Long productId;
+    private Map<String, BigDecimal> customDimensions; // length, width, height jako Stringy pro BigDecimal
 
-    @NotNull(message = "Custom dimensions are required.")
-    private Map<String, BigDecimal> customDimensions;
+    // Přidáno pro rozpis ceny
+    private Long selectedDesignId;
+    private Long selectedGlazeId;
+    private Long selectedRoofColorId;
+    private List<Long> selectedAddonIds; // Seznam ID vybraných doplňků (mimo 'Ne')
 
-    // Odebráno: private String customDesign;
-    private boolean customHasDivider;
-    private boolean customHasGutter;
-    private boolean customHasGardenShed;
-
-    // Pole pro Glaze a RoofColor zde nebyla, což je v pořádku
 }

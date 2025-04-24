@@ -305,45 +305,35 @@ public class ProductController {
 
     @PostMapping("/api/product/calculate-price")
     @ResponseBody
-    public ResponseEntity<CustomPriceResponseDto> calculateCustomPrice(@RequestBody CustomPriceRequestDto requestDto) {
-        logger.info(">>> [ProductController] Vstupuji do API calculateCustomPrice. Product ID: {}", requestDto.getProductId());
+    public ResponseEntity<CustomPriceResponseDto> calculateCustomPrice(@RequestBody CustomPriceRequestDto requestDto) { // Nyní přijímáme nové DTO
+        logger.info(">>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: {}", requestDto.getProductId());
         String dimensionsLog = requestDto.getCustomDimensions() != null ? requestDto.getCustomDimensions().toString() : "null";
-        logger.debug("[ProductController] Calc request data: ProductId={}, Dimensions={}",
-                requestDto.getProductId(), dimensionsLog);
+        String addonIdsLog = requestDto.getSelectedAddonIds() != null ? requestDto.getSelectedAddonIds().toString() : "[]";
+        logger.debug("[ProductController] Calc request data: ProductId={}, Dimensions={}, DesignId={}, GlazeId={}, RoofColorId={}, AddonIds={}",
+                requestDto.getProductId(), dimensionsLog, requestDto.getSelectedDesignId(), requestDto.getSelectedGlazeId(),
+                requestDto.getSelectedRoofColorId(), addonIdsLog);
 
         try {
-            Product product = productService.getProductById(requestDto.getProductId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produkt nenalezen: " + requestDto.getProductId()));
+            // Voláme novou servisní metodu, která vrací detailní DTO
+            CustomPriceResponseDto responseDto = productService.calculateDetailedCustomPrice(requestDto);
 
-            if (!product.isCustomisable() || product.getConfigurator() == null) {
-                logger.warn("[ProductController] API Calc: Produkt ID {} není konfigurovatelný nebo chybí konfigurace.", requestDto.getProductId());
-                return ResponseEntity.badRequest().body(new CustomPriceResponseDto(null, null, "Tento produkt nelze konfigurovat na míru nebo chybí konfigurace."));
+            if (responseDto.getErrorMessage() != null) {
+                // Pokud servisní metoda vrátila chybu, vrátíme BadRequest
+                logger.warn("[ProductController] API Calc: Servisní vrstva vrátila chybu: {}", responseDto.getErrorMessage());
+                // Zde bychom mohli rozlišit typ chyby (např. 404 pokud EntityNotFound), ale pro jednoduchost vracíme 400
+                return ResponseEntity.badRequest().body(responseDto);
             }
 
-            // Volání metody pro výpočet ZÁKLADNÍ ceny pouze z rozměrů
-            BigDecimal priceCZK = productService.calculateDynamicProductPrice(
-                    product,
-                    requestDto.getCustomDimensions(),
-                    "CZK" // Předání měny
-            );
-            BigDecimal priceEUR = productService.calculateDynamicProductPrice(
-                    product,
-                    requestDto.getCustomDimensions(),
-                    "EUR" // Předání měny
-            );
+            logger.info(">>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID {}: Total CZK={}, Total EUR={}. Vracím OK.",
+                    requestDto.getProductId(), responseDto.getTotalPriceCZK(), responseDto.getTotalPriceEUR());
+            return ResponseEntity.ok(responseDto);
 
-            logger.info(">>> [ProductController] API calculateCustomPrice (ZÁKLADNÍ cena z rozměrů) úspěšně spočítána. Product ID {}: CZK={}, EUR={}. Vracím OK.", requestDto.getProductId(), priceCZK, priceEUR);
-            return ResponseEntity.ok(new CustomPriceResponseDto(priceCZK, priceEUR, null));
-
-        } catch (ResponseStatusException e) {
-            logger.warn("[ProductController] API Calc: Chyba stavu {}: {}", e.getStatusCode(), e.getReason());
-            return ResponseEntity.status(e.getStatusCode()).body(new CustomPriceResponseDto(null, null, e.getReason()));
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            logger.warn("[ProductController] API Calc: Neplatný požadavek: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(new CustomPriceResponseDto(null, null, e.getMessage()));
         } catch (Exception e) {
-            logger.error("!!! [ProductController] API Calc: Neočekávaná chyba: {} !!!", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new CustomPriceResponseDto(null, null, "Došlo k neočekávané chybě při výpočtu ceny."));
+            // Zachycení neočekávaných chyb, které nebyly ošetřeny v service vrstvě
+            logger.error("!!! [ProductController] API Calc (detailed): Neočekávaná chyba: {} !!!", e.getMessage(), e);
+            CustomPriceResponseDto errorResponse = new CustomPriceResponseDto();
+            errorResponse.setErrorMessage("Došlo k neočekávané systémové chybě při výpočtu ceny.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 }

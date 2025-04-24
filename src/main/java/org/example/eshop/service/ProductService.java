@@ -2,10 +2,10 @@
 package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.example.eshop.dto.CustomPriceRequestDto;
+import org.example.eshop.dto.CustomPriceResponseDto;
 import org.example.eshop.model.*; // Import všech modelů
-import org.example.eshop.repository.ImageRepository;
-import org.example.eshop.repository.ProductRepository;
-import org.example.eshop.repository.TaxRateRepository; // TaxRateRepository je potřeba
+import org.example.eshop.repository.*;
 import org.example.eshop.config.PriceConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +47,10 @@ public class ProductService implements PriceConstants {
     @Autowired private ImageRepository imageRepository;
     @Autowired private TaxRateRepository taxRateRepository;
     @Autowired private DiscountService discountService;
+    @Autowired private DesignRepository designRepository;
+    @Autowired private GlazeRepository glazeRepository;
+    @Autowired private RoofColorRepository roofColorRepository;
+    @Autowired private AddonsRepository addonsRepository;
 
 
     @Cacheable(value = "activeProductsPage", key = "#pageable.toString()")
@@ -837,5 +841,225 @@ public class ProductService implements PriceConstants {
 
 
         logger.info(">>> [ProductService] Opouštím updateImageDisplayOrder. Product ID: {}", productId);
+    }
+    @Transactional(readOnly = true)
+    public CustomPriceResponseDto calculateDetailedCustomPrice(CustomPriceRequestDto requestDto) {
+        logger.info(">>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: {}", requestDto.getProductId());
+        BigDecimal zero = BigDecimal.ZERO.setScale(PRICE_SCALE, ROUNDING_MODE);
+        CustomPriceResponseDto response = new CustomPriceResponseDto();
+        response.setAddonPricesCZK(new HashMap<>()); // Inicializace map
+        response.setAddonPricesEUR(new HashMap<>());
+        // Inicializace všech číselných hodnot na 0 pro případ chyby
+        response.setBasePriceCZK(zero);
+        response.setBasePriceEUR(zero);
+        response.setDesignPriceCZK(zero);
+        response.setDesignPriceEUR(zero);
+        response.setGlazePriceCZK(zero);
+        response.setGlazePriceEUR(zero);
+        response.setRoofColorPriceCZK(zero);
+        response.setRoofColorPriceEUR(zero);
+        response.setTotalPriceCZK(zero);
+        response.setTotalPriceEUR(zero);
+
+
+        try {
+            // --- Validace a načtení produktu ---
+            Product product = productRepository.findByIdWithDetails(requestDto.getProductId())
+                    .orElseThrow(() -> new EntityNotFoundException("Produkt nenalezen: " + requestDto.getProductId()));
+
+            if (!product.isActive() || !product.isCustomisable() || product.getConfigurator() == null) {
+                throw new IllegalArgumentException("Produkt ID " + requestDto.getProductId() + " není aktivní, konfigurovatelný, nebo chybí konfigurace.");
+            }
+            ProductConfigurator config = product.getConfigurator();
+
+            // --- Výpočet základní ceny (z rozměrů) ---
+            Map<String, BigDecimal> dimensions = requestDto.getCustomDimensions();
+            if (dimensions == null || dimensions.get("length") == null || dimensions.get("width") == null || dimensions.get("height") == null) {
+                throw new IllegalArgumentException("Chybí kompletní rozměry.");
+            }
+            BigDecimal length = dimensions.get("length");
+            BigDecimal width = dimensions.get("width");
+            BigDecimal height = dimensions.get("height");
+
+            validateDimension("Length (Délka)", length, config.getMinLength(), config.getMaxLength());
+            validateDimension("Width (Šířka/Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
+            validateDimension("Height (Výška)", height, config.getMinHeight(), config.getMaxHeight());
+
+            // Výpočet pro CZK
+            BigDecimal pricePerCmH_CZK = getPriceForCurrency(config.getPricePerCmHeightCZK(), null, "CZK", "Height Price/cm");
+            BigDecimal pricePerCmL_CZK = getPriceForCurrency(config.getPricePerCmLengthCZK(), null, "CZK", "Length Price/cm");
+            BigDecimal pricePerCmW_CZK = getPriceForCurrency(config.getPricePerCmWidthCZK(), null, "CZK", "Width Price/cm");
+            BigDecimal basePriceCZK = height.multiply(pricePerCmH_CZK).add(length.multiply(pricePerCmL_CZK)).add(width.multiply(pricePerCmW_CZK));
+            response.setBasePriceCZK(basePriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE).max(zero));
+
+            // Výpočet pro EUR
+            BigDecimal pricePerCmH_EUR = getPriceForCurrency(null, config.getPricePerCmHeightEUR(), "EUR", "Height Price/cm");
+            BigDecimal pricePerCmL_EUR = getPriceForCurrency(null, config.getPricePerCmLengthEUR(), "EUR", "Length Price/cm");
+            BigDecimal pricePerCmW_EUR = getPriceForCurrency(null, config.getPricePerCmWidthEUR(), "EUR", "Width Price/cm");
+            BigDecimal basePriceEUR = height.multiply(pricePerCmH_EUR).add(length.multiply(pricePerCmL_EUR)).add(width.multiply(pricePerCmW_EUR));
+            response.setBasePriceEUR(basePriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE).max(zero));
+
+            logger.debug("[calculateDetailedCustomPrice] Base price calculated: CZK={}, EUR={}", response.getBasePriceCZK(), response.getBasePriceEUR());
+
+            // --- Výpočet ceny za atributy (Design, Lazura, Střecha) ---
+            BigDecimal designPriceCZK = zero;
+            BigDecimal designPriceEUR = zero;
+            if (requestDto.getSelectedDesignId() != null) {
+                Design design = designRepository.findById(requestDto.getSelectedDesignId()) // Opraveno: Použití designRepository
+                        .orElseThrow(() -> new EntityNotFoundException("Design nenalezen: " + requestDto.getSelectedDesignId()));
+                // Použití správných getterů getPriceSurchargeCZK/EUR
+                designPriceCZK = Optional.ofNullable(design.getPriceSurchargeCZK()).orElse(zero); // Opraveno
+                designPriceEUR = Optional.ofNullable(design.getPriceSurchargeEUR()).orElse(zero); // Opraveno
+            }
+            response.setDesignPriceCZK(designPriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE));
+            response.setDesignPriceEUR(designPriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE));
+            logger.debug("[calculateDetailedCustomPrice] Design price: CZK={}, EUR={}", response.getDesignPriceCZK(), response.getDesignPriceEUR());
+
+            BigDecimal glazePriceCZK = zero;
+            BigDecimal glazePriceEUR = zero;
+            if (requestDto.getSelectedGlazeId() != null) {
+                Glaze glaze = glazeRepository.findById(requestDto.getSelectedGlazeId()) // Opraveno: Použití glazeRepository
+                        .orElseThrow(() -> new EntityNotFoundException("Lazura nenalezena: " + requestDto.getSelectedGlazeId()));
+                // Použití správných getterů getPriceSurchargeCZK/EUR
+                glazePriceCZK = Optional.ofNullable(glaze.getPriceSurchargeCZK()).orElse(zero); // Opraveno
+                glazePriceEUR = Optional.ofNullable(glaze.getPriceSurchargeEUR()).orElse(zero); // Opraveno
+            }
+            response.setGlazePriceCZK(glazePriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE));
+            response.setGlazePriceEUR(glazePriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE));
+            logger.debug("[calculateDetailedCustomPrice] Glaze price: CZK={}, EUR={}", response.getGlazePriceCZK(), response.getGlazePriceEUR());
+
+            BigDecimal roofColorPriceCZK = zero;
+            BigDecimal roofColorPriceEUR = zero;
+            if (requestDto.getSelectedRoofColorId() != null) {
+                RoofColor roofColor = roofColorRepository.findById(requestDto.getSelectedRoofColorId()) // Opraveno: Použití roofColorRepository
+                        .orElseThrow(() -> new EntityNotFoundException("Barva střechy nenalezena: " + requestDto.getSelectedRoofColorId()));
+                // Použití správných getterů getPriceSurchargeCZK/EUR
+                roofColorPriceCZK = Optional.ofNullable(roofColor.getPriceSurchargeCZK()).orElse(zero); // Opraveno
+                roofColorPriceEUR = Optional.ofNullable(roofColor.getPriceSurchargeEUR()).orElse(zero); // Opraveno
+            }
+            response.setRoofColorPriceCZK(roofColorPriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE));
+            response.setRoofColorPriceEUR(roofColorPriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE));
+            logger.debug("[calculateDetailedCustomPrice] RoofColor price: CZK={}, EUR={}", response.getRoofColorPriceCZK(), response.getRoofColorPriceEUR());
+
+            // --- Výpočet ceny za doplňky ---
+            BigDecimal totalAddonsCZK = zero;
+            BigDecimal totalAddonsEUR = zero;
+            if (requestDto.getSelectedAddonIds() != null && !requestDto.getSelectedAddonIds().isEmpty()) {
+                List<Addon> selectedAddons = addonsRepository.findAllById(requestDto.getSelectedAddonIds()); // Opraveno: Použití addonsRepository
+                if (selectedAddons.size() != requestDto.getSelectedAddonIds().size()) {
+                    Set<Long> foundIds = selectedAddons.stream().map(Addon::getId).collect(Collectors.toSet());
+                    requestDto.getSelectedAddonIds().stream()
+                            .filter(id -> !foundIds.contains(id))
+                            .findFirst()
+                            .ifPresent(notFoundId -> {
+                                logger.warn("Doplněk s ID {} nebyl nalezen.", notFoundId);
+                                // Můžeme zde hodit chybu, nebo jen logovat a pokračovat s nalezenými
+                                // throw new EntityNotFoundException("Doplněk nenalezen: " + notFoundId);
+                            });
+                }
+
+                for (Addon addon : selectedAddons) {
+                    if (!addon.isActive()) {
+                        logger.warn("Vybraný doplněk '{}' (ID: {}) není aktivní, přeskakuji výpočet ceny.", addon.getName(), addon.getId());
+                        continue; // Přeskočit neaktivní
+                    }
+                    // Ověřit, zda je doplněk povolený pro tento produkt? product.getAvailableAddons().contains(addon)
+                    // Prozatím ne, spoléháme na frontend.
+
+                    BigDecimal addonPriceCZK = calculateSingleAddonPriceBackend(addon, dimensions, "CZK");
+                    BigDecimal addonPriceEUR = calculateSingleAddonPriceBackend(addon, dimensions, "EUR");
+
+                    // Přidáme do mapy rozpisu, jen pokud je cena > 0
+                    if (addonPriceCZK.compareTo(zero) > 0) {
+                        response.getAddonPricesCZK().put(addon.getName(), addonPriceCZK);
+                        totalAddonsCZK = totalAddonsCZK.add(addonPriceCZK);
+                    }
+                    if (addonPriceEUR.compareTo(zero) > 0) {
+                        response.getAddonPricesEUR().put(addon.getName(), addonPriceEUR);
+                        totalAddonsEUR = totalAddonsEUR.add(addonPriceEUR);
+                    }
+                    logger.debug("[calculateDetailedCustomPrice] Addon '{}' price: CZK={}, EUR={}", addon.getName(), addonPriceCZK, addonPriceEUR);
+                }
+            }
+            logger.debug("[calculateDetailedCustomPrice] Total Addons price: CZK={}, EUR={}", totalAddonsCZK, totalAddonsEUR);
+
+            // --- Výpočet celkové ceny ---
+            BigDecimal totalPriceCZK = response.getBasePriceCZK()
+                    .add(response.getDesignPriceCZK())
+                    .add(response.getGlazePriceCZK())
+                    .add(response.getRoofColorPriceCZK())
+                    .add(totalAddonsCZK);
+            response.setTotalPriceCZK(totalPriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE));
+
+            BigDecimal totalPriceEUR = response.getBasePriceEUR()
+                    .add(response.getDesignPriceEUR())
+                    .add(response.getGlazePriceEUR())
+                    .add(response.getRoofColorPriceEUR())
+                    .add(totalAddonsEUR);
+            response.setTotalPriceEUR(totalPriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE));
+
+            logger.info("[calculateDetailedCustomPrice] Total price calculated: CZK={}, EUR={}", response.getTotalPriceCZK(), response.getTotalPriceEUR());
+
+        } catch (IllegalArgumentException | EntityNotFoundException | IllegalStateException e) {
+            logger.error("!!! [ProductService] Chyba v calculateDetailedCustomPrice for Product ID {}: {} !!!", requestDto.getProductId(), e.getMessage());
+            response.setErrorMessage(e.getMessage()); // Nastavíme chybovou zprávu do DTO
+            // Ceny zůstanou inicializované na 0
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Neočekávaná chyba v calculateDetailedCustomPrice for Product ID {}: {} !!!", requestDto.getProductId(), e.getMessage(), e);
+            response.setErrorMessage("Došlo k neočekávané chybě při výpočtu ceny.");
+        }
+
+        logger.info(">>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: {}. Response has error: {}", requestDto.getProductId(), response.getErrorMessage() != null);
+        return response;
+    }
+
+    /**
+     * Pomocná metoda pro výpočet ceny jednoho doplňku na backendu.
+     * Podobná JS verzi, ale pracuje s Addon entitou.
+     * OPRAVENO: Pracuje s pricingType jako String.
+     */
+    private BigDecimal calculateSingleAddonPriceBackend(Addon addon, Map<String, BigDecimal> dimensions, String currency) {
+        BigDecimal zero = BigDecimal.ZERO.setScale(PRICE_SCALE, ROUNDING_MODE);
+        if (addon == null || dimensions == null) return zero;
+
+        String pricingType = addon.getPricingType(); // Opraveno: Pracujeme se Stringem
+        BigDecimal price = zero;
+        BigDecimal unitPrice;
+
+        BigDecimal lengthCm = dimensions.get("length");
+        BigDecimal widthCm = dimensions.get("width");
+        BigDecimal heightCm = dimensions.get("height");
+
+        if ("FIXED".equals(pricingType)) { // Opraveno: Porovnáváme String
+            price = getPriceForCurrency(addon.getPriceCZK(), addon.getPriceEUR(), currency, "Addon '" + addon.getName() + "' Fixed Price");
+        } else {
+            unitPrice = getPriceForCurrency(addon.getPricePerUnitCZK(), addon.getPricePerUnitEUR(), currency, "Addon '" + addon.getName() + "' Unit Price");
+            if (unitPrice.compareTo(zero) <= 0) return zero; // Nulová jednotková cena nic nepřidá
+
+            // Opraveno: Porovnáváme Stringy
+            switch (pricingType) {
+                case "PER_CM_WIDTH":
+                    if (widthCm != null && widthCm.compareTo(zero) > 0) price = unitPrice.multiply(widthCm);
+                    break;
+                case "PER_CM_LENGTH":
+                    if (lengthCm != null && lengthCm.compareTo(zero) > 0) price = unitPrice.multiply(lengthCm);
+                    break;
+                case "PER_CM_HEIGHT":
+                    if (heightCm != null && heightCm.compareTo(zero) > 0) price = unitPrice.multiply(heightCm);
+                    break;
+                case "PER_SQUARE_METER":
+                    if (lengthCm != null && lengthCm.compareTo(zero) > 0 && widthCm != null && widthCm.compareTo(zero) > 0) {
+                        BigDecimal lengthM = lengthCm.divide(new BigDecimal("100"), 4, ROUNDING_MODE); // 4 des. mista pro mezivypocet
+                        BigDecimal widthM = widthCm.divide(new BigDecimal("100"), 4, ROUNDING_MODE);
+                        price = unitPrice.multiply(lengthM).multiply(widthM);
+                    }
+                    break;
+                default:
+                    logger.warn("Neznámý PricingType '{}' pro doplněk '{}'", pricingType, addon.getName());
+                    break; // Neznámý typ, cena zůstane 0
+            }
+        }
+
+        return price.setScale(PRICE_SCALE, ROUNDING_MODE).max(zero); // Zaokrouhlení a zajištění nezápornosti
     }
 } // Konec třídy ProductService
