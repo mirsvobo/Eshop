@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -15,6 +16,7 @@ import java.util.Set;
 @Getter // Lombok getter pro selectedCurrency
 public class CurrencyService implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
     private static final Logger log = LoggerFactory.getLogger(CurrencyService.class);
 

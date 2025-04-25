@@ -99,7 +99,7 @@ public class CheckoutController implements PriceConstants {
             }
         } else {
             // Pokud máme data z předchozího pokusu (např. po chybě), načteme přihlášeného uživatele znovu pro zobrazení
-            if (userDetails != null && customer == null) {
+            if (userDetails != null) {
                 customer = customerService.getCustomerByEmail(userDetails.getUsername()).orElse(null);
                 if (customer == null) {
                     log.error("Authenticated user {} not found when preparing model after error.", userDetails.getUsername());
@@ -160,7 +160,7 @@ public class CheckoutController implements PriceConstants {
                         initialShippingCostNoTax = null;
                     } else {
                         initialShippingCostNoTax = initialShippingCostNoTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-                        initialShippingError = null; // Úspěšný výpočet
+                        // Úspěšný výpočet
                     }
                 } catch (Exception e) {
                     log.error("Error calculating initial shipping for {}: {}", userIdentifier, e.getMessage());
@@ -170,7 +170,7 @@ public class CheckoutController implements PriceConstants {
             }
         } catch (Exception e) {
             log.error("Failed to get shipping tax rate or calculate initial shipping: {}", e.getMessage(), e);
-            initialShippingError = (initialShippingError != null) ? initialShippingError : "Chyba konfigurace dopravy.";
+            initialShippingError = "Chyba konfigurace dopravy.";
             // Pokud selže načtení sazby, přidáme do modelu fallback hodnotu
             if (!model.containsAttribute("shippingTaxRate")) {
                 model.addAttribute("shippingTaxRate", shippingTaxRate); // Přidání fallback sazby
@@ -204,7 +204,7 @@ public class CheckoutController implements PriceConstants {
             RedirectAttributes redirectAttributes) {
 
         // Získáme principal bezpečně
-        Principal principal = (userDetails != null) ? () -> userDetails.getUsername() : null;
+        Principal principal = (userDetails != null) ? userDetails::getUsername : null;
         boolean isGuest = (principal == null);
         // Získáme email pro logování (z DTO pro hosta, z principal pro přihlášeného)
         String userIdentifierForLog = isGuest
@@ -220,14 +220,8 @@ public class CheckoutController implements PriceConstants {
         if (!isGuest) {
             // Pro přihlášeného uživatele načteme email z Principal a PŘEPÍŠEME hodnotu v DTO
             // před dalšími kontrolami. Tím obejdeme problém s disabled polem ve formuláři.
-            if (principal != null) {
-                checkoutForm.setEmail(principal.getName());
-                log.debug("Set email in DTO from principal for logged-in user: {}", principal.getName());
-            } else {
-                // Toto by nemělo nastat, pokud !isGuest, ale pro jistotu
-                log.error("Critical inconsistency: User is considered logged in, but principal is null.");
-                bindingResult.reject("user.notAuthenticated", "Pro přihlášeného uživatele se nepodařilo získat email.");
-            }
+            checkoutForm.setEmail(principal.getName());
+            log.debug("Set email in DTO from principal for logged-in user: {}", principal.getName());
         } else {
             // Pro hosta validujeme email a kontaktní údaje explicitně pomocí skupiny GuestValidation
             if (validator != null) {
@@ -544,21 +538,14 @@ public class CheckoutController implements PriceConstants {
             }
 
             if (validatedCoupon != null && validatedCoupon.isFreeShipping()) {
-                finalShippingCostNoTax = BigDecimal.ZERO;
-                finalShippingTax = BigDecimal.ZERO;
                 shippingDiscountAmount = originalShippingCostNoTaxForSummary;
             } else {
                 finalShippingCostNoTax = originalShippingCostNoTaxForSummary;
                 finalShippingTax = originalShippingTaxForSummary;
-                shippingDiscountAmount = BigDecimal.ZERO;
             }
         } else {
             shippingError = shippingError != null ? shippingError : "Doprava nebyla vypočtena.";
             originalShippingCostNoTaxForSummary = null; // Indicate error/unknown
-            originalShippingTaxForSummary = BigDecimal.ZERO;
-            finalShippingCostNoTax = BigDecimal.ZERO;
-            finalShippingTax = BigDecimal.ZERO;
-            shippingDiscountAmount = BigDecimal.ZERO;
         }
 
         // --- Logika zaokrouhlení (zůstává stejná) ---
@@ -584,9 +571,6 @@ public class CheckoutController implements PriceConstants {
                     originalTotalPrice, roundedTotalPrice, roundingDifference);
         } else {
             log.debug("Rounding calculation skipped because shipping is invalid.");
-            originalTotalPrice = null;
-            roundedTotalPrice = null;
-            roundingDifference = BigDecimal.ZERO;
         }
         // --- KONEC LOGIKY ZAOKROUHLENÍ ---
 

@@ -10509,3 +10509,117 @@ java.lang.IllegalStateException: Neither BindingResult nor plain target object f
 2025-04-25T01:57:48.261+02:00  INFO 9588 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
 2025-04-25T01:57:48.385+02:00  INFO 9588 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
 2025-04-25T01:57:48.396+02:00  INFO 9588 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-04-25T16:36:07.386+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 7336 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-25T16:36:07.391+02:00 DEBUG 7336 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-25T16:36:07.393+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-25T16:36:08.163+02:00  INFO 7336 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-25T16:36:08.165+02:00  INFO 7336 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-25T16:36:11.613+02:00  INFO 7336 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-25T16:36:11.906+02:00  INFO 7336 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 265 ms. Found 14 JPA repository interfaces.
+2025-04-25T16:36:15.167+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-25T16:36:15.211+02:00  INFO 7336 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-25T16:36:15.211+02:00  INFO 7336 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-25T16:36:15.380+02:00  INFO 7336 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-25T16:36:15.381+02:00  INFO 7336 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 7215 ms
+2025-04-25T16:36:16.444+02:00  INFO 7336 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-25T16:36:16.621+02:00  INFO 7336 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-25T16:36:16.636+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T16:36:16.717+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T16:36:16.724+02:00  INFO 7336 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-04-25T16:36:17.364+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-25T16:36:17.434+02:00  INFO 7336 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-25T16:36:17.670+02:00  INFO 7336 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@5bfc9378
+2025-04-25T16:36:17.674+02:00  INFO 7336 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-25T16:36:17.851+02:00  INFO 7336 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-25T16:36:19.201+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.RoofColor] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.370+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' created in EhcacheManager.
+2025-04-25T16:36:19.390+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.images] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.393+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' created in EhcacheManager.
+2025-04-25T16:36:19.395+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.OrderState] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.398+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' created in EhcacheManager.
+2025-04-25T16:36:19.401+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001003: Read-only caching was requested for mutable entity [NavigableRole[org.example.eshop.model.OrderState]]
+2025-04-25T16:36:19.401+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate.products] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.404+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' created in EhcacheManager.
+2025-04-25T16:36:19.406+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.410+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' created in EhcacheManager.
+2025-04-25T16:36:19.411+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001003: Read-only caching was requested for mutable entity [NavigableRole[org.example.eshop.model.TaxRate]]
+2025-04-25T16:36:19.411+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.ProductConfigurator] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.421+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' created in EhcacheManager.
+2025-04-25T16:36:19.423+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Design] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.426+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' created in EhcacheManager.
+2025-04-25T16:36:19.427+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.429+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' created in EhcacheManager.
+2025-04-25T16:36:19.432+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Discount] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.435+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' created in EhcacheManager.
+2025-04-25T16:36:19.436+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Glaze] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.439+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' created in EhcacheManager.
+2025-04-25T16:36:19.441+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.availableTaxRates] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.449+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' created in EhcacheManager.
+2025-04-25T16:36:19.450+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Coupon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.451+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' created in EhcacheManager.
+2025-04-25T16:36:19.453+02:00  WARN 7336 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Addon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T16:36:19.455+02:00  INFO 7336 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' created in EhcacheManager.
+2025-04-25T16:36:21.186+02:00  INFO 7336 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-25T16:36:21.422+02:00  INFO 7336 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T16:36:22.705+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-04-25T16:36:25.998+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-25T16:36:26.434+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-25T16:36:26.435+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-25T16:36:26.464+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-25T16:36:26.731+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : No existing numeric-like order codes found in database.
+2025-04-25T16:36:26.733+02:00  INFO 7336 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 205
+2025-04-25T16:36:27.339+02:00  WARN 7336 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-25T16:36:28.053+02:00  INFO 7336 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-25T16:36:28.205+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-25T16:36:28.975+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-25T16:36:30.285+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-25T16:36:30.393+02:00  INFO 7336 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-25T16:36:30.414+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 24.312 seconds (process running for 27.775)
+2025-04-25T16:36:30.434+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing application data for Drevniky Kolar...
+2025-04-25T16:36:30.523+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Tax Rates already exist, skipping creation.
+2025-04-25T16:36:30.527+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Order States already exist, checking/updating 'READY_TO_SHIP' description...
+2025-04-25T16:36:30.650+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Email Template Configs already exist, skipping creation.
+2025-04-25T16:36:30.650+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating attributes (Designs, Glazes, Roof Colors)...
+2025-04-25T16:36:30.744+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating addons...
+2025-04-25T16:36:30.766+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 130 cm' already exists. Skipping creation.
+2025-04-25T16:36:30.772+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 90 cm' already exists. Skipping creation.
+2025-04-25T16:36:30.777+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Držáky 2 páry' already exists. Skipping creation.
+2025-04-25T16:36:30.787+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 1x' already exists. Skipping creation.
+2025-04-25T16:36:30.793+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 2x' already exists. Skipping creation.
+2025-04-25T16:36:30.799+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 3x' already exists. Skipping creation.
+2025-04-25T16:36:30.805+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Okap' already exists. Skipping creation.
+2025-04-25T16:36:30.806+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial product creation as requested.
+2025-04-25T16:36:30.806+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin users...
+2025-04-25T16:36:30.827+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user mirsvobo@gmail.com already exists. Skipping creation.
+2025-04-25T16:36:30.844+02:00  WARN 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user drevnikykolar@gmail.com already exists. Skipping creation.
+2025-04-25T16:36:30.849+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial order creation as requested.
+2025-04-25T16:36:30.850+02:00  INFO 7336 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Application data initialization finished successfully.
+2025-04-25T16:36:31.253+02:00  INFO 7336 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-25T16:36:31.254+02:00  INFO 7336 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-25T16:36:31.260+02:00  INFO 7336 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 6 ms
+2025-04-25T16:42:08.831+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-25T16:42:09.489+02:00  INFO 7336 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-25T16:42:09.885+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-25T16:42:09.942+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T16:42:09.952+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' removed from EhcacheManager.
+2025-04-25T16:42:09.954+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' removed from EhcacheManager.
+2025-04-25T16:42:09.955+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' removed from EhcacheManager.
+2025-04-25T16:42:09.955+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' removed from EhcacheManager.
+2025-04-25T16:42:09.956+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' removed from EhcacheManager.
+2025-04-25T16:42:09.957+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' removed from EhcacheManager.
+2025-04-25T16:42:09.958+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' removed from EhcacheManager.
+2025-04-25T16:42:09.959+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' removed from EhcacheManager.
+2025-04-25T16:42:09.959+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' removed from EhcacheManager.
+2025-04-25T16:42:09.960+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' removed from EhcacheManager.
+2025-04-25T16:42:09.960+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' removed from EhcacheManager.
+2025-04-25T16:42:09.962+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' removed from EhcacheManager.
+2025-04-25T16:42:09.963+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
+2025-04-25T16:42:10.374+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-25T16:42:10.981+02:00  INFO 7336 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

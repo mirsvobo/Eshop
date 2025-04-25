@@ -122,7 +122,7 @@ public class DiscountService implements PriceConstants {
                     BigDecimal value = EURO_CURRENCY.equals(currency) ? d.getValueEUR() : d.getValueCZK();
                     return value != null && value.compareTo(BigDecimal.ZERO) > 0;
                 })
-                .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? Optional.ofNullable(d.getValueEUR()).orElse(BigDecimal.ZERO) : Optional.ofNullable(d.getValueCZK()).orElse(BigDecimal.ZERO)));
+                .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? Optional.of(d.getValueEUR()).orElse(BigDecimal.ZERO) : Optional.of(d.getValueCZK()).orElse(BigDecimal.ZERO)));
 
 
         if (bestFixedDiscount.isPresent()) {

@@ -95,17 +95,20 @@ public class DummyPaymentService implements PaymentService, PriceConstants { // 
         // Standardní logika podle platební metody (pokud není vyžadována záloha)
         String paymentMethod = order.getPaymentMethod().toUpperCase();
         log.debug("DetermineInitialPaymentStatus: Determining status for payment method: {}", paymentMethod);
-        switch (paymentMethod) {
-            case "BANK_TRANSFER":
+        return switch (paymentMethod) {
+            case "BANK_TRANSFER" -> {
                 log.info("DetermineInitialPaymentStatus: Status for BANK_TRANSFER set to PENDING_PAYMENT for order {}.", order.getOrderCode());
-                return "PENDING_PAYMENT"; // Čeká na platbu
-            case "CASH_ON_DELIVERY":
+                yield "PENDING_PAYMENT";
+            }
+            case "CASH_ON_DELIVERY" -> {
                 log.info("DetermineInitialPaymentStatus: Status for CASH_ON_DELIVERY set to PENDING for order {}.", order.getOrderCode());
-                return "PENDING"; // Čeká na zpracování/odeslání
+                yield "PENDING";
+            }
             // Zde můžete přidat další platební metody
-            default:
+            default -> {
                 log.warn("DetermineInitialPaymentStatus: Unknown payment method '{}' for order {}. Defaulting to PENDING.", paymentMethod, order.getOrderCode());
-                return "PENDING"; // Výchozí bezpečný stav
-        }
+                yield "PENDING";
+            }
+        };
     }
 }

@@ -1063,7 +1063,7 @@ public class OrderService implements PriceConstants {
         BigDecimal amountJustPaid;
         if (PAYMENT_STATUS_DEPOSIT_PAID.equals(order.getPaymentStatus()) && order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
             amountJustPaid = Optional.ofNullable(order.getTotalPrice()).orElse(BigDecimal.ZERO)
-                    .subtract(Optional.ofNullable(order.getDepositAmount()).orElse(BigDecimal.ZERO));
+                    .subtract(Optional.of(order.getDepositAmount()).orElse(BigDecimal.ZERO));
             log.debug("Calculating remaining amount for order {}: Total({}) - Deposit({}) = {}",
                     order.getOrderCode(), order.getTotalPrice(), order.getDepositAmount(), amountJustPaid);
         } else {
@@ -1135,7 +1135,7 @@ public class OrderService implements PriceConstants {
         order.setCouponDiscountAmount(BigDecimal.ZERO);
         order.setAppliedCoupon(null);
 
-        if (!StringUtils.hasText(couponCode) || order == null || customer == null || order.getSubTotalWithoutTax() == null) {
+        if (!StringUtils.hasText(couponCode) || customer == null || order.getSubTotalWithoutTax() == null) {
             log.debug("validateAndApplyCoupon: Missing coupon code, order, customer, or subtotal. No coupon applied.");
             return null; // Missing required data
         }

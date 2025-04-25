@@ -10,6 +10,7 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.*;
@@ -19,6 +20,7 @@ import java.util.*;
 @Getter // Keep Lombok Getter
 public class Cart implements Serializable, PriceConstants { // Implement PriceConstants
 
+    @Serial
     private static final long serialVersionUID = 1L;
     private static final Logger log = LoggerFactory.getLogger(Cart.class);
 
@@ -75,7 +77,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
 
     public List<CartItem> getItemsList() {
         log.trace("getItemsList called for cart hash: {}. Returning {} items.", this.hashCode(), items.size());
-        return Collections.unmodifiableList(new ArrayList<>(items.values()));
+        return List.copyOf(items.values());
     }
 
     public Map<String, CartItem> getItems() {
@@ -162,8 +164,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
         // Check coupon type and calculate discount using correct methods
         if (appliedCoupon.isPercentage()) {
             if (appliedCoupon.getValue() != null && appliedCoupon.getValue().compareTo(BigDecimal.ZERO) > 0) {
-                int calcScale = (this instanceof PriceConstants) ? CALCULATION_SCALE : 4;
-                BigDecimal discountFactor = appliedCoupon.getValue().divide(BigDecimal.valueOf(100), calcScale, ROUNDING_MODE);
+                BigDecimal discountFactor = appliedCoupon.getValue().divide(BigDecimal.valueOf(100), CALCULATION_SCALE, ROUNDING_MODE);
                 discount = subtotal.multiply(discountFactor);
             } else {
                 log.warn("Percentage coupon '{}' has null or zero value. Applying zero discount.", appliedCoupon.getCode());

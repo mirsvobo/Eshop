@@ -8,7 +8,6 @@ import org.example.eshop.service.PaymentProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +22,6 @@ public class WebHookController {
     private PaymentProcessingService paymentProcessingService;
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Value("${superfaktura.webhook.secret:}")
-    private String webhookSecret; // Můžeme ponechat, pokud jej chceme použít v budoucnu
 
     @PostMapping("/payment")
     public ResponseEntity<String> handlePaymentWebhook(

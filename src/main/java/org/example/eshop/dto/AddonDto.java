@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -16,6 +17,7 @@ import java.io.Serializable;
 public class AddonDto implements Serializable { // <-- PŘIDAT IMPLEMENTS
 
     // Přidat serialVersionUID pro dobrou praxi
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @NotNull(message = "Addon ID is required.")

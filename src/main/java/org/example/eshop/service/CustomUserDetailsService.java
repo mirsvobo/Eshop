@@ -44,7 +44,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("User account is disabled: " + email);
         }
 
-        log.debug("User found: {}, Enabled: {}, Roles: {}", customer.getEmail(), customer.isEnabled(), customer.getRoles());
+        log.debug("User found: {}, Enabled: {}, Roles: {}", customer.getEmail(), true, customer.getRoles());
 
         // Převedeme role zákazníka (Set<String>) na GrantedAuthority pro Spring Security
         Collection<? extends GrantedAuthority> authorities = mapRolesToAuthorities(customer.getRoles());

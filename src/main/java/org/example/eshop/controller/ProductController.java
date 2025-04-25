@@ -2,7 +2,6 @@ package org.example.eshop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CustomPriceRequestDto;
 import org.example.eshop.dto.CustomPriceResponseDto;
@@ -38,8 +37,7 @@ public class ProductController {
     CurrencyService currencyService;
     @Autowired
     private ProductService productService;
-    @Autowired
-    private AddonsService addonsService; // Předpokládám, že je stále potřeba pro detail
+
 
     @GetMapping("/produkty")
     @Transactional(readOnly = true)
@@ -162,7 +160,7 @@ public class ProductController {
                 jsonLdMap.put("@context", "https://schema.org/");
                 jsonLdMap.put("@type", "Product");
                 jsonLdMap.put("name", product.getName());
-                jsonLdMap.put("description", product.getShortDescription() != null ? product.getShortDescription() : abbreviate(product.getDescription(), 250));
+                jsonLdMap.put("description", product.getShortDescription() != null ? product.getShortDescription() : abbreviate(product.getDescription()));
                 jsonLdMap.put("image", imageUrls);
                 jsonLdMap.put("sku", (product.isCustomisable() ? "CUSTOM-" : "STD-") + product.getId()); // Rozlišení SKU
 
@@ -291,12 +289,12 @@ public class ProductController {
         }
     }
 
-    private String abbreviate(String text, int maxLength) {
-        if (text == null || text.length() <= maxLength) {
+    private String abbreviate(String text) {
+        if (text == null || text.length() <= 250) {
             return text;
         }
         // Jednoduché zkrácení, Apache Commons Lang StringUtils.abbreviate je robustnější
-        return text.substring(0, maxLength - 3) + "...";
+        return text.substring(0, 250 - 3) + "...";
     }
 
 
