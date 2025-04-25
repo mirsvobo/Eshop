@@ -52,6 +52,12 @@
           <div class="form-text">Zaškrtněte, pokud se na produkty s touto sazbou vztahuje režim přenesené daňové povinnosti.</div>
         </div>
 
+        <div class="mb-3">
+          <label for="note" class="form-label">Poznámka (zobrazí se u výběru DPH)</label>
+          <input type="text" class="form-control" th:errorclass="is-invalid" id="note" th:field="*{note}" maxlength="255">
+          <div class="form-text">Krátká poznámka, která se může zobrazit zákazníkovi při výběru sazby (např. "Jen pro stavby k bydlení").</div>
+          <div th:if="${#fields.hasErrors('note')}" class="invalid-feedback" th:errors="*{note}">Chyba poznámky</div>
+        </div>
         <div class="d-flex justify-content-end">
           <a th:href="@{/admin/tax-rates}" class="btn btn-secondary me-2">Zrušit</a>
           <button type="submit" class="btn btn-primary">Uložit Sazbu</button>

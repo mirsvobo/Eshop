@@ -12798,3 +12798,1030 @@ jakarta.persistence.EntityNotFoundException: Order not found: 2
 2025-04-25T17:44:10.054+02:00  INFO 784 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
 2025-04-25T17:44:10.080+02:00  INFO 784 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
 2025-04-25T17:44:10.090+02:00  INFO 784 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+2025-04-25T17:45:33.273+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 2312 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-25T17:45:33.280+02:00 DEBUG 2312 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-25T17:45:33.283+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-25T17:45:34.028+02:00  INFO 2312 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-25T17:45:34.029+02:00  INFO 2312 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-25T17:45:37.476+02:00  INFO 2312 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-25T17:45:37.692+02:00  INFO 2312 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 194 ms. Found 14 JPA repository interfaces.
+2025-04-25T17:45:39.943+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-25T17:45:39.968+02:00  INFO 2312 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-25T17:45:39.970+02:00  INFO 2312 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-25T17:45:40.083+02:00  INFO 2312 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-25T17:45:40.083+02:00  INFO 2312 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 6053 ms
+2025-04-25T17:45:41.120+02:00  INFO 2312 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-25T17:45:41.413+02:00  INFO 2312 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-25T17:45:41.434+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T17:45:41.561+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T17:45:41.573+02:00  INFO 2312 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-04-25T17:45:42.554+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-25T17:45:42.659+02:00  INFO 2312 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-25T17:45:42.951+02:00  INFO 2312 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@3afaa1c1
+2025-04-25T17:45:42.962+02:00  INFO 2312 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-25T17:45:43.200+02:00  INFO 2312 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-25T17:45:45.370+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Discount] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.630+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' created in EhcacheManager.
+2025-04-25T17:45:45.660+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.OrderState] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.668+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' created in EhcacheManager.
+2025-04-25T17:45:45.674+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001003: Read-only caching was requested for mutable entity [NavigableRole[org.example.eshop.model.OrderState]]
+2025-04-25T17:45:45.677+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Coupon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.681+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' created in EhcacheManager.
+2025-04-25T17:45:45.681+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.692+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' created in EhcacheManager.
+2025-04-25T17:45:45.693+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Glaze] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.703+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' created in EhcacheManager.
+2025-04-25T17:45:45.706+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.715+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' created in EhcacheManager.
+2025-04-25T17:45:45.715+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.RoofColor] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.722+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' created in EhcacheManager.
+2025-04-25T17:45:45.730+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate.products] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.732+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' created in EhcacheManager.
+2025-04-25T17:45:45.738+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Design] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.748+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' created in EhcacheManager.
+2025-04-25T17:45:45.750+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.ProductConfigurator] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.761+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' created in EhcacheManager.
+2025-04-25T17:45:45.761+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Addon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.770+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' created in EhcacheManager.
+2025-04-25T17:45:45.772+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.availableTaxRates] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.777+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' created in EhcacheManager.
+2025-04-25T17:45:45.780+02:00  WARN 2312 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.images] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T17:45:45.785+02:00  INFO 2312 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' created in EhcacheManager.
+2025-04-25T17:45:49.027+02:00  INFO 2312 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-25T17:45:49.033+02:00  INFO 2312 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T17:45:50.473+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-04-25T17:45:53.630+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-25T17:45:54.250+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-25T17:45:54.250+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-25T17:45:54.290+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-25T17:45:54.663+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Found maximum existing numeric order code: 207
+2025-04-25T17:45:54.663+02:00  INFO 2312 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 207
+2025-04-25T17:45:55.625+02:00  WARN 2312 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-25T17:45:56.870+02:00  INFO 2312 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-25T17:45:57.080+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-25T17:45:58.592+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-25T17:46:00.840+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-25T17:46:01.075+02:00  INFO 2312 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-25T17:46:01.113+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 29.284 seconds (process running for 31.514)
+2025-04-25T17:46:01.147+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing application data for Drevniky Kolar...
+2025-04-25T17:46:01.279+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Tax Rates already exist, skipping creation.
+2025-04-25T17:46:01.280+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Order States already exist, checking/updating 'READY_TO_SHIP' description...
+2025-04-25T17:46:01.467+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Email Template Configs already exist, skipping creation.
+2025-04-25T17:46:01.467+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating attributes (Designs, Glazes, Roof Colors)...
+2025-04-25T17:46:01.600+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating addons...
+2025-04-25T17:46:01.630+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 130 cm' already exists. Skipping creation.
+2025-04-25T17:46:01.640+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 90 cm' already exists. Skipping creation.
+2025-04-25T17:46:01.640+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Držáky 2 páry' already exists. Skipping creation.
+2025-04-25T17:46:01.650+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 1x' already exists. Skipping creation.
+2025-04-25T17:46:01.660+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 2x' already exists. Skipping creation.
+2025-04-25T17:46:01.671+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 3x' already exists. Skipping creation.
+2025-04-25T17:46:01.683+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Okap' already exists. Skipping creation.
+2025-04-25T17:46:01.683+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial product creation as requested.
+2025-04-25T17:46:01.686+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin users...
+2025-04-25T17:46:01.720+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user mirsvobo@gmail.com already exists. Skipping creation.
+2025-04-25T17:46:01.745+02:00  WARN 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user drevnikykolar@gmail.com already exists. Skipping creation.
+2025-04-25T17:46:01.752+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial order creation as requested.
+2025-04-25T17:46:01.752+02:00  INFO 2312 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Application data initialization finished successfully.
+2025-04-25T17:46:02.243+02:00  INFO 2312 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-25T17:46:02.244+02:00  INFO 2312 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-25T17:46:02.260+02:00  INFO 2312 --- [Eshop] [RMI TCP Connection(4)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 11 ms
+2025-04-25T17:46:02.865+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /admin
+2025-04-25T17:46:02.889+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:02.892+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:03.022+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.a.c.AdminDashboardController       : Requesting admin dashboard view.
+2025-04-25T17:46:03.030+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders created between 2025-04-25T00:00 and 2025-04-25T23:59:59.999999999
+2025-04-25T17:46:03.060+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with payment status: AWAITING_DEPOSIT
+2025-04-25T17:46:03.060+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with status code: PROCESSING
+2025-04-25T17:46:03.077+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with status code: NEW
+2025-04-25T17:46:03.080+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with status code: IN_PRODUCTION
+2025-04-25T17:46:03.087+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with status code: AT_ZINC_PLATING
+2025-04-25T17:46:03.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Counting orders with status code: READY_TO_SHIP
+2025-04-25T17:46:03.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : OrderService.findOrders called with filters - Email: 'N/A', StateID: null, PaymentStatus: 'N/A', From: null, To: null. Pageable: Page request [number: 0, size 5, sort: orderDate: DESC]
+2025-04-25T17:46:03.162+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] org.example.eshop.service.OrderService   : Found 2 orders matching criteria using specifications.
+2025-04-25T17:46:03.162+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.CustomerService  : Counting total customers
+2025-04-25T17:46:12.060+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /admin/orders/2
+2025-04-25T17:46:12.060+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:12.060+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:12.076+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.e.a.controller.AdminOrderController  : Requesting admin order detail view for ID: 2
+2025-04-25T17:46:12.078+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-2] org.example.eshop.service.OrderService   : Finding order by ID with full details using new repo method: 2
+2025-04-25T17:46:12.146+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.eshop.service.OrderStateService      : Fetching all order states sorted by displayOrder
+2025-04-25T17:46:12.156+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-2] o.e.e.a.controller.AdminOrderController  : Order detail loaded successfully for ID: 2
+2025-04-25T17:46:34.270+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /
+2025-04-25T17:46:34.271+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:34.271+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:34.271+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.HomeController      : Accessing home page
+2025-04-25T17:46:34.273+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getAllActiveProducts (List) using standard repo method <<<
+2025-04-25T17:46:34.317+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] getAllActiveProducts (List): Načteno 1 aktivních produktů (with details).
+2025-04-25T17:46:34.317+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getAllActiveProducts (List) <<<
+2025-04-25T17:46:34.323+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.HomeController      : Featured products and prices added to model for currency: CZK
+2025-04-25T17:46:36.741+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /produkt/na-miru
+2025-04-25T17:46:36.741+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:36.741+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:36.745+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do productDetail. Slug: na-miru
+2025-04-25T17:46:36.745+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getActiveProductBySlug using findActiveBySlugWithDetails. Slug: na-miru
+2025-04-25T17:46:36.796+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [ProductService] getActiveProductBySlug: Aktivní produkt se slugem 'na-miru' nenalezen.
+2025-04-25T17:46:36.796+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getActiveProductBySlug (Slug: na-miru) <<<
+2025-04-25T17:46:36.800+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.ProductController   : [ProductController] Produkt se slugem 'na-miru' nenalezen nebo není aktivní.
+2025-04-25T17:46:36.802+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.ProductController   : ResponseStatusException v productDetail: 404 NOT_FOUND "Produkt nebyl nalezen"
+2025-04-25T17:46:36.846+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-8] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "Produkt nebyl nalezen"]
+2025-04-25T17:46:40.340+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /produkt/test
+2025-04-25T17:46:40.341+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:40.342+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:40.344+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do productDetail. Slug: test
+2025-04-25T17:46:40.344+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getActiveProductBySlug using findActiveBySlugWithDetails. Slug: test
+2025-04-25T17:46:40.412+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] getActiveProductBySlug: Aktivní produkt se slugem 'test' nalezen (with details).
+2025-04-25T17:46:40.414+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getActiveProductBySlug (Slug: test) <<<
+2025-04-25T17:46:40.414+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : [ProductController] Produkt ID 1 nalezen pro slug 'test'.
+2025-04-25T17:46:40.415+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK
+2025-04-25T17:46:40.416+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (CZK): 9000.00
+2025-04-25T17:46:40.416+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:46:40.416+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: EUR
+2025-04-25T17:46:40.416+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (EUR): 9000.00
+2025-04-25T17:46:40.416+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: EUR. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:46:40.416+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : [ProductController] Výchozí ZÁKLADNÍ cena (bez doplňků/atributů) pro custom produkt ID 1: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:40.423+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : JSON-LD data vygenerována a přidána do modelu.
+2025-04-25T17:46:40.423+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : DEBUG: Načtené availableTaxRates pro produkt ID 1: 3
+2025-04-25T17:46:40.423+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : DEBUG: Přidávám sortedTaxRates do modelu, velikost: 3
+2025-04-25T17:46:40.423+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : Available designs: 1, glazes: 1, roofColors: 1
+2025-04-25T17:46:40.423+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : [ProductController] Zpracovávám detail pro CUSTOM produkt ID 1
+2025-04-25T17:46:40.423+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : [ProductController] Grouped addons: [Konstrukce, Montážní materiál, Poličky]
+2025-04-25T17:46:40.423+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.ProductController   : >>> [ProductController] Opouštím productDetail (CUSTOM). Vracím 'produkt-detail-custom'. Model keys: [currentGlobalCurrency, product, initialCustomPriceCZK, initialCustomPriceEUR, initialCustomPriceError, jsonLdData, availableTaxRates, availableDesigns, availableGlazes, availableRoofColors, configurator, groupedAddons, cartItemDto]
+2025-04-25T17:46:40.571+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-7] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource images/placeholder.png.]
+2025-04-25T17:46:40.663+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:46:40.663+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:40.663+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:40.710+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:46:40.710+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:46:40.712+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:46:40.752+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:40.756+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:40.760+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:40.762+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:40.762+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:40.764+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:40.764+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:46:40.765+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:46:45.320+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:46:45.320+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:45.320+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:45.325+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:46:45.325+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:46:45.325+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:46:45.386+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:45.386+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:45.386+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:45.390+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:45.391+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:45.391+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:45.391+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:46:45.391+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:46:46.610+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:46:46.610+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:46.610+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:46.618+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:46:46.620+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:46:46.622+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:46:46.685+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:46.685+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:46.685+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:46.685+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:46.685+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:46.685+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:46.685+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:46:46.690+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:46:48.407+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:46:48.407+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:48.407+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:48.410+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:46:48.410+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:46:48.410+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:46:48.464+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:48.464+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:48.467+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:48.467+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:48.467+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:48.467+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:48.467+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:46:48.467+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:46:49.450+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik/pridat
+2025-04-25T17:46:49.452+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:49.452+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:49.500+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : --- addToCart START --- Cart hash: -66593863
+2025-04-25T17:46:49.502+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: 1
+2025-04-25T17:46:49.542+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] getProductById: Produkt ID 1 nalezen (with details).
+2025-04-25T17:46:49.542+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getProductById (ID: 1) <<<
+2025-04-25T17:46:49.542+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Received CartItemDto raw data: CartItemDto(productId=1, quantity=1, isCustom=false, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedTaxRateId=1, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddonIds=null)
+2025-04-25T17:46:49.550+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Received CartItemDto (before processing): productId=1, quantity=1, isCustom(DTO)=false, designId=2, glazeId=1, roofColorId=1, taxRateId=1, customDimensions={height=300.00, length=300.00, width=300.00}, addonIds=null
+2025-04-25T17:46:49.550+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Received isCustom DIRECTLY via @RequestParam: true
+2025-04-25T17:46:49.550+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: 1
+2025-04-25T17:46:49.566+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [ProductService] getProductById: Produkt ID 1 nalezen (with details).
+2025-04-25T17:46:49.566+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getProductById (ID: 1) <<<
+2025-04-25T17:46:49.580+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Processing Cart Item: isCustom set FROM PARAM = true
+2025-04-25T17:46:49.580+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Applied Tax Rate 21.00% (RC: false)
+2025-04-25T17:46:49.580+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Processing CUSTOM product path for product ID: 1
+2025-04-25T17:46:49.580+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:46:49.591+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:49.591+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:46:49.591+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Final unit prices set for CartItem: CZK=9000.00, EUR=9000.00
+2025-04-25T17:46:49.598+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Built variant info: Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit
+2025-04-25T17:46:49.598+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Generated Cart Item ID: P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1
+2025-04-25T17:46:49.600+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] org.example.eshop.service.Cart           : addItem called for cart hash: 105374850. Item ID: P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, Product ID: 1
+2025-04-25T17:46:49.600+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] org.example.eshop.service.Cart           : Added new cart item ID: P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1. Cart hash: 105374850
+2025-04-25T17:46:49.600+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] org.example.eshop.service.Cart           : Cart items map after addItem (hash: 105374850): {P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1=CartItem(cartItemId=P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, productId=1, productName=Test, productSlug=test, imageUrl=/images/placeholder.png, quantity=1, isCustom=true, length=300.00, width=300.00, height=300.00, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedDesignName=František, selectedGlazeName=Afromorsia, selectedRoofColorName=Antracit, selectedTaxRateId=1, selectedTaxRateValue=0.2100, selectedIsReverseCharge=false, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddons=[], unitPriceCZK=9000.00, unitPriceEUR=9000.00, variantInfo=Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit)}
+2025-04-25T17:46:49.607+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : --- addToCart END --- Item added/updated. Cart instance hash: -66593863, Items count: 1
+2025-04-25T17:46:49.632+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik
+2025-04-25T17:46:49.632+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:49.632+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:49.632+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : --- viewCart START --- Cart instance hash: -66593863
+2025-04-25T17:46:49.632+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Cart items before display: {P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1=CartItem(cartItemId=P1-T1-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, productId=1, productName=Test, productSlug=test, imageUrl=/images/placeholder.png, quantity=1, isCustom=true, length=300.00, width=300.00, height=300.00, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedDesignName=František, selectedGlazeName=Afromorsia, selectedRoofColorName=Antracit, selectedTaxRateId=1, selectedTaxRateValue=0.2100, selectedIsReverseCharge=false, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddons=[], unitPriceCZK=9000.00, unitPriceEUR=9000.00, variantInfo=Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit)}
+2025-04-25T17:46:49.632+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Displaying cart page. Cart has 1 items.
+2025-04-25T17:46:49.632+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Current currency set to: CZK
+2025-04-25T17:46:49.632+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Cart subtotal (CZK): 9000.00
+2025-04-25T17:46:49.632+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Validated coupon: None, Discount amount (CZK): 0
+2025-04-25T17:46:49.640+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Total VAT (CZK): 1890.00
+2025-04-25T17:46:49.640+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : VAT Breakdown (CZK): {0.21=1890.00}
+2025-04-25T17:46:49.641+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Total Price Before Shipping (CZK): 10890.00
+2025-04-25T17:46:49.641+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : Total Price Without Tax After Discount (CZK): 9000.00
+2025-04-25T17:46:49.641+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CartController      : --- viewCart END --- Model attributes set for cart.
+2025-04-25T17:46:49.735+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-4] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource images/placeholder.png.]
+2025-04-25T17:46:51.490+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna
+2025-04-25T17:46:51.490+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:51.490+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:51.500+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Displaying checkout page for user: mirsvobo@gmail.com in currency: CZK
+2025-04-25T17:46:51.507+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Initialized checkout form DTO from logged-in customer 1.
+2025-04-25T17:46:51.507+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Added shippingTaxRate 0.21 to model.
+2025-04-25T17:46:51.507+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-25T17:46:51.507+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Heřmanského 732, Heřmanův Městec, 53803, Česká republika'
+2025-04-25T17:46:51.852+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 826.39 CZK (Distance: 21.8 km)
+2025-04-25T17:46:51.852+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Preparing checkout summary model data for currency: CZK
+2025-04-25T17:46:51.852+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Rounding calculation: originalTotalPrice=11889.93, roundedTotalPrice=11889, roundingDifference=0.93
+2025-04-25T17:46:51.852+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Checkout summary model prepared: subtotal=9000.00, itemDiscount=0, itemVat=1890.00, origShipCost=826.39, shipDiscount=0, finalShipCost=826.39, finalShipTax=173.54, originalTotal=11889.93, roundingDiff=0.93, finalRoundedTotal=11889, totalVatWithShip=2063.54, shippingError='null'
+2025-04-25T17:46:51.852+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : Checkout page model prepared for mirsvobo@gmail.com. Currency: CZK
+2025-04-25T17:46:55.260+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna/calculate-shipping
+2025-04-25T17:46:55.260+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:55.260+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:55.270+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : AJAX request to calculate shipping for address: ShippingAddressDto(street=Heřmanského 732, city=Heřmanův Městec, zipCode=53803, country=Česká republika) in currency CZK
+2025-04-25T17:46:55.270+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-25T17:46:55.270+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Heřmanského 732, Heřmanův Městec, 53803, Česká republika'
+2025-04-25T17:46:55.340+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 826.39 CZK (Distance: 21.8 km)
+2025-04-25T17:46:55.340+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : AJAX Shipping Calc OK: origCost=826.39, origTax=173.54, shipDiscount=0, finalCost=826.39, finalTax=173.54, finalTotal=11889.93, finalTotalVat=2063.54
+2025-04-25T17:46:58.125+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna/odeslat
+2025-04-25T17:46:58.125+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:58.125+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:58.140+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Processing checkout submission for user: mirsvobo@gmail.com in currency: CZK
+2025-04-25T17:46:58.140+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Set email in DTO from principal for logged-in user: mirsvobo@gmail.com
+2025-04-25T17:46:58.140+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Getting logged-in customer: mirsvobo@gmail.com
+2025-04-25T17:46:58.143+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Customer 1 address matches DTO, no update needed.
+2025-04-25T17:46:58.143+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Using valid shipping costs from form: NoTax=826.39, Tax=173.54
+2025-04-25T17:46:58.143+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Calculating final order totals for saving: originalTotal=11889.93, roundedTotal=11889
+2025-04-25T17:46:58.143+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Attempting to create order with request: CreateOrderRequest(customerId=1, useCustomerAddresses=true, paymentMethod=BANK_TRANSFER, currency=CZK, customerNote=, couponCode=null, items=[CartItemDto(productId=1, quantity=1, isCustom=true, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedTaxRateId=1, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddonIds=[])], shippingCostNoTax=826.39, shippingTax=173.54)
+2025-04-25T17:46:58.143+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 1 with explicit currency: CZK
+2025-04-25T17:46:58.149+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: CZK
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: CZK
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Copying addresses for customer ID: 1 to order.
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Invoice recipient is person: Miroslav Svoboda
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Delivery address is same as invoice. Copying invoice address details AND customer contact name/phone.
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Address copy for order (new) completed successfully.
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: CZK
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Processing item with Product ID: 1
+2025-04-25T17:46:58.150+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 1, TaxRate ID: 1
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Selected Tax Rate ID 1 ('Základní', Rate: 0.2100, RC: false) validated for Product ID 1
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Attribute surcharge calculated for currency CZK: 0
+2025-04-25T17:46:58.190+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (CZK): 9000.00
+2025-04-25T17:46:58.190+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [processCartItem] Custom Base Unit Price (No Tax, Currency: CZK): 9000.00
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [processCartItem] No addons selected for custom item.
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Saving historical data for OrderItem (Product ID: 1)
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Finished saving historical data for OrderItem. VariantInfo: Na míru|Rozměry (DxHxV): 300x300x300 cm|Design: František|Lazura: Afromorsia|Střecha: Antracit
+2025-04-25T17:46:58.190+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.DiscountService  : Finding active discounts for product ID: 1 at time: 2025-04-25T17:46:58.190596800
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.DiscountService  : Found 0 potentially applicable active discounts.
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.example.eshop.service.DiscountService  : Found 0 discounts applicable to product ID 1
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [processCartItem] Final Unit Price (No Tax, Currency: CZK): 9000.00
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [processCartItem] Unit Tax Amount calculated using rate 0.2100: 1890.00
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [processCartItem] Unit Price With Tax: 10890.00
+2025-04-25T17:46:58.200+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Finished processCartItem for Product ID: 1. Total Price w/o Tax: 9000.00, Total Tax: 1890.00, Selected Rate ID: 1
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Processed item successfully. Running Subtotal: 9000.00, Running Item Tax: 1890.00
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Finished items processing. Final Subtotal: 9000.00, Final Item Tax: 1890.00
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost (no free shipping coupon). Currency: CZK
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Using shipping costs from request. CostNoTax: 826.39, Tax: 173.54, Estimated Rate: 0.2100
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals for currency: CZK
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Final totals calculated: TotalNoTax=9826.39, TotalTax=2063.54, OriginalTotalWithTax=11889.93, RoundedTotalToSave=11889
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Final totals calculated: TotalNoTax=9826.39, TotalTax=2063.54, OriginalTotalWithTax=11889.93, RoundedTotalToSave=11889
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit for currency: CZK
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : DetermineInitialPaymentStatus: Order null contains custom product. Calculating potential deposit.
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: 50% of 11889 is 5944.50
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Rounded down to nearest thousand: 5000
+2025-04-25T17:46:58.200+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Final deposit amount calculated: 5000.00
+2025-04-25T17:46:58.200+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : DetermineInitialPaymentStatus: Deposit required for order null. Status set to AWAITING_DEPOSIT.
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: 50% of 11889 is 5944.50
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Rounded down to nearest thousand: 5000
+2025-04-25T17:46:58.200+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Final deposit amount calculated: 5000.00
+2025-04-25T17:46:58.200+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Deposit amount 5000.00 CZK calculated for custom order (new).
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Final Payment status: AWAITING_DEPOSIT, Deposit Amount: 5000.00
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 208
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Generated Order Code: 208
+2025-04-25T17:46:58.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-25T17:46:58.227+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : Order 208 created successfully. Total: 11889 CZK
+2025-04-25T17:46:58.227+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email for order 208...
+2025-04-25T17:46:58.230+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.OrderService   : [Order Creation - Step 11] Triggering proforma invoice generation for order 208. Currency: CZK
+2025-04-25T17:46:58.230+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Order 208 successfully created with currency CZK for user: mirsvobo@gmail.com
+2025-04-25T17:46:58.230+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] org.example.eshop.service.Cart           : clearCart called for cart hash: 105374850. Clearing items and coupon.
+2025-04-25T17:46:58.230+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-7] o.e.eshop.controller.CheckoutController  : Session cart cleared for mirsvobo@gmail.com
+2025-04-25T17:46:58.230+02:00 ERROR 2312 --- [Eshop] [task-1] org.thymeleaf.TemplateEngine             : [THYMELEAF][task-1] Exception processing template "emails/order-confirmation": Error resolving template [emails/order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [emails/order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.setEshopVariables(EmailService.java:85) ~[classes/:na]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:69) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-25T17:46:58.238+02:00 ERROR 2312 --- [Eshop] [task-2] .a.i.SimpleAsyncUncaughtExceptionHandler : Unexpected exception occurred invoking async method: public void org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(org.example.eshop.model.Order)
+
+jakarta.persistence.EntityNotFoundException: Order not found: 3
+	at org.example.eshop.service.SuperFakturaInvoiceService.lambda$reloadOrder$2(SuperFakturaInvoiceService.java:323) ~[classes/:na]
+	at java.base/java.util.Optional.orElseThrow(Optional.java:403) ~[na:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.reloadOrder(SuperFakturaInvoiceService.java:323) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(SuperFakturaInvoiceService.java:76) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-25T17:46:58.240+02:00 ERROR 2312 --- [Eshop] [task-1] org.example.eshop.service.EmailService   : Failed to process Thymeleaf template 'emails/order-confirmation' for order confirmation 208: Error resolving template [emails/order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+
+org.thymeleaf.exceptions.TemplateInputException: Error resolving template [emails/order-confirmation], template might not exist or might not be accessible by any of the configured Template Resolvers
+	at org.thymeleaf.engine.TemplateManager.resolveTemplate(TemplateManager.java:869) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.engine.TemplateManager.parseAndProcess(TemplateManager.java:607) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1103) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1064) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.thymeleaf.TemplateEngine.process(TemplateEngine.java:1053) ~[thymeleaf-3.1.3.RELEASE.jar:3.1.3.RELEASE]
+	at org.example.eshop.service.EmailService.setEshopVariables(EmailService.java:85) ~[classes/:na]
+	at org.example.eshop.service.EmailService.sendOrderConfirmationEmail(EmailService.java:69) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-25T17:46:58.250+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /muj-ucet/objednavky
+2025-04-25T17:46:58.250+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:46:58.250+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:46:58.259+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-5] org.example.eshop.service.OrderService   : Finding all orders for customer ID: 1
+2025-04-25T17:47:45.169+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /admin
+2025-04-25T17:47:45.171+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:45.171+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:45.172+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.a.c.AdminDashboardController       : Requesting admin dashboard view.
+2025-04-25T17:47:45.174+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders created between 2025-04-25T00:00 and 2025-04-25T23:59:59.999999999
+2025-04-25T17:47:45.185+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with payment status: AWAITING_DEPOSIT
+2025-04-25T17:47:45.192+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with status code: PROCESSING
+2025-04-25T17:47:45.200+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with status code: NEW
+2025-04-25T17:47:45.206+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with status code: IN_PRODUCTION
+2025-04-25T17:47:45.211+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with status code: AT_ZINC_PLATING
+2025-04-25T17:47:45.214+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Counting orders with status code: READY_TO_SHIP
+2025-04-25T17:47:45.217+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : OrderService.findOrders called with filters - Email: 'N/A', StateID: null, PaymentStatus: 'N/A', From: null, To: null. Pageable: Page request [number: 0, size 5, sort: orderDate: DESC]
+2025-04-25T17:47:45.223+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.OrderService   : Found 3 orders matching criteria using specifications.
+2025-04-25T17:47:45.225+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.CustomerService  : Counting total customers
+2025-04-25T17:47:45.758+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /admin/email-configs
+2025-04-25T17:47:45.758+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:45.758+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:45.760+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.a.c.AdminEmailConfigController     : Requesting email config list view.
+2025-04-25T17:47:45.768+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.OrderStateService      : Fetching all order states sorted by displayOrder
+2025-04-25T17:47:48.812+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna
+2025-04-25T17:47:48.820+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:48.820+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:48.822+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.CheckoutController  : Displaying checkout page for user: mirsvobo@gmail.com in currency: CZK
+2025-04-25T17:47:48.822+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.CheckoutController  : User mirsvobo@gmail.com attempted to access checkout with an empty cart.
+2025-04-25T17:47:48.839+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik
+2025-04-25T17:47:48.842+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:48.842+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:48.842+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.CartController      : --- viewCart START --- Cart instance hash: -66593863
+2025-04-25T17:47:48.842+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.CartController      : Cart items before display: {}
+2025-04-25T17:47:48.842+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.CartController      : Displaying cart page. Cart has 0 items.
+2025-04-25T17:47:48.842+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.CartController      : Current currency set to: CZK
+2025-04-25T17:47:48.842+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.CartController      : --- viewCart END --- Model attributes set for cart.
+2025-04-25T17:47:49.682+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik
+2025-04-25T17:47:49.689+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:49.689+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:49.689+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : --- viewCart START --- Cart instance hash: -66593863
+2025-04-25T17:47:49.689+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Cart items before display: {}
+2025-04-25T17:47:49.690+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Displaying cart page. Cart has 0 items.
+2025-04-25T17:47:49.690+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : Current currency set to: CZK
+2025-04-25T17:47:49.690+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CartController      : --- viewCart END --- Model attributes set for cart.
+2025-04-25T17:47:50.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /produkty
+2025-04-25T17:47:50.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:50.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:50.880+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do listProducts. Pageable: Page request [number: 0, size 20, sort: UNSORTED]
+2025-04-25T17:47:50.880+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getActiveProducts(Pageable: Page request [number: 0, size 20, sort: UNSORTED]) using standard repo method <<<
+2025-04-25T17:47:50.884+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-5] org.hibernate.orm.query                  : HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
+2025-04-25T17:47:50.921+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.example.eshop.service.ProductService   : [ProductService] getActiveProducts(Pageable): Načtena stránka s 1 aktivními produkty (with details).
+2025-04-25T17:47:50.921+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getActiveProducts(Pageable) <<<
+2025-04-25T17:47:50.921+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.eshop.controller.ProductController   : [ProductController] ProductService.getActiveProducts vrátil stránku: TotalElements=1, TotalPages=1, Number=0, Size=20
+2025-04-25T17:47:50.921+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-5] o.e.eshop.controller.ProductController   : >>> [ProductController] Opouštím listProducts. Obsah modelu před vrácením 'produkty': [currentGlobalCurrency, currentCurrency, productPage, productPrices]
+2025-04-25T17:47:51.050+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-8] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource images/placeholder-custom.png.]
+2025-04-25T17:47:52.160+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /produkt/na-miru
+2025-04-25T17:47:52.160+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:52.160+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:52.163+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do productDetail. Slug: na-miru
+2025-04-25T17:47:52.163+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getActiveProductBySlug using findActiveBySlugWithDetails. Slug: na-miru
+2025-04-25T17:47:52.203+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : [ProductService] getActiveProductBySlug: Aktivní produkt se slugem 'na-miru' nenalezen.
+2025-04-25T17:47:52.205+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getActiveProductBySlug (Slug: na-miru) <<<
+2025-04-25T17:47:52.205+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : [ProductController] Produkt se slugem 'na-miru' nenalezen nebo není aktivní.
+2025-04-25T17:47:52.205+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.eshop.controller.ProductController   : ResponseStatusException v productDetail: 404 NOT_FOUND "Produkt nebyl nalezen"
+2025-04-25T17:47:52.210+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-9] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "Produkt nebyl nalezen"]
+2025-04-25T17:47:55.356+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /produkt/test
+2025-04-25T17:47:55.356+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:55.356+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:55.360+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do productDetail. Slug: test
+2025-04-25T17:47:55.360+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getActiveProductBySlug using findActiveBySlugWithDetails. Slug: test
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [ProductService] getActiveProductBySlug: Aktivní produkt se slugem 'test' nalezen (with details).
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getActiveProductBySlug (Slug: test) <<<
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : [ProductController] Produkt ID 1 nalezen pro slug 'test'.
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK
+2025-04-25T17:47:55.447+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (CZK): 9000.00
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: EUR
+2025-04-25T17:47:55.447+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (EUR): 9000.00
+2025-04-25T17:47:55.447+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: EUR. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:47:55.447+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : [ProductController] Výchozí ZÁKLADNÍ cena (bez doplňků/atributů) pro custom produkt ID 1: CZK=9000.00, EUR=9000.00
+2025-04-25T17:47:55.450+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : JSON-LD data vygenerována a přidána do modelu.
+2025-04-25T17:47:55.450+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : DEBUG: Načtené availableTaxRates pro produkt ID 1: 3
+2025-04-25T17:47:55.450+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : DEBUG: Přidávám sortedTaxRates do modelu, velikost: 3
+2025-04-25T17:47:55.450+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : Available designs: 1, glazes: 1, roofColors: 1
+2025-04-25T17:47:55.450+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : [ProductController] Zpracovávám detail pro CUSTOM produkt ID 1
+2025-04-25T17:47:55.450+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : [ProductController] Grouped addons: [Konstrukce, Montážní materiál, Poličky]
+2025-04-25T17:47:55.450+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-1] o.e.eshop.controller.ProductController   : >>> [ProductController] Opouštím productDetail (CUSTOM). Vracím 'produkt-detail-custom'. Model keys: [currentGlobalCurrency, product, initialCustomPriceCZK, initialCustomPriceEUR, initialCustomPriceError, jsonLdData, availableTaxRates, availableDesigns, availableGlazes, availableRoofColors, configurator, groupedAddons, cartItemDto]
+2025-04-25T17:47:55.649+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-7] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource images/placeholder.png.]
+2025-04-25T17:47:55.754+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:47:55.758+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:47:55.758+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:47:55.760+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:47:55.761+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:47:55.762+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:47:55.823+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:47:55.828+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:47:55.830+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:47:55.830+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:47:55.832+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:47:55.832+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:47:55.832+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:47:55.834+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-4] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:48:02.866+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /api/product/calculate-price
+2025-04-25T17:48:02.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:02.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:02.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : >>> [ProductController] Vstupuji do API calculateCustomPrice (detailed). Product ID: 1
+2025-04-25T17:48:02.870+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : [ProductController] Calc request data: ProductId=1, Dimensions={length=300.00, width=300.00, height=300.00}, DesignId=2, GlazeId=1, RoofColorId=1, AddonIds=[]
+2025-04-25T17:48:02.870+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:48:02.990+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:48:02.992+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:02.994+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:02.995+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:02.995+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:02.995+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:48:02.995+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:48:02.995+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.eshop.controller.ProductController   : >>> [ProductController] API calculateCustomPrice (detailed) úspěšně spočítána. Product ID 1: Total CZK=9000.00, Total EUR=9000.00. Vracím OK.
+2025-04-25T17:48:05.987+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik/pridat
+2025-04-25T17:48:05.987+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:05.987+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:05.989+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : --- addToCart START --- Cart hash: -66593863
+2025-04-25T17:48:05.989+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: 1
+2025-04-25T17:48:06.031+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [ProductService] getProductById: Produkt ID 1 nalezen (with details).
+2025-04-25T17:48:06.035+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getProductById (ID: 1) <<<
+2025-04-25T17:48:06.036+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Received CartItemDto raw data: CartItemDto(productId=1, quantity=1, isCustom=false, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedTaxRateId=3, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddonIds=null)
+2025-04-25T17:48:06.037+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Received CartItemDto (before processing): productId=1, quantity=1, isCustom(DTO)=false, designId=2, glazeId=1, roofColorId=1, taxRateId=3, customDimensions={height=300.00, length=300.00, width=300.00}, addonIds=null
+2025-04-25T17:48:06.037+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Received isCustom DIRECTLY via @RequestParam: true
+2025-04-25T17:48:06.037+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: 1
+2025-04-25T17:48:06.053+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [ProductService] getProductById: Produkt ID 1 nalezen (with details).
+2025-04-25T17:48:06.053+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím getProductById (ID: 1) <<<
+2025-04-25T17:48:06.062+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Processing Cart Item: isCustom set FROM PARAM = true
+2025-04-25T17:48:06.062+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Applied Tax Rate 0.00% (RC: true)
+2025-04-25T17:48:06.062+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Processing CUSTOM product path for product ID: 1
+2025-04-25T17:48:06.062+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: 1
+2025-04-25T17:48:06.080+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Base price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:48:06.085+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Design price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:06.086+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Glaze price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:06.088+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] RoofColor price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:06.088+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total Addons price: CZK=0.00, EUR=0.00
+2025-04-25T17:48:06.089+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : [calculateDetailedCustomPrice] Total price calculated: CZK=9000.00, EUR=9000.00
+2025-04-25T17:48:06.089+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: 1. Response has error: false
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Final unit prices set for CartItem: CZK=9000.00, EUR=9000.00
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Built variant info: Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : Generated Cart Item ID: P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.Cart           : addItem called for cart hash: 105374850. Item ID: P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, Product ID: 1
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.Cart           : Added new cart item ID: P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1. Cart hash: 105374850
+2025-04-25T17:48:06.090+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] org.example.eshop.service.Cart           : Cart items map after addItem (hash: 105374850): {P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1=CartItem(cartItemId=P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, productId=1, productName=Test, productSlug=test, imageUrl=/images/placeholder.png, quantity=1, isCustom=true, length=300.00, width=300.00, height=300.00, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedDesignName=František, selectedGlazeName=Afromorsia, selectedRoofColorName=Antracit, selectedTaxRateId=3, selectedTaxRateValue=0.0000, selectedIsReverseCharge=true, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddons=[], unitPriceCZK=9000.00, unitPriceEUR=9000.00, variantInfo=Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit)}
+2025-04-25T17:48:06.090+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CartController      : --- addToCart END --- Item added/updated. Cart instance hash: -66593863, Items count: 1
+2025-04-25T17:48:06.103+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /kosik
+2025-04-25T17:48:06.103+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:06.103+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:06.103+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : --- viewCart START --- Cart instance hash: -66593863
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Cart items before display: {P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1=CartItem(cartItemId=P1-T3-C-DIMS[height=300;length=300;width=300;]-D2-G1-RC1, productId=1, productName=Test, productSlug=test, imageUrl=/images/placeholder.png, quantity=1, isCustom=true, length=300.00, width=300.00, height=300.00, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedDesignName=František, selectedGlazeName=Afromorsia, selectedRoofColorName=Antracit, selectedTaxRateId=3, selectedTaxRateValue=0.0000, selectedIsReverseCharge=true, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddons=[], unitPriceCZK=9000.00, unitPriceEUR=9000.00, variantInfo=Na míru | Rozměry (DxHxV): 300x300x300 cm | Design: František | Lazura: Afromorsia | Střecha: Antracit)}
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Displaying cart page. Cart has 1 items.
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Current currency set to: CZK
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Cart subtotal (CZK): 9000.00
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Validated coupon: None, Discount amount (CZK): 0
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Total VAT (CZK): 0.00
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : VAT Breakdown (CZK): {0.00=0.00}
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Total Price Before Shipping (CZK): 9000.00
+2025-04-25T17:48:06.103+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : Total Price Without Tax After Discount (CZK): 9000.00
+2025-04-25T17:48:06.103+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CartController      : --- viewCart END --- Model attributes set for cart.
+2025-04-25T17:48:06.288+02:00  WARN 2312 --- [Eshop] [http-nio-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource images/placeholder.png.]
+2025-04-25T17:48:08.309+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna
+2025-04-25T17:48:08.309+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:08.309+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:08.309+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Displaying checkout page for user: mirsvobo@gmail.com in currency: CZK
+2025-04-25T17:48:08.321+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Initialized checkout form DTO from logged-in customer 1.
+2025-04-25T17:48:08.326+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Added shippingTaxRate 0.21 to model.
+2025-04-25T17:48:08.326+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-25T17:48:08.326+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Heřmanského 732, Heřmanův Městec, 53803, Česká republika'
+2025-04-25T17:48:08.413+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 826.39 CZK (Distance: 21.8 km)
+2025-04-25T17:48:08.413+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Preparing checkout summary model data for currency: CZK
+2025-04-25T17:48:08.413+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Rounding calculation: originalTotalPrice=9999.93, roundedTotalPrice=9999, roundingDifference=0.93
+2025-04-25T17:48:08.413+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Checkout summary model prepared: subtotal=9000.00, itemDiscount=0, itemVat=0.00, origShipCost=826.39, shipDiscount=0, finalShipCost=826.39, finalShipTax=173.54, originalTotal=9999.93, roundingDiff=0.93, finalRoundedTotal=9999, totalVatWithShip=173.54, shippingError='null'
+2025-04-25T17:48:08.413+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-3] o.e.eshop.controller.CheckoutController  : Checkout page model prepared for mirsvobo@gmail.com. Currency: CZK
+2025-04-25T17:48:12.483+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna/calculate-shipping
+2025-04-25T17:48:12.483+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:12.483+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:12.488+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : AJAX request to calculate shipping for address: ShippingAddressDto(street=Heřmanského 732, city=Heřmanův Městec, zipCode=53803, country=Česká republika) in currency CZK
+2025-04-25T17:48:12.488+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calculating shipping cost for order null in currency CZK
+2025-04-25T17:48:12.488+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calling Google Distance Matrix API: Origin=50.03500389,15.49180022, Destination='Heřmanského 732, Heřmanův Městec, 53803, Česká republika'
+2025-04-25T17:48:12.564+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.e.service.GoogleMapsShippingService  : Calculated shipping cost for order null: 826.39 CZK (Distance: 21.8 km)
+2025-04-25T17:48:12.564+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-8] o.e.eshop.controller.CheckoutController  : AJAX Shipping Calc OK: origCost=826.39, origTax=173.54, shipDiscount=0, finalCost=826.39, finalTax=173.54, finalTotal=9999.93, finalTotalVat=173.54
+2025-04-25T17:48:14.952+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /pokladna/odeslat
+2025-04-25T17:48:14.952+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:14.952+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:14.961+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Processing checkout submission for user: mirsvobo@gmail.com in currency: CZK
+2025-04-25T17:48:14.961+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Set email in DTO from principal for logged-in user: mirsvobo@gmail.com
+2025-04-25T17:48:14.961+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Getting logged-in customer: mirsvobo@gmail.com
+2025-04-25T17:48:14.971+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Customer 1 address matches DTO, no update needed.
+2025-04-25T17:48:14.971+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Using valid shipping costs from form: NoTax=826.39, Tax=173.54
+2025-04-25T17:48:14.971+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Calculating final order totals for saving: originalTotal=9999.93, roundedTotal=9999
+2025-04-25T17:48:14.971+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Attempting to create order with request: CreateOrderRequest(customerId=1, useCustomerAddresses=true, paymentMethod=BANK_TRANSFER, currency=CZK, customerNote=, couponCode=null, items=[CartItemDto(productId=1, quantity=1, isCustom=true, selectedDesignId=2, selectedGlazeId=1, selectedRoofColorId=1, selectedTaxRateId=3, customDimensions={height=300.00, length=300.00, width=300.00}, customRoofOverstep=null, customHasDivider=false, customHasGutter=false, customHasGardenShed=false, selectedAddonIds=[])], shippingCostNoTax=826.39, shippingTax=173.54)
+2025-04-25T17:48:14.974+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Attempting to create order for customer ID: 1 with explicit currency: CZK
+2025-04-25T17:48:14.974+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 1] Validating request and loading entities for currency: CZK
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 2] Initializing Order object for currency: CZK
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Copying addresses for customer ID: 1 to order.
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Invoice recipient is person: Miroslav Svoboda
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Delivery address is same as invoice. Copying invoice address details AND customer contact name/phone.
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Address copy for order (new) completed successfully.
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 3] Processing order items for currency: CZK
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Processing item with Product ID: 1
+2025-04-25T17:48:14.982+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Starting processCartItem for Product ID: 1, TaxRate ID: 3
+2025-04-25T17:48:15.040+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Selected Tax Rate ID 3 ('Přenesená daňová povinnost', Rate: 0.0000, RC: true) validated for Product ID 1
+2025-04-25T17:48:15.040+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Attribute surcharge calculated for currency CZK: 0
+2025-04-25T17:48:15.040+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.ProductService   : >>> [ProductService] Vstupuji do calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK
+2025-04-25T17:48:15.040+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.ProductService   : [ProductService] Calculated BASE price from dimensions (CZK): 9000.00
+2025-04-25T17:48:15.044+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.ProductService   : >>> [ProductService] Opouštím calculateDynamicProductPrice (Base Dimensions Only). Product ID: 1, Currency: CZK. Vypočtená ZÁKLADNÍ cena: 9000.00
+2025-04-25T17:48:15.044+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [processCartItem] Custom Base Unit Price (No Tax, Currency: CZK): 9000.00
+2025-04-25T17:48:15.044+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [processCartItem] No addons selected for custom item.
+2025-04-25T17:48:15.044+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Saving historical data for OrderItem (Product ID: 1)
+2025-04-25T17:48:15.044+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Finished saving historical data for OrderItem. VariantInfo: Na míru|Rozměry (DxHxV): 300x300x300 cm|Design: František|Lazura: Afromorsia|Střecha: Antracit
+2025-04-25T17:48:15.044+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.DiscountService  : Finding active discounts for product ID: 1 at time: 2025-04-25T17:48:15.044204700
+2025-04-25T17:48:15.054+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.DiscountService  : Found 0 potentially applicable active discounts.
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.example.eshop.service.DiscountService  : Found 0 discounts applicable to product ID 1
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [processCartItem] Final Unit Price (No Tax, Currency: CZK): 9000.00
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [processCartItem] Unit Tax Amount calculated using rate 0.0000: 0.00
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [processCartItem] Unit Price With Tax: 9000.00
+2025-04-25T17:48:15.055+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Finished processCartItem for Product ID: 1. Total Price w/o Tax: 9000.00, Total Tax: 0.00, Selected Rate ID: 3
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Processed item successfully. Running Subtotal: 9000.00, Running Item Tax: 0.00
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Finished items processing. Final Subtotal: 9000.00, Final Item Tax: 0.00
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 5] Calculating shipping cost (no free shipping coupon). Currency: CZK
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Using shipping costs from request. CostNoTax: 826.39, Tax: 173.54, Estimated Rate: 0.2100
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 6] Calculating final totals for currency: CZK
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Final totals calculated: TotalNoTax=9826.39, TotalTax=173.54, OriginalTotalWithTax=9999.93, RoundedTotalToSave=9999
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Final totals calculated: TotalNoTax=9826.39, TotalTax=173.54, OriginalTotalWithTax=9999.93, RoundedTotalToSave=9999
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 7] Determining payment status/deposit for currency: CZK
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : DetermineInitialPaymentStatus: Order null contains custom product. Calculating potential deposit.
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: 50% of 9999 is 4999.50
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Rounded down to nearest thousand: 4000
+2025-04-25T17:48:15.055+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Final deposit amount calculated: 4000.00
+2025-04-25T17:48:15.055+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : DetermineInitialPaymentStatus: Deposit required for order null. Status set to AWAITING_DEPOSIT.
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: 50% of 9999 is 4999.50
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Rounded down to nearest thousand: 4000
+2025-04-25T17:48:15.055+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.service.DummyPaymentService    : CalculateDeposit: Final deposit amount calculated: 4000.00
+2025-04-25T17:48:15.055+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Deposit amount 4000.00 CZK calculated for custom order (new).
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Final Payment status: AWAITING_DEPOSIT, Deposit Amount: 4000.00
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.e.service.OrderCodeGeneratorService  : Generated next order code: 209
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Generated Order Code: 209
+2025-04-25T17:48:15.055+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 8] Saving order...
+2025-04-25T17:48:15.072+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : Order 209 created successfully. Total: 9999 CZK
+2025-04-25T17:48:15.072+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 10] Sending confirmation email for order 209...
+2025-04-25T17:48:15.072+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.OrderService   : [Order Creation - Step 11] Triggering proforma invoice generation for order 209. Currency: CZK
+2025-04-25T17:48:15.072+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Order 209 successfully created with currency CZK for user: mirsvobo@gmail.com
+2025-04-25T17:48:15.072+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] org.example.eshop.service.Cart           : clearCart called for cart hash: 105374850. Clearing items and coupon.
+2025-04-25T17:48:15.072+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-10] o.e.eshop.controller.CheckoutController  : Session cart cleared for mirsvobo@gmail.com
+2025-04-25T17:48:15.089+02:00  INFO 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : ASYNC: Attempting to generate SuperFaktura PROFORMA invoice for order: 209. Order currency: CZK
+2025-04-25T17:48:15.090+02:00 DEBUG 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : Calculated average tax rate: 0.0000
+2025-04-25T17:48:15.091+02:00 DEBUG 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : Setting transfer_tax_liability=1 for deposit item (Order: 209) as at least one original item had RC.
+2025-04-25T17:48:15.091+02:00  INFO 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : SF API Request Payload (Proforma Invoice - Order 209):
+{
+  "Invoice" : {
+    "order_no" : "209",
+    "date" : "2025-04-25",
+    "note" : "Záloha za objednané zboží dle obj. č. 209",
+    "payment_type" : "transfer",
+    "InvoiceItem" : [ {
+      "transfer_tax_liability" : 1,
+      "unit" : "ks",
+      "quantity" : 1,
+      "name" : "Záloha na dřevník dle obj. č. 209",
+      "description" : "Záloha na objednávku 209 (4000.00 CZK z celkové částky 9999.00 CZK)",
+      "tax" : 0.00,
+      "currency" : "CZK",
+      "unit_price" : 4000.00
+    } ],
+    "variable" : "209",
+    "due_date" : "2025-05-02",
+    "rounding" : "item",
+    "currency" : "CZK",
+    "language" : "cze",
+    "specific" : "4",
+    "type" : "proforma"
+  },
+  "Client" : {
+    "zip" : "53803",
+    "country" : "Česká republika",
+    "address" : "Heřmanského 732",
+    "phone" : "704756313",
+    "city" : "Heřmanův Městec",
+    "name" : "Miroslav Svoboda",
+    "email" : "mirsvobo@gmail.com"
+  }
+}
+2025-04-25T17:48:15.097+02:00  INFO 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : Sending Proforma Invoice request to SF API: URL=https://moje.superfaktura.cz/invoices/create.json, Method=POST
+2025-04-25T17:48:15.098+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /muj-ucet/objednavky
+2025-04-25T17:48:15.098+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:48:15.098+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:48:15.110+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] org.example.eshop.service.OrderService   : Finding all orders for customer ID: 1
+2025-04-25T17:48:15.665+02:00 DEBUG 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : Raw SF API Response Body for Proforma Invoice (Order 209): START
+{"error":5,"error_message":{"type":["Pros\u00edm, vlo\u017ete alespo\u0148 jednu polo\u017eku faktury"]},"error_data":{"Invoice":{"user_id":"39487","user_profile_id":"36761","parent_id":null,"proforma_id":null,"estimate_id":null,"sequence_id":"305625","import_type":null,"import_id":null,"import_parent_id":null,"type":"proforma","template":null,"tax_document":null,"name":"Z\u00e1lohov\u00e1 faktura 000006\/2025","lang":null,"client_data":"{\"Client\":{\"user_id\":\"39487\",\"user_profile_id\":\"36761\",\"uuid\":null,\"country_id\":\"57\",\"name\":\"Miroslav Svoboda\",\"ico\":null,\"dic\":null,\"ic_dph\":null,\"iban\":null,\"swift\":null,\"bank_account_prefix\":null,\"bank_account\":null,\"bank_code\":null,\"account\":null,\"email\":\"mirsvobo@gmail.com\",\"address\":\"He\\u0159mansk\\u00e9ho 732\",\"city\":\"He\\u0159man\\u016fv M\\u011bstec\",\"zip\":\"53803\",\"state\":null,\"country\":\"\\u010cesk\\u00e1 republika\",\"delivery_name\":null,\"delivery_address\":null,\"delivery_city\":null,\"delivery_zip\":null,\"delivery_state\":null,\"delivery_country\":null,\"delivery_country_id\":null,\"phone\":\"704756313\",\"delivery_phone\":null,\"fax\":null,\"due_date\":null,\"default_variable\":null,\"discount\":null,\"currency\":null,\"bank_account_id\":null,\"comment\":null,\"tags\":null,\"distance\":null,\"dont_travel\":null,\"notices\":\"1\",\"id\":2489297}}","my_data":"{\"MyData\":{\"id\":\"36761\",\"user_id\":\"39451\",\"country_id\":\"57\",\"company_name\":\"Truhl\\u00e1\\u0159stv\\u00ed Kol\\u00e1\\u0159\",\"ico\":\"73589292\",\"dic\":\"\",\"ic_dph\":\"CZ8204183086\",\"business_register\":\"\",\"address\":\"Dru\\u017estevn\\u00ed 304\",\"city\":\"\\u0158e\\u010dany nad Labem\",\"zip\":\"53313\",\"tax_payer\":\"1\",\"BankAccount\":[{\"id\":\"29020\",\"user_id\":\"39451\",\"user_profile_id\":\"36761\",\"currency\":\"CZK\",\"default\":true,\"show\":true,\"country_id\":\"57\",\"bank_name\":\"Fio banka a.s.\",\"bank_code\":\"2010\",\"account\":\"2601817728\",\"iban\":\"CZ0420100000002601817728\",\"swift\":\"FIOBCZPPXXX\",\"created\":\"2021-09-30 09:01:03\",\"modified\":\"2022-03-15 08:14:09\",\"show_account\":true}],\"Logo\":[{\"id\":\"232833\",\"model\":\"User\",\"foreign_key\":\"36761\",\"dirname\":\"img\",\"basename\":\"01bee4bf6f88cc7efb2e_36761_kolar_miniatura.png\",\"checksum\":\"879da79e1e0cb910db85417d917648c9\",\"group\":\"logo\",\"default\":true,\"alternative\":null,\"size\":\"56033\",\"extern_file\":\"0\",\"delete_flag\":false,\"created\":\"2021-09-30 09:00:09\",\"modified\":\"2022-03-15 08:14:09\",\"path\":\"img\\\/01bee4bf6f88cc7efb2e_36761_kolar_miniatura.png\"}],\"Signature\":{\"id\":null,\"model\":null,\"foreign_key\":null,\"dirname\":null,\"basename\":null,\"checksum\":null,\"group\":null,\"default\":null,\"alternative\":null,\"size\":null,\"extern_file\":null,\"delete_flag\":null,\"created\":null,\"modified\":null,\"path\":\"\"}}}","items_data":null,"invoice_no":6,"order_no":"209","invoice_no_formatted":"000006\/2025","invoice_no_formatted_raw":null,"invoice_no_formatted_length":"0","mask":"YYYYNNN","variable":"209","variable_raw":null,"constant":"","specific":"4","payment_type":"transfer","status":"1","home_currency":"CZK","invoice_currency":"CZK","exchange_rate":1,"country_exchange_rate":1,"amount":null,"vat":null,"discount":"0","items_name":null,"issued_by":"mirsvobo","issued_by_phone":"704756313","issued_by_email":"mirsvobo@gmail.com","paid":null,"amount_paid":null,"deposit":"0.00","header_comment":"","comment":"","internal_comment":null,"recurring":null,"paydate":null,"delivery":null,"taxdate":null,"accounting_date":null,"delivery_type":"haulage","due":"2025-05-02","demo":"0","token":null,"tags":null,"vat_transfer":null,"special_vat_scheme":null,"issued_by_web":null,"summary_invoice":"0","total_amount":null,"date":"2025-04-25","note":"Z\u00e1loha za objednan\u00e9 zbo\u017e\u00ed dle obj. \u010d. 209","InvoiceItem":[{"transfer_tax_liability":1,"unit":"ks","quantity":1,"name":"Z\u00e1loha na d\u0159evn\u00edk dle obj. \u010d. 209","description":"Z\u00e1loha na objedn\u00e1vku 209 (4000.00 CZK z celkov\u00e9 \u010d\u00e1stky 9999.00 CZK)","tax":0,"currency":"CZK","unit_price":4000}],"due_date":"2025-05-02","rounding":"item","currency":"CZK","language":"cze","id":0,"client_id":2489297,"suffix":"2","created":"2025-04-25"},"InvoiceSetting":{"settings":"{\"summary_bg_color\":\"#d4eef6\"}"}}}
+END_RESPONSE
+2025-04-25T17:48:15.683+02:00 ERROR 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : SF API call OK (2xx) but returned error for Proforma Invoice (Order 209): type: Prosím, vložte alespoň jednu položku faktury;
+2025-04-25T17:48:15.683+02:00 ERROR 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : Unexpected error during Proforma Invoice API call for order 209: SF API reported error for Proforma Invoice (Order: 209): type: Prosím, vložte alespoň jednu položku faktury;
+
+java.lang.RuntimeException: SF API reported error for Proforma Invoice (Order: 209): type: Prosím, vložte alespoň jednu položku faktury;
+	at org.example.eshop.service.SuperFakturaInvoiceService.callSuperfakturaApi(SuperFakturaInvoiceService.java:362) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(SuperFakturaInvoiceService.java:95) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-04-25T17:48:15.689+02:00 ERROR 2312 --- [Eshop] [task-4] o.e.e.s.SuperFakturaInvoiceService       : ASYNC: Failed to generate Proforma Invoice for order 209: Unexpected error during SF API call for Proforma Invoice
+
+java.lang.RuntimeException: Unexpected error during SF API call for Proforma Invoice
+	at org.example.eshop.service.SuperFakturaInvoiceService.callSuperfakturaApi(SuperFakturaInvoiceService.java:397) ~[classes/:na]
+	at org.example.eshop.service.SuperFakturaInvoiceService.generateProformaInvoice(SuperFakturaInvoiceService.java:95) ~[classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119) ~[spring-tx-6.2.5.jar:6.2.5]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184) ~[spring-aop-6.2.5.jar:6.2.5]
+	at org.springframework.aop.interceptor.AsyncExecutionInterceptor.lambda$invoke$0(AsyncExecutionInterceptor.java:114) ~[spring-aop-6.2.5.jar:6.2.5]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.RuntimeException: SF API reported error for Proforma Invoice (Order: 209): type: Prosím, vložte alespoň jednu položku faktury;
+	at org.example.eshop.service.SuperFakturaInvoiceService.callSuperfakturaApi(SuperFakturaInvoiceService.java:362) ~[classes/:na]
+	... 14 common frames omitted
+
+2025-04-25T17:48:16.270+02:00  INFO 2312 --- [Eshop] [task-3] org.example.eshop.service.EmailService   : Order confirmation email sent successfully to mirsvobo@gmail.com for order 209
+2025-04-25T17:50:25.146+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /muj-ucet/objednavky/209
+2025-04-25T17:50:25.146+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:50:25.146+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:50:25.159+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.c.CustomerAccountController        : Customer mirsvobo@gmail.com (ID: 1) viewing order detail for CODE: 209
+2025-04-25T17:50:25.160+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-6] org.example.eshop.service.OrderService   : Finding order by code with full details using new repo method: 209
+2025-04-25T17:50:25.193+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-6] o.e.e.c.CustomerAccountController        : Order detail for CODE 209 loaded successfully for customer mirsvobo@gmail.com
+2025-04-25T17:51:20.181+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Vstupuji do addGlobalCurrencyToModel pro request: /muj-ucet/objednavky
+2025-04-25T17:51:20.184+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : [GlobalModelAttributeAdvice] Získána měna ze CurrencyService: CZK
+2025-04-25T17:51:20.184+02:00  INFO 2312 --- [Eshop] [http-nio-8080-exec-9] o.e.e.advice.GlobalModelAttributeAdvice  : >>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: CZK
+2025-04-25T17:51:20.197+02:00 DEBUG 2312 --- [Eshop] [http-nio-8080-exec-9] org.example.eshop.service.OrderService   : Finding all orders for customer ID: 1
+2025-04-25T17:54:09.382+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-25T17:54:09.400+02:00  INFO 2312 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-25T17:54:09.414+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-25T17:54:09.422+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T17:54:09.426+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' removed from EhcacheManager.
+2025-04-25T17:54:09.426+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' removed from EhcacheManager.
+2025-04-25T17:54:09.427+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' removed from EhcacheManager.
+2025-04-25T17:54:09.429+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' removed from EhcacheManager.
+2025-04-25T17:54:09.429+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' removed from EhcacheManager.
+2025-04-25T17:54:09.429+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' removed from EhcacheManager.
+2025-04-25T17:54:09.429+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' removed from EhcacheManager.
+2025-04-25T17:54:09.430+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
+2025-04-25T17:54:09.450+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-25T17:54:09.457+02:00  INFO 2312 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-04-25T18:03:40.573+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 11040 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-25T18:03:40.582+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-25T18:03:40.584+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-25T18:03:41.397+02:00  INFO 11040 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-25T18:03:41.398+02:00  INFO 11040 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-25T18:03:43.647+02:00  INFO 11040 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-25T18:03:43.821+02:00  INFO 11040 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 157 ms. Found 14 JPA repository interfaces.
+2025-04-25T18:03:46.881+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-25T18:03:46.930+02:00  INFO 11040 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-25T18:03:46.930+02:00  INFO 11040 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-25T18:03:47.227+02:00  INFO 11040 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-25T18:03:47.231+02:00  INFO 11040 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5830 ms
+2025-04-25T18:03:48.852+02:00  INFO 11040 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-25T18:03:49.020+02:00  INFO 11040 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-25T18:03:49.043+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T18:03:49.160+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T18:03:49.175+02:00  INFO 11040 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-04-25T18:03:50.368+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-25T18:03:50.497+02:00  INFO 11040 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-25T18:03:50.808+02:00  INFO 11040 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@60d2c77c
+2025-04-25T18:03:50.820+02:00  INFO 11040 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-25T18:03:51.038+02:00  INFO 11040 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-25T18:03:53.218+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Discount] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.497+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' created in EhcacheManager.
+2025-04-25T18:03:53.517+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.527+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' created in EhcacheManager.
+2025-04-25T18:03:53.527+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Glaze] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.532+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' created in EhcacheManager.
+2025-04-25T18:03:53.537+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.544+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' created in EhcacheManager.
+2025-04-25T18:03:53.546+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.ProductConfigurator] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.548+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' created in EhcacheManager.
+2025-04-25T18:03:53.557+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Coupon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.570+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' created in EhcacheManager.
+2025-04-25T18:03:53.575+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.RoofColor] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.581+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' created in EhcacheManager.
+2025-04-25T18:03:53.587+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Design] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.592+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' created in EhcacheManager.
+2025-04-25T18:03:53.593+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate.products] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.605+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' created in EhcacheManager.
+2025-04-25T18:03:53.608+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.availableTaxRates] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.615+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' created in EhcacheManager.
+2025-04-25T18:03:53.619+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.images] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.627+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' created in EhcacheManager.
+2025-04-25T18:03:53.631+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.OrderState] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.631+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' created in EhcacheManager.
+2025-04-25T18:03:53.639+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001003: Read-only caching was requested for mutable entity [NavigableRole[org.example.eshop.model.OrderState]]
+2025-04-25T18:03:53.642+02:00  WARN 11040 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Addon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:03:53.646+02:00  INFO 11040 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' created in EhcacheManager.
+2025-04-25T18:03:56.742+02:00  INFO 11040 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-25T18:04:00.514+02:00  INFO 11040 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T18:04:01.347+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-04-25T18:04:03.493+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-25T18:04:03.845+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-25T18:04:03.845+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-25T18:04:03.868+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-25T18:04:04.333+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : No existing numeric-like order codes found in database.
+2025-04-25T18:04:04.334+02:00  INFO 11040 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 205
+2025-04-25T18:04:04.850+02:00  WARN 11040 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-25T18:04:05.465+02:00  INFO 11040 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-25T18:04:05.601+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-25T18:04:06.465+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-25T18:04:07.624+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-25T18:04:07.732+02:00  INFO 11040 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-25T18:04:07.756+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 29.218 seconds (process running for 31.536)
+2025-04-25T18:04:07.779+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing application data for Drevniky Kolar...
+2025-04-25T18:04:07.917+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Tax Rates...
+2025-04-25T18:04:07.984+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Default Tax Rates (21%, 12%) created.
+2025-04-25T18:04:08.000+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Order States...
+2025-04-25T18:04:08.025+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Default Order States created.
+2025-04-25T18:04:08.032+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating default Email Template Configs...
+2025-04-25T18:04:08.088+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: NEW
+2025-04-25T18:04:08.097+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: SHIPPED
+2025-04-25T18:04:08.103+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: DELIVERED
+2025-04-25T18:04:08.111+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: CANCELLED
+2025-04-25T18:04:08.117+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: AWAITING_DEPOSIT
+2025-04-25T18:04:08.124+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: AWAITING_PAYMENT
+2025-04-25T18:04:08.132+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: DEPOSIT_PAID
+2025-04-25T18:04:08.141+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: PAID
+2025-04-25T18:04:08.148+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: PROCESSING
+2025-04-25T18:04:08.155+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: IN_PRODUCTION
+2025-04-25T18:04:08.162+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: AT_ZINC_PLATING
+2025-04-25T18:04:08.173+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Created EmailTemplateConfig for state: READY_TO_SHIP
+2025-04-25T18:04:08.173+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Default Email Template Configs created.
+2025-04-25T18:04:08.173+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating attributes (Designs, Glazes, Roof Colors)...
+2025-04-25T18:04:08.192+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Tomáš
+2025-04-25T18:04:08.202+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: František
+2025-04-25T18:04:08.212+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Design: Martin
+2025-04-25T18:04:08.225+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Afromorsia
+2025-04-25T18:04:08.235+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Borovice
+2025-04-25T18:04:08.242+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Kaštan
+2025-04-25T18:04:08.249+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Ořech - rustic
+2025-04-25T18:04:08.256+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Ořech - světlý
+2025-04-25T18:04:08.265+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Ořech - tmavý
+2025-04-25T18:04:08.273+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Glaze: Vlastní
+2025-04-25T18:04:08.284+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Antracit
+2025-04-25T18:04:08.296+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Černá
+2025-04-25T18:04:08.304+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Cihlová
+2025-04-25T18:04:08.313+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Světle hnědá
+2025-04-25T18:04:08.324+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Tmavě hnědá
+2025-04-25T18:04:08.335+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating RoofColor: Vlastní
+2025-04-25T18:04:08.338+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating addons...
+2025-04-25T18:04:08.355+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Polička 130 cm', Category='Poličky', Type='FIXED', SKU='POL130', CZK='1815.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.403+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Polička 90 cm', Category='Poličky', Type='FIXED', SKU='POL90', CZK='1452.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.419+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Držáky 2 páry', Category='Montážní materiál', Type='FIXED', SKU='DRZ2P', CZK='580.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.438+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Příčka 1x', Category='Konstrukce', Type='FIXED', SKU='PRICKA1', CZK='1500.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.453+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Příčka 2x', Category='Konstrukce', Type='FIXED', SKU='PRICKA2', CZK='3000.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.469+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Příčka 3x', Category='Konstrukce', Type='FIXED', SKU='PRICKA3', CZK='4500.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.483+02:00 DEBUG 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating Addon: Name='Okap', Category='Střecha', Type='FIXED', SKU='OKAP', CZK='5000.00', EUR='0', UnitCZK='null', UnitEUR='null'
+2025-04-25T18:04:08.488+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial product creation as requested.
+2025-04-25T18:04:08.490+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin users...
+2025-04-25T18:04:08.724+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin user: mirsvobo@gmail.com
+2025-04-25T18:04:08.917+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin user: drevnikykolar@gmail.com
+2025-04-25T18:04:08.919+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial order creation as requested.
+2025-04-25T18:04:08.920+02:00  INFO 11040 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Application data initialization finished successfully.
+2025-04-25T18:04:09.265+02:00  INFO 11040 --- [Eshop] [RMI TCP Connection(2)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-25T18:04:09.265+02:00  INFO 11040 --- [Eshop] [RMI TCP Connection(2)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-25T18:04:09.268+02:00  INFO 11040 --- [Eshop] [RMI TCP Connection(2)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2025-04-25T18:04:35.938+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-25T18:04:35.950+02:00  INFO 11040 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-25T18:04:35.972+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-25T18:04:35.980+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T18:04:35.985+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' removed from EhcacheManager.
+2025-04-25T18:04:35.986+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' removed from EhcacheManager.
+2025-04-25T18:04:35.987+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' removed from EhcacheManager.
+2025-04-25T18:04:35.988+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' removed from EhcacheManager.
+2025-04-25T18:04:35.988+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' removed from EhcacheManager.
+2025-04-25T18:04:35.989+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' removed from EhcacheManager.
+2025-04-25T18:04:35.989+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' removed from EhcacheManager.
+2025-04-25T18:04:35.991+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' removed from EhcacheManager.
+2025-04-25T18:04:35.992+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' removed from EhcacheManager.
+2025-04-25T18:04:35.992+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' removed from EhcacheManager.
+2025-04-25T18:04:35.993+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' removed from EhcacheManager.
+2025-04-25T18:04:35.993+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' removed from EhcacheManager.
+2025-04-25T18:04:35.993+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
+2025-04-25T18:04:36.012+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-25T18:04:36.015+02:00  INFO 11040 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-04-25T18:04:43.002+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Starting EshopApplication using Java 21.0.6 with PID 19068 (C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop\target\classes started by mirsv in C:\Users\mirsv\Desktop\Dřevníky Kolář\Eshop)
+2025-04-25T18:04:43.009+02:00 DEBUG 19068 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Running with Spring Boot v3.4.4, Spring v6.2.5
+2025-04-25T18:04:43.013+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : No active profile set, falling back to 1 default profile: "default"
+2025-04-25T18:04:43.856+02:00  INFO 19068 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-04-25T18:04:43.857+02:00  INFO 19068 --- [Eshop] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-04-25T18:04:47.516+02:00  INFO 19068 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-04-25T18:04:47.852+02:00  INFO 19068 --- [Eshop] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 306 ms. Found 14 JPA repository interfaces.
+2025-04-25T18:04:51.007+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-04-25T18:04:51.065+02:00  INFO 19068 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-04-25T18:04:51.067+02:00  INFO 19068 --- [Eshop] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2025-04-25T18:04:51.307+02:00  INFO 19068 --- [Eshop] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-04-25T18:04:51.307+02:00  INFO 19068 --- [Eshop] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 7448 ms
+2025-04-25T18:04:52.601+02:00  INFO 19068 --- [Eshop] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-04-25T18:04:52.771+02:00  INFO 19068 --- [Eshop] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2025-04-25T18:04:52.787+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T18:04:52.884+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.deprecation            : HHH90000021: Encountered deprecated setting [javax.persistence.sharedCache.mode], use [jakarta.persistence.sharedCache.mode] instead
+2025-04-25T18:04:52.887+02:00  INFO 19068 --- [Eshop] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000025: Second-level cache region factory [org.hibernate.cache.jcache.internal.JCacheRegionFactory]
+2025-04-25T18:04:53.887+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-04-25T18:04:53.971+02:00  INFO 19068 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-04-25T18:04:54.255+02:00  INFO 19068 --- [Eshop] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@4dc4935c
+2025-04-25T18:04:54.263+02:00  INFO 19068 --- [Eshop] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-04-25T18:04:54.467+02:00  INFO 19068 --- [Eshop] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 11.7.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-04-25T18:04:56.780+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.availableTaxRates] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.026+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' created in EhcacheManager.
+2025-04-25T18:04:57.057+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Discount] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.062+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' created in EhcacheManager.
+2025-04-25T18:04:57.067+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.OrderState] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.073+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' created in EhcacheManager.
+2025-04-25T18:04:57.077+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001003: Read-only caching was requested for mutable entity [NavigableRole[org.example.eshop.model.OrderState]]
+2025-04-25T18:04:57.077+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Design] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.082+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' created in EhcacheManager.
+2025-04-25T18:04:57.082+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.090+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' created in EhcacheManager.
+2025-04-25T18:04:57.090+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.ProductConfigurator] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.100+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' created in EhcacheManager.
+2025-04-25T18:04:57.100+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Product.images] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.107+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' created in EhcacheManager.
+2025-04-25T18:04:57.111+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Addon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.117+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' created in EhcacheManager.
+2025-04-25T18:04:57.117+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Glaze] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.127+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' created in EhcacheManager.
+2025-04-25T18:04:57.128+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.136+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' created in EhcacheManager.
+2025-04-25T18:04:57.141+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.TaxRate.products] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.147+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' created in EhcacheManager.
+2025-04-25T18:04:57.147+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.RoofColor] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.154+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' created in EhcacheManager.
+2025-04-25T18:04:57.156+02:00  WARN 19068 --- [Eshop] [restartedMain] org.hibernate.orm.cache                  : HHH90001006: Missing cache[org.example.eshop.model.Coupon] was created on-the-fly. The created cache will use a provider-specific default configuration: make sure you defined one. You can disable this warning by setting 'hibernate.javax.cache.missing_cache_strategy' to 'create'.
+2025-04-25T18:04:57.162+02:00  INFO 19068 --- [Eshop] [restartedMain] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' created in EhcacheManager.
+2025-04-25T18:05:00.168+02:00  INFO 19068 --- [Eshop] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-04-25T18:05:00.541+02:00  INFO 19068 --- [Eshop] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T18:05:02.358+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-04-25T18:05:05.816+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Initializing Google Maps API context...
+2025-04-25T18:05:06.373+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Google Maps API context initialized successfully.
+2025-04-25T18:05:06.373+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.GoogleMapsShippingService  : Origin coordinates set to: 50.03500389,15.49180022
+2025-04-25T18:05:06.413+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Initializing order code counter...
+2025-04-25T18:05:06.759+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : No existing numeric-like order codes found in database.
+2025-04-25T18:05:06.759+02:00  INFO 19068 --- [Eshop] [restartedMain] o.e.e.service.OrderCodeGeneratorService  : Order code counter initialized to: 205
+2025-04-25T18:05:07.848+02:00  WARN 19068 --- [Eshop] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-04-25T18:05:09.109+02:00  INFO 19068 --- [Eshop] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2025-04-25T18:05:09.407+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page template: index
+2025-04-25T18:05:10.964+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-04-25T18:05:13.400+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-04-25T18:05:13.623+02:00  INFO 19068 --- [Eshop] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-04-25T18:05:13.658+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.EshopApplication       : Started EshopApplication in 33.14 seconds (process running for 36.521)
+2025-04-25T18:05:13.694+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Initializing application data for Drevniky Kolar...
+2025-04-25T18:05:13.814+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Tax Rates already exist, skipping creation.
+2025-04-25T18:05:14.005+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Added default note to existing 'Snížená' tax rate.
+2025-04-25T18:05:14.039+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Order States already exist, checking/updating 'READY_TO_SHIP' description...
+2025-04-25T18:05:14.053+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Email Template Configs already exist, skipping creation.
+2025-04-25T18:05:14.056+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating attributes (Designs, Glazes, Roof Colors)...
+2025-04-25T18:05:14.194+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating addons...
+2025-04-25T18:05:14.205+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 130 cm' already exists. Skipping creation.
+2025-04-25T18:05:14.215+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Polička 90 cm' already exists. Skipping creation.
+2025-04-25T18:05:14.226+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Držáky 2 páry' already exists. Skipping creation.
+2025-04-25T18:05:14.241+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 1x' already exists. Skipping creation.
+2025-04-25T18:05:14.256+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 2x' already exists. Skipping creation.
+2025-04-25T18:05:14.266+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Příčka 3x' already exists. Skipping creation.
+2025-04-25T18:05:14.272+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Addon with name 'Okap' already exists. Skipping creation.
+2025-04-25T18:05:14.276+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial product creation as requested.
+2025-04-25T18:05:14.276+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Creating admin users...
+2025-04-25T18:05:14.304+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user mirsvobo@gmail.com already exists. Skipping creation.
+2025-04-25T18:05:14.322+02:00  WARN 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Admin user drevnikykolar@gmail.com already exists. Skipping creation.
+2025-04-25T18:05:14.330+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Skipping initial order creation as requested.
+2025-04-25T18:05:14.330+02:00  INFO 19068 --- [Eshop] [restartedMain] org.example.eshop.init.DataInitializer   : Application data initialization finished successfully.
+2025-04-25T18:05:14.780+02:00  INFO 19068 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-04-25T18:05:14.781+02:00  INFO 19068 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-04-25T18:05:14.787+02:00  INFO 19068 --- [Eshop] [RMI TCP Connection(3)-192.168.1.157] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2025-04-25T18:24:20.501+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2025-04-25T18:24:20.516+02:00  INFO 19068 --- [Eshop] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2025-04-25T18:24:20.535+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] o.e.e.service.GoogleMapsShippingService  : Shutting down Google Maps API context.
+2025-04-25T18:24:20.545+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-04-25T18:24:20.553+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Coupon' removed from EhcacheManager.
+2025-04-25T18:24:20.554+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.OrderState' removed from EhcacheManager.
+2025-04-25T18:24:20.554+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate' removed from EhcacheManager.
+2025-04-25T18:24:20.554+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.ProductConfigurator' removed from EhcacheManager.
+2025-04-25T18:24:20.555+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Glaze' removed from EhcacheManager.
+2025-04-25T18:24:20.556+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.RoofColor' removed from EhcacheManager.
+2025-04-25T18:24:20.557+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product' removed from EhcacheManager.
+2025-04-25T18:24:20.557+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Addon' removed from EhcacheManager.
+2025-04-25T18:24:20.557+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Design' removed from EhcacheManager.
+2025-04-25T18:24:20.558+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.TaxRate.products' removed from EhcacheManager.
+2025-04-25T18:24:20.558+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.availableTaxRates' removed from EhcacheManager.
+2025-04-25T18:24:20.559+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Product.images' removed from EhcacheManager.
+2025-04-25T18:24:20.559+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] org.ehcache.core.EhcacheManager          : Cache 'org.example.eshop.model.Discount' removed from EhcacheManager.
+2025-04-25T18:24:20.582+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-04-25T18:24:20.591+02:00  INFO 19068 --- [Eshop] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

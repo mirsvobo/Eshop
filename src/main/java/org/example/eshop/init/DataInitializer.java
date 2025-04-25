@@ -78,7 +78,7 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
         log.info("Initializing application data for Drevniky Kolar...");
         try {
             // 1. Core Data (Tax Rates, Order States, Email Templates)
-            createTaxRates();
+            createTaxRates(); // Upravená metoda
             createOrderStates();
             createEmailTemplates();
 
@@ -103,8 +103,6 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             createRoofColor("Tmavě hnědá", null, null, null);
             createRoofColor("Vlastní", "Zákazník specifikuje v poznámce objednávky", null, null);
 
-            // V metodě run() třídy DataInitializer
-
             // 3. Addons
             log.info("Creating addons...");
             // Předpokládáme, že všechny stávající jsou typu FIXED
@@ -116,8 +114,7 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             createAddon("Příčka 2x", "Dřevěná příčka", "Konstrukce", "FIXED", new BigDecimal("3000.00"), null, null, null, "PRICKA2", true);
             createAddon("Příčka 3x", "Dřevěná příčka", "Konstrukce", "FIXED", new BigDecimal("4500.00"), null, null, null, "PRICKA3", true);
             createAddon("Okap", "Kompletní okapový systém", "Střecha", "FIXED", new BigDecimal("5000.00"), null, null, null, "OKAP", true);
-            // Příklad dimenzionálního addonu (např. cena za cm šířky)
-            // createAddon("Extra nátěr", "Speciální nátěr", "Povrchová úprava", "PER_CM_WIDTH", null, null, new BigDecimal("5.50"), new BigDecimal("0.22"), "NATERSIRKA", true);
+
             // 4. Products - None initially
             log.info("Skipping initial product creation as requested.");
 
@@ -132,25 +129,38 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             log.info("Application data initialization finished successfully.");
         } catch (Exception e) {
             log.error("Error during application data initialization!", e);
-            // Consider re-throwing if initialization is critical
             throw new RuntimeException("Failed to initialize data", e);
         }
     }
 
     // --- Helper Methods ---
 
+    // === UPRAVENÁ METODA ===
     private void createTaxRates() {
         if (taxRateRepository.count() == 0) {
             log.info("Creating default Tax Rates...");
-            TaxRate rate21 = new TaxRate(null, "Základní", new BigDecimal("0.2100"), false, null);
-            TaxRate rate12 = new TaxRate(null, "Snížená", new BigDecimal("0.1200"), false, null);
-            TaxRate rateRC = new TaxRate(null, "Přenesená daňová povinnost", BigDecimal.ZERO, true, null);
-            taxRateRepository.saveAll(List.of(rate21, rate12, rateRC));
-            log.info("Default Tax Rates created.");
+            // Základní sazba (21%), bez PDP, bez poznámky
+            TaxRate rate21 = new TaxRate(null, "Základní", new BigDecimal("0.2100"), false, null, null); // Added null for 'note'
+            // Snížená sazba (12%), bez PDP, s poznámkou
+            TaxRate rate12 = new TaxRate(null, "Snížená", new BigDecimal("0.1200"), false, null, null); // Added note
+            // !!! ODEBRÁNO: Sazba pro Přenesenou daňovou povinnost !!!
+            // TaxRate rateRC = new TaxRate(null, "Přenesená daňová povinnost", BigDecimal.ZERO, true, null, null); // Removed
+
+            taxRateRepository.saveAll(List.of(rate21, rate12)); // Uložíme jen 21% a 12%
+            log.info("Default Tax Rates (21%, 12%) created.");
         } else {
             log.info("Tax Rates already exist, skipping creation.");
+            // Zde můžeme případně přidat logiku pro aktualizaci existujících sazeb, pokud by bylo potřeba přidat poznámky zpětně
+            Optional<TaxRate> rate12Opt = taxRateRepository.findByNameIgnoreCase("Snížená");
+            if (rate12Opt.isPresent() && rate12Opt.get().getNote() == null) {
+                TaxRate rate12 = rate12Opt.get();
+                rate12.setNote("Pouze pro stavby k bydlení");
+                taxRateRepository.save(rate12);
+                log.info("Added default note to existing 'Snížená' tax rate.");
+            }
         }
     }
+    // === KONEC UPRAVENÉ METODY ===
 
     private void createOrderStates() {
         if (orderStateRepository.count() == 0) {
@@ -163,7 +173,6 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             createState("PROCESSING", "Zpracovává se", "Objednávka se připravuje k výrobě/expedici.", 40, false);
             createState("IN_PRODUCTION", "Ve výrobě", "Produkt je aktuálně ve výrobě.", 50, false);
             createState("AT_ZINC_PLATING", "V zinkovně", "Produkt je v zinkovně.", 60, false);
-            // *** UPDATED DESCRIPTION HERE during creation ***
             createState("READY_TO_SHIP", "Připraveno k montáži", "Objednávka je připravena k montáži.", 70, false);
             createState("SHIPPED", "Odesláno", "Objednávka byla předána dopravci.", 80, false);
             createState("DELIVERED", "Doručeno", "Objednávka byla úspěšně doručena.", 90, true);
@@ -171,15 +180,11 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             log.info("Default Order States created.");
         } else {
             log.info("Order States already exist, checking/updating 'READY_TO_SHIP' description...");
-            // If states already exist, still ensure the description is correct
             Optional<OrderState> readyToShipOpt = orderStateRepository.findByCodeIgnoreCase("READY_TO_SHIP");
             if (readyToShipOpt.isPresent()) {
                 OrderState stateReadyToShip = readyToShipOpt.get();
-                // Check the *name* field, as 'description' might not be the displayed text
                 if (!"Připraveno k montáži".equals(stateReadyToShip.getName())) {
-                    stateReadyToShip.setName("Připraveno k montáži"); // Update name field
-                    // Also update description if needed, though it might be less critical
-                    // stateReadyToShip.setDescription("Objednávka je připravena k montáži.");
+                    stateReadyToShip.setName("Připraveno k montáži");
                     orderStateRepository.save(stateReadyToShip);
                     log.info("Updated name/description for existing OrderState 'READY_TO_SHIP'.");
                 }
@@ -281,27 +286,21 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
                 });
     }
 
-    // V třídě DataInitializer
-
-    // --- Helper for Addons (NOVÁ VERZE S KATEGORIÍ A TYPEM CENY) ---
+    // --- Helper for Addons ---
     private Addon createAddon(String name, String desc, String category, String pricingType,
                               BigDecimal priceCZK, BigDecimal priceEUR,
                               BigDecimal pricePerUnitCZK, BigDecimal pricePerUnitEUR,
                               String sku, boolean active) {
 
-        // Default values if null
         category = StringUtils.hasText(category) ? category : "Ostatní";
         pricingType = StringUtils.hasText(pricingType) ? pricingType : "FIXED";
 
-        // Check by name first (case-insensitive)
         Optional<Addon> existingByName = addonsRepository.findByNameIgnoreCase(name);
         if (existingByName.isPresent()) {
             log.warn("Addon with name '{}' already exists. Skipping creation.", name);
             return existingByName.get();
         }
-        // Check by SKU if provided and name doesn't exist
         if (sku != null && !sku.trim().isEmpty()) {
-            // Použijeme opravenou metodu z AddonsRepository
             Optional<Addon> existingBySku = addonsRepository.findBySkuIgnoreCase(sku.trim());
             if (existingBySku.isPresent()) {
                 log.warn("Addon with SKU '{}' already exists. Skipping creation.", sku.trim());
@@ -309,24 +308,22 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             }
         }
 
-        // Create new if not found
         Addon addon = new Addon();
         addon.setName(name);
         addon.setDescription(desc);
         addon.setCategory(category.trim());
         addon.setPricingType(pricingType);
 
-        // Set prices based on type
         if ("FIXED".equals(pricingType)) {
-            addon.setPriceCZK(priceCZK != null ? priceCZK : BigDecimal.ZERO); // Default to 0 if null
-            addon.setPriceEUR(priceEUR != null ? priceEUR : BigDecimal.ZERO); // Default to 0 if null
+            addon.setPriceCZK(priceCZK != null ? priceCZK : BigDecimal.ZERO);
+            addon.setPriceEUR(priceEUR != null ? priceEUR : BigDecimal.ZERO);
             addon.setPricePerUnitCZK(null);
             addon.setPricePerUnitEUR(null);
         } else {
             addon.setPriceCZK(null);
             addon.setPriceEUR(null);
-            addon.setPricePerUnitCZK(pricePerUnitCZK != null ? pricePerUnitCZK : BigDecimal.ZERO); // Default to 0
-            addon.setPricePerUnitEUR(pricePerUnitEUR != null ? pricePerUnitEUR : BigDecimal.ZERO); // Default to 0
+            addon.setPricePerUnitCZK(pricePerUnitCZK != null ? pricePerUnitCZK : BigDecimal.ZERO);
+            addon.setPricePerUnitEUR(pricePerUnitEUR != null ? pricePerUnitEUR : BigDecimal.ZERO);
         }
 
         addon.setSku(sku != null ? sku.trim() : null);
@@ -359,4 +356,4 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
         return customerRepository.save(c);
     }
 
-} // End of DataInitializer class
+}

@@ -61,7 +61,7 @@ public class EmailService {
 
         String to = order.getCustomer().getEmail();
         String subject = shopName + " - Potvrzení objednávky č. " + order.getOrderCode();
-        String templateName = "order-confirmation"; // Pevně daná šablona pro potvrzení
+        String templateName = "emails/order-confirmation"; // Pevně daná šablona pro potvrzení
 
         try {
             Context context = new Context(defaultLocale);

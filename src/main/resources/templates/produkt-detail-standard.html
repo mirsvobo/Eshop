@@ -158,8 +158,11 @@
                         <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i> </label>
                         <div class="form-check" th:each="taxRate, iterStat : ${product.availableTaxRates}">
                             <input class="form-check-input" type="radio" name="selectedTaxRateId" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" th:checked="${iterStat.index == 0}" required>
-                            <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}" th:text="${taxRate.name}">
-                                Název sazby
+                            <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}">
+                                <span th:text="${taxRate.name}">Název sazby</span>
+                                <span th:if="${taxRate.note != null and not #strings.isEmpty(taxRate.note)}"
+                                      th:text="' - ' + ${taxRate.note}"
+                                      class="text-muted small"> - Poznámka</span>
                             </label>
                             <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">
                                 Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong>

@@ -17,6 +17,14 @@
     </div>
   </div>
 
+  <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <span th:text="${successMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
   <div th:if="${taxRates == null or #lists.isEmpty(taxRates)}" class="alert alert-info">
     Nebyly nalezeny žádné daňové sazby.
   </div>
@@ -28,7 +36,7 @@
         <th>ID</th>
         <th>Název</th>
         <th class="text-end">Sazba (%)</th>
-        <th>Přenesená daňová povinnost</th>
+        <th>Poznámka</th> <th>PDP</th>
         <th>Akce</th>
       </tr>
       </thead>
@@ -39,12 +47,15 @@
           <a th:href="@{/admin/tax-rates/{id}/edit(id=${rate.id})}" th:text="${rate.name}">Název Sazby</a>
         </td>
         <td class="text-end" th:text="${#numbers.formatDecimal(rate.rate.multiply(100), 1, 'POINT', 2, 'COMMA') + '%'}">21.00%</td>
+        <td th:text="${#strings.abbreviate(rate.note, 50)} ?: '-'">Krátká poznámka...</td>
         <td>
           <span th:if="${rate.reverseCharge}" class="badge bg-info">Ano</span>
           <span th:unless="${rate.reverseCharge}" class="badge bg-secondary">Ne</span>
         </td>
         <td>
-
+          <a th:href="@{/admin/tax-rates/{id}/edit(id=${rate.id})}" class="btn btn-sm btn-outline-primary" title="Upravit">
+            <i class="bi bi-pencil-square"></i>
+          </a>
           <form th:action="@{/admin/tax-rates/{id}/delete(id=${rate.id})}" method="post" class="d-inline" onsubmit="return confirm('Opravdu chcete smazat tuto sazbu? Smazání selže, pokud je sazba přiřazena k produktům.');">
             <button type="submit" class="btn btn-sm btn-outline-danger" title="Smazat">
               <i class="bi bi-trash3"></i>
