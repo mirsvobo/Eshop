@@ -1,6 +1,7 @@
 package org.example.eshop.controller;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.example.eshop.admin.service.AddonsService;
@@ -136,11 +137,27 @@ public class CartController implements PriceConstants {
     // ====================================================================
     @PostMapping("/pridat")
     public String addToCart(@ModelAttribute("cartItemDto") @Valid CartItemDto cartItemDto,
+                            // ----- ZAČÁTEK ZMĚNY -----
+                            @RequestParam(name = "isCustom", defaultValue = "false") boolean isCustomParam, // Explicitní parametr
+                            // ----- KONEC ZMĚNY -----
                             BindingResult bindingResult,
-                            RedirectAttributes redirectAttributes) {
+                            RedirectAttributes redirectAttributes,
+                            HttpServletRequest request) { // Přidán HttpServletRequest pro logování
+
+        // Logování surových parametrů (pro budoucí debug)
+        java.util.Map<String, String[]> paramMap = request.getParameterMap();
+        log.debug("Raw request parameters: {}", paramMap.entrySet().stream()
+                .map(e -> e.getKey() + "=" + Arrays.toString(e.getValue()))
+                .collect(Collectors.joining(", ")));
+
+        // ----- ZAČÁTEK ZMĚNY -----
+        // Ručně nastavíme hodnotu 'isCustom' v DTO podle parametru
+        cartItemDto.setCustom(isCustomParam);
+        // ----- KONEC ZMĚNY -----
 
         log.info("--- addToCart START --- Cart hash: {}", this.sessionCart.hashCode());
-        log.debug("Received CartItemDto raw data: {}", cartItemDto);
+        // Tento log teď ukáže hodnotu *po* manuálním nastavení
+        log.debug("Received CartItemDto (after manual 'isCustom' set): {}", cartItemDto);
 
         // ---- KROK 1: Standardní validace pomocí @Valid ----
         if (bindingResult.hasErrors()) {
@@ -175,7 +192,8 @@ public class CartController implements PriceConstants {
                 return "redirect:/produkt/" + productSlugForRedirect;
             }
 
-            log.info("Processing Cart Item: isCustom from DTO = {}", cartItemDto.isCustom());
+            // Tento log nyní ukáže správnou hodnotu díky manuálnímu nastavení výše
+            log.info("Processing Cart Item: isCustom = {}", cartItemDto.isCustom());
 
             // Načtení a validace TaxRate (povinné pro všechny)
             if (cartItemDto.getSelectedTaxRateId() == null) {
@@ -191,8 +209,8 @@ public class CartController implements PriceConstants {
                 return "redirect:/produkt/" + productSlugForRedirect;
             }
 
-            // Manuální validace ID atributů a načtení entit POUZE pokud je custom
-            if (cartItemDto.isCustom()) {
+            // Manuální validace ID atributů a rozměrů POUZE pokud je custom
+            if (cartItemDto.isCustom()) { // Tento if teď bude fungovat správně
                 boolean manualValidationError = false;
                 // Kontrola ID Designu
                 if (cartItemDto.getSelectedDesignId() == null) {
@@ -233,7 +251,7 @@ public class CartController implements PriceConstants {
                     return "redirect:/produkt/" + productSlugForRedirect;
                 }
             } else {
-                // Pro standardní produkt také musíme načíst atributy, které přišly z DTO
+                // Pro standardní produkt také musíme načíst atributy
                 if (cartItemDto.getSelectedDesignId() != null) {
                     selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId())
                             .orElseThrow(() -> new EntityNotFoundException("Design nenalezen (Standard): ID " + cartItemDto.getSelectedDesignId()));
@@ -257,7 +275,7 @@ public class CartController implements PriceConstants {
                 }
             }
 
-            // ---- KROK 3: Pokračování se zpracováním položky (Validace prošla) ----
+            // ---- KROK 3: Pokračování se zpracováním položky ----
 
             // Vytvoření CartItem
             CartItem cartItem = new CartItem();
@@ -266,7 +284,7 @@ public class CartController implements PriceConstants {
             cartItem.setProductSlug(product.getSlug());
             cartItem.setImageUrl(!product.getImagesOrdered().isEmpty() ? product.getImagesOrdered().getFirst().getUrl() : "/images/placeholder.png");
             cartItem.setQuantity(cartItemDto.getQuantity());
-            cartItem.setCustom(cartItemDto.isCustom()); // <-- Použij hodnotu z DTO
+            cartItem.setCustom(cartItemDto.isCustom()); // <-- Použij hodnotu z DTO (nyní opravenou)
 
             // Nastavení načtených atributů
             cartItem.setSelectedDesignId(selectedDesign.getId());
@@ -277,22 +295,24 @@ public class CartController implements PriceConstants {
             cartItem.setSelectedRoofColorName(selectedRoofColor.getName());
             cartItem.setSelectedTaxRateId(selectedTaxRate.getId());
             cartItem.setSelectedTaxRateValue(selectedTaxRate.getRate());
-            cartItem.setSelectedIsReverseCharge(selectedTaxRate.isReverseCharge());
+            cartItem.setSelectedIsReverseCharge(selectedTaxRate.isReverseCharge()); // Store original RC flag
             log.debug("Applied Tax Rate {}% (RC from TaxRate entity: {})", selectedTaxRate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2), selectedTaxRate.isReverseCharge());
 
             // Výpočet ceny a nastavení dalších atributů
             List<AddonDto> processedAddons = new ArrayList<>();
             BigDecimal unitPriceCZK;
             BigDecimal unitPriceEUR;
-            String currency = currencyService.getSelectedCurrency(); // Získáme aktuální měnu
+            String currency = currencyService.getSelectedCurrency();
 
             if (cartItem.isCustom()) {
+                // Tento blok by se měl nyní spustit pro custom produkt
                 log.info("Processing CUSTOM product path for product ID: {}", product.getId());
                 if (product.getConfigurator() == null) {
                     throw new IllegalStateException("Produkt '" + product.getName() + "' je konfigurovatelný, ale chybí data konfigurátoru.");
                 }
                 Map<String, BigDecimal> dimensionsMap = cartItemDto.getCustomDimensions();
-                // Validace rozměrů už proběhla
+                // Validace rozměrů už proběhla výše
+
                 BigDecimal lengthCm = dimensionsMap.get("length");
                 BigDecimal widthCm = dimensionsMap.get("width");
                 BigDecimal heightCm = dimensionsMap.get("height");
@@ -316,7 +336,7 @@ public class CartController implements PriceConstants {
                 cartItem.setLength(lengthCm);
                 cartItem.setWidth(widthCm);
                 cartItem.setHeight(heightCm);
-                cartItem.setCustomDimensions(dimensionsMap);
+                cartItem.setCustomDimensions(dimensionsMap); // Uložíme mapu pro CartItem ID a variantInfo
                 List<Long> selectedAddonIds = cartItemDto.getSelectedAddonIds();
                 if (selectedAddonIds != null && !selectedAddonIds.isEmpty()) {
                     Set<Long> addonIdSet = new HashSet<>(selectedAddonIds);
@@ -333,7 +353,7 @@ public class CartController implements PriceConstants {
                             AddonDto addonDto = new AddonDto();
                             addonDto.setAddonId(dbAddon.getId());
                             addonDto.setAddonName(dbAddon.getName());
-                            addonDto.setQuantity(1);
+                            addonDto.setQuantity(1); // Předpokládáme množství 1 pro addony přidávané zde
                             processedAddons.add(addonDto);
                         } else {
                             log.warn("Requested addon ID {} is invalid/inactive/not allowed for product {}. Skipping.", addonId, product.getId());
@@ -350,8 +370,9 @@ public class CartController implements PriceConstants {
                 cartItem.setCustomHasGardenShed(cartItemDto.isCustomHasGardenShed());
 
             } else { // Standardní produkt
-                log.info("Processing STANDARD product path for product ID: {}", product.getId());
-                // Získání základní ceny a příplatků za atributy
+                log.error("Chyba: Produkt ID {} je custom, ale zpracovává se jako standardní!", product.getId()); // Měli bychom sem logicky dojít jen pokud selže oprava
+                // Zde by byla logika pro standardní produkt, pokud by to nebyl custom
+                // V tomto případě by ale měla metoda skončit chybou výše, nebo bude cena 0
                 BigDecimal baseUnitPriceCZK = Optional.ofNullable(product.getBasePriceCZK()).orElse(BigDecimal.ZERO);
                 BigDecimal baseUnitPriceEUR = Optional.ofNullable(product.getBasePriceEUR()).orElse(BigDecimal.ZERO);
                 BigDecimal attributeSurchargeCZK = BigDecimal.ZERO
@@ -366,13 +387,11 @@ public class CartController implements PriceConstants {
                 unitPriceCZK = baseUnitPriceCZK.add(attributeSurchargeCZK);
                 unitPriceEUR = baseUnitPriceEUR.add(attributeSurchargeEUR);
 
-                // Nastavení rozměrů a ostatních polí pro standardní produkt
                 cartItem.setLength(product.getLength());
                 cartItem.setWidth(product.getWidth());
                 cartItem.setHeight(product.getHeight());
-                cartItem.setSelectedAddons(Collections.emptyList()); // Standardní nemá addony z formuláře
-                cartItem.setCustomDimensions(null); // Standardní nemá custom rozměry
-                // Reset custom příznaků
+                cartItem.setSelectedAddons(Collections.emptyList());
+                cartItem.setCustomDimensions(null);
                 cartItem.setCustomRoofOverstep(null);
                 cartItem.setCustomHasDivider(false);
                 cartItem.setCustomHasGutter(false);

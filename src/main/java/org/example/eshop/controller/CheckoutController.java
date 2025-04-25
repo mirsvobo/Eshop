@@ -367,6 +367,120 @@ public class CheckoutController implements PriceConstants {
         BigDecimal originalTotalPriceWithTax = finalTotalWithoutTax.add(finalTotalTax);
         return originalTotalPriceWithTax.setScale(0, RoundingMode.DOWN);
     }
+    // --- NOVÁ METODA PRO VÝPOČET DOPRAVY ---
+    @PostMapping("/calculate-shipping")
+    @ResponseBody // Důležité - vracíme přímo JSON, ne název šablony
+    @Transactional(readOnly = true) // Obvykle stačí read-only, pokud shippingService nemění data
+    public ResponseEntity<ShippingCalculationResponseDto> calculateShippingAjax(@RequestBody @Valid ShippingAddressDto addressDto, Principal principal) {
+        String userIdentifier = (principal != null) ? principal.getName() : "GUEST";
+        String currentCurrency = currencyService.getSelectedCurrency();
+        log.info("AJAX: Calculating shipping for user {} and currency {} with address: {}", userIdentifier, currentCurrency, addressDto);
+
+        ShippingCalculationResponseDto responseDto = new ShippingCalculationResponseDto();
+        responseDto.setCurrencySymbol(EURO_CURRENCY.equals(currentCurrency) ? "€" : "Kč");
+        BigDecimal shippingCostNoTax = null;
+        BigDecimal shippingTax = null;
+        BigDecimal shippingTaxRate = BigDecimal.ZERO;
+        Coupon validatedCoupon = null; // Budeme potřebovat pro zjištění dopravy zdarma
+        Customer customer = null; // Zkusíme načíst zákazníka
+        boolean freeShippingApplied = false;
+        BigDecimal shippingDiscountAmount = BigDecimal.ZERO;
+
+        try {
+            // Získání zákazníka (pro validaci kuponu)
+            if (principal != null) {
+                customer = customerService.getCustomerByEmail(principal.getName()).orElse(null);
+            }
+            // Validace kuponu (potřebujeme znát subtotal pro validaci min. hodnoty)
+            BigDecimal subtotalForCoupon = sessionCart.calculateSubtotal(currentCurrency);
+            validatedCoupon = validateAndGetCoupon(sessionCart, customer, subtotalForCoupon, currentCurrency); // Použijeme stávající pomocnou metodu
+            if (validatedCoupon != null && validatedCoupon.isFreeShipping()) {
+                freeShippingApplied = true;
+                log.debug("AJAX: Free shipping coupon '{}' is active.", validatedCoupon.getCode());
+            }
+
+
+            // Vytvoření dočasného Order objektu jen pro adresu
+            Order tempOrder = createTemporaryOrderForShippingFromDto(addressDto, currentCurrency);
+            if (tempOrder == null || !isShippingAddressAvailable(tempOrder)) {
+                throw new IllegalArgumentException("Nebyla zadána kompletní dodací adresa.");
+            }
+
+            // Výpočet původní ceny dopravy (vždy, abychom věděli výši slevy)
+            shippingCostNoTax = shippingService.calculateShippingCost(tempOrder, currentCurrency);
+            if (shippingCostNoTax == null || shippingCostNoTax.compareTo(BigDecimal.ZERO) < 0) {
+                log.warn("Shipping service returned null or negative cost for address: {}", addressDto);
+                shippingCostNoTax = null; // Signalizuje chybu
+                throw new ShippingCalculationException("Nepodařilo se vypočítat cenu dopravy pro zadanou adresu.");
+            }
+            shippingCostNoTax = shippingCostNoTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+            log.debug("AJAX: Calculated original shipping cost (no tax): {}", shippingCostNoTax);
+
+
+            // Výpočet DPH a finální ceny dopravy
+            shippingTaxRate = Optional.ofNullable(shippingService.getShippingTaxRate()).orElse(BigDecimal.ZERO);
+            if (shippingCostNoTax.compareTo(BigDecimal.ZERO) > 0 && shippingTaxRate.compareTo(BigDecimal.ZERO) <= 0) {
+                log.error("Shipping tax rate missing or zero during AJAX calculation!");
+                shippingTaxRate = new BigDecimal("0.21"); // Fallback
+            }
+            shippingTax = shippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
+
+            // Aplikace dopravy zdarma
+            BigDecimal finalShippingCostNoTax;
+            BigDecimal finalShippingTax;
+            if(freeShippingApplied) {
+                shippingDiscountAmount = shippingCostNoTax; // Sleva je celá původní cena
+                finalShippingCostNoTax = BigDecimal.ZERO;
+                finalShippingTax = BigDecimal.ZERO;
+                log.info("AJAX: Applying free shipping. Original cost: {}, Discount: {}", shippingCostNoTax, shippingDiscountAmount);
+            } else {
+                shippingDiscountAmount = BigDecimal.ZERO; // Žádná sleva na dopravu
+                finalShippingCostNoTax = shippingCostNoTax;
+                finalShippingTax = shippingTax;
+            }
+
+
+            // --- Výpočet celkové ceny objednávky (podobně jako v prepareCheckoutSummaryModel) ---
+            BigDecimal subtotal = sessionCart.calculateSubtotal(currentCurrency);
+            BigDecimal couponDiscount = (validatedCoupon != null && !validatedCoupon.isFreeShippingOnly())
+                    ? sessionCart.calculateDiscountAmount(currentCurrency) : BigDecimal.ZERO;
+            BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(currentCurrency);
+            Map<BigDecimal, BigDecimal> vatBreakdown = sessionCart.calculateVatBreakdown(currentCurrency); // Pro odpověď
+
+            BigDecimal subTotalAfterDiscount = subtotal.subtract(couponDiscount);
+            BigDecimal finalTotalWithoutTax = subTotalAfterDiscount.add(finalShippingCostNoTax);
+            BigDecimal finalTotalTax = totalItemVat.add(finalShippingTax);
+            BigDecimal originalTotalPriceWithTax = finalTotalWithoutTax.add(finalTotalTax);
+
+            // Zaokrouhlení celkové ceny DOLŮ na celé číslo
+            BigDecimal roundedTotalPrice = originalTotalPriceWithTax.setScale(0, RoundingMode.DOWN);
+            // --- Konec výpočtu celkové ceny ---
+
+            // Naplnění DTO pro odpověď
+            responseDto.setShippingCostNoTax(finalShippingCostNoTax); // Finální cena dopravy bez DPH
+            responseDto.setShippingTax(finalShippingTax); // Finální DPH z dopravy
+            responseDto.setTotalPrice(originalTotalPriceWithTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP)); // Vracíme PŘESNOU cenu před finálním zaokrouhlením
+            responseDto.setVatBreakdown(new TreeMap<>(vatBreakdown)); // Rozpis DPH ze zboží
+            responseDto.setTotalVatWithShipping(finalTotalTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP)); // Celkové DPH
+            responseDto.setOriginalShippingCostNoTax(shippingCostNoTax); // Původní cena dopravy
+            responseDto.setOriginalShippingTax(shippingTax); // Původní DPH z dopravy
+            responseDto.setShippingDiscountAmount(shippingDiscountAmount); // Sleva na dopravu
+
+            log.info("AJAX: Shipping calculation successful for user {}. Response: {}", userIdentifier, responseDto);
+            return ResponseEntity.ok(responseDto);
+
+        } catch (ShippingCalculationException | IllegalArgumentException e) {
+            log.warn("AJAX: Validation/Calculation error during shipping calculation for user {}: {}", userIdentifier, e.getMessage());
+            responseDto.setErrorMessage(e.getMessage());
+            // Vracíme 400 Bad Request pro chyby validace adresy nebo výpočtu
+            return ResponseEntity.badRequest().body(responseDto);
+        } catch (Exception e) {
+            log.error("AJAX: Unexpected error during shipping calculation for user {}: {}", userIdentifier, e.getMessage(), e);
+            responseDto.setErrorMessage("Došlo k neočekávané chybě při výpočtu ceny dopravy.");
+            // Vracíme 500 Internal Server Error pro neočekávané chyby
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseDto);
+        }
+    }
     /**
      * Prepares model attributes needed for rendering the checkout page, especially after a form error.
      * Includes calculation of summary values based on current cart and potential shipping costs.

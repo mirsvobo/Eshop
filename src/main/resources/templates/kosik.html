@@ -65,18 +65,6 @@
                             <div class="text-muted d-block item-description-details"
                                  th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''">
                             </div>
-
-                            <div th:if="${item.isCustom() and item.length != null and item.width != null and item.height != null}"
-                                 class="text-muted d-block small mt-1">
-                                Rozměry (DxHxV):
-                                <span th:text="${#numbers.formatDecimal(item.length, 1, 'DEFAULT', 0, 'POINT')}"></span> x
-                                <span th:text="${#numbers.formatDecimal(item.width, 1, 'DEFAULT', 0, 'POINT')}"></span> x
-                                <span th:text="${#numbers.formatDecimal(item.height, 1, 'DEFAULT', 0, 'POINT')}"></span> cm
-                            </div>
-
-                            <div th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}" class="text-muted d-block mt-1 item-description-details">
-                                <strong>Doplňky:</strong> <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + (${!iter.last} ? ', ' : '')"></span>
-                            </div>
                         </td>
                         <td class="text-end">
                                 <span th:if="${item.unitPriceCZK != null or item.unitPriceEUR != null}"

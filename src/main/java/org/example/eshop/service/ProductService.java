@@ -76,7 +76,56 @@ public class ProductService implements PriceConstants {
         logger.trace("Generated slug '{}' from input '{}'", slug, input);
         return slug;
     }
+    public BigDecimal calculateSingleAddonPriceBackend(Addon addon, Map<String, BigDecimal> dimensions, String currency) { // <-- Změna na public
+        BigDecimal zero = BigDecimal.ZERO.setScale(PRICE_SCALE, ROUNDING_MODE);
+        if (addon == null || dimensions == null) return zero;
 
+        String pricingType = addon.getPricingType();
+        BigDecimal price = zero; // Použijeme zero místo null pro jistotu
+        BigDecimal unitPrice;
+
+        BigDecimal lengthCm = dimensions.get("length");
+        BigDecimal widthCm = dimensions.get("width");
+        BigDecimal heightCm = dimensions.get("height");
+
+        if ("FIXED".equals(pricingType)) {
+            // Použijeme getPriceForCurrency pro získání ceny, vrátí 0 pokud není nalezena
+            price = getPriceForCurrency(addon.getPriceCZK(), addon.getPriceEUR(), currency, "Addon '" + addon.getName() + "' Fixed Price");
+        } else {
+            unitPrice = getPriceForCurrency(addon.getPricePerUnitCZK(), addon.getPricePerUnitEUR(), currency, "Addon '" + addon.getName() + "' Unit Price");
+            if (unitPrice.compareTo(zero) <= 0) return zero; // Nulová nebo chybějící jednotková cena nic nepřidá
+
+            // Kontrola platnosti rozměrů pro dimenzionální ceny
+            if (lengthCm == null || widthCm == null || heightCm == null ||
+                    lengthCm.compareTo(BigDecimal.ZERO) <= 0 || widthCm.compareTo(BigDecimal.ZERO) <= 0 || heightCm.compareTo(BigDecimal.ZERO) <= 0) {
+                logger.warn("Některý z rozměrů ({}, {}, {}) není platný pro výpočet dimenzionální ceny doplňku '{}'.", lengthCm, widthCm, heightCm, addon.getName());
+                return zero; // Nelze vypočítat
+            }
+
+
+            switch (pricingType) {
+                case "PER_CM_WIDTH":
+                    price = unitPrice.multiply(widthCm);
+                    break;
+                case "PER_CM_LENGTH":
+                    price = unitPrice.multiply(lengthCm);
+                    break;
+                case "PER_CM_HEIGHT":
+                    price = unitPrice.multiply(heightCm);
+                    break;
+                case "PER_SQUARE_METER":
+                    BigDecimal lengthM = lengthCm.divide(new BigDecimal("100"), CALCULATION_SCALE, ROUNDING_MODE);
+                    BigDecimal widthM = widthCm.divide(new BigDecimal("100"), CALCULATION_SCALE, ROUNDING_MODE);
+                    price = unitPrice.multiply(lengthM).multiply(widthM);
+                    break;
+                default:
+                    logger.warn("Neznámý PricingType '{}' pro doplněk '{}'", pricingType, addon.getName());
+                    break; // Neznámý typ, cena zůstane 0
+            }
+        }
+
+        return price.setScale(PRICE_SCALE, ROUNDING_MODE).max(zero); // Zaokrouhlení a zajištění nezápornosti
+    }
     @Cacheable(value = "activeProductsPage", key = "#pageable.toString()")
     @Transactional(readOnly = true)
     public Page<Product> getActiveProducts(Pageable pageable) {
@@ -1100,53 +1149,4 @@ public class ProductService implements PriceConstants {
         return response;
     }
 
-    /**
-     * Pomocná metoda pro výpočet ceny jednoho doplňku na backendu.
-     * Podobná JS verzi, ale pracuje s Addon entitou.
-     * OPRAVENO: Pracuje s pricingType jako String.
-     */
-    private BigDecimal calculateSingleAddonPriceBackend(Addon addon, Map<String, BigDecimal> dimensions, String currency) {
-        BigDecimal zero = BigDecimal.ZERO.setScale(PRICE_SCALE, ROUNDING_MODE);
-        if (addon == null || dimensions == null) return zero;
-
-        String pricingType = addon.getPricingType(); // Opraveno: Pracujeme se Stringem
-        BigDecimal price = zero;
-        BigDecimal unitPrice;
-
-        BigDecimal lengthCm = dimensions.get("length");
-        BigDecimal widthCm = dimensions.get("width");
-        BigDecimal heightCm = dimensions.get("height");
-
-        if ("FIXED".equals(pricingType)) { // Opraveno: Porovnáváme String
-            price = getPriceForCurrency(addon.getPriceCZK(), addon.getPriceEUR(), currency, "Addon '" + addon.getName() + "' Fixed Price");
-        } else {
-            unitPrice = getPriceForCurrency(addon.getPricePerUnitCZK(), addon.getPricePerUnitEUR(), currency, "Addon '" + addon.getName() + "' Unit Price");
-            if (unitPrice.compareTo(zero) <= 0) return zero; // Nulová jednotková cena nic nepřidá
-
-            // Opraveno: Porovnáváme Stringy
-            switch (pricingType) {
-                case "PER_CM_WIDTH":
-                    if (widthCm != null && widthCm.compareTo(zero) > 0) price = unitPrice.multiply(widthCm);
-                    break;
-                case "PER_CM_LENGTH":
-                    if (lengthCm != null && lengthCm.compareTo(zero) > 0) price = unitPrice.multiply(lengthCm);
-                    break;
-                case "PER_CM_HEIGHT":
-                    if (heightCm != null && heightCm.compareTo(zero) > 0) price = unitPrice.multiply(heightCm);
-                    break;
-                case "PER_SQUARE_METER":
-                    if (lengthCm != null && lengthCm.compareTo(zero) > 0 && widthCm != null && widthCm.compareTo(zero) > 0) {
-                        BigDecimal lengthM = lengthCm.divide(new BigDecimal("100"), 4, ROUNDING_MODE); // 4 des. mista pro mezivypocet
-                        BigDecimal widthM = widthCm.divide(new BigDecimal("100"), 4, ROUNDING_MODE);
-                        price = unitPrice.multiply(lengthM).multiply(widthM);
-                    }
-                    break;
-                default:
-                    logger.warn("Neznámý PricingType '{}' pro doplněk '{}'", pricingType, addon.getName());
-                    break; // Neznámý typ, cena zůstane 0
-            }
-        }
-
-        return price.setScale(PRICE_SCALE, ROUNDING_MODE).max(zero); // Zaokrouhlení a zajištění nezápornosti
-    }
 } // Konec třídy ProductService

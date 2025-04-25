@@ -394,15 +394,30 @@ public class OrderService implements PriceConstants {
     }
 
 
+    /**
+     * Zpracuje jednu položku z DTO (CartItemDto) a převede ji na entitu OrderItem,
+     * včetně výpočtu ceny, načtení atributů, addonů a DPH.
+     * Nastavuje příznak isReverseCharge POUZE na základě hodnoty applyReverseCharge z pokladny.
+     *
+     * @param itemDto Položka DTO z košíku nebo requestu.
+     * @param order Objednávka, ke které položka patří.
+     * @param currency Měna objednávky.
+     * @param applyReverseCharge Příznak z pokladny, zda má být uplatněno PDP.
+     * @return Objekt OrderItem připravený k uložení.
+     * @throws EntityNotFoundException Pokud produkt, sazba, atribut nebo addon nejsou nalezeny.
+     * @throws IllegalArgumentException Pokud chybí povinná data (ID sazby, rozměry u custom produktu).
+     * @throws IllegalStateException Pokud chybí konfigurace cen produktu.
+     */
     private OrderItem processCartItem(CartItemDto itemDto, Order order, String currency, boolean applyReverseCharge) {
-        log.debug("Starting processCartItem for Product ID: {}, TaxRate ID: {}, Apply RC Flag: {}",
+        log.debug("Starting processCartItem for Product ID: {}, TaxRate ID: {}, Apply RC Flag from Checkout: {}",
                 itemDto.getProductId(), itemDto.getSelectedTaxRateId(), applyReverseCharge);
+
         Product product = productRepository.findByIdWithDetails(itemDto.getProductId()) // Načteme s detaily včetně asociací
                 .orElseThrow(() -> new EntityNotFoundException("Produkt nenalezen: " + itemDto.getProductId()));
         if (!product.isActive())
             throw new IllegalArgumentException("Produkt '" + product.getName() + "' není aktivní a nelze jej objednat.");
 
-        // --- Načtení a validace vybrané TaxRate ---
+        // --- Načtení a validace vybrané TaxRate (zůstává důležité pro sazbu DPH) ---
         if (itemDto.getSelectedTaxRateId() == null) {
             throw new IllegalArgumentException("Chybí ID vybrané daňové sazby pro produkt: " + product.getName());
         }
@@ -414,8 +429,9 @@ public class OrderService implements PriceConstants {
             log.error("Selected TaxRate ID {} ('{}') is not available for Product ID {}", selectedTaxRate.getId(), selectedTaxRate.getName(), product.getId());
             throw new IllegalArgumentException("Vybraná daňová sazba '" + selectedTaxRate.getName() + "' není pro produkt '" + product.getName() + "' povolena.");
         }
-        log.debug("Selected Tax Rate ID {} ('{}', Rate: {}) validated for Product ID {}",
-                selectedTaxRate.getId(), selectedTaxRate.getName(), selectedTaxRate.getRate(), product.getId());
+        // Logujeme i původní nastavení RC u sazby pro přehlednost
+        log.debug("Selected Tax Rate ID {} ('{}', Rate: {}, Original RC Flag: {}) validated for Product ID {}",
+                selectedTaxRate.getId(), selectedTaxRate.getName(), selectedTaxRate.getRate(), selectedTaxRate.isReverseCharge(), product.getId());
         // --- Konec načtení a validace TaxRate ---
 
         OrderItem orderItem = new OrderItem();
@@ -425,11 +441,9 @@ public class OrderService implements PriceConstants {
         orderItem.setCustomConfigured(itemDto.isCustom());
 
         // --- Uložení VYBRANÉ sazby DPH a jejího ID ---
-        // Důležité: Ukládáme SEM původní sazbu (21% nebo 12%)
-        orderItem.setTaxRate(selectedTaxRate.getRate());
+        orderItem.setTaxRate(selectedTaxRate.getRate()); // Stále ukládáme původní sazbu (např. 0.21)
         orderItem.setSelectedTaxRateId(selectedTaxRate.getId());
         orderItem.setSelectedTaxRateName(selectedTaxRate.getName());
-        // Příznak RC nastavíme až podle applyReverseCharge flagu
 
         // Načtení vybraných atributů (Design, Glaze, RoofColor)
         Design selectedDesign = designRepository.findById(itemDto.getSelectedDesignId())
@@ -450,20 +464,17 @@ public class OrderService implements PriceConstants {
         attributeSurcharge = EURO_CURRENCY.equals(currency) ? surchargeEUR : surchargeCZK;
         log.debug("Attribute surcharge calculated for currency {}: {}", currency, attributeSurcharge);
 
-        // Výpočet základní jednotkové ceny bez DPH (závisí na custom/standard)
+        // Výpočet základní jednotkové ceny a addonů
         BigDecimal baseUnitPriceNoTax;
         List<OrderItemAddon> orderItemAddonsToSave = new ArrayList<>();
         BigDecimal totalAddonPriceNoTax = BigDecimal.ZERO;
 
         if (itemDto.isCustom()) {
-            // --- Custom produkt ---
             Map<String, BigDecimal> dimensionsMap = itemDto.getCustomDimensions();
             if (dimensionsMap == null || dimensionsMap.get("length") == null || dimensionsMap.get("width") == null || dimensionsMap.get("height") == null) {
                 throw new IllegalArgumentException("Chybí kompletní rozměry v mapě customDimensions pro custom produkt.");
             }
             baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency);
-            log.debug("[processCartItem] Custom Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
-
             orderItem.setLength(dimensionsMap.get("length"));
             orderItem.setWidth(dimensionsMap.get("width"));
             orderItem.setHeight(dimensionsMap.get("height"));
@@ -491,16 +502,9 @@ public class OrderService implements PriceConstants {
                         oia.setOrderItem(orderItem);
                         oia.setAddon(addon);
                         oia.setAddonName(addon.getName());
-                        oia.setQuantity(1);
+                        oia.setQuantity(1); // Assume quantity 1 for addons added this way
 
-                        BigDecimal addonUnitPrice;
-                        if ("FIXED".equals(addon.getPricingType())) {
-                            addonUnitPrice = EURO_CURRENCY.equals(currency) ? addon.getPriceEUR() : addon.getPriceCZK();
-                        } else {
-                            // Prozatímní placeholder pro cenu dimenzionálních addonů - zde by měla být logika výpočtu
-                            log.warn("Calculation for dimensional addon '{}' not fully implemented in processCartItem, using placeholder zero.", addon.getName());
-                            addonUnitPrice = BigDecimal.ZERO; // TODO: Implementovat výpočet pro dimenzionální addony
-                        }
+                        BigDecimal addonUnitPrice = productService.calculateSingleAddonPriceBackend(addon, dimensionsMap, currency); // Helper method call
 
                         if (addonUnitPrice == null || addonUnitPrice.compareTo(BigDecimal.ZERO) < 0) {
                             log.error("Invalid price for addon ID {} ('{}') in currency {}. Price: {}", addon.getId(), addon.getName(), currency, addonUnitPrice);
@@ -518,15 +522,12 @@ public class OrderService implements PriceConstants {
                     }
                 }
                 log.debug("[processCartItem] Total calculated addon price for item ({}): {}", currency, totalAddonPriceNoTax);
-            } else {
-                log.debug("[processCartItem] No addons selected for custom item.");
             }
             orderItem.setSelectedAddons(orderItemAddonsToSave);
 
         } else {
             // --- Standardní produkt ---
             baseUnitPriceNoTax = calculateBaseUnitPrice(product, itemDto, currency);
-            log.debug("[processCartItem] Standard Base Unit Price (No Tax, Currency: {}): {}", currency, baseUnitPriceNoTax);
             orderItem.setLength(product.getLength());
             orderItem.setWidth(product.getWidth());
             orderItem.setHeight(product.getHeight());
@@ -547,22 +548,16 @@ public class OrderService implements PriceConstants {
         BigDecimal finalUnitPriceNoTax = unitPriceAfterDiscountNoTax
                 .add(attributeSurcharge)
                 .add(totalAddonPriceNoTax);
-        log.debug("[processCartItem] Final Unit Price (No Tax, Currency: {}): {}", currency, finalUnitPriceNoTax);
         orderItem.setUnitPriceWithoutTax(finalUnitPriceNoTax.setScale(PRICE_SCALE, ROUNDING_MODE));
 
 
-        // --- NOVÁ LOGIKA: Nastavení příznaku Reverse Charge ---
-        if (applyReverseCharge) {
-            orderItem.setReverseCharge(true);
-            log.debug("Applying Reverse Charge flag to OrderItem (Product ID: {}) based on checkout selection. Kept original tax rate: {}", itemDto.getProductId(), orderItem.getTaxRate());
-        } else {
-            orderItem.setReverseCharge(false);
-        }
-        // --- KONEC NOVÉ LOGIKY ---
+        // --- ÚPRAVA ZDE: Nastavení příznaku Reverse Charge POUZE podle checkboxu z pokladny ---
+        orderItem.setReverseCharge(applyReverseCharge); // Přímo přiřadíme hodnotu z parametru
+        log.debug("Setting OrderItem.isReverseCharge to: {} (based SOLELY on checkout flag)", applyReverseCharge);
+        // --- KONEC ÚPRAVY ---
 
-        // --- VÝPOČET CEN S DPH (používá novou metodu) ---
-        recalculateTaxAmounts(orderItem); // Zavoláme metodu, která zohlední isReverseCharge
-        // --- KONEC VÝPOČTU CEN S DPH ---
+        // --- VÝPOČET CEN S DPH (používá metodu recalculateTaxAmounts, která zohlední isReverseCharge) ---
+        recalculateTaxAmounts(orderItem); // Tato metoda již počítá s příznakem orderItem.isReverseCharge()
 
         log.info("Finished processCartItem for Product ID: {}. RC applied: {}, Total Price w/ Tax: {}, Selected Rate ID: {}",
                 itemDto.getProductId(), orderItem.isReverseCharge(), orderItem.getTotalPriceWithTax(), orderItem.getSelectedTaxRateId());
