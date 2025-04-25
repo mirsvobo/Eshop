@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
-    private final Locale defaultLocale = new Locale("cs", "CZ");
+    private final Locale defaultLocale = Locale.forLanguageTag("cs-CZ");
     // Cache pro konfiguraci emailů (klíč = stateCode.toUpperCase())
     private final Map<String, EmailTemplateConfig> configCache = new ConcurrentHashMap<>();
     @Autowired
@@ -66,13 +66,7 @@ public class EmailService {
         try {
             Context context = new Context(defaultLocale);
             context.setVariable("order", order);
-            context.setVariable("shopName", shopName);
-            context.setVariable("shopUrl", shopUrl);
-            String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + order.getOrderCode();
-            context.setVariable("trackingUrl", trackingUrl);
-
-            String htmlBody = templateEngine.process(templateName, context);
-            sendHtmlEmail(to, subject, htmlBody);
+            setEshopVariables(order, to, subject, templateName, context);
             log.info("Order confirmation email sent successfully to {} for order {}", to, order.getOrderCode());
 
         } catch (TemplateProcessingException tpe) {
@@ -80,6 +74,16 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send order confirmation email to {} for order {}: {}", to, order.getOrderCode(), e.getMessage(), e);
         }
+    }
+
+    private void setEshopVariables(Order order, String to, String subject, String templateName, Context context) throws MessagingException, UnsupportedEncodingException {
+        context.setVariable("shopName", shopName);
+        context.setVariable("shopUrl", shopUrl);
+        String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + order.getOrderCode();
+        context.setVariable("trackingUrl", trackingUrl);
+
+        String htmlBody = templateEngine.process(templateName, context);
+        sendHtmlEmail(to, subject, htmlBody);
     }
 
     @Async
@@ -112,15 +116,7 @@ public class EmailService {
             Context context = new Context(defaultLocale);
             context.setVariable("order", order);
             context.setVariable("newState", newState);
-            context.setVariable("shopName", shopName);
-            context.setVariable("shopUrl", shopUrl);
-            String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + order.getOrderCode();
-            context.setVariable("trackingUrl", trackingUrl);
-            // TODO: Přidat customMessageBody z konfigurace do kontextu?
-            // context.setVariable("customMessageBody", config.getCustomMessageBody());
-
-            String htmlBody = templateEngine.process(templateName, context);
-            sendHtmlEmail(to, subject, htmlBody);
+            setEshopVariables(order, to, subject, templateName, context);
             log.info("Order status update email ('{}' - Template: {}) sent successfully to {} for order {}", newState.getName(), templateName, to, order.getOrderCode());
 
         } catch (TemplateProcessingException tpe) {
@@ -138,10 +134,6 @@ public class EmailService {
 
         helper.setFrom(mailFrom, shopName); // Nastavit i jméno odesílatele
         helper.setTo(to);
-        // TODO: Posílat BCC kopii administrátorovi, pokud je nastavena
-        // if (StringUtils.hasText(adminBccEmail)) {
-        //    helper.setBcc(adminBccEmail);
-        // }
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
 

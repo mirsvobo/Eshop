@@ -186,9 +186,7 @@ public class DiscountService implements PriceConstants {
             existingDiscount.getProducts().removeIf(product -> !productsToAssign.contains(product));
 
             // Přidání nových produktů
-            productsToAssign.forEach(product -> {
-                existingDiscount.getProducts().add(product);
-            });
+            productsToAssign.forEach(product -> existingDiscount.getProducts().add(product));
 
             Discount updatedDiscount = discountRepository.save(existingDiscount);
             log.info("Discount {} (ID: {}) updated successfully.", updatedDiscount.getName(), updatedDiscount.getId());

@@ -17,8 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,7 +36,7 @@ public class CustomerService {
 
     // --- Registrace a Autentizace (BEZE ZMĚNY) ---
     @Transactional
-    public Customer registerCustomer(RegistrationDto dto) {
+    public void registerCustomer(RegistrationDto dto) {
         log.info("Attempting to register customer with email: {}", dto.getEmail());
         validateObject(dto);
         if (customerRepository.existsByEmailIgnoreCase(dto.getEmail())) {
@@ -59,39 +57,11 @@ public class CustomerService {
 
         Customer savedCustomer = customerRepository.save(customer);
         log.info("Customer registered successfully with ID: {}", savedCustomer.getId());
-        return savedCustomer;
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Customer> authenticateCustomer(String email, String rawPassword) {
-        log.debug("Attempting to authenticate customer: {}", email);
-        if (!StringUtils.hasText(email) || !StringUtils.hasText(rawPassword)) return Optional.empty();
-        Optional<Customer> customerOpt = customerRepository.findByEmailIgnoreCase(email.trim());
-        if (customerOpt.isPresent()) {
-            Customer customer = customerOpt.get();
-            if (customer.isGuest()) {
-                log.warn("Auth failed for {}: Account is a guest account.", email);
-                return Optional.empty();
-            }
-            if (customer.getPassword() != null && passwordEncoder.matches(rawPassword, customer.getPassword())) {
-                if (!customer.isEnabled()) {
-                    log.warn("Auth failed for {}: Account disabled.", email);
-                    return Optional.empty();
-                }
-                log.info("Auth successful for: {}", email);
-                return Optional.of(customer);
-            } else {
-                log.warn("Auth failed for {}: Invalid password.", email);
-            }
-        } else {
-            log.warn("Auth failed: Customer not found with email: {}", email);
-        }
-        return Optional.empty();
     }
 
     // --- Úprava Profilu (BEZE ZMĚNY) ---
     @Transactional
-    public Customer updateProfile(String currentEmail, ProfileUpdateDto dto) {
+    public void updateProfile(String currentEmail, ProfileUpdateDto dto) {
         log.info("Updating profile for user: {}", currentEmail);
         validateObject(dto);
         Customer customer = customerRepository.findByEmailIgnoreCase(currentEmail)
@@ -109,9 +79,7 @@ public class CustomerService {
         if (!StringUtils.hasText(customer.getDeliveryPhone())) {
             customer.setDeliveryPhone(dto.getPhone());
         }
-        Customer updatedCustomer = customerRepository.save(customer);
         log.info("Profile updated successfully for user: {}", currentEmail);
-        return updatedCustomer;
     }
 
     // --- Změna Hesla (BEZE ZMĚNY) ---
@@ -216,7 +184,7 @@ public class CustomerService {
 
     // --- Správa Adres (BEZE ZMĚNY) ---
     @Transactional
-    public Customer updateAddress(Long customerId, AddressType addressType, AddressDto dto) {
+    public void updateAddress(Long customerId, AddressType addressType, AddressDto dto) {
         log.info("Updating {} address for customer ID: {}", addressType, customerId);
         validateObject(dto);
         Customer customer = customerRepository.findById(customerId)
@@ -234,20 +202,7 @@ public class CustomerService {
             customer.setUseInvoiceAddressAsDelivery(false);
             log.debug("Set useInvoiceAddressAsDelivery to false for customer {}", customerId);
         }
-        Customer updatedCustomer = customerRepository.save(customer);
         log.info("{} address updated successfully for customer ID: {}", addressType, customerId);
-        return updatedCustomer;
-    }
-
-    @Transactional(readOnly = true)
-    public long countCustomersCreatedBetween(LocalDateTime start, LocalDateTime end) {
-        log.debug("Counting customers created between {} and {}", start, end);
-        try {
-            return customerRepository.countByCreatedAtBetween(start, end);
-        } catch (Exception e) {
-            log.error("Error counting customers between dates: {}", e.getMessage(), e);
-            return 0L;
-        }
     }
 
     @Transactional(readOnly = true)
@@ -288,7 +243,7 @@ public class CustomerService {
     }
 
     @Transactional
-    public Customer setUseInvoiceAddressAsDelivery(Long customerId, boolean useInvoiceAddress) {
+    public void setUseInvoiceAddressAsDelivery(Long customerId, boolean useInvoiceAddress) {
         log.info("Setting useInvoiceAddressAsDelivery to {} for customer ID: {}", useInvoiceAddress, customerId);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found with ID: " + customerId));
@@ -296,9 +251,7 @@ public class CustomerService {
             throw new IllegalArgumentException("Nastavení adresy nelze měnit pro host účet.");
         }
         customer.setUseInvoiceAddressAsDelivery(useInvoiceAddress);
-        Customer updatedCustomer = customerRepository.save(customer);
         log.info("useInvoiceAddressAsDelivery flag updated for customer ID: {}", customerId);
-        return updatedCustomer;
     }
 
     // --- Metody pro čtení (BEZE ZMĚNY) ---
@@ -311,11 +264,6 @@ public class CustomerService {
     public Optional<Customer> getCustomerByEmail(String email) {
         if (!StringUtils.hasText(email)) return Optional.empty();
         return customerRepository.findByEmailIgnoreCase(email.trim());
-    }
-
-    @Transactional(readOnly = true)
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
     }
 
     @Transactional(readOnly = true)
@@ -337,17 +285,6 @@ public class CustomerService {
     public Customer saveCustomer(Customer customer) {
         log.info("Saving customer ID: {}", customer.getId());
         return customerRepository.save(customer);
-    }
-
-    // --- Správa rolí (BEZE ZMĚNY) ---
-    @Transactional
-    public void addRoleToCustomer(Long customerId, String role) {
-        log.warn("addRoleToCustomer not implemented");
-    }
-
-    @Transactional
-    public void removeRoleFromCustomer(Long customerId, String role) {
-        log.warn("removeRoleFromCustomer not implemented");
     }
 
     // --- Pomocná metoda pro validaci (BEZE ZMĚNY) ---

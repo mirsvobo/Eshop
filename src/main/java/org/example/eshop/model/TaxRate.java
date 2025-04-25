@@ -17,7 +17,7 @@ import java.util.Set;
 @Entity
 @Cacheable
 // Pro TaxRate můžeme nechat READ_ONLY, pokud se nemění často. Pokud ano, změnit na READ_WRITE.
-@Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Table(name = "tax_rate", indexes = {
         @Index(name = "idx_taxrate_name", columnList = "name", unique = true)
 })

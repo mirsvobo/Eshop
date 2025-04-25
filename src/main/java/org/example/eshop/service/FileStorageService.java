@@ -1,11 +1,9 @@
-// src/main/java/org/example/eshop/service/FileStorageService.java
 package org.example.eshop.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import com.google.api.client.util.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.util.StringUtils; // Přidat import
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -13,10 +11,10 @@ import java.io.InputStream;
 import java.nio.file.*;
 import java.util.UUID;
 
+
+@Slf4j
 @Service
 public class FileStorageService {
-
-    private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
 
     @Value("${eshop.upload.dir:${user.dir}/uploads}")
     private String uploadDir;

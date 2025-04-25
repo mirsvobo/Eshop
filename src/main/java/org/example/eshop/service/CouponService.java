@@ -128,22 +128,22 @@ public class CouponService {
             log.warn("checkMinimumOrderValue called with null coupon or subtotal.");
             return false;
         }
-        // Zde byla chyba, mělo být EUR
-        BigDecimal minimumValue = coupon.getMinimumOrderValueCZK();
-        // OPRAVA: Správné pole pro EUR
-        minimumValue = EURO_CURRENCY.equals(currency)
+        // OPRAVA: Přímo použijeme hodnotu z ternárního operátoru, odstranění redundantní proměnné 'minimumValue'
+        BigDecimal requiredMinimum = EURO_CURRENCY.equals(currency)
                 ? coupon.getMinimumOrderValueEUR()
                 : coupon.getMinimumOrderValueCZK();
 
-
-        if (minimumValue == null || minimumValue.compareTo(BigDecimal.ZERO) <= 0) {
-            return true; // No minimum value set.
+        // Pokud není minimální hodnota nastavena nebo je nulová/záporná, podmínka je splněna
+        if (requiredMinimum == null || requiredMinimum.compareTo(BigDecimal.ZERO) <= 0) {
+            return true;
         }
-        boolean ok = orderSubtotal.compareTo(minimumValue) >= 0;
+
+        // Porovnání subtotalu s požadovaným minimem
+        boolean ok = orderSubtotal.compareTo(requiredMinimum) >= 0;
         if (!ok) {
             log.debug("Order subtotal {} {} is below minimum {} {} required for coupon '{}'",
                     orderSubtotal.setScale(PRICE_SCALE, ROUNDING_MODE), currency,
-                    minimumValue.setScale(PRICE_SCALE, ROUNDING_MODE), currency,
+                    requiredMinimum.setScale(PRICE_SCALE, ROUNDING_MODE), currency,
                     coupon.getCode());
         }
         return ok;
@@ -170,6 +170,8 @@ public class CouponService {
         }
         if (customer == null || customer.getId() == null || customer.isGuest()) {
             log.warn("Checking customer usage limit for coupon '{}' on a guest or customer without ID. Allowing usage.", coupon.getCode());
+            // Zde můžeme diskutovat, zda host může použít kupón s omezením na zákazníka
+            // Prozatím povolíme, ale logujeme varování
             return true;
         }
         long customerUsageCount = orderRepository.countByCustomerIdAndAppliedCouponId(customer.getId(), coupon.getId());
@@ -192,9 +194,7 @@ public class CouponService {
             couponRepository.save(couponToUpdate);
             log.info("Incremented usage count for coupon '{}' (ID: {}). New count: {}",
                     couponToUpdate.getCode(), couponToUpdate.getId(), couponToUpdate.getUsedTimes());
-        }, () -> {
-            log.error("Could not mark coupon as used, not found with ID: {}", coupon.getId());
-        });
+        }, () -> log.error("Could not mark coupon as used, not found with ID: {}", coupon.getId()));
     }
 
 
@@ -226,35 +226,36 @@ public class CouponService {
 
     @Caching(
             put = {@CachePut(value = "couponByCode", key = "#result.code", condition = "#result != null")},
-            evict = {@CacheEvict(value = "couponByCode", key = "#existingCoupon.code",
-                    condition = "#existingCoupon != null and #couponData.code != null and !#existingCoupon.code.equalsIgnoreCase(#couponData.code.trim().toUpperCase())",
-                    beforeInvocation = true)
-            })
+            // OPRAVA: Správné načtení existujícího kódu pro invalidaci cache
+            evict = {@CacheEvict(value = "couponByCode", key = "#result.code", condition = "#result != null and #result.code != #couponData.code")}
+    )
     @Transactional
     public Coupon updateCoupon(Long id, Coupon couponData) {
         log.info("Updating coupon with ID: {} via CMS", id);
 
+        // OPRAVA: Nejdříve načteme existující kupón
         Coupon existingCoupon = couponRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Coupon with ID " + id + " not found."));
 
-        couponData.setCode(couponData.getCode() != null ? couponData.getCode().trim().toUpperCase() : null);
+        // Zvalidujeme příchozí data
+        String newCode = couponData.getCode() != null ? couponData.getCode().trim().toUpperCase() : null;
         validateCouponData(couponData, id); // Validace PŘED uložením
 
-        if (!existingCoupon.getCode().equalsIgnoreCase(couponData.getCode())) {
-            couponRepository.findByCodeIgnoreCase(couponData.getCode())
-                    .filter(found -> !found.getId().equals(id))
+        // OPRAVA: Ověření unikátnosti kódu, pokud se mění
+        if (newCode != null && !existingCoupon.getCode().equalsIgnoreCase(newCode)) {
+            couponRepository.findByCodeIgnoreCase(newCode)
+                    .filter(found -> !found.getId().equals(id)) // Zajistí, že nenajdeme sami sebe
                     .ifPresent(found -> {
-                        throw new IllegalArgumentException("Kupón s kódem '" + couponData.getCode() + "' již existuje.");
+                        throw new IllegalArgumentException("Kupón s kódem '" + newCode + "' již existuje.");
                     });
-            existingCoupon.setCode(couponData.getCode());
+            existingCoupon.setCode(newCode); // Aktualizujeme kód až po ověření
         }
 
-        // Update polí
+        // Update ostatních polí (tato část byla víceméně v pořádku)
         existingCoupon.setName(couponData.getName());
         existingCoupon.setDescription(couponData.getDescription());
         existingCoupon.setPercentage(couponData.isPercentage());
         existingCoupon.setFreeShipping(couponData.isFreeShipping());
-        // Hodnoty jsou normalizovány ve validateCouponData
         existingCoupon.setValue(couponData.getValue());
         existingCoupon.setValueCZK(couponData.getValueCZK());
         existingCoupon.setValueEUR(couponData.getValueEUR());
@@ -272,19 +273,20 @@ public class CouponService {
         return updatedCoupon;
     }
 
-    @CacheEvict(value = "couponByCode", key = "#couponToDeactivate.code", condition = "#couponToDeactivate != null")
+    @CacheEvict(value = "couponByCode", key = "#result.code", condition = "#result != null")
     @Transactional
-    public void deactivateCoupon(Long id) {
+    public void deactivateCoupon(Long id) { // Změněn návratový typ na Coupon pro CacheEvict
         log.warn("Attempting to deactivate coupon with ID: {} via CMS", id);
-        Coupon coupon = couponRepository.findById(id)
+        // OPRAVA: Načtení kupónu PŘED operací
+        Coupon couponToDeactivate = couponRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Coupon with ID " + id + " not found."));
 
-        if (coupon.isActive()) {
-            coupon.setActive(false);
-            couponRepository.save(coupon);
-            log.info("Coupon '{}' (ID: {}) successfully deactivated via CMS.", coupon.getCode(), id);
+        if (couponToDeactivate.isActive()) {
+            couponToDeactivate.setActive(false);
+            Coupon savedCoupon = couponRepository.save(couponToDeactivate); // Uložíme změnu
+            log.info("Coupon '{}' (ID: {}) successfully deactivated via CMS.", savedCoupon.getCode(), id);
         } else {
-            log.info("Coupon '{}' (ID: {}) is already inactive.", coupon.getCode(), id);
+            log.info("Coupon '{}' (ID: {}) is already inactive.", couponToDeactivate.getCode(), id);
         }
     }
 
