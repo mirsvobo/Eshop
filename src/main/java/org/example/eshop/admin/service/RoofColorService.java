@@ -2,7 +2,6 @@ package org.example.eshop.admin.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.model.RoofColor;
-import org.example.eshop.repository.ProductRepository;
 import org.example.eshop.repository.RoofColorRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,8 +25,6 @@ public class RoofColorService {
 
     @Autowired
     private RoofColorRepository roofColorRepository;
-    @Autowired
-    private ProductRepository productRepository; // Pro kontrolu použití
 
     @Cacheable("allRoofColors")
     @Transactional(readOnly = true)

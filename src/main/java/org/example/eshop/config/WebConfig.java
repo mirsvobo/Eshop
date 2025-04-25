@@ -1,5 +1,6 @@
 package org.example.eshop.config;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -17,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
     private String baseUrlPath;
 
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@NotNull ResourceHandlerRegistry registry) {
         String resolvedUploadDir = Paths.get(uploadDir).toAbsolutePath().normalize().toString();
         // Zajistí, že cesta končí lomítkem, pokud není root
         if (!resolvedUploadDir.endsWith("/") && !resolvedUploadDir.endsWith("\\")) {

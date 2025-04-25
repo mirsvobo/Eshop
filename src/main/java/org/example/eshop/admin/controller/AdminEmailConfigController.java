@@ -207,15 +207,7 @@ public class AdminEmailConfigController {
             loadAllOrderStates(model); // Znovu načíst stavy
             // Znovu připravit zobrazovaný název pro případ návratu na formulář
             model.addAttribute("currentStateDisplayName", existingConfig.getStateCode()); // Zobrazíme jen kód pro jednoduchost při chybě
-            if (orderStateService != null) { // Zkontrolujeme null pro jistotu
-                List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
-                String displayName = allStates.stream()
-                        .filter(state -> Objects.equals(state.getCode(), originalStateCode))
-                        .map(state -> state.getName() + " (" + state.getCode() + ")")
-                        .findFirst()
-                        .orElse(originalStateCode);
-                model.addAttribute("currentStateDisplayName", displayName);
-            }
+            checkIfNull(model, originalStateCode);
 
             return "admin/email-config-form";
         }
@@ -243,17 +235,21 @@ public class AdminEmailConfigController {
             loadAllOrderStates(model); // Načíst stavy
             // Znovu připravit zobrazovaný název
             model.addAttribute("currentStateDisplayName", originalStateCode); // Zobrazíme jen kód pro jednoduchost při chybě
-            if (orderStateService != null) {
-                List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
-                String displayName = allStates.stream()
-                        .filter(state -> Objects.equals(state.getCode(), originalStateCode))
-                        .map(state -> state.getName() + " (" + state.getCode() + ")")
-                        .findFirst()
-                        .orElse(originalStateCode);
-                model.addAttribute("currentStateDisplayName", displayName);
-            }
+            checkIfNull(model, originalStateCode);
             model.addAttribute("errorMessage", "Při aktualizaci konfigurace nastala neočekávaná chyba: " + e.getMessage());
             return "admin/email-config-form";
+        }
+    }
+
+    private void checkIfNull(Model model, String originalStateCode) {
+        if (orderStateService != null) { // Zkontrolujeme null pro jistotu
+            List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
+            String displayName = allStates.stream()
+                    .filter(state -> Objects.equals(state.getCode(), originalStateCode))
+                    .map(state -> state.getName() + " (" + state.getCode() + ")")
+                    .findFirst()
+                    .orElse(originalStateCode);
+            model.addAttribute("currentStateDisplayName", displayName);
         }
     }
 

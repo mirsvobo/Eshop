@@ -3,7 +3,6 @@ package org.example.eshop.admin.service;
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.model.Glaze;
 import org.example.eshop.repository.GlazeRepository;
-import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +25,7 @@ public class GlazeService {
 
     @Autowired
     private GlazeRepository glazeRepository;
-    @Autowired
-    private ProductRepository productRepository; // Pro kontrolu použití
+
 
     @Cacheable("allGlazes")
     @Transactional(readOnly = true)

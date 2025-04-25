@@ -9,8 +9,6 @@ import org.example.eshop.admin.service.GlazeService;
 import org.example.eshop.admin.service.RoofColorService;
 import org.example.eshop.dto.ImageOrderUpdateRequest;
 import org.example.eshop.model.*;
-import org.example.eshop.repository.ImageRepository;
-import org.example.eshop.service.FileStorageService;
 import org.example.eshop.service.ProductService;
 import org.example.eshop.service.TaxRateService;
 import org.slf4j.Logger;
@@ -57,10 +55,7 @@ public class AdminProductController {
     private GlazeService glazeService;
     @Autowired
     private RoofColorService roofColorService;
-    @Autowired
-    private FileStorageService fileStorageService; // Nepoužívá se přímo zde, ale v ProductService
-    @Autowired
-    private ImageRepository imageRepository; // Potřeba pro smazání obrázku
+
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -162,7 +157,7 @@ public class AdminProductController {
     }
 
     @GetMapping
-    public String listProducts(@PageableDefault(size = 10, sort = "name") Pageable pageable, Model model) {
+    public String listProducts(@PageableDefault(sort = "name") Pageable pageable, Model model) {
         log.info("Requesting product list view. Pageable: {}", pageable);
         Page<Product> productPage = productService.getAllProducts(pageable); //
         model.addAttribute("productPage", productPage);
@@ -292,7 +287,8 @@ public class AdminProductController {
             if (configuratorResult.hasErrors()) {
                 configuratorResult.getAllErrors().forEach(error -> {
                     if (error instanceof FieldError fieldError) {
-                        bindingResult.rejectValue("configurator." + fieldError.getField(), fieldError.getCode(), fieldError.getDefaultMessage());
+                        assert fieldError.getDefaultMessage() != null;
+                        bindingResult.rejectValue("configurator." + fieldError.getField(), Objects.requireNonNull(fieldError.getCode()), fieldError.getDefaultMessage());
                     } else {
                         bindingResult.addError(new ObjectError("configurator", error.getDefaultMessage()));
                     }
@@ -363,7 +359,7 @@ public class AdminProductController {
 
         // Načtení existujícího produktu z DB (včetně asociací, pokud je potřeba je zachovat/aktualizovat)
         Optional<Product> existingProductOpt = productService.getProductById(id); //
-        if (!existingProductOpt.isPresent()) {
+        if (existingProductOpt.isEmpty()) {
             log.error("Product with ID {} not found for update.", id);
             redirectAttributes.addFlashAttribute("errorMessage", "Produkt s ID " + id + " nenalezen pro úpravu.");
             return "redirect:/admin/products";
@@ -476,7 +472,7 @@ public class AdminProductController {
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .collect(Collectors.toSet());
-            if (rates.isEmpty() && taxRateIds.size() > 0) {
+            if (rates.isEmpty() && !taxRateIds.isEmpty()) {
                 // Pokud jsme měli IDčka, ale žádné jsme nenašli, je to chyba
                 log.error("Nebyly nalezeny žádné platné TaxRates pro poskytnutá ID: {}", taxRateIds);
                 throw new IllegalArgumentException("Produkt musí mít přiřazenu alespoň jednu platnou daňovou sazbu (zadaná ID nebyla nalezena).");

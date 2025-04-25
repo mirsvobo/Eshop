@@ -57,8 +57,7 @@ public class CartController implements PriceConstants {
     private GlazeRepository glazeRepository;
     @Autowired
     private RoofColorRepository roofColorRepository;
-    @Autowired
-    private TaxRateService taxRateService;
+    
     @Autowired
     private CurrencyService currencyService;
     @Autowired

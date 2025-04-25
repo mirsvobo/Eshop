@@ -34,12 +34,11 @@ public class AdminCustomerController {
     private static final Logger log = LoggerFactory.getLogger(AdminCustomerController.class);
 
     private final CustomerService customerService;
-    private final OrderService orderService; // Může se hodit pro budoucí rozšíření
 
     // Konstruktor pro injektáž závislostí
     public AdminCustomerController(CustomerService customerService, OrderService orderService) {
         this.customerService = customerService;
-        this.orderService = orderService;
+        // Může se hodit pro budoucí rozšíření
     }
 
     @ModelAttribute("currentUri")

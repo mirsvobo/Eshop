@@ -116,8 +116,6 @@ public class AdminCouponController {
                     .orElseThrow(() -> new EntityNotFoundException("Kupón s ID " + id + " nenalezen."));
             model.addAttribute("coupon", coupon);
             model.addAttribute("pageTitle", "Upravit kupón: " + coupon.getCode());
-            // Odstraněno: model.addAttribute("isPercentage", coupon.isPercentage());
-            // Odstraněno: model.addAttribute("freeShipping", coupon.isFreeShipping());
             return "admin/coupon-form";
         } catch (EntityNotFoundException e) {
             log.warn("Coupon with ID {} not found for editing.", id);

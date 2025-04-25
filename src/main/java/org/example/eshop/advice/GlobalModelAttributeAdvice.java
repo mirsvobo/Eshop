@@ -18,10 +18,6 @@ public class GlobalModelAttributeAdvice {
     @Autowired
     private CurrencyService currencyService;
 
-    // Pokud používáš i Cart, odkomentuj:
-    // @Autowired
-    // private Cart cart;
-
     /**
      * Původní metoda pro přidání měny.
      * Přidává aktuálně zvolenou měnu do modelu pod názvem "currentGlobalCurrency".
@@ -40,38 +36,4 @@ public class GlobalModelAttributeAdvice {
         logger.info(">>> [GlobalModelAttributeAdvice] Opouštím addGlobalCurrencyToModel. Vracím měnu: {}", selectedCurrency); // <-- NOVÝ LOG
         return selectedCurrency;
     }
-
-    /*
-    // Pokud bys potřeboval přidávat i další atributy (např. počet položek v košíku)
-    @ModelAttribute // Bez explicitního názvu - přidá všechny atributy z metody
-    public void addOtherGlobalAttributes(Model model, HttpServletRequest request) {
-         logger.info(">>> [GlobalModelAttributeAdvice] Vstupuji do addOtherGlobalAttributes pro request: {}", request.getRequestURI());
-         try {
-            // Příklad pro počet položek v košíku (pokud máš Cart bean)
-            // if (cart != null) {
-            //     int itemCount = cart.getItemCount();
-            //     model.addAttribute("cartItemCount", itemCount);
-            //     logger.info("[GlobalModelAttributeAdvice] Přidán cartItemCount: {}", itemCount);
-            // } else {
-            //     logger.warn("[GlobalModelAttributeAdvice] Cart bean není dostupná, nelze přidat cartItemCount.");
-            //     model.addAttribute("cartItemCount", 0);
-            // }
-
-            // Příklad pro dostupné měny
-            List<String> availableCurrencies = Collections.emptyList();
-             try {
-                 availableCurrencies = currencyService.getAvailableCurrencies(); // Pokud existuje tato metoda
-                 model.addAttribute("availableCurrencies", availableCurrencies);
-                 logger.info("[GlobalModelAttributeAdvice] Přidány availableCurrencies: {}", availableCurrencies);
-             } catch (Exception e) {
-                 logger.error("!!! [GlobalModelAttributeAdvice] Chyba při získávání dostupných měn: {} !!!", e.getMessage(), e);
-                 model.addAttribute("availableCurrencies", List.of("CZK", "EUR")); // Fallback
-             }
-
-         } catch (Exception e) {
-             logger.error("!!! [GlobalModelAttributeAdvice] Chyba v addOtherGlobalAttributes: {} !!!", e.getMessage(), e);
-         }
-         logger.info(">>> [GlobalModelAttributeAdvice] Opouštím addOtherGlobalAttributes.");
-    }
-    */
 }
