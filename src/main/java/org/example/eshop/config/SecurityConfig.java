@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-// *** PŘIDAT IMPORT ***
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,7 +50,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()
-                        .requestMatchers(HttpMethod.POST,"/pokladna/calculate-shipping").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/pokladna/calculate-shipping").permitAll()
 
                         .requestMatchers(
                                 new AntPathRequestMatcher("/muj-ucet/**")

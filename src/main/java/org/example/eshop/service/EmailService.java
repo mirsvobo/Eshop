@@ -2,10 +2,10 @@ package org.example.eshop.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.example.eshop.model.EmailTemplateConfig; // Import nové entity
+import org.example.eshop.model.EmailTemplateConfig;
 import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderState;
-import org.example.eshop.repository.EmailTemplateConfigRepository; // Import nového repo
+import org.example.eshop.repository.EmailTemplateConfigRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,15 +14,15 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.exceptions.TemplateProcessingException;
-import org.springframework.util.StringUtils;
 
-import java.io.UnsupportedEncodingException; // Pro setFrom
+import java.io.UnsupportedEncodingException;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional; // Přidán import
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 // Lombok Getter/Setter již není potřeba pro vnořenou třídu
 
@@ -30,22 +30,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
-
-    @Autowired private JavaMailSender javaMailSender;
-    @Autowired private TemplateEngine templateEngine;
-    // *** ÚPRAVA: Injektovat repozitář pro konfiguraci emailů ***
-    @Autowired private EmailTemplateConfigRepository emailTemplateConfigRepository;
-
-    @Value("${spring.mail.username}") private String mailFrom;
-    @Value("${eshop.name:Dřevníky Kolář}") private String shopName;
-    @Value("${eshop.url:http://localhost:8080}") private String shopUrl;
-    // TODO: Načíst email pro BCC z application.properties
-    // @Value("${eshop.admin.bccEmail:}") private String adminBccEmail;
-
     private final Locale defaultLocale = new Locale("cs", "CZ");
     // Cache pro konfiguraci emailů (klíč = stateCode.toUpperCase())
     private final Map<String, EmailTemplateConfig> configCache = new ConcurrentHashMap<>();
-
+    @Autowired
+    private JavaMailSender javaMailSender;
+    @Autowired
+    private TemplateEngine templateEngine;
+    // *** ÚPRAVA: Injektovat repozitář pro konfiguraci emailů ***
+    @Autowired
+    private EmailTemplateConfigRepository emailTemplateConfigRepository;
+    @Value("${spring.mail.username}")
+    private String mailFrom;
+    // TODO: Načíst email pro BCC z application.properties
+    // @Value("${eshop.admin.bccEmail:}") private String adminBccEmail;
+    @Value("${eshop.name:Dřevníky Kolář}")
+    private String shopName;
+    @Value("${eshop.url:http://localhost:8080}")
+    private String shopUrl;
 
     // --- Metody pro odeslání emailů (sendOrderConfirmationEmail, sendOrderStatusUpdateEmail) ---
     // ... (Metody zůstávají stejné, volají upravenou loadEmailConfigForState) ...
@@ -157,6 +159,7 @@ public class EmailService {
 
     /**
      * Načte konfiguraci emailu pro daný stav objednávky (z cache nebo DB).
+     *
      * @param stateCode Kód stavu objednávky (např. "SHIPPED").
      * @return Objekt s konfigurací emailu. Nikdy nevrací null.
      */

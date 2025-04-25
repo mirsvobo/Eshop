@@ -31,6 +31,7 @@ public class OrderItemService {
     /**
      * Vrátí všechny položky všech objednávek (používat opatrně, může být velmi mnoho dat).
      * Vhodné pro specifické reporty.
+     *
      * @return Seznam všech OrderItem.
      */
     @Transactional(readOnly = true)
@@ -41,6 +42,7 @@ public class OrderItemService {
 
     /**
      * Najde všechny položky pro konkrétní ID objednávky.
+     *
      * @param orderId ID objednávky.
      * @return Seznam položek dané objednávky.
      */
@@ -54,6 +56,7 @@ public class OrderItemService {
 
     /**
      * Najde položku objednávky podle jejího ID.
+     *
      * @param orderItemId ID položky.
      * @return Optional obsahující OrderItem, pokud existuje.
      */
@@ -71,6 +74,7 @@ public class OrderItemService {
      * Vytvoří novou položku objednávky.
      * VAROVÁNÍ: Nepoužívat přímo! Položky by měly být vytvářeny pouze přes OrderService.createOrder.
      * Tato metoda nezahrnuje žádné výpočty cen, daní, slev atd. a nenaváže správně součty v Order!
+     *
      * @param orderItem Objekt položky (musí mít nastavenou vazbu na Order).
      * @return Uložená položka.
      * @throws UnsupportedOperationException Vždy hodí výjimku, aby se zabránilo použití.
@@ -90,7 +94,8 @@ public class OrderItemService {
      * Aktualizuje položku objednávky.
      * VAROVÁNÍ: Používat extrémně opatrně! Může narušit konzistenci objednávky (ceny, součty).
      * Povoleno pouze pro úpravu polí, která nemají vliv na finance (např. interní poznámka).
-     * @param id ID položky k aktualizaci.
+     *
+     * @param id            ID položky k aktualizaci.
      * @param orderItemData Objekt s novými daty.
      * @return Optional s aktualizovanou položkou.
      * @throws UnsupportedOperationException Pokud se pokusí změnit kritická pole.
@@ -108,8 +113,7 @@ public class OrderItemService {
                     if (orderItemData.getCount() != null && !orderItemData.getCount().equals(existingItem.getCount()) ||
                             orderItemData.getUnitPriceWithoutTax() != null && orderItemData.getUnitPriceWithoutTax().compareTo(existingItem.getUnitPriceWithoutTax()) != 0 ||
                             // ... další kontroly pro ceny, daně, produkt, variantu ...
-                            orderItemData.getOrder() != null && !orderItemData.getOrder().getId().equals(existingItem.getOrder().getId()))
-                    {
+                            orderItemData.getOrder() != null && !orderItemData.getOrder().getId().equals(existingItem.getOrder().getId())) {
                         log.error("CRITICAL: Attempting unsafe direct update on critical fields of OrderItem ID: {}. Update blocked.", id);
                         throw new UnsupportedOperationException("Direct update of critical OrderItem fields (quantity, prices, product, order link, etc.) is not allowed via OrderItemService.");
                     }
@@ -126,6 +130,7 @@ public class OrderItemService {
      * Smaže položku objednávky.
      * VAROVÁNÍ: Extrémně nebezpečné! Naruší součty v objednávce a datovou integritu.
      * Tato operace by měla být zakázána. Položky by se měly maximálně označit jako stornované.
+     *
      * @param id ID položky ke smazání.
      * @throws UnsupportedOperationException Vždy hodí výjimku, aby se zabránilo použití.
      */

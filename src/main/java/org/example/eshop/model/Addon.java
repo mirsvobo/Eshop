@@ -1,10 +1,9 @@
 package org.example.eshop.model;
 
 import jakarta.persistence.*;
-// Odebrána anotace import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern; // For pricingType validation
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Cache;
@@ -62,7 +61,7 @@ public class Addon {
     private BigDecimal pricePerUnitEUR;
 
     // --- Other Fields ---
-    @Column(unique = true, length=100)
+    @Column(unique = true, length = 100)
     private String sku;
 
     @NotNull // Ensure active field is never null

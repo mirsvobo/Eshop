@@ -8,17 +8,16 @@ import org.example.eshop.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,8 +34,10 @@ public class CouponService {
     private static final Locale CZECH_LOCALE = Locale.forLanguageTag("cs-CZ");
     private static final Locale EURO_LOCALE = Locale.forLanguageTag("sk-SK");
 
-    @Autowired private CouponRepository couponRepository;
-    @Autowired private OrderRepository orderRepository;
+    @Autowired
+    private CouponRepository couponRepository;
+    @Autowired
+    private OrderRepository orderRepository;
 
     // --- Metody pro čtení ---
     @Transactional(readOnly = true)
@@ -44,7 +45,8 @@ public class CouponService {
         log.debug("Fetching coupon by ID: {}", id);
         return couponRepository.findById(id);
     }
-    @Cacheable(value = "couponByCode", key = "T(String).valueOf(#code).trim().toUpperCase()", unless="#result == null or !#result.isPresent()")
+
+    @Cacheable(value = "couponByCode", key = "T(String).valueOf(#code).trim().toUpperCase()", unless = "#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Coupon> findByCode(String code) {
         if (!StringUtils.hasText(code)) {
@@ -126,9 +128,8 @@ public class CouponService {
             log.warn("checkMinimumOrderValue called with null coupon or subtotal.");
             return false;
         }
-        BigDecimal minimumValue = EURO_CURRENCY.equals(currency)
-                ? coupon.getMinimumOrderValueCZK() // Zde byla chyba, mělo být EUR
-                : coupon.getMinimumOrderValueCZK();
+        // Zde byla chyba, mělo být EUR
+        BigDecimal minimumValue = coupon.getMinimumOrderValueCZK();
         // OPRAVA: Správné pole pro EUR
         minimumValue = EURO_CURRENCY.equals(currency)
                 ? coupon.getMinimumOrderValueEUR()
@@ -222,9 +223,10 @@ public class CouponService {
         log.info("Coupon '{}' (ID: {}) created successfully via CMS.", savedCoupon.getCode(), savedCoupon.getId());
         return savedCoupon;
     }
+
     @Caching(
-            put = { @CachePut(value = "couponByCode", key = "#result.code", condition="#result != null") },
-            evict = { @CacheEvict(value = "couponByCode", key = "#existingCoupon.code",
+            put = {@CachePut(value = "couponByCode", key = "#result.code", condition = "#result != null")},
+            evict = {@CacheEvict(value = "couponByCode", key = "#existingCoupon.code",
                     condition = "#existingCoupon != null and #couponData.code != null and !#existingCoupon.code.equalsIgnoreCase(#couponData.code.trim().toUpperCase())",
                     beforeInvocation = true)
             })
@@ -269,7 +271,8 @@ public class CouponService {
         log.info("Coupon '{}' (ID: {}) updated successfully via CMS.", updatedCoupon.getCode(), updatedCoupon.getId());
         return updatedCoupon;
     }
-    @CacheEvict(value = "couponByCode", key = "#couponToDeactivate.code", condition="#couponToDeactivate != null")
+
+    @CacheEvict(value = "couponByCode", key = "#couponToDeactivate.code", condition = "#couponToDeactivate != null")
     @Transactional
     public void deactivateCoupon(Long id) {
         log.warn("Attempting to deactivate coupon with ID: {} via CMS", id);
@@ -293,7 +296,8 @@ public class CouponService {
     private void validateCouponData(Coupon coupon, Long idBeingUpdated) {
         if (coupon == null) throw new IllegalArgumentException("Coupon data cannot be null.");
         if (!StringUtils.hasText(coupon.getCode())) throw new IllegalArgumentException("Kód kupónu nesmí být prázdný.");
-        if (!StringUtils.hasText(coupon.getName())) throw new IllegalArgumentException("Název kupónu nesmí být prázdný.");
+        if (!StringUtils.hasText(coupon.getName()))
+            throw new IllegalArgumentException("Název kupónu nesmí být prázdný.");
 
         coupon.setCode(coupon.getCode().trim().toUpperCase());
 
@@ -316,16 +320,20 @@ public class CouponService {
         else {
             boolean hasCzValue = coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) > 0;
             boolean hasEuValue = coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) > 0;
-            if (coupon.getValueCZK() != null && coupon.getValueCZK().signum() < 0) throw new IllegalArgumentException("Pevná částka CZK nesmí být záporná.");
-            if (coupon.getValueEUR() != null && coupon.getValueEUR().signum() < 0) throw new IllegalArgumentException("Pevná částka EUR nesmí být záporná.");
+            if (coupon.getValueCZK() != null && coupon.getValueCZK().signum() < 0)
+                throw new IllegalArgumentException("Pevná částka CZK nesmí být záporná.");
+            if (coupon.getValueEUR() != null && coupon.getValueEUR().signum() < 0)
+                throw new IllegalArgumentException("Pevná částka EUR nesmí být záporná.");
 
             if (hasCzValue || hasEuValue) {
                 hasValueDiscount = true;
             }
             // Normalizace - vynulovat procento a nepoužité fixní ceny
             coupon.setValue(null);
-            if (coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) <= 0) coupon.setValueCZK(null);
-            if (coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) <= 0) coupon.setValueEUR(null);
+            if (coupon.getValueCZK() != null && coupon.getValueCZK().compareTo(BigDecimal.ZERO) <= 0)
+                coupon.setValueCZK(null);
+            if (coupon.getValueEUR() != null && coupon.getValueEUR().compareTo(BigDecimal.ZERO) <= 0)
+                coupon.setValueEUR(null);
         }
 
         // 3. Kontrola kombinace hodnoty a freeShipping
@@ -344,21 +352,39 @@ public class CouponService {
 
 
         // Normalizace minimálních hodnot
-        if (coupon.getMinimumOrderValueCZK() != null) { if (coupon.getMinimumOrderValueCZK().signum() < 0) throw new IllegalArgumentException("Minimální hodnota CZK nesmí být záporná."); if (coupon.getMinimumOrderValueCZK().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueCZK(null); }
-        if (coupon.getMinimumOrderValueEUR() != null) { if (coupon.getMinimumOrderValueEUR().signum() < 0) throw new IllegalArgumentException("Minimální hodnota EUR nesmí být záporná."); if (coupon.getMinimumOrderValueEUR().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueEUR(null); }
+        if (coupon.getMinimumOrderValueCZK() != null) {
+            if (coupon.getMinimumOrderValueCZK().signum() < 0)
+                throw new IllegalArgumentException("Minimální hodnota CZK nesmí být záporná.");
+            if (coupon.getMinimumOrderValueCZK().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueCZK(null);
+        }
+        if (coupon.getMinimumOrderValueEUR() != null) {
+            if (coupon.getMinimumOrderValueEUR().signum() < 0)
+                throw new IllegalArgumentException("Minimální hodnota EUR nesmí být záporná.");
+            if (coupon.getMinimumOrderValueEUR().compareTo(BigDecimal.ZERO) == 0) coupon.setMinimumOrderValueEUR(null);
+        }
 
         // Validace datumů
-        if (coupon.getStartDate() != null && coupon.getExpirationDate() != null && coupon.getStartDate().isAfter(coupon.getExpirationDate())) { throw new IllegalArgumentException("Datum 'Platnost od' nesmí být po datu 'Platnost do'."); }
+        if (coupon.getStartDate() != null && coupon.getExpirationDate() != null && coupon.getStartDate().isAfter(coupon.getExpirationDate())) {
+            throw new IllegalArgumentException("Datum 'Platnost od' nesmí být po datu 'Platnost do'.");
+        }
 
         // Validace a normalizace limitů
-        if (coupon.getUsageLimit() != null) { if(coupon.getUsageLimit() < 0) throw new IllegalArgumentException("Celkový limit použití nesmí být záporný."); if(coupon.getUsageLimit() == 0) coupon.setUsageLimit(null); }
-        if (coupon.getUsageLimitPerCustomer() != null) { if (coupon.getUsageLimitPerCustomer() < 0) throw new IllegalArgumentException("Limit použití na zákazníka nesmí být záporný."); if(coupon.getUsageLimitPerCustomer() == 0) coupon.setUsageLimitPerCustomer(null); }
+        if (coupon.getUsageLimit() != null) {
+            if (coupon.getUsageLimit() < 0)
+                throw new IllegalArgumentException("Celkový limit použití nesmí být záporný.");
+            if (coupon.getUsageLimit() == 0) coupon.setUsageLimit(null);
+        }
+        if (coupon.getUsageLimitPerCustomer() != null) {
+            if (coupon.getUsageLimitPerCustomer() < 0)
+                throw new IllegalArgumentException("Limit použití na zákazníka nesmí být záporný.");
+            if (coupon.getUsageLimitPerCustomer() == 0) coupon.setUsageLimitPerCustomer(null);
+        }
 
         // Validace limitu vs. aktuální počet použití při UPDATE
         if (idBeingUpdated != null && coupon.getUsageLimit() != null) {
             couponRepository.findById(idBeingUpdated).ifPresent(existing -> {
                 if (coupon.getUsageLimit() < existing.getUsedTimes()) {
-                    throw new IllegalArgumentException("Celkový limit použití ("+coupon.getUsageLimit()+") nesmí být nižší než aktuální počet použití (" + existing.getUsedTimes() + ").");
+                    throw new IllegalArgumentException("Celkový limit použití (" + coupon.getUsageLimit() + ") nesmí být nižší než aktuální počet použití (" + existing.getUsedTimes() + ").");
                 }
             });
         }

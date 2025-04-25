@@ -23,7 +23,8 @@ public class Discount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Použít Long místo long
 
-    @Column(nullable = false) private String name;
+    @Column(nullable = false)
+    private String name;
     private String description;
 
     // Hodnota - POUZE pro procentuální slevu
@@ -39,16 +40,19 @@ public class Discount {
     @Column(nullable = false)
     private boolean isPercentage; // True = procenta, False = pevná částka
 
-    @Column(nullable = false) private LocalDateTime validFrom;
-    @Column(nullable = false) private LocalDateTime validTo;
+    @Column(nullable = false)
+    private LocalDateTime validFrom;
+    @Column(nullable = false)
+    private LocalDateTime validTo;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name="discount_products",
+            name = "discount_products",
             joinColumns = @JoinColumn(name = "discount_id"),
             inverseJoinColumns = @JoinColumn(name = "product_id")
     )
     private Set<Product> products;
 
-    @Column(nullable = false) private boolean active = true;
+    @Column(nullable = false)
+    private boolean active = true;
 }

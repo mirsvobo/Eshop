@@ -1,22 +1,22 @@
 package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
-import org.example.eshop.config.PriceConstants; // Import konstant
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.Discount;
 import org.example.eshop.model.Product;
 import org.example.eshop.repository.DiscountRepository;
 import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort; // Přidán import pro Sort
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils; // Přidán import pro StringUtils
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,8 +28,10 @@ public class DiscountService implements PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(DiscountService.class);
 
-    @Autowired private DiscountRepository discountRepository;
-    @Autowired private ProductRepository productRepository; // Pro načítání produktů
+    @Autowired
+    private DiscountRepository discountRepository;
+    @Autowired
+    private ProductRepository productRepository; // Pro načítání produktů
 
     @Cacheable("allDiscounts")
     @Transactional(readOnly = true)
@@ -38,7 +40,8 @@ public class DiscountService implements PriceConstants {
         // Můžeme přidat řazení, např. podle data vytvoření nebo názvu
         return discountRepository.findAll(Sort.by("name"));
     }
-    @Cacheable(value = "discountById", key = "#id", unless="#result == null or !#result.isPresent()")
+
+    @Cacheable(value = "discountById", key = "#id", unless = "#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Discount> getDiscountById(Long id) {
         log.debug("Fetching discount by ID with products using new repo method: {}", id);
@@ -74,7 +77,8 @@ public class DiscountService implements PriceConstants {
 
     /**
      * Aplikuje nejlepší dostupnou procentuální slevu na danou cenu.
-     * @param price Původní cena (bez DPH).
+     *
+     * @param price   Původní cena (bez DPH).
      * @param product Produkt, pro který hledáme slevy.
      * @return Cena po aplikaci nejlepší procentuální slevy, nebo původní cena.
      */
@@ -101,8 +105,9 @@ public class DiscountService implements PriceConstants {
 
     /**
      * Aplikuje nejlepší dostupnou slevu pevnou částkou pro danou měnu.
-     * @param price Cena před slevou.
-     * @param product Produkt.
+     *
+     * @param price    Cena před slevou.
+     * @param product  Produkt.
      * @param currency Měna ("CZK" nebo "EUR").
      * @return Cena po slevě.
      */
@@ -152,6 +157,7 @@ public class DiscountService implements PriceConstants {
         log.info("Discount {} created successfully with ID: {}", savedDiscount.getName(), savedDiscount.getId());
         return savedDiscount;
     }
+
     @Caching(evict = {
             @CacheEvict(value = "allDiscounts", allEntries = true),
             @CacheEvict(value = "discountById", key = "#id")
@@ -181,9 +187,7 @@ public class DiscountService implements PriceConstants {
 
             // Přidání nových produktů
             productsToAssign.forEach(product -> {
-                if (!existingDiscount.getProducts().contains(product)) {
-                    existingDiscount.getProducts().add(product);
-                }
+                existingDiscount.getProducts().add(product);
             });
 
             Discount updatedDiscount = discountRepository.save(existingDiscount);
@@ -191,6 +195,7 @@ public class DiscountService implements PriceConstants {
             return Optional.of(updatedDiscount); // Vrátíme Optional<Discount>
         });
     }
+
     @Caching(evict = {
             @CacheEvict(value = "allDiscounts", allEntries = true),
             @CacheEvict(value = "discountById", key = "#id")
@@ -213,14 +218,17 @@ public class DiscountService implements PriceConstants {
     // --- Pomocné metody ---
     private void validateDiscount(Discount discount) {
         if (discount == null) throw new IllegalArgumentException("Discount data cannot be null.");
-        if (!StringUtils.hasText(discount.getName())) throw new IllegalArgumentException("Discount name cannot be empty.");
+        if (!StringUtils.hasText(discount.getName()))
+            throw new IllegalArgumentException("Discount name cannot be empty.");
         validateDiscountDates(discount);
         validateDiscountValues(discount);
     }
 
     private void validateDiscountDates(Discount discount) {
-        if (discount.getValidFrom() == null || discount.getValidTo() == null) throw new IllegalArgumentException("Discount validity dates (From, To) cannot be null.");
-        if (discount.getValidTo().isBefore(discount.getValidFrom())) throw new IllegalArgumentException("'Valid To' date cannot be before 'Valid From' date.");
+        if (discount.getValidFrom() == null || discount.getValidTo() == null)
+            throw new IllegalArgumentException("Discount validity dates (From, To) cannot be null.");
+        if (discount.getValidTo().isBefore(discount.getValidFrom()))
+            throw new IllegalArgumentException("'Valid To' date cannot be before 'Valid From' date.");
     }
 
     private Set<Product> loadAndAssignProducts(Set<Long> productIds) {
@@ -251,8 +259,10 @@ public class DiscountService implements PriceConstants {
                 throw new IllegalArgumentException("Fixed discount must have a positive value for at least one currency (CZK or EUR).");
             }
             // Kontrola záporných hodnot
-            if (discount.getValueCZK() != null && discount.getValueCZK().signum() < 0) throw new IllegalArgumentException("Fixed amount CZK cannot be negative.");
-            if (discount.getValueEUR() != null && discount.getValueEUR().signum() < 0) throw new IllegalArgumentException("Fixed amount EUR cannot be negative.");
+            if (discount.getValueCZK() != null && discount.getValueCZK().signum() < 0)
+                throw new IllegalArgumentException("Fixed amount CZK cannot be negative.");
+            if (discount.getValueEUR() != null && discount.getValueEUR().signum() < 0)
+                throw new IllegalArgumentException("Fixed amount EUR cannot be negative.");
 
             // Normalizace - vynulovat procento a nepoužité/nulové fixní ceny
             discount.setValue(null);

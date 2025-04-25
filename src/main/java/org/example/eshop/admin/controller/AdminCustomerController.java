@@ -7,7 +7,7 @@ import org.example.eshop.dto.AddressDto;
 import org.example.eshop.dto.ProfileUpdateDto;
 import org.example.eshop.model.Customer;
 import org.example.eshop.service.CustomerService;
-import org.example.eshop.service.OrderService; // Přidáno pro případné budoucí použití
+import org.example.eshop.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -16,11 +16,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // Přidáno pro viewCustomerDetail
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
-// import org.springframework.validation.annotation.Validated; // Není potřeba, @Valid stačí
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -102,7 +101,7 @@ public class AdminCustomerController {
                 currentSort = pageable.getSortOr(Sort.by(Sort.Direction.DESC, "id")).stream()
                         .map(order -> order.getProperty() + "," + order.getDirection())
                         .collect(Collectors.joining("&sort="));
-                if (!StringUtils.hasText(currentSort) || ",".equals(currentSort)){
+                if (!StringUtils.hasText(currentSort) || ",".equals(currentSort)) {
                     currentSort = "id,DESC"; // Default fallback
                 }
             }
@@ -328,15 +327,28 @@ public class AdminCustomerController {
     private AddressDto mapCustomerToAddressDto(Customer customer, CustomerService.AddressType type) {
         AddressDto dto = new AddressDto();
         if (type == CustomerService.AddressType.INVOICE) {
-            dto.setCompanyName(customer.getInvoiceCompanyName()); dto.setVatId(customer.getInvoiceVatId()); dto.setTaxId(customer.getInvoiceTaxId());
-            dto.setFirstName(customer.getInvoiceFirstName()); dto.setLastName(customer.getInvoiceLastName()); dto.setStreet(customer.getInvoiceStreet());
-            dto.setCity(customer.getInvoiceCity()); dto.setZipCode(customer.getInvoiceZipCode()); dto.setCountry(customer.getInvoiceCountry());
+            dto.setCompanyName(customer.getInvoiceCompanyName());
+            dto.setVatId(customer.getInvoiceVatId());
+            dto.setTaxId(customer.getInvoiceTaxId());
+            dto.setFirstName(customer.getInvoiceFirstName());
+            dto.setLastName(customer.getInvoiceLastName());
+            dto.setStreet(customer.getInvoiceStreet());
+            dto.setCity(customer.getInvoiceCity());
+            dto.setZipCode(customer.getInvoiceZipCode());
+            dto.setCountry(customer.getInvoiceCountry());
             dto.setPhone(customer.getPhone()); // Main phone for invoice DTO
         } else { // DELIVERY
-            dto.setCompanyName(customer.getDeliveryCompanyName()); dto.setFirstName(customer.getDeliveryFirstName()); dto.setLastName(customer.getDeliveryLastName());
-            dto.setStreet(customer.getDeliveryStreet()); dto.setCity(customer.getDeliveryCity()); dto.setZipCode(customer.getDeliveryZipCode());
-            dto.setCountry(customer.getDeliveryCountry()); dto.setPhone(customer.getDeliveryPhone());
-            if (!StringUtils.hasText(dto.getPhone())) { dto.setPhone(customer.getPhone()); } // Fallback to main phone
+            dto.setCompanyName(customer.getDeliveryCompanyName());
+            dto.setFirstName(customer.getDeliveryFirstName());
+            dto.setLastName(customer.getDeliveryLastName());
+            dto.setStreet(customer.getDeliveryStreet());
+            dto.setCity(customer.getDeliveryCity());
+            dto.setZipCode(customer.getDeliveryZipCode());
+            dto.setCountry(customer.getDeliveryCountry());
+            dto.setPhone(customer.getDeliveryPhone());
+            if (!StringUtils.hasText(dto.getPhone())) {
+                dto.setPhone(customer.getPhone());
+            } // Fallback to main phone
         }
         return dto;
     }

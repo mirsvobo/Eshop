@@ -2,25 +2,27 @@ package org.example.eshop.admin.controller;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid; // Použijeme @Valid pro základní validaci DTO, i když hlavní je v service
+import jakarta.validation.Valid;
 import org.example.eshop.model.Discount;
 import org.example.eshop.model.Product;
 import org.example.eshop.service.DiscountService;
-import org.example.eshop.service.ProductService; // Pro načtení produktů do formuláře
+import org.example.eshop.service.ProductService;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // Pro načtení produktů v edit
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -30,8 +32,28 @@ public class AdminDiscountController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDiscountController.class);
 
-    @Autowired private DiscountService discountService;
-    @Autowired private ProductService productService; // Pro načtení seznamu produktů
+    @Autowired
+    private DiscountService discountService;
+    @Autowired
+    private ProductService productService; // Pro načtení seznamu produktů
+
+    @NotNull
+    private static Optional<Discount> getDiscount(Object resultObject) {
+        Optional<Discount> updatedDiscountOpt = Optional.empty();
+
+        // Bezpečné rozbalení a přetypování
+        if (resultObject instanceof Optional<?> outerOptional && outerOptional.isPresent()) {
+            Object innerObject = outerOptional.get();
+            if (innerObject instanceof Optional<?> innerOptional && innerOptional.isPresent()) {
+                if (innerOptional.get() instanceof Discount discount) { // Použití pattern matching pro cast
+                    updatedDiscountOpt = Optional.of(discount);
+                }
+            } else if (innerObject instanceof Discount discount) { // Pro případ, že by updateDiscount vracel jen Optional<Discount>
+                updatedDiscountOpt = Optional.of(discount);
+            }
+        }
+        return updatedDiscountOpt;
+    }
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -116,8 +138,7 @@ public class AdminDiscountController {
             model.addAttribute("pageTitle", "Vytvořit novou slevu (Chyba)");
             loadAllProducts(model);
             return "admin/discount-form";
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Unexpected error creating discount '{}': {}", discount.getName(), e.getMessage(), e);
             model.addAttribute("errorMessage", "Při vytváření slevy nastala neočekávaná chyba: " + e.getMessage());
             model.addAttribute("pageTitle", "Vytvořit novou slevu (Chyba)");
@@ -152,7 +173,6 @@ public class AdminDiscountController {
             return "redirect:/admin/discounts";
         }
     }
-
 
     @PostMapping("/{id}")
     public String updateDiscount(@PathVariable Long id,
@@ -210,8 +230,7 @@ public class AdminDiscountController {
             loadAllProducts(model);
             model.addAttribute("selectedProductIds", productIds != null ? productIds : Collections.emptySet());
             return "admin/discount-form";
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Unexpected error updating discount ID {}: {}", id, e.getMessage(), e);
             model.addAttribute("pageTitle", "Upravit slevu (Chyba)");
             discountData.setId(id); // Zachovat ID
@@ -220,24 +239,6 @@ public class AdminDiscountController {
             model.addAttribute("errorMessage", "Při aktualizaci slevy nastala neočekávaná chyba: " + e.getMessage());
             return "admin/discount-form";
         }
-    }
-
-    @NotNull
-    private static Optional<Discount> getDiscount(Object resultObject) {
-        Optional<Discount> updatedDiscountOpt = Optional.empty();
-
-        // Bezpečné rozbalení a přetypování
-        if (resultObject instanceof Optional<?> outerOptional && outerOptional.isPresent()) {
-            Object innerObject = outerOptional.get();
-            if (innerObject instanceof Optional<?> innerOptional && innerOptional.isPresent()) {
-                if (innerOptional.get() instanceof Discount discount) { // Použití pattern matching pro cast
-                    updatedDiscountOpt = Optional.of(discount);
-                }
-            } else if (innerObject instanceof Discount discount) { // Pro případ, že by updateDiscount vracel jen Optional<Discount>
-                updatedDiscountOpt = Optional.of(discount);
-            }
-        }
-        return updatedDiscountOpt;
     }
 
     @PostMapping("/{id}/delete")

@@ -1,19 +1,12 @@
 package org.example.eshop.advice; // Balíček dle tvého kódu
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.service.CurrencyService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
-
-// Přidáno pro logování
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-// Přidáno pro @SessionScope beany (pokud používáš Cart) a HttpServletRequest
-import jakarta.servlet.http.HttpServletRequest; // Pro logování URL
-import org.example.eshop.service.Cart; // Pokud používáš Cart
-import java.util.Collections;
-import java.util.List;
 
 
 @ControllerAdvice

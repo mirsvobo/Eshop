@@ -1,10 +1,9 @@
 package org.example.eshop.service;
 
 import lombok.Getter;
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.CartItem;
 import org.example.eshop.model.Coupon;
-import org.example.eshop.config.PriceConstants; // Ensure this is imported
-import org.example.eshop.model.TaxRate; // Import TaxRate if needed, otherwise use BigDecimal for rate
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.ScopedProxyMode;
@@ -13,9 +12,7 @@ import org.springframework.web.context.annotation.SessionScope;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @SessionScope(proxyMode = ScopedProxyMode.TARGET_CLASS)
@@ -56,6 +53,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
             log.debug("Cart items map after addItem (hash: {}): {}", this.hashCode(), items);
         }
     }
+
     public void updateQuantity(String cartItemId, int quantity) {
         log.debug("updateQuantity called for cart hash: {}. Item ID: {}, New Quantity: {}", this.hashCode(), cartItemId, quantity);
         CartItem item = items.get(cartItemId);
@@ -74,31 +72,38 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
             log.debug("Cart items map after updateQuantity (hash: {}): {}", this.hashCode(), items);
         }
     }
+
     public List<CartItem> getItemsList() {
         log.trace("getItemsList called for cart hash: {}. Returning {} items.", this.hashCode(), items.size());
         return Collections.unmodifiableList(new ArrayList<>(items.values()));
     }
+
     public Map<String, CartItem> getItems() {
         return Collections.unmodifiableMap(items); // Return unmodifiable map
     }
+
     public int getItemCount() {
         log.trace("getItemCount called for cart hash: {}. Count: {}", this.hashCode(), items.size());
         return items.size();
     }
+
     public int getTotalQuantity() {
         return items.values().stream().mapToInt(CartItem::getQuantity).sum();
     }
+
     public void clearCart() {
         log.info("clearCart called for cart hash: {}. Clearing items and coupon.", this.hashCode());
         items.clear();
         appliedCoupon = null;
         appliedCouponCode = null;
     }
+
     public void applyCoupon(Coupon coupon, String code) {
         this.appliedCoupon = coupon;
         this.appliedCouponCode = code;
         log.info("Applied coupon code '{}' to cart hash: {}.", code, this.hashCode());
     }
+
     public void setAttemptedCouponCode(String code) {
         this.appliedCouponCode = code;
         if (this.appliedCoupon != null && (code == null || !code.equalsIgnoreCase(this.appliedCoupon.getCode()))) {
@@ -106,6 +111,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
             log.info("Removed previously applied valid coupon from cart hash: {} due to new attempt with code '{}'.", this.hashCode(), code);
         }
     }
+
     public void removeCoupon() {
         if (this.appliedCoupon != null || this.appliedCouponCode != null) {
             this.appliedCoupon = null;
@@ -113,6 +119,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
             log.info("Removed coupon from cart hash: {}.", this.hashCode());
         }
     }
+
     public boolean hasItems() {
         boolean empty = items.isEmpty();
         log.trace("hasItems called for cart hash: {}. Is empty: {}", this.hashCode(), empty);
@@ -125,6 +132,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
 
     /**
      * Calculates the subtotal of all items in the cart for the given currency (before VAT and discounts).
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Calculated subtotal.
      */
@@ -139,6 +147,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
     /**
      * Calculates the total discount amount based on the applied coupon and subtotal.
      * Uses the correct methods from the Coupon model (isPercentage, getValue, getValueCZK, getValueEUR).
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Discount amount, never null.
      */
@@ -181,6 +190,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
 
     /**
      * Calculates the total price excluding VAT, after applying discounts, but before shipping.
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Total price without VAT, after discount. Never null.
      */
@@ -193,6 +203,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
     /**
      * Calculates the total VAT amount for all items in the cart.
      * Includes DEBUG logging.
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Total VAT amount for items, never null.
      */
@@ -211,6 +222,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
     /**
      * Calculates the breakdown of VAT amounts per tax rate for all items in the cart.
      * Includes DEBUG logging.
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Map where key is the TaxRate percentage (BigDecimal) and value is the total VAT amount (BigDecimal) for that rate. Sorted by rate.
      */
@@ -264,6 +276,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
     /**
      * Calculates the total price of items including VAT and after discount, but BEFORE shipping.
      * Formula: (Subtotal - Discount) + Total VAT
+     *
      * @param currency Currency code ("CZK" or "EUR").
      * @return Total price before shipping, never null.
      */
@@ -280,6 +293,7 @@ public class Cart implements Serializable, PriceConstants { // Implement PriceCo
         log.trace("DEBUG_VAT (Cart {}): Calculated TotalPriceBeforeShipping = {}", this.hashCode(), finalTotal);
         return finalTotal;
     }
+
     // Metoda z Cart.java
     public void removeItem(String cartItemId) {
         log.debug("removeItem called for cart hash: {}. Item ID: {}", this.hashCode(), cartItemId);

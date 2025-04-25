@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable; // <-- PŘIDAT IMPORT
+import java.io.Serializable;
 
 /**
  * DTO pro doplněk vybraný k položce objednávky.
@@ -27,7 +27,8 @@ public class AddonDto implements Serializable { // <-- PŘIDAT IMPLEMENTS
     private String addonName; // Název doplňku pro zobrazení v košíku
 
     // Konstruktory, pokud by byly potřeba
-    public AddonDto() {}
+    public AddonDto() {
+    }
 
     public AddonDto(Long addonId, int quantity) {
         this.addonId = addonId;

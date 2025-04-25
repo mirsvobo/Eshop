@@ -3,8 +3,9 @@ package org.example.eshop.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
-import java.util.Map; // <-- Přidat import pro Map
+import java.util.Map;
 
 /**
  * DTO pro odpověď AJAXového výpočtu dopravy.

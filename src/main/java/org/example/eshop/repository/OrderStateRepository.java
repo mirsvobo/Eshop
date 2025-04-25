@@ -4,14 +4,15 @@ import org.example.eshop.model.OrderState;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List; // Import List
-import java.util.Optional; // Import Optional
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderStateRepository extends JpaRepository<OrderState, Long> {
 
     /**
      * Najde stav objednávky podle jeho kódu (bez ohledu na velikost písmen).
+     *
      * @param code Kód stavu (např. "NEW", "SHIPPED").
      * @return Optional obsahující OrderState, pokud existuje.
      */
@@ -19,6 +20,7 @@ public interface OrderStateRepository extends JpaRepository<OrderState, Long> {
 
     /**
      * Vrátí všechny stavy seřazené podle pole displayOrder.
+     *
      * @return Seřazený seznam stavů.
      */
     List<OrderState> findAllByOrderByDisplayOrderAsc();

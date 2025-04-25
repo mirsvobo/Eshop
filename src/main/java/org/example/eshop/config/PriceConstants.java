@@ -8,13 +8,19 @@ import java.math.RoundingMode;
  */
 public interface PriceConstants {
 
-    /** Počet desetinných míst pro finální ceny a zobrazení (typicky 2). */
+    /**
+     * Počet desetinných míst pro finální ceny a zobrazení (typicky 2).
+     */
     int PRICE_SCALE = 2;
 
-    /** Počet desetinných míst pro mezivýpočty (vyšší přesnost). */
+    /**
+     * Počet desetinných míst pro mezivýpočty (vyšší přesnost).
+     */
     int CALCULATION_SCALE = 4;
 
-    /** Režim zaokrouhlování používaný v aplikaci. */
+    /**
+     * Režim zaokrouhlování používaný v aplikaci.
+     */
     RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
 
     // Zde mohou být další sdílené konstanty, např. kódy měn

@@ -25,6 +25,7 @@ public class CurrencyService implements Serializable {
 
     /**
      * Nastaví vybranou měnu, pokud je povolena.
+     *
      * @param currency Kód měny ("CZK" nebo "EUR").
      */
     public void setSelectedCurrency(String currency) {

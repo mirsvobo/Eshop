@@ -28,10 +28,10 @@ public class FileStorageService {
     /**
      * Uloží nahraný soubor do specifického podadresáře a vrátí relativní URL.
      *
-     * @param file MultipartFile k uložení.
+     * @param file         MultipartFile k uložení.
      * @param subDirectory Podadresář v rámci uploadDir (např. "products", "categories").
      * @return Relativní URL k uloženému souboru (např. "/uploads/products/xyz.jpg").
-     * @throws IOException Pokud nastane chyba při ukládání.
+     * @throws IOException              Pokud nastane chyba při ukládání.
      * @throws IllegalArgumentException Pokud soubor nebo podadresář nejsou platné.
      */
     public String storeFile(MultipartFile file, String subDirectory) throws IOException {

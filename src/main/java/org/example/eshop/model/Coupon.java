@@ -21,8 +21,10 @@ public class Coupon {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50) private String code;
-    @Column(nullable = false) private String name;
+    @Column(nullable = false, unique = true, length = 50)
+    private String code;
+    @Column(nullable = false)
+    private String name;
     private String description;
 
     // Hodnota - POUZE pro procentuální slevu
@@ -52,17 +54,20 @@ public class Coupon {
 
     private Integer usageLimit;
     private Integer usageLimitPerCustomer;
-    @Column(nullable = false) private Integer usedTimes = 0;
+    @Column(nullable = false)
+    private Integer usedTimes = 0;
 
     @Column(precision = 10, scale = 2)
     private BigDecimal minimumOrderValueCZK;
     @Column(precision = 10, scale = 2)
     private BigDecimal minimumOrderValueEUR;
 
-    @Column(nullable = false) private boolean active = true;
+    @Column(nullable = false)
+    private boolean active = true;
 
     /**
      * Pomocná metoda pro logiku "jen doprava zdarma".
+     *
      * @return true pokud je kupón jen na dopravu zdarma.
      */
     @Transient // Nebude se ukládat do DB

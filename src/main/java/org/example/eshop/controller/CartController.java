@@ -4,17 +4,18 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.example.eshop.admin.service.AddonsService;
+import org.example.eshop.config.PriceConstants;
+import org.example.eshop.dto.AddonDto;
+import org.example.eshop.dto.CartItemDto;
+import org.example.eshop.dto.CustomPriceRequestDto;
+import org.example.eshop.dto.CustomPriceResponseDto;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.DesignRepository;
 import org.example.eshop.repository.GlazeRepository;
 import org.example.eshop.repository.RoofColorRepository;
 import org.example.eshop.repository.TaxRateRepository;
 import org.example.eshop.service.*;
-import org.example.eshop.config.PriceConstants;
-import org.example.eshop.dto.AddonDto;
-import org.example.eshop.dto.CartItemDto;
-import org.example.eshop.dto.CustomPriceRequestDto;
-import org.example.eshop.dto.CustomPriceResponseDto;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode; // Import pro RoundingMode
 import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,17 +41,28 @@ public class CartController implements PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(CartController.class);
 
-    @Autowired private Cart sessionCart; // Session-scoped cart bean
-    @Autowired private ProductService productService;
-    @Autowired private AddonsService addonsService; // Použito pro načtení addonů podle ID
-    @Autowired private CouponService couponService;
-    @Autowired private CustomerService customerService;
-    @Autowired private DesignRepository designRepository;
-    @Autowired private GlazeRepository glazeRepository;
-    @Autowired private RoofColorRepository roofColorRepository;
-    @Autowired private TaxRateService taxRateService;
-    @Autowired private CurrencyService currencyService;
-    @Autowired private TaxRateRepository taxRateRepository; // Použito pro načtení TaxRate
+    @Autowired
+    private Cart sessionCart; // Session-scoped cart bean
+    @Autowired
+    private ProductService productService;
+    @Autowired
+    private AddonsService addonsService; // Použito pro načtení addonů podle ID
+    @Autowired
+    private CouponService couponService;
+    @Autowired
+    private CustomerService customerService;
+    @Autowired
+    private DesignRepository designRepository;
+    @Autowired
+    private GlazeRepository glazeRepository;
+    @Autowired
+    private RoofColorRepository roofColorRepository;
+    @Autowired
+    private TaxRateService taxRateService;
+    @Autowired
+    private CurrencyService currencyService;
+    @Autowired
+    private TaxRateRepository taxRateRepository; // Použito pro načtení TaxRate
 
     // --------------------------------------------------------------------
     // View Cart Method (bez změny)
@@ -59,7 +70,9 @@ public class CartController implements PriceConstants {
     @GetMapping
     public String viewCart(Model model, Principal principal) {
         log.info("--- viewCart START --- Cart instance hash: {}", this.sessionCart.hashCode());
-        if (log.isDebugEnabled()) { log.debug("Cart items before display: {}", this.sessionCart.getItems()); }
+        if (log.isDebugEnabled()) {
+            log.debug("Cart items before display: {}", this.sessionCart.getItems());
+        }
         log.debug("Displaying cart page. Cart has {} items.", this.sessionCart.getItemCount());
         model.addAttribute("cart", this.sessionCart);
 
@@ -79,21 +92,40 @@ public class CartController implements PriceConstants {
                 Customer customer = (principal != null) ? customerService.getCustomerByEmail(principal.getName()).orElse(null) : null;
                 Coupon currentCoupon = this.sessionCart.getAppliedCoupon();
                 boolean stillValid = couponService.isCouponGenerallyValid(currentCoupon) && couponService.checkMinimumOrderValue(currentCoupon, subtotal, currentCurrency) && couponService.checkCustomerUsageLimit(customer, currentCoupon);
-                if (stillValid) { validatedCoupon = currentCoupon; if (validatedCoupon.isFreeShipping()) { model.addAttribute("freeShippingApplied", true); log.debug("Free shipping applied by coupon '{}'", validatedCoupon.getCode()); } }
-                else { log.warn("Previously applied coupon '{}' is no longer valid. Removing.", currentCoupon.getCode()); this.sessionCart.removeCoupon(); model.addAttribute("couponMessage", "Dříve použitý kupón '" + currentCoupon.getCode() + "' již není platný."); }
+                if (stillValid) {
+                    validatedCoupon = currentCoupon;
+                    if (validatedCoupon.isFreeShipping()) {
+                        model.addAttribute("freeShippingApplied", true);
+                        log.debug("Free shipping applied by coupon '{}'", validatedCoupon.getCode());
+                    }
+                } else {
+                    log.warn("Previously applied coupon '{}' is no longer valid. Removing.", currentCoupon.getCode());
+                    this.sessionCart.removeCoupon();
+                    model.addAttribute("couponMessage", "Dříve použitý kupón '" + currentCoupon.getCode() + "' již není platný.");
+                }
             }
-            model.addAttribute("validatedCoupon", validatedCoupon); model.addAttribute("couponDiscountAmount", couponDiscountAmount);
+            model.addAttribute("validatedCoupon", validatedCoupon);
+            model.addAttribute("couponDiscountAmount", couponDiscountAmount);
             log.debug("Validated coupon: {}, Discount amount ({}): {}", (validatedCoupon != null ? validatedCoupon.getCode() : "None"), currentCurrency, couponDiscountAmount);
-            BigDecimal totalVat = this.sessionCart.calculateTotalVatAmount(currentCurrency); Map<BigDecimal, BigDecimal> vatBreakdown = this.sessionCart.calculateVatBreakdown(currentCurrency);
-            model.addAttribute("totalVat", totalVat); model.addAttribute("vatBreakdown", vatBreakdown);
-            log.debug("Total VAT ({}): {}", currentCurrency, totalVat); log.debug("VAT Breakdown ({}): {}", currentCurrency, vatBreakdown);
-            BigDecimal totalPriceBeforeShipping = this.sessionCart.calculateTotalPriceBeforeShipping(currentCurrency); model.addAttribute("totalPriceBeforeShipping", totalPriceBeforeShipping);
+            BigDecimal totalVat = this.sessionCart.calculateTotalVatAmount(currentCurrency);
+            Map<BigDecimal, BigDecimal> vatBreakdown = this.sessionCart.calculateVatBreakdown(currentCurrency);
+            model.addAttribute("totalVat", totalVat);
+            model.addAttribute("vatBreakdown", vatBreakdown);
+            log.debug("Total VAT ({}): {}", currentCurrency, totalVat);
+            log.debug("VAT Breakdown ({}): {}", currentCurrency, vatBreakdown);
+            BigDecimal totalPriceBeforeShipping = this.sessionCart.calculateTotalPriceBeforeShipping(currentCurrency);
+            model.addAttribute("totalPriceBeforeShipping", totalPriceBeforeShipping);
             log.debug("Total Price Before Shipping ({}): {}", currentCurrency, totalPriceBeforeShipping);
-            BigDecimal totalPriceWithoutTaxAfterDiscount = this.sessionCart.calculateTotalPriceWithoutTaxAfterDiscount(currentCurrency); model.addAttribute("totalPriceWithoutTaxAfterDiscount", totalPriceWithoutTaxAfterDiscount);
+            BigDecimal totalPriceWithoutTaxAfterDiscount = this.sessionCart.calculateTotalPriceWithoutTaxAfterDiscount(currentCurrency);
+            model.addAttribute("totalPriceWithoutTaxAfterDiscount", totalPriceWithoutTaxAfterDiscount);
             log.debug("Total Price Without Tax After Discount ({}): {}", currentCurrency, totalPriceWithoutTaxAfterDiscount);
         } else {
-            model.addAttribute("subtotal", BigDecimal.ZERO); model.addAttribute("couponDiscountAmount", BigDecimal.ZERO); model.addAttribute("validatedCoupon", null);
-            model.addAttribute("totalVat", BigDecimal.ZERO); model.addAttribute("vatBreakdown", Collections.emptyMap()); model.addAttribute("totalPriceBeforeShipping", BigDecimal.ZERO);
+            model.addAttribute("subtotal", BigDecimal.ZERO);
+            model.addAttribute("couponDiscountAmount", BigDecimal.ZERO);
+            model.addAttribute("validatedCoupon", null);
+            model.addAttribute("totalVat", BigDecimal.ZERO);
+            model.addAttribute("vatBreakdown", Collections.emptyMap());
+            model.addAttribute("totalPriceBeforeShipping", BigDecimal.ZERO);
             model.addAttribute("totalPriceWithoutTaxAfterDiscount", BigDecimal.ZERO);
         }
         log.info("--- viewCart END --- Model attributes set for cart.");
@@ -142,11 +174,15 @@ public class CartController implements PriceConstants {
             Product product = productService.getProductById(cartItemDto.getProductId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produkt nenalezen: " + cartItemDto.getProductId()));
             if (productSlugForRedirect == null) productSlugForRedirect = product.getSlug();
-            if (!product.isActive()) { /* ... */ return "redirect:/produkt/" + productSlugForRedirect; }
+            if (!product.isActive()) { /* ... */
+                return "redirect:/produkt/" + productSlugForRedirect;
+            }
             TaxRate selectedTaxRate = taxRateRepository.findById(cartItemDto.getSelectedTaxRateId())
                     .orElseThrow(() -> new EntityNotFoundException("Daňová sazba nenalezena: " + cartItemDto.getSelectedTaxRateId()));
             Set<TaxRate> availableRates = product.getAvailableTaxRates();
-            if (availableRates == null || !availableRates.contains(selectedTaxRate)) { /* ... */ return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty"; }
+            if (availableRates == null || !availableRates.contains(selectedTaxRate)) { /* ... */
+                return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty";
+            }
             Design selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId())
                     .orElseThrow(() -> new EntityNotFoundException("Design nenalezen: " + cartItemDto.getSelectedDesignId()));
             Glaze selectedGlaze = glazeRepository.findById(cartItemDto.getSelectedGlazeId())
@@ -168,10 +204,14 @@ public class CartController implements PriceConstants {
             // ===============================================
 
             // Uložení ostatních dat (beze změny)
-            cartItem.setSelectedDesignId(selectedDesign.getId()); cartItem.setSelectedDesignName(selectedDesign.getName());
-            cartItem.setSelectedGlazeId(selectedGlaze.getId()); cartItem.setSelectedGlazeName(selectedGlaze.getName());
-            cartItem.setSelectedRoofColorId(selectedRoofColor.getId()); cartItem.setSelectedRoofColorName(selectedRoofColor.getName());
-            cartItem.setSelectedTaxRateId(selectedTaxRate.getId()); cartItem.setSelectedTaxRateValue(selectedTaxRate.getRate());
+            cartItem.setSelectedDesignId(selectedDesign.getId());
+            cartItem.setSelectedDesignName(selectedDesign.getName());
+            cartItem.setSelectedGlazeId(selectedGlaze.getId());
+            cartItem.setSelectedGlazeName(selectedGlaze.getName());
+            cartItem.setSelectedRoofColorId(selectedRoofColor.getId());
+            cartItem.setSelectedRoofColorName(selectedRoofColor.getName());
+            cartItem.setSelectedTaxRateId(selectedTaxRate.getId());
+            cartItem.setSelectedTaxRateValue(selectedTaxRate.getRate());
             cartItem.setSelectedIsReverseCharge(selectedTaxRate.isReverseCharge());
             log.debug("Applied Tax Rate {}% (RC: {})", selectedTaxRate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2), selectedTaxRate.isReverseCharge());
 
@@ -184,18 +224,27 @@ public class CartController implements PriceConstants {
             if (cartItem.isCustom()) {
                 log.info("Processing CUSTOM product path for product ID: {}", product.getId());
                 // ... (zpracování custom produktu - kód zůstává stejný, používá cartItemDto pro addony a rozměry) ...
-                if (product.getConfigurator() == null) { throw new IllegalStateException("Produkt '" + product.getName() + "' je konfigurovatelný, ale chybí data konfigurátoru."); }
+                if (product.getConfigurator() == null) {
+                    throw new IllegalStateException("Produkt '" + product.getName() + "' je konfigurovatelný, ale chybí data konfigurátoru.");
+                }
                 Map<String, BigDecimal> dimensionsMap = cartItemDto.getCustomDimensions();
-                if (dimensionsMap == null || dimensionsMap.get("length") == null || dimensionsMap.get("width") == null || dimensionsMap.get("height") == null) { throw new IllegalArgumentException("Chybí kompletní rozměry v mapě customDimensions."); }
-                BigDecimal lengthCm = dimensionsMap.get("length"); BigDecimal widthCm = dimensionsMap.get("width"); BigDecimal heightCm = dimensionsMap.get("height");
-                CustomPriceRequestDto priceRequest = new CustomPriceRequestDto();
-                priceRequest.setProductId(product.getId()); priceRequest.setCustomDimensions(dimensionsMap);
-                priceRequest.setSelectedDesignId(cartItemDto.getSelectedDesignId()); priceRequest.setSelectedGlazeId(cartItemDto.getSelectedGlazeId()); priceRequest.setSelectedRoofColorId(cartItemDto.getSelectedRoofColorId());
-                priceRequest.setSelectedAddonIds(cartItemDto.getSelectedAddonIds() != null ? cartItemDto.getSelectedAddonIds() : Collections.emptyList());
+                if (dimensionsMap == null || dimensionsMap.get("length") == null || dimensionsMap.get("width") == null || dimensionsMap.get("height") == null) {
+                    throw new IllegalArgumentException("Chybí kompletní rozměry v mapě customDimensions.");
+                }
+                BigDecimal lengthCm = dimensionsMap.get("length");
+                BigDecimal widthCm = dimensionsMap.get("width");
+                BigDecimal heightCm = dimensionsMap.get("height");
+                CustomPriceRequestDto priceRequest = getCustomPriceRequestDto(cartItemDto, product, dimensionsMap);
                 CustomPriceResponseDto priceResponse = productService.calculateDetailedCustomPrice(priceRequest);
-                if (StringUtils.hasText(priceResponse.getErrorMessage())) { /* ... chyba ... */ return "redirect:/produkt/" + product.getSlug(); }
-                unitPriceCZK = priceResponse.getTotalPriceCZK(); unitPriceEUR = priceResponse.getTotalPriceEUR();
-                cartItem.setLength(lengthCm); cartItem.setWidth(widthCm); cartItem.setHeight(heightCm); cartItem.setCustomDimensions(dimensionsMap);
+                if (StringUtils.hasText(priceResponse.getErrorMessage())) { /* ... chyba ... */
+                    return "redirect:/produkt/" + product.getSlug();
+                }
+                unitPriceCZK = priceResponse.getTotalPriceCZK();
+                unitPriceEUR = priceResponse.getTotalPriceEUR();
+                cartItem.setLength(lengthCm);
+                cartItem.setWidth(widthCm);
+                cartItem.setHeight(heightCm);
+                cartItem.setCustomDimensions(dimensionsMap);
                 List<Long> selectedAddonIds = cartItemDto.getSelectedAddonIds();
                 if (selectedAddonIds != null && !selectedAddonIds.isEmpty()) {
                     Set<Long> addonIdSet = new HashSet<>(selectedAddonIds);
@@ -204,9 +253,14 @@ public class CartController implements PriceConstants {
                     for (Long addonId : selectedAddonIds) {
                         Addon dbAddon = validDbAddons.get(addonId);
                         if (dbAddon != null && allowedAddonIds.contains(addonId)) {
-                            AddonDto addonDto = new AddonDto(); addonDto.setAddonId(dbAddon.getId()); addonDto.setAddonName(dbAddon.getName()); addonDto.setQuantity(1);
+                            AddonDto addonDto = new AddonDto();
+                            addonDto.setAddonId(dbAddon.getId());
+                            addonDto.setAddonName(dbAddon.getName());
+                            addonDto.setQuantity(1);
                             processedAddons.add(addonDto);
-                        } else { log.warn("Requested addon ID {} is invalid/inactive/not allowed for product {}. Skipping.", addonId, product.getId()); }
+                        } else {
+                            log.warn("Requested addon ID {} is invalid/inactive/not allowed for product {}. Skipping.", addonId, product.getId());
+                        }
                     }
                 }
                 cartItem.setSelectedAddons(processedAddons);
@@ -215,16 +269,27 @@ public class CartController implements PriceConstants {
                 // ... (zpracování standard produktu - kód zůstává stejný) ...
                 BigDecimal baseUnitPriceCZK = product.getBasePriceCZK() != null ? product.getBasePriceCZK() : BigDecimal.ZERO;
                 BigDecimal baseUnitPriceEUR = product.getBasePriceEUR() != null ? product.getBasePriceEUR() : BigDecimal.ZERO;
-                BigDecimal attributeSurchargeCZK = BigDecimal.ZERO; BigDecimal attributeSurchargeEUR = BigDecimal.ZERO;
-                if (selectedDesign.getPriceSurchargeCZK() != null) attributeSurchargeCZK = attributeSurchargeCZK.add(selectedDesign.getPriceSurchargeCZK());
-                if (selectedGlaze.getPriceSurchargeCZK() != null) attributeSurchargeCZK = attributeSurchargeCZK.add(selectedGlaze.getPriceSurchargeCZK());
-                if (selectedRoofColor.getPriceSurchargeCZK() != null) attributeSurchargeCZK = attributeSurchargeCZK.add(selectedRoofColor.getPriceSurchargeCZK());
-                if (selectedDesign.getPriceSurchargeEUR() != null) attributeSurchargeEUR = attributeSurchargeEUR.add(selectedDesign.getPriceSurchargeEUR());
-                if (selectedGlaze.getPriceSurchargeEUR() != null) attributeSurchargeEUR = attributeSurchargeEUR.add(selectedGlaze.getPriceSurchargeEUR());
-                if (selectedRoofColor.getPriceSurchargeEUR() != null) attributeSurchargeEUR = attributeSurchargeEUR.add(selectedRoofColor.getPriceSurchargeEUR());
-                unitPriceCZK = baseUnitPriceCZK.add(attributeSurchargeCZK); unitPriceEUR = baseUnitPriceEUR.add(attributeSurchargeEUR);
-                cartItem.setLength(product.getLength()); cartItem.setWidth(product.getWidth()); cartItem.setHeight(product.getHeight());
-                cartItem.setSelectedAddons(Collections.emptyList()); cartItem.setCustomDimensions(null);
+                BigDecimal attributeSurchargeCZK = BigDecimal.ZERO;
+                BigDecimal attributeSurchargeEUR = BigDecimal.ZERO;
+                if (selectedDesign.getPriceSurchargeCZK() != null)
+                    attributeSurchargeCZK = attributeSurchargeCZK.add(selectedDesign.getPriceSurchargeCZK());
+                if (selectedGlaze.getPriceSurchargeCZK() != null)
+                    attributeSurchargeCZK = attributeSurchargeCZK.add(selectedGlaze.getPriceSurchargeCZK());
+                if (selectedRoofColor.getPriceSurchargeCZK() != null)
+                    attributeSurchargeCZK = attributeSurchargeCZK.add(selectedRoofColor.getPriceSurchargeCZK());
+                if (selectedDesign.getPriceSurchargeEUR() != null)
+                    attributeSurchargeEUR = attributeSurchargeEUR.add(selectedDesign.getPriceSurchargeEUR());
+                if (selectedGlaze.getPriceSurchargeEUR() != null)
+                    attributeSurchargeEUR = attributeSurchargeEUR.add(selectedGlaze.getPriceSurchargeEUR());
+                if (selectedRoofColor.getPriceSurchargeEUR() != null)
+                    attributeSurchargeEUR = attributeSurchargeEUR.add(selectedRoofColor.getPriceSurchargeEUR());
+                unitPriceCZK = baseUnitPriceCZK.add(attributeSurchargeCZK);
+                unitPriceEUR = baseUnitPriceEUR.add(attributeSurchargeEUR);
+                cartItem.setLength(product.getLength());
+                cartItem.setWidth(product.getWidth());
+                cartItem.setHeight(product.getHeight());
+                cartItem.setSelectedAddons(Collections.emptyList());
+                cartItem.setCustomDimensions(null);
             }
 
             // Nastavení finálních cen (beze změny)
@@ -274,6 +339,18 @@ public class CartController implements PriceConstants {
         return "redirect:/kosik";
     }
 
+    @NotNull
+    private static CustomPriceRequestDto getCustomPriceRequestDto(CartItemDto cartItemDto, Product product, Map<String, BigDecimal> dimensionsMap) {
+        CustomPriceRequestDto priceRequest = new CustomPriceRequestDto();
+        priceRequest.setProductId(product.getId());
+        priceRequest.setCustomDimensions(dimensionsMap);
+        priceRequest.setSelectedDesignId(cartItemDto.getSelectedDesignId());
+        priceRequest.setSelectedGlazeId(cartItemDto.getSelectedGlazeId());
+        priceRequest.setSelectedRoofColorId(cartItemDto.getSelectedRoofColorId());
+        priceRequest.setSelectedAddonIds(cartItemDto.getSelectedAddonIds() != null ? cartItemDto.getSelectedAddonIds() : Collections.emptyList());
+        return priceRequest;
+    }
+
     // Metoda buildVariantInfoString (beze změny)
     private String buildVariantInfoString(CartItem item, Design design, Glaze glaze, RoofColor roofColor) {
         // ... (kód metody zůstává stejný) ...
@@ -290,12 +367,24 @@ public class CartController implements PriceConstants {
                 variantSb.append("Rozměry (DxHxV): ").append(item.getLength().stripTrailingZeros().toPlainString()).append("x").append(item.getWidth().stripTrailingZeros().toPlainString()).append("x").append(item.getHeight().stripTrailingZeros().toPlainString()).append(" cm");
             }
         }
-        if (design != null) { if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | "); variantSb.append("Design: ").append(design.getName()); }
-        if (glaze != null) { if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | "); variantSb.append("Lazura: ").append(glaze.getName()); }
-        if (roofColor != null) { if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | "); variantSb.append("Střecha: ").append(roofColor.getName()); }
+        if (design != null) {
+            if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | ");
+            variantSb.append("Design: ").append(design.getName());
+        }
+        if (glaze != null) {
+            if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | ");
+            variantSb.append("Lazura: ").append(glaze.getName());
+        }
+        if (roofColor != null) {
+            if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | ");
+            variantSb.append("Střecha: ").append(roofColor.getName());
+        }
         if (item.isCustom() && !CollectionUtils.isEmpty(item.getSelectedAddons())) {
             String addonNames = item.getSelectedAddons().stream().map(AddonDto::getAddonName).filter(StringUtils::hasText).collect(Collectors.joining(", "));
-            if (StringUtils.hasText(addonNames)) { if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | "); variantSb.append("Doplňky: ").append(addonNames); }
+            if (StringUtils.hasText(addonNames)) {
+                if (!variantSb.isEmpty() && variantSb.charAt(variantSb.length() - 1) != ' ') variantSb.append(" | ");
+                variantSb.append("Doplňky: ").append(addonNames);
+            }
         }
         String result = variantSb.toString().trim();
         result = result.replaceAll("\\s+\\|\\s+", " | ");
@@ -337,18 +426,44 @@ public class CartController implements PriceConstants {
     @PostMapping("/pouzit-kupon")
     public String applyCoupon(@RequestParam String couponCode, RedirectAttributes ra, Principal principal) {
         log.info("--- applyCoupon START --- Cart instance hash: {}", this.sessionCart.hashCode());
-        if (!StringUtils.hasText(couponCode)) { ra.addFlashAttribute("couponMessage", "Zadejte prosím kód kupónu."); return "redirect:/kosik"; }
+        if (!StringUtils.hasText(couponCode)) {
+            ra.addFlashAttribute("couponMessage", "Zadejte prosím kód kupónu.");
+            return "redirect:/kosik";
+        }
         String trimmedCode = couponCode.trim();
         log.info("Attempting to apply coupon code: {}", trimmedCode);
         Optional<Coupon> couponOpt = couponService.findByCode(trimmedCode);
-        if (couponOpt.isEmpty()) { this.sessionCart.setAttemptedCouponCode(trimmedCode); ra.addFlashAttribute("couponMessage", "Kód kupónu '" + trimmedCode + "' neexistuje."); log.warn("Coupon code '{}' not found.", trimmedCode); return "redirect:/kosik"; }
+        if (couponOpt.isEmpty()) {
+            this.sessionCart.setAttemptedCouponCode(trimmedCode);
+            ra.addFlashAttribute("couponMessage", "Kód kupónu '" + trimmedCode + "' neexistuje.");
+            log.warn("Coupon code '{}' not found.", trimmedCode);
+            return "redirect:/kosik";
+        }
         Coupon coupon = couponOpt.get();
-        if (!couponService.isCouponGenerallyValid(coupon)) { this.sessionCart.setAttemptedCouponCode(trimmedCode); ra.addFlashAttribute("couponMessage", "Kupón '" + trimmedCode + "' není aktivní nebo vypršela jeho platnost."); log.warn("Coupon code '{}' is not generally valid.", trimmedCode); return "redirect:/kosik"; }
-        String currency = currencyService.getSelectedCurrency(); BigDecimal subtotal = this.sessionCart.calculateSubtotal(currency);
-        if (!couponService.checkMinimumOrderValue(coupon, subtotal, currency)) { this.sessionCart.setAttemptedCouponCode(trimmedCode); String minValStr = couponService.getMinimumValueString(coupon, currency); ra.addFlashAttribute("couponMessage", "Pro použití kupónu '" + trimmedCode + "' je nutná minimální hodnota objednávky " + minValStr + "."); log.warn("Coupon '{}' minimum order value not met.", trimmedCode); return "redirect:/kosik"; }
+        if (!couponService.isCouponGenerallyValid(coupon)) {
+            this.sessionCart.setAttemptedCouponCode(trimmedCode);
+            ra.addFlashAttribute("couponMessage", "Kupón '" + trimmedCode + "' není aktivní nebo vypršela jeho platnost.");
+            log.warn("Coupon code '{}' is not generally valid.", trimmedCode);
+            return "redirect:/kosik";
+        }
+        String currency = currencyService.getSelectedCurrency();
+        BigDecimal subtotal = this.sessionCart.calculateSubtotal(currency);
+        if (!couponService.checkMinimumOrderValue(coupon, subtotal, currency)) {
+            this.sessionCart.setAttemptedCouponCode(trimmedCode);
+            String minValStr = couponService.getMinimumValueString(coupon, currency);
+            ra.addFlashAttribute("couponMessage", "Pro použití kupónu '" + trimmedCode + "' je nutná minimální hodnota objednávky " + minValStr + ".");
+            log.warn("Coupon '{}' minimum order value not met.", trimmedCode);
+            return "redirect:/kosik";
+        }
         Customer customer = (principal != null) ? customerService.getCustomerByEmail(principal.getName()).orElse(null) : null;
-        if (customer != null && !customer.isGuest() && !couponService.checkCustomerUsageLimit(customer, coupon)) { this.sessionCart.setAttemptedCouponCode(trimmedCode); ra.addFlashAttribute("couponMessage", "Kupón '" + trimmedCode + "' jste již použil(a) maximální počet krát."); log.warn("Customer '{}' reached usage limit for coupon '{}'.", principal.getName(), trimmedCode); return "redirect:/kosik"; }
-        this.sessionCart.applyCoupon(coupon, trimmedCode); ra.addFlashAttribute("couponSuccess", "Kupón '" + trimmedCode + "' byl úspěšně použit.");
+        if (customer != null && !customer.isGuest() && !couponService.checkCustomerUsageLimit(customer, coupon)) {
+            this.sessionCart.setAttemptedCouponCode(trimmedCode);
+            ra.addFlashAttribute("couponMessage", "Kupón '" + trimmedCode + "' jste již použil(a) maximální počet krát.");
+            log.warn("Customer '{}' reached usage limit for coupon '{}'.", principal.getName(), trimmedCode);
+            return "redirect:/kosik";
+        }
+        this.sessionCart.applyCoupon(coupon, trimmedCode);
+        ra.addFlashAttribute("couponSuccess", "Kupón '" + trimmedCode + "' byl úspěšně použit.");
         log.info("--- applyCoupon END --- Coupon '{}' successfully applied. Cart hash: {}", trimmedCode, this.sessionCart.hashCode());
         return "redirect:/kosik";
     }
@@ -356,7 +471,8 @@ public class CartController implements PriceConstants {
     @PostMapping("/odebrat-kupon")
     public String removeCoupon(RedirectAttributes ra) {
         log.info("--- removeCoupon START --- Cart instance hash: {}", this.sessionCart.hashCode());
-        this.sessionCart.removeCoupon(); ra.addFlashAttribute("cartSuccess", "Slevový kupón byl odebrán.");
+        this.sessionCart.removeCoupon();
+        ra.addFlashAttribute("cartSuccess", "Slevový kupón byl odebrán.");
         log.info("--- removeCoupon END --- Success. Cart instance hash: {}", this.sessionCart.hashCode());
         return "redirect:/kosik";
     }

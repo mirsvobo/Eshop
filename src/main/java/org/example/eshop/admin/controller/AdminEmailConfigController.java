@@ -5,9 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.model.EmailTemplateConfig;
 import org.example.eshop.model.OrderState;
-import org.example.eshop.repository.EmailTemplateConfigRepository; // Přidán přímý import repozitáře
-import org.example.eshop.service.EmailService; // Pro čištění cache
-import org.example.eshop.service.OrderStateService; // Pro načtení stavů
+import org.example.eshop.repository.EmailTemplateConfigRepository;
+import org.example.eshop.service.EmailService;
+import org.example.eshop.service.OrderStateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +18,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects; // <<< Potřebný import
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -33,9 +29,12 @@ public class AdminEmailConfigController {
     private static final Logger log = LoggerFactory.getLogger(AdminEmailConfigController.class);
 
     // Poznámka: Zvažte použití dedikované Service vrstvy místo přímého repozitáře
-    @Autowired private EmailTemplateConfigRepository emailTemplateConfigRepository;
-    @Autowired private OrderStateService orderStateService;
-    @Autowired private EmailService emailService; // Pro čištění cache
+    @Autowired
+    private EmailTemplateConfigRepository emailTemplateConfigRepository;
+    @Autowired
+    private OrderStateService orderStateService;
+    @Autowired
+    private EmailService emailService; // Pro čištění cache
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {

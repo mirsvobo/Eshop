@@ -10,7 +10,6 @@ import org.example.eshop.model.Customer;
 import org.example.eshop.model.Order;
 import org.example.eshop.service.CustomerService;
 import org.example.eshop.service.OrderService;
-import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 @RequestMapping("/muj-ucet")
@@ -42,7 +40,9 @@ public class CustomerAccountController {
     }
 
     private Customer getCurrentCustomer(Principal principal) {
-        if (principal == null) { throw new IllegalStateException("Uživatel není přihlášen."); }
+        if (principal == null) {
+            throw new IllegalStateException("Uživatel není přihlášen.");
+        }
         String userEmail = principal.getName();
         return customerService.getCustomerByEmail(userEmail)
                 .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen."));
@@ -98,7 +98,9 @@ public class CustomerAccountController {
         if (passwordDto.getNewPassword() != null && !passwordDto.getNewPassword().equals(passwordDto.getConfirmNewPassword())) {
             bindingResult.rejectValue("confirmNewPassword", "error.passwordChange", "Nové heslo a potvrzení se neshodují.");
         }
-        if (bindingResult.hasErrors()) { return "muj-ucet/zmena-hesla"; }
+        if (bindingResult.hasErrors()) {
+            return "muj-ucet/zmena-hesla";
+        }
         try {
             Customer customer = getCurrentCustomer(principal);
             customerService.changePassword(customer.getId(), passwordDto);
@@ -138,7 +140,9 @@ public class CustomerAccountController {
         Customer loggedInCustomer = null;
         try {
             // ... (kód pro získání zákazníka a základní kontroly) ...
-            if (principal == null) { throw new IllegalStateException("Uživatel není přihlášen."); }
+            if (principal == null) {
+                throw new IllegalStateException("Uživatel není přihlášen.");
+            }
             String userEmail = principal.getName();
             loggedInCustomer = customerService.getCustomerByEmail(userEmail)
                     .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen. Email: " + userEmail));
@@ -168,6 +172,7 @@ public class CustomerAccountController {
             return "redirect:/muj-ucet/objednavky";
         }
     }
+
     @GetMapping("/adresy")
     public String viewAddresses(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {
@@ -191,8 +196,12 @@ public class CustomerAccountController {
                                         BindingResult bindingResult, Principal principal, RedirectAttributes redirectAttributes, Model model) {
         if (!bindingResult.hasFieldErrors("companyName") &&
                 !org.springframework.util.StringUtils.hasText(addressDto.getCompanyName())) {
-            if (!org.springframework.util.StringUtils.hasText(addressDto.getFirstName())) { bindingResult.rejectValue("firstName", "error.deliveryAddress", "Jméno nebo firma musí být vyplněno."); }
-            if (!org.springframework.util.StringUtils.hasText(addressDto.getLastName())) { bindingResult.rejectValue("lastName", "error.deliveryAddress", "Příjmení nebo firma musí být vyplněno."); }
+            if (!org.springframework.util.StringUtils.hasText(addressDto.getFirstName())) {
+                bindingResult.rejectValue("firstName", "error.deliveryAddress", "Jméno nebo firma musí být vyplněno.");
+            }
+            if (!org.springframework.util.StringUtils.hasText(addressDto.getLastName())) {
+                bindingResult.rejectValue("lastName", "error.deliveryAddress", "Příjmení nebo firma musí být vyplněno.");
+            }
         }
         return updateAddressInternal(addressDto, bindingResult, principal, redirectAttributes, model, CustomerService.AddressType.DELIVERY);
     }
@@ -217,7 +226,7 @@ public class CustomerAccountController {
             redirectAttributes.addFlashAttribute("addressSuccess", Character.toUpperCase(addressTypeName.charAt(0)) + addressTypeName.substring(1) + " adresa byla úspěšně aktualizována.");
         } catch (Exception e) {
             log.error("Chyba při aktualizaci {} adresy pro {}: {}", addressTypeName, principal.getName(), e.getMessage(), e);
-            redirectAttributes.addFlashAttribute(errorModelAttributeName, "Aktualizace "+ addressTypeName +" adresy selhala: " + e.getMessage());
+            redirectAttributes.addFlashAttribute(errorModelAttributeName, "Aktualizace " + addressTypeName + " adresy selhala: " + e.getMessage());
         }
         return "redirect:/muj-ucet/adresy";
     }
@@ -258,17 +267,31 @@ public class CustomerAccountController {
             model.addAttribute("deliveryAddress", deliveryAddressDto);
         }
     }
+
     private void mapCustomerToAddressDto(Customer customer, AddressDto dto, CustomerService.AddressType type) {
         if (type == CustomerService.AddressType.INVOICE) {
-            dto.setCompanyName(customer.getInvoiceCompanyName()); dto.setVatId(customer.getInvoiceVatId()); dto.setTaxId(customer.getInvoiceTaxId());
-            dto.setFirstName(customer.getInvoiceFirstName()); dto.setLastName(customer.getInvoiceLastName()); dto.setStreet(customer.getInvoiceStreet());
-            dto.setCity(customer.getInvoiceCity()); dto.setZipCode(customer.getInvoiceZipCode()); dto.setCountry(customer.getInvoiceCountry());
+            dto.setCompanyName(customer.getInvoiceCompanyName());
+            dto.setVatId(customer.getInvoiceVatId());
+            dto.setTaxId(customer.getInvoiceTaxId());
+            dto.setFirstName(customer.getInvoiceFirstName());
+            dto.setLastName(customer.getInvoiceLastName());
+            dto.setStreet(customer.getInvoiceStreet());
+            dto.setCity(customer.getInvoiceCity());
+            dto.setZipCode(customer.getInvoiceZipCode());
+            dto.setCountry(customer.getInvoiceCountry());
             dto.setPhone(customer.getPhone());
         } else { // DELIVERY
-            dto.setCompanyName(customer.getDeliveryCompanyName()); dto.setFirstName(customer.getDeliveryFirstName()); dto.setLastName(customer.getDeliveryLastName());
-            dto.setStreet(customer.getDeliveryStreet()); dto.setCity(customer.getDeliveryCity()); dto.setZipCode(customer.getDeliveryZipCode());
-            dto.setCountry(customer.getDeliveryCountry()); dto.setPhone(customer.getDeliveryPhone());
-            if (!org.springframework.util.StringUtils.hasText(dto.getPhone())) { dto.setPhone(customer.getPhone()); }
+            dto.setCompanyName(customer.getDeliveryCompanyName());
+            dto.setFirstName(customer.getDeliveryFirstName());
+            dto.setLastName(customer.getDeliveryLastName());
+            dto.setStreet(customer.getDeliveryStreet());
+            dto.setCity(customer.getDeliveryCity());
+            dto.setZipCode(customer.getDeliveryZipCode());
+            dto.setCountry(customer.getDeliveryCountry());
+            dto.setPhone(customer.getDeliveryPhone());
+            if (!org.springframework.util.StringUtils.hasText(dto.getPhone())) {
+                dto.setPhone(customer.getPhone());
+            }
         }
     }
 }

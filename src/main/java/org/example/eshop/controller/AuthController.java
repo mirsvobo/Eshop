@@ -1,18 +1,18 @@
 package org.example.eshop.controller;
 
 import jakarta.validation.Valid;
-import org.example.eshop.dto.RegistrationDto; // Potřebujeme DTO pro registraci
-import org.example.eshop.service.CustomerService; // Potřebujeme CustomerService
-import org.slf4j.Logger; // Import loggeru
-import org.slf4j.LoggerFactory; // Import loggeru
-import org.springframework.beans.factory.annotation.Autowired; // Import Autowired
+import org.example.eshop.dto.RegistrationDto;
+import org.example.eshop.service.CustomerService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model; // Import Model
-import org.springframework.validation.BindingResult; // Import BindingResult
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute; // Import ModelAttribute
-import org.springframework.web.bind.annotation.PostMapping; // Import PostMapping
-import org.springframework.web.servlet.mvc.support.RedirectAttributes; // Import RedirectAttributes
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class AuthController {

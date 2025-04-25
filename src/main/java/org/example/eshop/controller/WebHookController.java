@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils; // Potřebný import
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,8 +19,10 @@ public class WebHookController {
 
     private static final Logger log = LoggerFactory.getLogger(WebHookController.class);
 
-    @Autowired private PaymentProcessingService paymentProcessingService;
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private PaymentProcessingService paymentProcessingService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("${superfaktura.webhook.secret:}")
     private String webhookSecret; // Můžeme ponechat, pokud jej chceme použít v budoucnu

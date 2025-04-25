@@ -3,30 +3,25 @@ package org.example.eshop.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.admin.service.AddonsService;
-import org.example.eshop.model.*; // Import všech modelů
-import org.example.eshop.service.CurrencyService;
-import org.example.eshop.service.ProductService;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CustomPriceRequestDto;
 import org.example.eshop.dto.CustomPriceResponseDto;
-import org.hibernate.Hibernate; // Stále potřeba pro LAZY kolekce
-import org.slf4j.Logger; // <-- PŘIDÁNO
-import org.slf4j.LoggerFactory; // <-- PŘIDÁNO
+import org.example.eshop.model.*;
+import org.example.eshop.service.CurrencyService;
+import org.example.eshop.service.ProductService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // Stále potřeba
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.util.*; // Import pro Set, Map atd.
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.example.eshop.config.PriceConstants.EURO_CURRENCY;
@@ -37,7 +32,8 @@ public class ProductController {
     // private static final Logger log = LoggerFactory.getLogger(ProductController.class); // Původní logger
     private static final Logger logger = LoggerFactory.getLogger(ProductController.class); // <-- PŘEJMENOVÁNO NA logger pro konzistenci
 
-    @Autowired ObjectMapper objectMapper;
+    @Autowired
+    ObjectMapper objectMapper;
     @Autowired
     CurrencyService currencyService;
     @Autowired
@@ -294,6 +290,7 @@ public class ProductController {
             return "redirect:/produkty?error=detail_unexpected";
         }
     }
+
     private String abbreviate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;

@@ -51,7 +51,8 @@ public class RoofColor {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false; // Použití Hibernate proxy-safe kontroly
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o))
+            return false; // Použití Hibernate proxy-safe kontroly
         RoofColor roofColor = (RoofColor) o;
         return id != null && id.equals(roofColor.id);
     }

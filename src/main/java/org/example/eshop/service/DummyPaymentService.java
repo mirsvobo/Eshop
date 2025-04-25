@@ -1,11 +1,11 @@
 package org.example.eshop.service;
 
-import org.example.eshop.config.PriceConstants; // Import PriceConstants
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger; // Import loggeru
-import org.slf4j.LoggerFactory; // Import loggeru
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

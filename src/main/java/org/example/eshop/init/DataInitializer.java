@@ -4,7 +4,10 @@ import jakarta.transaction.Transactional;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.*;
-import org.example.eshop.service.*;
+import org.example.eshop.service.OrderCodeGeneratorService;
+import org.example.eshop.service.OrderService;
+import org.example.eshop.service.PaymentService;
+import org.example.eshop.service.ShippingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +20,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Component
 @org.springframework.core.annotation.Order(Ordered.LOWEST_PRECEDENCE)
@@ -27,24 +31,41 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     // --- Repositories ---
-    @Autowired private TaxRateRepository taxRateRepository;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private AddonsRepository addonsRepository;
-    @Autowired private OrderStateRepository orderStateRepository;
-    @Autowired private CustomerRepository customerRepository;
-    @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private ImageRepository imageRepository;
-    @Autowired private EmailTemplateConfigRepository emailTemplateConfigRepository;
-    @Autowired private DesignRepository designRepository;
-    @Autowired private GlazeRepository glazeRepository;
-    @Autowired private RoofColorRepository roofColorRepository;
-    @Autowired private OrderRepository orderRepository;
+    @Autowired
+    private TaxRateRepository taxRateRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private AddonsRepository addonsRepository;
+    @Autowired
+    private OrderStateRepository orderStateRepository;
+    @Autowired
+    private CustomerRepository customerRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private ImageRepository imageRepository;
+    @Autowired
+    private EmailTemplateConfigRepository emailTemplateConfigRepository;
+    @Autowired
+    private DesignRepository designRepository;
+    @Autowired
+    private GlazeRepository glazeRepository;
+    @Autowired
+    private RoofColorRepository roofColorRepository;
+    @Autowired
+    private OrderRepository orderRepository;
 
     // --- Services (Keep if helper methods rely on them) ---
-    @Autowired private OrderService orderService;
-    @Autowired @Qualifier("googleMapsShippingService") private ShippingService shippingService;
-    @Autowired private PaymentService paymentService;
-    @Autowired private OrderCodeGeneratorService orderCodeGeneratorService;
+    @Autowired
+    private OrderService orderService;
+    @Autowired
+    @Qualifier("googleMapsShippingService")
+    private ShippingService shippingService;
+    @Autowired
+    private PaymentService paymentService;
+    @Autowired
+    private OrderCodeGeneratorService orderCodeGeneratorService;
 
     // Variable references (commented out as sample products/orders are not created)
     // private Customer adminUser1;
@@ -171,8 +192,11 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
     // Helper createState
     private OrderState createState(String code, String name, String description, int order, boolean isFinal) {
         OrderState state = new OrderState();
-        state.setCode(code.toUpperCase()); state.setName(name); state.setDescription(description);
-        state.setDisplayOrder(order); state.setFinalState(isFinal);
+        state.setCode(code.toUpperCase());
+        state.setName(name);
+        state.setDescription(description);
+        state.setDisplayOrder(order);
+        state.setFinalState(isFinal);
         return orderStateRepository.save(state);
     }
 
@@ -217,27 +241,43 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
     private Design createDesign(String name, String description, BigDecimal surchargeCZK, BigDecimal surchargeEUR, String imageUrl) {
         return designRepository.findByNameIgnoreCase(name)
                 .orElseGet(() -> {
-                    Design d = new Design(); d.setName(name); d.setDescription(description); d.setActive(true);
-                    d.setImageUrl(imageUrl); d.setPriceSurchargeCZK(null); d.setPriceSurchargeEUR(null);
-                    log.debug("Creating Design: {}", name); return designRepository.save(d);
+                    Design d = new Design();
+                    d.setName(name);
+                    d.setDescription(description);
+                    d.setActive(true);
+                    d.setImageUrl(imageUrl);
+                    d.setPriceSurchargeCZK(null);
+                    d.setPriceSurchargeEUR(null);
+                    log.debug("Creating Design: {}", name);
+                    return designRepository.save(d);
                 });
     }
 
     private Glaze createGlaze(String name, String description, BigDecimal surchargeCZK, BigDecimal surchargeEUR) {
         return glazeRepository.findByNameIgnoreCase(name)
                 .orElseGet(() -> {
-                    Glaze g = new Glaze(); g.setName(name); g.setDescription(description); g.setActive(true);
-                    g.setPriceSurchargeCZK(null); g.setPriceSurchargeEUR(null);
-                    log.debug("Creating Glaze: {}", name); return glazeRepository.save(g);
+                    Glaze g = new Glaze();
+                    g.setName(name);
+                    g.setDescription(description);
+                    g.setActive(true);
+                    g.setPriceSurchargeCZK(null);
+                    g.setPriceSurchargeEUR(null);
+                    log.debug("Creating Glaze: {}", name);
+                    return glazeRepository.save(g);
                 });
     }
 
     private RoofColor createRoofColor(String name, String description, BigDecimal surchargeCZK, BigDecimal surchargeEUR) {
         return roofColorRepository.findByNameIgnoreCase(name)
                 .orElseGet(() -> {
-                    RoofColor rc = new RoofColor(); rc.setName(name); rc.setDescription(description); rc.setActive(true);
-                    rc.setPriceSurchargeCZK(null); rc.setPriceSurchargeEUR(null);
-                    log.debug("Creating RoofColor: {}", name); return roofColorRepository.save(rc);
+                    RoofColor rc = new RoofColor();
+                    rc.setName(name);
+                    rc.setDescription(description);
+                    rc.setActive(true);
+                    rc.setPriceSurchargeCZK(null);
+                    rc.setPriceSurchargeEUR(null);
+                    log.debug("Creating RoofColor: {}", name);
+                    return roofColorRepository.save(rc);
                 });
     }
 
@@ -304,8 +344,13 @@ public class DataInitializer implements ApplicationRunner, PriceConstants {
             return customerRepository.findByEmailIgnoreCase(email).get();
         }
         Customer c = new Customer();
-        c.setFirstName(fname); c.setLastName(lname); c.setEmail(email.toLowerCase().trim()); c.setPhone(phone);
-        c.setPassword(passwordEncoder.encode(password)); c.setEnabled(true); c.setGuest(false);
+        c.setFirstName(fname);
+        c.setLastName(lname);
+        c.setEmail(email.toLowerCase().trim());
+        c.setPhone(phone);
+        c.setPassword(passwordEncoder.encode(password));
+        c.setEnabled(true);
+        c.setGuest(false);
         c.setRoles(Set.of("ROLE_USER", "ROLE_ADMIN"));
         c.setInvoiceFirstName(fname);
         c.setInvoiceLastName(lname);

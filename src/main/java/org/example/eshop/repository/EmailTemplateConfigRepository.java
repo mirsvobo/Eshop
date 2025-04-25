@@ -11,6 +11,7 @@ public interface EmailTemplateConfigRepository extends JpaRepository<EmailTempla
 
     /**
      * Najde konfiguraci emailu podle kódu stavu objednávky (case-insensitive).
+     *
      * @param stateCode Kód stavu (např. "SHIPPED").
      * @return Optional obsahující konfiguraci, pokud byla nalezena.
      */

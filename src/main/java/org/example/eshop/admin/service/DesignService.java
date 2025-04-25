@@ -7,27 +7,27 @@ import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 
-import java.math.BigDecimal; // <-- Přidat import
-import java.util.Collections;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set; // <-- Přidat import
 
 @Service
 public class DesignService {
 
     private static final Logger log = LoggerFactory.getLogger(DesignService.class);
 
-    @Autowired private DesignRepository designRepository;
-    @Autowired private ProductRepository productRepository;
+    @Autowired
+    private DesignRepository designRepository;
+    @Autowired
+    private ProductRepository productRepository;
 
     @Cacheable("allDesigns") // Název cache z ehcache.xml
     @Transactional(readOnly = true)

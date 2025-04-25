@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collections; // Přidat import
+import java.util.Collections;
 import java.util.Optional;
 
 @Controller

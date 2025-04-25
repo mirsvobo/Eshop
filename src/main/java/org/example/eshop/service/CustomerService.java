@@ -4,12 +4,8 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.Getter;
+import org.example.eshop.dto.*;
 import org.example.eshop.model.Customer;
-import org.example.eshop.dto.AddressDto;
-import org.example.eshop.dto.ChangePasswordDto;
-import org.example.eshop.dto.CheckoutFormDataDto;
-import org.example.eshop.dto.ProfileUpdateDto;
-import org.example.eshop.dto.RegistrationDto;
 import org.example.eshop.repository.CustomerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +28,13 @@ public class CustomerService {
 
     static final Logger log = LoggerFactory.getLogger(CustomerService.class);
 
-    @Autowired private CustomerRepository customerRepository;
-    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired
+    private CustomerRepository customerRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     @Getter
-    @Autowired(required = false) private Validator validator;
-
-    public enum AddressType { INVOICE, DELIVERY }
-
-    public static class EmailRegisteredException extends Exception {
-        public EmailRegisteredException(String message) { super(message); }
-    }
+    @Autowired(required = false)
+    private Validator validator;
 
     // --- Registrace a Autentizace (BEZE ZMĚNY) ---
     @Transactional
@@ -76,12 +69,23 @@ public class CustomerService {
         Optional<Customer> customerOpt = customerRepository.findByEmailIgnoreCase(email.trim());
         if (customerOpt.isPresent()) {
             Customer customer = customerOpt.get();
-            if (customer.isGuest()) { log.warn("Auth failed for {}: Account is a guest account.", email); return Optional.empty(); }
+            if (customer.isGuest()) {
+                log.warn("Auth failed for {}: Account is a guest account.", email);
+                return Optional.empty();
+            }
             if (customer.getPassword() != null && passwordEncoder.matches(rawPassword, customer.getPassword())) {
-                if (!customer.isEnabled()) { log.warn("Auth failed for {}: Account disabled.", email); return Optional.empty(); }
-                log.info("Auth successful for: {}", email); return Optional.of(customer);
-            } else { log.warn("Auth failed for {}: Invalid password.", email); }
-        } else { log.warn("Auth failed: Customer not found with email: {}", email); }
+                if (!customer.isEnabled()) {
+                    log.warn("Auth failed for {}: Account disabled.", email);
+                    return Optional.empty();
+                }
+                log.info("Auth successful for: {}", email);
+                return Optional.of(customer);
+            } else {
+                log.warn("Auth failed for {}: Invalid password.", email);
+            }
+        } else {
+            log.warn("Auth failed: Customer not found with email: {}", email);
+        }
         return Optional.empty();
     }
 
@@ -92,7 +96,9 @@ public class CustomerService {
         validateObject(dto);
         Customer customer = customerRepository.findByEmailIgnoreCase(currentEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found with email: " + currentEmail));
-        if (customer.isGuest()) { throw new IllegalArgumentException("Profil hosta nelze měnit standardním způsobem."); }
+        if (customer.isGuest()) {
+            throw new IllegalArgumentException("Profil hosta nelze měnit standardním způsobem.");
+        }
         customer.setFirstName(dto.getFirstName());
         customer.setLastName(dto.getLastName());
         customer.setPhone(dto.getPhone());
@@ -100,7 +106,9 @@ public class CustomerService {
             customer.setInvoiceFirstName(dto.getFirstName());
             customer.setInvoiceLastName(dto.getLastName());
         }
-        if (!StringUtils.hasText(customer.getDeliveryPhone())) { customer.setDeliveryPhone(dto.getPhone()); }
+        if (!StringUtils.hasText(customer.getDeliveryPhone())) {
+            customer.setDeliveryPhone(dto.getPhone());
+        }
         Customer updatedCustomer = customerRepository.save(customer);
         log.info("Profile updated successfully for user: {}", currentEmail);
         return updatedCustomer;
@@ -113,9 +121,15 @@ public class CustomerService {
         validateObject(dto);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found with ID: " + customerId));
-        if (customer.isGuest()) { throw new IllegalArgumentException("Host účty nemají heslo."); }
-        if (!StringUtils.hasText(customer.getPassword())) { throw new IllegalStateException("Chyba účtu: Heslo není nastaveno."); }
-        if (!passwordEncoder.matches(dto.getCurrentPassword(), customer.getPassword())) { throw new IllegalArgumentException("Nesprávné staré heslo."); }
+        if (customer.isGuest()) {
+            throw new IllegalArgumentException("Host účty nemají heslo.");
+        }
+        if (!StringUtils.hasText(customer.getPassword())) {
+            throw new IllegalStateException("Chyba účtu: Heslo není nastaveno.");
+        }
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), customer.getPassword())) {
+            throw new IllegalArgumentException("Nesprávné staré heslo.");
+        }
         customer.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         customerRepository.save(customer);
         log.info("Password changed successfully for customer ID: {}", customerId);
@@ -129,12 +143,20 @@ public class CustomerService {
         Optional<Customer> existingCustomerOpt = customerRepository.findByEmailIgnoreCase(email);
         if (existingCustomerOpt.isPresent()) {
             Customer existingCustomer = existingCustomerOpt.get();
-            if (!existingCustomer.isGuest()) { throw new EmailRegisteredException("Tento email je již zaregistrován. Prosím, přihlaste se pro dokončení objednávky."); }
-            else { log.info("Found existing guest account for email {}, updating details.", email); updateCustomerFromDto(existingCustomer, dto); return customerRepository.save(existingCustomer); }
+            if (!existingCustomer.isGuest()) {
+                throw new EmailRegisteredException("Tento email je již zaregistrován. Prosím, přihlaste se pro dokončení objednávky.");
+            } else {
+                log.info("Found existing guest account for email {}, updating details.", email);
+                updateCustomerFromDto(existingCustomer, dto);
+                return customerRepository.save(existingCustomer);
+            }
         }
         log.info("Creating new guest customer record for email: {}", email);
         Customer guest = new Customer();
-        guest.setGuest(true); guest.setEnabled(true); guest.setRoles(Set.of("ROLE_GUEST")); guest.setPassword(null);
+        guest.setGuest(true);
+        guest.setEnabled(true);
+        guest.setRoles(Set.of("ROLE_GUEST"));
+        guest.setPassword(null);
         updateCustomerFromDto(guest, dto);
         Customer savedGuest = customerRepository.save(guest);
         log.info("Guest customer created successfully with ID: {}", savedGuest.getId());
@@ -145,8 +167,9 @@ public class CustomerService {
      * Pomocná metoda pro naplnění/aktualizaci Customer entity daty z CheckoutFormDataDto.
      * NEVOLÁ save() - to musí zajistit volající metoda.
      * *** UPRAVENO: Přidány null checky pro NOT NULL sloupce ***
+     *
      * @param customer Customer entita k naplnění/aktualizaci.
-     * @param dto DTO s daty z formuláře.
+     * @param dto      DTO s daty z formuláře.
      */
     public void updateCustomerFromDto(Customer customer, CheckoutFormDataDto dto) {
         // --- Základní / Kontaktní údaje ---
@@ -191,7 +214,6 @@ public class CustomerService {
         // @PreUpdate/@PrePersist v Customer entitě se postará o synchronizaci/vymazání dodací adresy
     }
 
-
     // --- Správa Adres (BEZE ZMĚNY) ---
     @Transactional
     public Customer updateAddress(Long customerId, AddressType addressType, AddressDto dto) {
@@ -199,14 +221,24 @@ public class CustomerService {
         validateObject(dto);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found with ID: " + customerId));
-        if (customer.isGuest()) { throw new IllegalArgumentException("Adresu hosta nelze měnit tímto způsobem."); }
-        if (!StringUtils.hasText(dto.getCompanyName()) && (!StringUtils.hasText(dto.getFirstName()) || !StringUtils.hasText(dto.getLastName()))) { throw new IllegalArgumentException("Musí být vyplněn název firmy nebo jméno a příjmení."); }
-        if (addressType == AddressType.INVOICE) { updateInvoiceAddressFromDto(customer, dto); }
-        else { updateDeliveryAddressFromDto(customer, dto); customer.setUseInvoiceAddressAsDelivery(false); log.debug("Set useInvoiceAddressAsDelivery to false for customer {}", customerId); }
+        if (customer.isGuest()) {
+            throw new IllegalArgumentException("Adresu hosta nelze měnit tímto způsobem.");
+        }
+        if (!StringUtils.hasText(dto.getCompanyName()) && (!StringUtils.hasText(dto.getFirstName()) || !StringUtils.hasText(dto.getLastName()))) {
+            throw new IllegalArgumentException("Musí být vyplněn název firmy nebo jméno a příjmení.");
+        }
+        if (addressType == AddressType.INVOICE) {
+            updateInvoiceAddressFromDto(customer, dto);
+        } else {
+            updateDeliveryAddressFromDto(customer, dto);
+            customer.setUseInvoiceAddressAsDelivery(false);
+            log.debug("Set useInvoiceAddressAsDelivery to false for customer {}", customerId);
+        }
         Customer updatedCustomer = customerRepository.save(customer);
         log.info("{} address updated successfully for customer ID: {}", addressType, customerId);
         return updatedCustomer;
     }
+
     @Transactional(readOnly = true)
     public long countCustomersCreatedBetween(LocalDateTime start, LocalDateTime end) {
         log.debug("Counting customers created between {} and {}", start, end);
@@ -228,23 +260,41 @@ public class CustomerService {
             return 0L;
         }
     }
+
     private void updateInvoiceAddressFromDto(Customer customer, AddressDto dto) {
-        customer.setInvoiceCompanyName(dto.getCompanyName()); customer.setInvoiceVatId(dto.getVatId()); customer.setInvoiceTaxId(dto.getTaxId());
-        customer.setInvoiceFirstName(dto.getFirstName()); customer.setInvoiceLastName(dto.getLastName()); customer.setInvoiceStreet(dto.getStreet());
-        customer.setInvoiceCity(dto.getCity()); customer.setInvoiceZipCode(dto.getZipCode()); customer.setInvoiceCountry(dto.getCountry());
+        customer.setInvoiceCompanyName(dto.getCompanyName());
+        customer.setInvoiceVatId(dto.getVatId());
+        customer.setInvoiceTaxId(dto.getTaxId());
+        customer.setInvoiceFirstName(dto.getFirstName());
+        customer.setInvoiceLastName(dto.getLastName());
+        customer.setInvoiceStreet(dto.getStreet());
+        customer.setInvoiceCity(dto.getCity());
+        customer.setInvoiceZipCode(dto.getZipCode());
+        customer.setInvoiceCountry(dto.getCountry());
     }
+
     private void updateDeliveryAddressFromDto(Customer customer, AddressDto dto) {
-        customer.setDeliveryCompanyName(dto.getCompanyName()); customer.setDeliveryFirstName(dto.getFirstName()); customer.setDeliveryLastName(dto.getLastName());
-        customer.setDeliveryStreet(dto.getStreet()); customer.setDeliveryCity(dto.getCity()); customer.setDeliveryZipCode(dto.getZipCode());
-        customer.setDeliveryCountry(dto.getCountry()); customer.setDeliveryPhone(dto.getPhone());
-        if (!StringUtils.hasText(customer.getDeliveryPhone())) { customer.setDeliveryPhone(customer.getPhone()); }
+        customer.setDeliveryCompanyName(dto.getCompanyName());
+        customer.setDeliveryFirstName(dto.getFirstName());
+        customer.setDeliveryLastName(dto.getLastName());
+        customer.setDeliveryStreet(dto.getStreet());
+        customer.setDeliveryCity(dto.getCity());
+        customer.setDeliveryZipCode(dto.getZipCode());
+        customer.setDeliveryCountry(dto.getCountry());
+        customer.setDeliveryPhone(dto.getPhone());
+        if (!StringUtils.hasText(customer.getDeliveryPhone())) {
+            customer.setDeliveryPhone(customer.getPhone());
+        }
     }
+
     @Transactional
     public Customer setUseInvoiceAddressAsDelivery(Long customerId, boolean useInvoiceAddress) {
         log.info("Setting useInvoiceAddressAsDelivery to {} for customer ID: {}", useInvoiceAddress, customerId);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found with ID: " + customerId));
-        if (customer.isGuest()) { throw new IllegalArgumentException("Nastavení adresy nelze měnit pro host účet."); }
+        if (customer.isGuest()) {
+            throw new IllegalArgumentException("Nastavení adresy nelze měnit pro host účet.");
+        }
         customer.setUseInvoiceAddressAsDelivery(useInvoiceAddress);
         Customer updatedCustomer = customerRepository.save(customer);
         log.info("useInvoiceAddressAsDelivery flag updated for customer ID: {}", customerId);
@@ -253,24 +303,36 @@ public class CustomerService {
 
     // --- Metody pro čtení (BEZE ZMĚNY) ---
     @Transactional(readOnly = true)
-    public Optional<Customer> getCustomerById(long id){ return customerRepository.findById(id); }
+    public Optional<Customer> getCustomerById(long id) {
+        return customerRepository.findById(id);
+    }
+
     @Transactional(readOnly = true)
-    public Optional<Customer> getCustomerByEmail(String email){
+    public Optional<Customer> getCustomerByEmail(String email) {
         if (!StringUtils.hasText(email)) return Optional.empty();
         return customerRepository.findByEmailIgnoreCase(email.trim());
     }
+
     @Transactional(readOnly = true)
-    public List<Customer> getAllCustomers() { return customerRepository.findAll(); }
+    public List<Customer> getAllCustomers() {
+        return customerRepository.findAll();
+    }
+
     @Transactional(readOnly = true)
     public Page<Customer> findCustomers(Pageable pageable, String emailFragment, String nameFragment, Boolean enabled) {
         log.debug("Searching for customers with filters - Email: '{}', Name: '{}', Enabled: {}, Page: {}", emailFragment, nameFragment, enabled, pageable);
-        boolean hasEmail = StringUtils.hasText(emailFragment); boolean hasName = StringUtils.hasText(nameFragment); boolean hasEnabled = enabled != null;
-        if (hasEmail && hasEnabled) return customerRepository.findByEmailContainingIgnoreCaseAndEnabled(emailFragment, enabled, pageable);
+        boolean hasEmail = StringUtils.hasText(emailFragment);
+        boolean hasName = StringUtils.hasText(nameFragment);
+        boolean hasEnabled = enabled != null;
+        if (hasEmail && hasEnabled)
+            return customerRepository.findByEmailContainingIgnoreCaseAndEnabled(emailFragment, enabled, pageable);
         if (hasEmail) return customerRepository.findByEmailContainingIgnoreCase(emailFragment, pageable);
-        if (hasName) return customerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(nameFragment, nameFragment, pageable);
+        if (hasName)
+            return customerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(nameFragment, nameFragment, pageable);
         if (hasEnabled) return customerRepository.findByEnabled(enabled, pageable);
         return customerRepository.findAll(pageable);
     }
+
     @Transactional
     public Customer saveCustomer(Customer customer) {
         log.info("Saving customer ID: {}", customer.getId());
@@ -279,13 +341,21 @@ public class CustomerService {
 
     // --- Správa rolí (BEZE ZMĚNY) ---
     @Transactional
-    public void addRoleToCustomer(Long customerId, String role) { log.warn("addRoleToCustomer not implemented"); }
+    public void addRoleToCustomer(Long customerId, String role) {
+        log.warn("addRoleToCustomer not implemented");
+    }
+
     @Transactional
-    public void removeRoleFromCustomer(Long customerId, String role) { log.warn("removeRoleFromCustomer not implemented"); }
+    public void removeRoleFromCustomer(Long customerId, String role) {
+        log.warn("removeRoleFromCustomer not implemented");
+    }
 
     // --- Pomocná metoda pro validaci (BEZE ZMĚNY) ---
     private void validateObject(Object object) {
-        if (validator == null || object == null) { log.trace("Validator not present or object is null, skipping validation."); return; }
+        if (validator == null || object == null) {
+            log.trace("Validator not present or object is null, skipping validation.");
+            return;
+        }
         Set<ConstraintViolation<Object>> violations = validator.validate(object);
         if (!violations.isEmpty()) {
             String errors = violations.stream().map(v -> v.getPropertyPath() + ": " + v.getMessage()).collect(Collectors.joining(", "));
@@ -293,5 +363,13 @@ public class CustomerService {
             throw new IllegalArgumentException("Validation failed: " + errors);
         }
         log.trace("Validation successful for {}", object.getClass().getSimpleName());
+    }
+
+    public enum AddressType {INVOICE, DELIVERY}
+
+    public static class EmailRegisteredException extends Exception {
+        public EmailRegisteredException(String message) {
+            super(message);
+        }
     }
 }

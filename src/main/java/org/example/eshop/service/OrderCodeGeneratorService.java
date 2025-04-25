@@ -2,16 +2,14 @@
 package org.example.eshop.service;
 
 import jakarta.annotation.PostConstruct;
-import org.example.eshop.model.Order; // Může zůstat pro kontext
 import org.example.eshop.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-// Odstraněny nepotřebné importy pro Page, PageRequest, Sort
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional; // Přidat import Optional
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -58,6 +56,7 @@ public class OrderCodeGeneratorService {
 
     /**
      * Získá další unikátní číselný kód objednávky.
+     *
      * @return Další číslo v pořadí jako String.
      */
     public String getNextOrderCode() {
@@ -65,7 +64,7 @@ public class OrderCodeGeneratorService {
             // Pojistka, pokud by PostConstruct z nějakého důvodu selhal před prvním použitím
             log.error("Order counter not initialized! Falling back to emergency initialization.");
             initializeCounter(); // Zkusíme znovu inicializovat
-            if(orderCounter == null){ // Pokud ani nouzová inicializace nepomohla
+            if (orderCounter == null) { // Pokud ani nouzová inicializace nepomohla
                 throw new IllegalStateException("Order counter could not be initialized.");
             }
         }

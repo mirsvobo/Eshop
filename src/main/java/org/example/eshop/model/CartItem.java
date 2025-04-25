@@ -3,20 +3,18 @@ package org.example.eshop.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString; // Přidáno pro logování
+import lombok.ToString;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.AddonDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils; // Pro CollectionUtils.isEmpty
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -77,52 +75,9 @@ public class CartItem implements Serializable, PriceConstants {
     }
 
     /**
-     * Vypočítá celkovou cenu řádku bez DPH.
-     * @param currency Měna ("CZK" nebo "EUR").
-     * @return Celková cena řádku bez DPH.
-     */
-    public BigDecimal getTotalLinePriceWithoutTax(String currency) {
-        BigDecimal unitPrice = EURO_CURRENCY.equals(currency) ? unitPriceEUR : unitPriceCZK;
-        // Přidána kontrola, zda unitPrice není null
-        if (unitPrice == null) {
-            log.error("Cannot calculate total line price: Unit price for currency '{}' is NULL for cart item ID '{}'", currency, cartItemId);
-            return BigDecimal.ZERO; // Nebo vyhodit výjimku?
-        }
-        if (quantity <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(PRICE_SCALE, ROUNDING_MODE);
-    }
-
-    /**
-     * Vypočítá výši DPH pro tento řádek.
-     * @param currency Měna ("CZK" nebo "EUR").
-     * @return Výše DPH.
-     */
-    public BigDecimal getVatAmount(String currency) {
-        BigDecimal linePriceWithoutTax = getTotalLinePriceWithoutTax(currency);
-        BigDecimal effectiveTaxRate = selectedTaxRateValue; // Použijeme uloženou hodnotu
-
-        if (effectiveTaxRate == null || effectiveTaxRate.compareTo(BigDecimal.ZERO) <= 0 || linePriceWithoutTax.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal calculatedVat = linePriceWithoutTax.multiply(effectiveTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
-        return calculatedVat;
-    }
-
-    /**
-     * Vypočítá celkovou cenu řádku včetně DPH.
-     * @param currency Měna ("CZK" nebo "EUR").
-     * @return Celková cena řádku s DPH.
-     */
-    public BigDecimal getTotalLinePriceWithTax(String currency) {
-        return getTotalLinePriceWithoutTax(currency).add(getVatAmount(currency));
-    }
-
-    /**
      * Generuje unikátní ID pro položku košíku na základě její konfigurace.
      * Zahrnuje všechny relevantní atributy a doplňky.
+     *
      * @return String reprezentující unikátní ID položky.
      */
     public static String generateCartItemId(Long productId, boolean isCustom,
@@ -180,6 +135,53 @@ public class CartItem implements Serializable, PriceConstants {
             if (selectedRoofColorId != null) sb.append("-RC").append(selectedRoofColorId);
         }
         return sb.toString();
+    }
+
+    /**
+     * Vypočítá celkovou cenu řádku bez DPH.
+     *
+     * @param currency Měna ("CZK" nebo "EUR").
+     * @return Celková cena řádku bez DPH.
+     */
+    public BigDecimal getTotalLinePriceWithoutTax(String currency) {
+        BigDecimal unitPrice = EURO_CURRENCY.equals(currency) ? unitPriceEUR : unitPriceCZK;
+        // Přidána kontrola, zda unitPrice není null
+        if (unitPrice == null) {
+            log.error("Cannot calculate total line price: Unit price for currency '{}' is NULL for cart item ID '{}'", currency, cartItemId);
+            return BigDecimal.ZERO; // Nebo vyhodit výjimku?
+        }
+        if (quantity <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(PRICE_SCALE, ROUNDING_MODE);
+    }
+
+    /**
+     * Vypočítá výši DPH pro tento řádek.
+     *
+     * @param currency Měna ("CZK" nebo "EUR").
+     * @return Výše DPH.
+     */
+    public BigDecimal getVatAmount(String currency) {
+        BigDecimal linePriceWithoutTax = getTotalLinePriceWithoutTax(currency);
+        BigDecimal effectiveTaxRate = selectedTaxRateValue; // Použijeme uloženou hodnotu
+
+        if (effectiveTaxRate == null || effectiveTaxRate.compareTo(BigDecimal.ZERO) <= 0 || linePriceWithoutTax.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal calculatedVat = linePriceWithoutTax.multiply(effectiveTaxRate).setScale(PRICE_SCALE, ROUNDING_MODE);
+        return calculatedVat;
+    }
+
+    /**
+     * Vypočítá celkovou cenu řádku včetně DPH.
+     *
+     * @param currency Měna ("CZK" nebo "EUR").
+     * @return Celková cena řádku s DPH.
+     */
+    public BigDecimal getTotalLinePriceWithTax(String currency) {
+        return getTotalLinePriceWithoutTax(currency).add(getVatAmount(currency));
     }
 
     // --- equals a hashCode podle cartItemId ---

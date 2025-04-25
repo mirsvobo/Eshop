@@ -1,11 +1,10 @@
 package org.example.eshop.repository;
 
 import org.example.eshop.model.Addon;
-import org.springframework.data.domain.Sort; // Potřeba pro findByActiveTrueOrderByNameAsc
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List; // Potřeba pro List
+import java.util.List;
 import java.util.Optional;
 
 @Repository

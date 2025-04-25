@@ -1,15 +1,16 @@
 package org.example.eshop.controller;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.ConstraintViolation; // Zachován import
 import jakarta.validation.Valid;
-import jakarta.validation.Validator; // Import Validator
+import jakarta.validation.Validator;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.*;
-// Import validation groups from DTO
-import org.example.eshop.dto.CheckoutFormDataDto.GuestValidation;
 import org.example.eshop.dto.CheckoutFormDataDto.DeliveryAddressValidation;
-import org.example.eshop.model.*;
+import org.example.eshop.dto.CheckoutFormDataDto.GuestValidation;
+import org.example.eshop.model.CartItem;
+import org.example.eshop.model.Coupon;
+import org.example.eshop.model.Customer;
+import org.example.eshop.model.Order;
 import org.example.eshop.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,15 +26,13 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ValidationUtils;
-import org.springframework.validation.annotation.Validated; // Import @Validated
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
-import java.time.LocalDate; // Zachován import
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -42,29 +41,11 @@ import java.util.stream.Collectors;
 public class CheckoutController implements PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(CheckoutController.class);
-
-    // Helper interface for default validation group
-    interface DefaultValidationGroup {
-    }
-
-    // Custom exception for validation flow control
-    static class ValidationException extends Exception {
-        public ValidationException(String message) {
-            super(message);
-        }
-    }
-
-    // Výjimka pro chybu výpočtu dopravy (zůstává)
-    public static class ShippingCalculationException extends RuntimeException {
-        public ShippingCalculationException(String message) {
-            super(message);
-        }
-
-        public ShippingCalculationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
-
+    private static final Map<String, String> ALLOWED_PAYMENT_METHODS = Map.of(
+            "BANK_TRANSFER", "Bankovní převod",
+            "CASH_ON_DELIVERY", "Dobírka"
+            // Přidat další metody podle potřeby
+    );
     @Autowired
     private Cart sessionCart;
     @Autowired
@@ -78,13 +59,6 @@ public class CheckoutController implements PriceConstants {
     private ShippingService shippingService;
     @Autowired
     private CurrencyService currencyService;
-    // Validator bude získán z CustomerService
-
-    private static final Map<String, String> ALLOWED_PAYMENT_METHODS = Map.of(
-            "BANK_TRANSFER", "Bankovní převod",
-            "CASH_ON_DELIVERY", "Dobírka"
-            // Přidat další metody podle potřeby
-    );
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -423,6 +397,7 @@ public class CheckoutController implements PriceConstants {
             return "pokladna";
         }
     }
+    // Validator bude získán z CustomerService
 
     // --- AJAX Endpoint a Pomocné metody (zůstávají stejné jako v předchozí odpovědi) ---
     @PostMapping("/calculate-shipping")
@@ -517,8 +492,6 @@ public class CheckoutController implements PriceConstants {
         }
     }
 
-    // --- POMOCNÉ METODY (PŘIDANÉ) ---
-
     /**
      * Prepares model attributes needed for rendering the checkout page, especially after a form error.
      * Includes calculation of summary values based on current cart and potential shipping costs.
@@ -526,7 +499,7 @@ public class CheckoutController implements PriceConstants {
      * @param model                    The model to populate.
      * @param customer                 The current customer (can be null for guest).
      * @param checkoutForm             The DTO with user's submitted data.
-     * @param currentCurrency                 The current currency code.
+     * @param currentCurrency          The current currency code.
      * @param initialShippingCostNoTax The initially calculated shipping cost (or null if error/not calculated).
      * @param shippingError            Error message related to shipping calculation (or null).
      */
@@ -557,7 +530,7 @@ public class CheckoutController implements PriceConstants {
             originalShippingCostNoTaxForSummary = initialShippingCostNoTax;
             try {
                 shippingTaxRate = shippingService.getShippingTaxRate();
-                if(shippingTaxRate == null || shippingTaxRate.compareTo(BigDecimal.ZERO) < 0) {
+                if (shippingTaxRate == null || shippingTaxRate.compareTo(BigDecimal.ZERO) < 0) {
                     log.error("Invalid shipping tax rate received from service: {}. Using fallback 0.21", shippingTaxRate);
                     shippingTaxRate = new BigDecimal("0.21");
                 }
@@ -646,8 +619,6 @@ public class CheckoutController implements PriceConstants {
                 subtotal, couponDiscount, totalItemVat, originalShippingCostNoTaxForSummary, shippingDiscountAmount, finalShippingCostNoTax, finalShippingTax, originalTotalPrice, roundingDifference, roundedTotalPrice, finalTotalVatWithShipping, shippingError);
     }
 
-
-    // --- OPRAVENÁ Metoda prepareModelForError ---
     /**
      * Helper method to prepare the model when validation errors occur, ensuring necessary data is available for re-rendering the page.
      * Keeps the calculated prices (original, rounded, difference) but indicates shipping error.
@@ -694,8 +665,6 @@ public class CheckoutController implements PriceConstants {
         log.debug("Model prepared for error view. Shipping error state indicated.");
     }
 
-// Zbytek třídy CheckoutController...
-
     private boolean hasSufficientAddress(Customer customer) {
         if (customer == null) return false;
         boolean hasInvoice = StringUtils.hasText(customer.getInvoiceStreet()) && StringUtils.hasText(customer.getInvoiceCity()) && StringUtils.hasText(customer.getInvoiceZipCode()) && StringUtils.hasText(customer.getInvoiceCountry());
@@ -705,6 +674,8 @@ public class CheckoutController implements PriceConstants {
             return hasInvoice && StringUtils.hasText(customer.getDeliveryStreet()) && StringUtils.hasText(customer.getDeliveryCity()) && StringUtils.hasText(customer.getDeliveryZipCode()) && StringUtils.hasText(customer.getDeliveryCountry());
         }
     }
+
+    // --- POMOCNÉ METODY (PŘIDANÉ) ---
 
     private boolean hasSufficientAddressInDto(CheckoutFormDataDto dto) {
         if (dto == null) return false;
@@ -716,6 +687,9 @@ public class CheckoutController implements PriceConstants {
             return hasInvoice && hasDelivery;
         }
     }
+
+
+    // --- OPRAVENÁ Metoda prepareModelForError ---
 
     private Order createTemporaryOrderForShipping(Customer customer, String currency) {
         if (customer == null) return null;
@@ -735,6 +709,8 @@ public class CheckoutController implements PriceConstants {
         }
         return tempOrder;
     }
+
+// Zbytek třídy CheckoutController...
 
     private Order createTemporaryOrderForShippingFromDto(ShippingAddressDto dto, String currency) {
         if (dto == null) return null;
@@ -841,11 +817,31 @@ public class CheckoutController implements PriceConstants {
             return false;
         }
         if (!dto.isUseInvoiceAddressAsDelivery()) {
-            if (!Objects.equals(customer.getDeliveryCompanyName(), dto.getDeliveryCompanyName()) || !Objects.equals(customer.getDeliveryFirstName(), dto.getDeliveryFirstName()) || !Objects.equals(customer.getDeliveryLastName(), dto.getDeliveryLastName()) || !Objects.equals(customer.getDeliveryStreet(), dto.getDeliveryStreet()) || !Objects.equals(customer.getDeliveryCity(), dto.getDeliveryCity()) || !Objects.equals(customer.getDeliveryZipCode(), dto.getDeliveryZipCode()) || !Objects.equals(customer.getDeliveryCountry(), dto.getDeliveryCountry()) || !Objects.equals(customer.getDeliveryPhone(), dto.getDeliveryPhone())) {
-                return false;
-            }
+            return Objects.equals(customer.getDeliveryCompanyName(), dto.getDeliveryCompanyName()) && Objects.equals(customer.getDeliveryFirstName(), dto.getDeliveryFirstName()) && Objects.equals(customer.getDeliveryLastName(), dto.getDeliveryLastName()) && Objects.equals(customer.getDeliveryStreet(), dto.getDeliveryStreet()) && Objects.equals(customer.getDeliveryCity(), dto.getDeliveryCity()) && Objects.equals(customer.getDeliveryZipCode(), dto.getDeliveryZipCode()) && Objects.equals(customer.getDeliveryCountry(), dto.getDeliveryCountry()) && Objects.equals(customer.getDeliveryPhone(), dto.getDeliveryPhone());
         }
         return true;
+    }
+
+    // Helper interface for default validation group
+    interface DefaultValidationGroup {
+    }
+
+    // Custom exception for validation flow control
+    static class ValidationException extends Exception {
+        public ValidationException(String message) {
+            super(message);
+        }
+    }
+
+    // Výjimka pro chybu výpočtu dopravy (zůstává)
+    public static class ShippingCalculationException extends RuntimeException {
+        public ShippingCalculationException(String message) {
+            super(message);
+        }
+
+        public ShippingCalculationException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 
 } // Konec třídy CheckoutController

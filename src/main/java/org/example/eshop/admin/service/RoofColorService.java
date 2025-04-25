@@ -7,13 +7,13 @@ import org.example.eshop.repository.RoofColorRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,8 +24,10 @@ public class RoofColorService {
 
     private static final Logger log = LoggerFactory.getLogger(RoofColorService.class);
 
-    @Autowired private RoofColorRepository roofColorRepository;
-    @Autowired private ProductRepository productRepository; // Pro kontrolu použití
+    @Autowired
+    private RoofColorRepository roofColorRepository;
+    @Autowired
+    private ProductRepository productRepository; // Pro kontrolu použití
 
     @Cacheable("allRoofColors")
     @Transactional(readOnly = true)
@@ -121,7 +123,8 @@ public class RoofColorService {
 
     private void validateRoofColor(RoofColor color) {
         if (color == null) throw new IllegalArgumentException("RoofColor object cannot be null.");
-        if (!StringUtils.hasText(color.getName())) throw new IllegalArgumentException("RoofColor name cannot be empty.");
+        if (!StringUtils.hasText(color.getName()))
+            throw new IllegalArgumentException("RoofColor name cannot be empty.");
         if (color.getPriceSurchargeCZK() != null && color.getPriceSurchargeCZK().signum() < 0) {
             throw new IllegalArgumentException("Price surcharge CZK cannot be negative.");
         }

@@ -20,11 +20,15 @@ public class Customer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false) private String firstName;
-    @Column(nullable = false) private String lastName;
-    @Column(nullable = false, unique = true) private String email; // Unikátní pro přihlášení
+    @Column(nullable = false)
+    private String firstName;
+    @Column(nullable = false)
+    private String lastName;
+    @Column(nullable = false, unique = true)
+    private String email; // Unikátní pro přihlášení
     private String phone;
-    @Column(nullable = true) private String password; // Uložené HASH heslo
+    @Column(nullable = true)
+    private String password; // Uložené HASH heslo
     @Column(nullable = false)
     private boolean isGuest = false;
 
@@ -34,20 +38,29 @@ public class Customer {
     private String invoiceTaxId; // IČO (Tax ID / Company ID) - např. 12345678
     private String invoiceFirstName; // Jméno na faktuře (může být jiné než název firmy)
     private String invoiceLastName; // Příjmení na faktuře
-    @Column(length = 255) private String invoiceStreet; // Ulice a číslo popisné
-    @Column(length = 100) private String invoiceCity; // Město
-    @Column(length = 20) private String invoiceZipCode; // PSČ
-    @Column(length = 100) private String invoiceCountry = "Česká republika"; // Výchozí země
+    @Column(length = 255)
+    private String invoiceStreet; // Ulice a číslo popisné
+    @Column(length = 100)
+    private String invoiceCity; // Město
+    @Column(length = 20)
+    private String invoiceZipCode; // PSČ
+    @Column(length = 100)
+    private String invoiceCountry = "Česká republika"; // Výchozí země
 
     // --- Dodací údaje ---
-    @Column(nullable = false) private boolean useInvoiceAddressAsDelivery = true; // Příznak, zda použít fakturační adresu jako dodací
+    @Column(nullable = false)
+    private boolean useInvoiceAddressAsDelivery = true; // Příznak, zda použít fakturační adresu jako dodací
     private String deliveryFirstName; // Jméno pro doručení
     private String deliveryLastName; // Příjmení pro doručení
     private String deliveryCompanyName; // Firma pro doručení
-    @Column(length = 255) private String deliveryStreet; // Ulice a číslo popisné
-    @Column(length = 100) private String deliveryCity; // Město
-    @Column(length = 20) private String deliveryZipCode; // PSČ
-    @Column(length = 100) private String deliveryCountry = "Česká republika"; // Výchozí země
+    @Column(length = 255)
+    private String deliveryStreet; // Ulice a číslo popisné
+    @Column(length = 100)
+    private String deliveryCity; // Město
+    @Column(length = 20)
+    private String deliveryZipCode; // PSČ
+    @Column(length = 100)
+    private String deliveryCountry = "Česká republika"; // Výchozí země
     private String deliveryPhone; // Telefon pro dopravce
 
     // Vazba na objednávky zákazníka (načítat LAZY)
@@ -62,8 +75,10 @@ public class Customer {
     private Set<String> roles = Set.of("ROLE_USER"); // Výchozí role pro každého zákazníka
 
     // --- Metadata účtu ---
-    @Column(nullable = false) private boolean enabled = true; // Pro aktivaci/deaktivaci účtu administrátorem
-    @Column(updatable = false, nullable = false) private LocalDateTime createdAt; // Datum vytvoření účtu
+    @Column(nullable = false)
+    private boolean enabled = true; // Pro aktivaci/deaktivaci účtu administrátorem
+    @Column(updatable = false, nullable = false)
+    private LocalDateTime createdAt; // Datum vytvoření účtu
     private LocalDateTime updatedAt; // Datum poslední aktualizace
 
     @PrePersist
@@ -79,6 +94,7 @@ public class Customer {
             invoiceLastName = lastName;
         }
     }
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

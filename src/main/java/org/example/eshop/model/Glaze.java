@@ -66,4 +66,5 @@ public class Glaze {
         // Nebo lépe použít konstantu, pokud ID není null
         return id != null ? Objects.hash(id) : getClass().hashCode();
         // Alternativně: return getClass().hashCode(); // Jednodušší, ale méně optimální pro Set operace PŘED uložením
-    }}
+    }
+}

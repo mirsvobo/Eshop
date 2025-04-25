@@ -4,8 +4,8 @@ import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CreateOrderRequest;
-import org.example.eshop.model.*; // Import všech modelů
-import org.example.eshop.repository.*; // Import všech repositories
+import org.example.eshop.model.*;
+import org.example.eshop.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode; // Import pro RoundingMode
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -40,28 +40,48 @@ public class OrderService implements PriceConstants {
     // Konstanty pro měny již máme z PriceConstants interface (EURO_CURRENCY, DEFAULT_CURRENCY)
 
     // Repositories
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private CustomerRepository customerRepository;
-    @Autowired private OrderStateRepository orderStateRepository;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private AddonsRepository addonsRepository;
-    @Autowired private CouponRepository couponRepository;
-    @Autowired private TaxRateRepository taxRateRepository;
-    @Autowired private DesignRepository designRepository;
-    @Autowired private GlazeRepository glazeRepository;
-    @Autowired private RoofColorRepository roofColorRepository;
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private CustomerRepository customerRepository;
+    @Autowired
+    private OrderStateRepository orderStateRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private AddonsRepository addonsRepository;
+    @Autowired
+    private CouponRepository couponRepository;
+    @Autowired
+    private TaxRateRepository taxRateRepository;
+    @Autowired
+    private DesignRepository designRepository;
+    @Autowired
+    private GlazeRepository glazeRepository;
+    @Autowired
+    private RoofColorRepository roofColorRepository;
 
     // Services
-    @Autowired private ProductService productService;
-    @Autowired private DiscountService discountService;
-    @Autowired private CouponService couponService;
-    @Autowired private EmailService emailService;
-    @Autowired @Qualifier("googleMapsShippingService") private ShippingService shippingService;
+    @Autowired
+    private ProductService productService;
+    @Autowired
+    private DiscountService discountService;
+    @Autowired
+    private CouponService couponService;
+    @Autowired
+    private EmailService emailService;
+    @Autowired
+    @Qualifier("googleMapsShippingService")
+    private ShippingService shippingService;
     // Použijeme @Lazy zde, abychom předešli cyklické závislosti při startu aplikace
     // (pokud by SuperFakturaInvoiceService měla závislost na OrderService)
-    @Autowired @Lazy private SuperFakturaInvoiceService invoiceService;
-    @Autowired private PaymentService paymentService;
-    @Autowired private OrderCodeGeneratorService orderCodeGeneratorService;
+    @Autowired
+    @Lazy
+    private SuperFakturaInvoiceService invoiceService;
+    @Autowired
+    private PaymentService paymentService;
+    @Autowired
+    private OrderCodeGeneratorService orderCodeGeneratorService;
 
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
@@ -241,7 +261,7 @@ public class OrderService implements PriceConstants {
             order.setShippingTax(shippingTax.setScale(PRICE_SCALE, ROUNDING_MODE));
             // NOTE: If shippingDiscountAmount needs to be stored, add a field to the Order entity.
 
-           // 6. Calculating Final Totals - UPRAVENO PRO ZAOKROUHLENÍ
+            // 6. Calculating Final Totals - UPRAVENO PRO ZAOKROUHLENÍ
             log.debug("[Order Creation - Step 6] Calculating final totals for currency: {}", orderCurrency);
             try {
                 BigDecimal subTotalAfterDiscount = Optional.ofNullable(order.getSubTotalWithoutTax()).orElse(BigDecimal.ZERO)
@@ -386,7 +406,8 @@ public class OrderService implements PriceConstants {
         log.debug("Starting processCartItem for Product ID: {}, TaxRate ID: {}", itemDto.getProductId(), itemDto.getSelectedTaxRateId());
         Product product = productRepository.findByIdWithDetails(itemDto.getProductId()) // Načteme s detaily včetně asociací
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Produkt nenalezen: " + itemDto.getProductId()));
-        if (!product.isActive()) throw new IllegalArgumentException("Produkt '" + product.getName() + "' není aktivní a nelze jej objednat.");
+        if (!product.isActive())
+            throw new IllegalArgumentException("Produkt '" + product.getName() + "' není aktivní a nelze jej objednat.");
 
         // --- Načtení a validace vybrané TaxRate ---
         if (itemDto.getSelectedTaxRateId() == null) {
@@ -584,7 +605,9 @@ public class OrderService implements PriceConstants {
                 orderItem.setHeight(itemDto.getCustomDimensions().get("height"));
             } else {
                 log.warn("Custom dimensions map missing for custom OrderItem (Product ID: {})", product.getId());
-                orderItem.setLength(null); orderItem.setWidth(null); orderItem.setHeight(null);
+                orderItem.setLength(null);
+                orderItem.setWidth(null);
+                orderItem.setHeight(null);
             }
 
             // Přidání vybraných atributů (použijeme předané entity)
@@ -599,7 +622,8 @@ public class OrderService implements PriceConstants {
             orderItem.setDesign(null); // Textový design se už nepoužívá
 
             // Přidání ostatních custom voleb
-            if (StringUtils.hasText(itemDto.getCustomRoofOverstep())) variantSb.append("|Přesah: ").append(itemDto.getCustomRoofOverstep());
+            if (StringUtils.hasText(itemDto.getCustomRoofOverstep()))
+                variantSb.append("|Přesah: ").append(itemDto.getCustomRoofOverstep());
             orderItem.setRoofOverstep(itemDto.getCustomRoofOverstep());
 
             if (itemDto.isCustomHasDivider()) variantSb.append("|Příčka: Ano");
@@ -621,12 +645,20 @@ public class OrderService implements PriceConstants {
             orderItem.setGlaze(glaze != null ? glaze.getName() : null);
             orderItem.setRoofColor(roofColor != null ? roofColor.getName() : null);
             orderItem.setDesign(null);
-            orderItem.setHasDivider(null); orderItem.setHasGutter(null); orderItem.setHasGardenShed(null);
+            orderItem.setHasDivider(null);
+            orderItem.setHasGutter(null);
+            orderItem.setHasGardenShed(null);
             // Sestavení variantInfo pro standardní produkt
             StringBuilder variantSb = new StringBuilder();
             if (design != null) variantSb.append("Design: ").append(design.getName());
-            if (glaze != null) { if (!variantSb.isEmpty()) variantSb.append(" | "); variantSb.append("Lazura: ").append(glaze.getName()); }
-            if (roofColor != null) { if (!variantSb.isEmpty()) variantSb.append(" | "); variantSb.append("Střecha: ").append(roofColor.getName()); }
+            if (glaze != null) {
+                if (!variantSb.isEmpty()) variantSb.append(" | ");
+                variantSb.append("Lazura: ").append(glaze.getName());
+            }
+            if (roofColor != null) {
+                if (!variantSb.isEmpty()) variantSb.append(" | ");
+                variantSb.append("Střecha: ").append(roofColor.getName());
+            }
             orderItem.setVariantInfo(variantSb.toString());
         }
         log.debug("Finished saving historical data for OrderItem. VariantInfo: {}", orderItem.getVariantInfo());
@@ -1088,13 +1120,14 @@ public class OrderService implements PriceConstants {
         };
     }
     // ----- NOVÁ POMOCNÁ METODA PRO KUPÓN -----
+
     /**
      * Validates the coupon based on general rules, minimum order value, and customer usage limits.
      * If valid, calculates the discount and applies it to the order object.
      *
-     * @param order The order object (used to set the discount amount).
+     * @param order      The order object (used to set the discount amount).
      * @param couponCode The code entered by the user.
-     * @param customer The customer placing the order.
+     * @param customer   The customer placing the order.
      * @return The validated Coupon object if it's valid and applied, otherwise null.
      */
     private Coupon validateAndApplyCoupon(Order order, String couponCode, Customer customer) {

@@ -1,17 +1,16 @@
 package org.example.eshop.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.AllArgsConstructor;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.math.BigDecimal;
-// import java.util.List; // Nahrazeno Set
-import java.util.Set; // Přidat import pro Set
-import java.util.HashSet; // Přidat import pro HashSet
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -29,7 +28,7 @@ public class TaxRate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length=100)
+    @Column(nullable = false, unique = true, length = 100)
     private String name;
 
     @Column(nullable = false, precision = 5, scale = 4) // scale=4 pro sazby jako 0.2100

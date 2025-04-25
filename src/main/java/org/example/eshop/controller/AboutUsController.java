@@ -13,17 +13,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class AboutUsController {
 
-        private static final Logger log = LoggerFactory.getLogger(AboutUsController.class);
+    private static final Logger log = LoggerFactory.getLogger(AboutUsController.class);
 
-        /**
-         * Zobrazí stránku "O nás".
-         *
-         * @return Název Thymeleaf šablony "o-nas".
-         */
-        @GetMapping("/o-nas")
-        public String showAboutUsPage() {
-                log.debug("Zobrazuji stránku O nás.");
+    /**
+     * Zobrazí stránku "O nás".
+     *
+     * @return Název Thymeleaf šablony "o-nas".
+     */
+    @GetMapping("/o-nas")
+    public String showAboutUsPage() {
+        log.debug("Zobrazuji stránku O nás.");
 
-                return "o-nas";
-        }
+        return "o-nas";
+    }
 }

@@ -3,11 +3,10 @@ package org.example.eshop.admin.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.model.Order;
-import org.example.eshop.model.OrderState; // <-- PŘIDÁNO: Import pro OrderState
+import org.example.eshop.model.OrderState;
 import org.example.eshop.service.OrderService;
-import org.example.eshop.service.OrderStateService; // <-- PŘIDÁNO: Import pro OrderStateService
+import org.example.eshop.service.OrderStateService;
 import org.example.eshop.service.SuperFakturaInvoiceService;
-import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,24 +15,21 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.format.annotation.DateTimeFormat; // <-- PŘIDÁNO: Import pro formát data
-import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.StringUtils; // <-- PŘIDÁNO: Import pro StringUtils
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime; // <-- PŘIDÁNO: Import pro LocalDateTime
-import java.time.LocalTime; // <-- PŘIDÁNO: Import pro LocalTime
-import java.util.List; // <-- PŘIDÁNO: Import pro List
-import java.util.Objects;
-import java.util.Optional; // <-- PŘIDÁNO: Import pro Optional
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -115,7 +111,7 @@ public class AdminOrderController {
                 currentSort = pageable.getSortOr(Sort.by(Sort.Direction.DESC, "orderDate")).stream()
                         .map(order -> order.getProperty() + "," + order.getDirection())
                         .collect(Collectors.joining("&sort="));
-                if (!StringUtils.hasText(currentSort) || ",".equals(currentSort)){
+                if (!StringUtils.hasText(currentSort) || ",".equals(currentSort)) {
                     currentSort = "orderDate,DESC";
                 }
             }
@@ -142,6 +138,7 @@ public class AdminOrderController {
         }
         return "admin/orders-list";
     }
+
     @GetMapping("/{id}")
     @Transactional(readOnly = true) // Transakce může zůstat, pokud OrderService potřebuje
     public String viewOrderDetail(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
@@ -259,7 +256,7 @@ public class AdminOrderController {
                 return "redirect:/admin/orders/" + id;
             }
             // Kontrola, zda je záloha požadována
-            if(order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0){
+            if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalStateException("Objednávka nevyžaduje zálohu.");
             }
             superFakturaInvoiceService.generateProformaInvoice(order);
@@ -267,8 +264,7 @@ public class AdminOrderController {
         } catch (EntityNotFoundException | IllegalStateException e) {
             log.warn("Proforma generation validation failed for order {}: {}", id, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error generating proforma for order {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Generování zálohové faktury selhalo: " + e.getMessage());
         }
@@ -292,7 +288,7 @@ public class AdminOrderController {
             if (order.getDepositPaidDate() == null && (order.getDepositAmount() != null && order.getDepositAmount().compareTo(BigDecimal.ZERO) > 0)) {
                 throw new IllegalStateException("Záloha pro tuto objednávku ještě nebyla označena jako zaplacená.");
             }
-            if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0){
+            if (order.getDepositAmount() == null || order.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalStateException("Pro tuto objednávku nebyla požadována záloha.");
             }
             superFakturaInvoiceService.generateTaxDocumentForDeposit(order);
@@ -300,8 +296,7 @@ public class AdminOrderController {
         } catch (EntityNotFoundException | IllegalStateException e) {
             log.warn("Tax doc generation validation failed for order {}: {}", id, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error generating tax doc for order {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Generování daňového dokladu selhalo: " + e.getMessage());
         }
@@ -331,8 +326,7 @@ public class AdminOrderController {
         } catch (EntityNotFoundException | IllegalStateException e) {
             log.warn("Final invoice generation validation failed for order {}: {}", id, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error generating final invoice for order {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Generování finální faktury selhalo: " + e.getMessage());
         }
@@ -358,8 +352,7 @@ public class AdminOrderController {
         } catch (EntityNotFoundException | IllegalStateException e) {
             log.warn("Send email validation failed for order {}: {}", id, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error sending invoice email for order {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Odeslání emailu selhalo: " + e.getMessage());
         }

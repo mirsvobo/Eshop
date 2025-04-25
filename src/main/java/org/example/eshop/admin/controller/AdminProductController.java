@@ -3,14 +3,16 @@ package org.example.eshop.admin.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.example.eshop.admin.service.AddonsService;
+import org.example.eshop.admin.service.DesignService;
+import org.example.eshop.admin.service.GlazeService;
+import org.example.eshop.admin.service.RoofColorService;
 import org.example.eshop.dto.ImageOrderUpdateRequest;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.ImageRepository;
-import org.example.eshop.service.*; // Importuj všechny potřebné services
-import org.example.eshop.admin.service.AddonsService; // Addons service
-import org.example.eshop.admin.service.DesignService; // Design service
-import org.example.eshop.admin.service.GlazeService; // Glaze service
-import org.example.eshop.admin.service.RoofColorService; // RoofColor service
+import org.example.eshop.service.FileStorageService;
+import org.example.eshop.service.ProductService;
+import org.example.eshop.service.TaxRateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +35,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
-// Odebrán import java.util.List, protože se nepoužívá přímo
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,14 +45,22 @@ public class AdminProductController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminProductController.class);
 
-    @Autowired private ProductService productService;
-    @Autowired private TaxRateService taxRateService;
-    @Autowired private AddonsService addonsService; // Předpokládá se, že tato service má metodu getAllActiveAddons() a getAddonById() vracející Optional
-    @Autowired private DesignService designService;
-    @Autowired private GlazeService glazeService;
-    @Autowired private RoofColorService roofColorService;
-    @Autowired private FileStorageService fileStorageService; // Nepoužívá se přímo zde, ale v ProductService
-    @Autowired private ImageRepository imageRepository; // Potřeba pro smazání obrázku
+    @Autowired
+    private ProductService productService;
+    @Autowired
+    private TaxRateService taxRateService;
+    @Autowired
+    private AddonsService addonsService; // Předpokládá se, že tato service má metodu getAllActiveAddons() a getAddonById() vracející Optional
+    @Autowired
+    private DesignService designService;
+    @Autowired
+    private GlazeService glazeService;
+    @Autowired
+    private RoofColorService roofColorService;
+    @Autowired
+    private FileStorageService fileStorageService; // Nepoužívá se přímo zde, ale v ProductService
+    @Autowired
+    private ImageRepository imageRepository; // Potřeba pro smazání obrázku
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -229,8 +238,7 @@ public class AdminProductController {
                 bindingResult.rejectValue("slug", "error.product.duplicate.slug", e.getMessage());
             } else if (e.getMessage().toLowerCase().contains("tax rate")) {
                 bindingResult.rejectValue("availableTaxRates", "error.product.taxrate", e.getMessage());
-            }
-            else {
+            } else {
                 model.addAttribute("errorMessage", "Chyba při ukládání: " + e.getMessage());
             }
             loadCommonFormData(model);
@@ -338,7 +346,6 @@ public class AdminProductController {
     // --- UPRAVENÉ METODY PRO EDITACI ---
 
 
-
     // Jedna POST metoda pro update - rozliší typ podle příchozího productData.isCustomisable()
     @PostMapping("/{id}")
     @Transactional // Potřeba pro načtení a uložení
@@ -418,13 +425,12 @@ public class AdminProductController {
             redirectAttributes.addFlashAttribute("successMessage", "Produkt '" + productData.getName() + "' byl úspěšně aktualizován."); //
             log.info("Product ID {} updated successfully.", id);
             return "redirect:/admin/products";
-        } catch (EntityNotFoundException e){
+        } catch (EntityNotFoundException e) {
             // Tohle by nemělo nastat, protože jsme existingProduct načetli výše
             log.error("Product ID {} disappeared during update process!", id, e);
             redirectAttributes.addFlashAttribute("errorMessage", "Produkt mezitím zmizel.");
             return "redirect:/admin/products";
-        }
-        catch (IllegalArgumentException | DataIntegrityViolationException e) {
+        } catch (IllegalArgumentException | DataIntegrityViolationException e) {
             log.warn("Error updating product ID {}: {}", id, e.getMessage());
             if (e.getMessage().toLowerCase().contains("slug")) {
                 bindingResult.rejectValue("slug", "error.product.duplicate.slug", e.getMessage());
@@ -680,8 +686,7 @@ public class AdminProductController {
         } catch (EntityNotFoundException e) {
             log.warn("Cannot deactivate product. Product not found: ID={}", id, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error deactivating product ID {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při deaktivaci produktu nastala chyba: " + e.getMessage());
         }

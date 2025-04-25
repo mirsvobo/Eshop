@@ -4,7 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.model.TaxRate;
-import org.example.eshop.service.TaxRateService; // Používáme existující service
+import org.example.eshop.service.TaxRateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional; // Potřebný import
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/admin/tax-rates")

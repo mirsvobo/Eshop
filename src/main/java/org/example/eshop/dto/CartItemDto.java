@@ -1,9 +1,10 @@
 package org.example.eshop.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString; // Přidáno pro lepší logování
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.util.List;

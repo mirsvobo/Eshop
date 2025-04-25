@@ -1,6 +1,7 @@
 package org.example.eshop.repository; // Nebo jiný vhodný balíček
 
-import jakarta.persistence.criteria.*; // Potřebné importy pro Criteria API
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.example.eshop.model.Customer;
 import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderState;
@@ -13,6 +14,7 @@ public class OrderSpecifications {
 
     /**
      * Vytvoří specifikaci pro filtrování podle emailu zákazníka (case-insensitive).
+     *
      * @param email Email nebo jeho část.
      * @return Specification nebo null, pokud je email prázdný.
      */
@@ -27,6 +29,7 @@ public class OrderSpecifications {
 
     /**
      * Vytvoří specifikaci pro filtrování podle ID stavu objednávky.
+     *
      * @param stateId ID stavu.
      * @return Specification nebo null, pokud stateId je null.
      */
@@ -40,6 +43,7 @@ public class OrderSpecifications {
 
     /**
      * Vytvoří specifikaci pro filtrování podle stavu platby (case-insensitive).
+     *
      * @param paymentStatus Stav platby.
      * @return Specification nebo null, pokud je paymentStatus prázdný.
      */
@@ -50,6 +54,7 @@ public class OrderSpecifications {
 
     /**
      * Vytvoří specifikaci pro filtrování objednávek od zadaného data a času (včetně).
+     *
      * @param from Počáteční datum a čas.
      * @return Specification nebo null, pokud from je null.
      */
@@ -60,6 +65,7 @@ public class OrderSpecifications {
 
     /**
      * Vytvoří specifikaci pro filtrování objednávek do zadaného data a času (včetně).
+     *
      * @param to Konečné datum a čas.
      * @return Specification nebo null, pokud to je null.
      */

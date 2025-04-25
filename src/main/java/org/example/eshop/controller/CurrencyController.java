@@ -1,6 +1,6 @@
 package org.example.eshop.controller;
 
-import jakarta.servlet.http.HttpServletRequest; // Import pro HttpServletRequest
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.service.CurrencyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.view.RedirectView; // Import pro RedirectView
+import org.springframework.web.servlet.view.RedirectView;
 
 @Controller
 public class CurrencyController {

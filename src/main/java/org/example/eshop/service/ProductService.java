@@ -2,14 +2,17 @@
 package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.example.eshop.config.PriceConstants;
 import org.example.eshop.dto.CustomPriceRequestDto;
 import org.example.eshop.dto.CustomPriceResponseDto;
-import org.example.eshop.model.*; // Import všech modelů
+import org.example.eshop.model.*;
 import org.example.eshop.repository.*;
-import org.example.eshop.config.PriceConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,14 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.util.*; // Import pro Set, Map atd.
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -35,23 +35,47 @@ import java.util.stream.Collectors;
 public class ProductService implements PriceConstants {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
-    @Autowired private FileStorageService fileStorageService;
-
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
     private static final Pattern MULTIPLE_DASHES = Pattern.compile("-{2,}");
     private static final Pattern EDGES_DASHES = Pattern.compile("^-|-$");
+    @Autowired
+    private FileStorageService fileStorageService;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ImageRepository imageRepository;
+    @Autowired
+    private TaxRateRepository taxRateRepository;
+    @Autowired
+    private DiscountService discountService;
+    @Autowired
+    private DesignRepository designRepository;
+    @Autowired
+    private GlazeRepository glazeRepository;
+    @Autowired
+    private RoofColorRepository roofColorRepository;
+    @Autowired
+    private AddonsRepository addonsRepository;
 
-
-    @Autowired private ProductRepository productRepository;
-    @Autowired private ImageRepository imageRepository;
-    @Autowired private TaxRateRepository taxRateRepository;
-    @Autowired private DiscountService discountService;
-    @Autowired private DesignRepository designRepository;
-    @Autowired private GlazeRepository glazeRepository;
-    @Autowired private RoofColorRepository roofColorRepository;
-    @Autowired private AddonsRepository addonsRepository;
-
+    public static String generateSlug(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            logger.warn("Attempted to generate slug from empty or null input. Returning empty string.");
+            return "";
+        }
+        String nowhitespace = WHITESPACE.matcher(input.trim()).replaceAll("-");
+        String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
+        String slug = NONLATIN.matcher(normalized).replaceAll("");
+        slug = slug.toLowerCase(Locale.ENGLISH);
+        slug = MULTIPLE_DASHES.matcher(slug).replaceAll("-");
+        slug = EDGES_DASHES.matcher(slug).replaceAll("");
+        if (slug.length() > 150) {
+            slug = slug.substring(0, 150);
+            slug = EDGES_DASHES.matcher(slug).replaceAll("");
+        }
+        logger.trace("Generated slug '{}' from input '{}'", slug, input);
+        return slug;
+    }
 
     @Cacheable(value = "activeProductsPage", key = "#pageable.toString()")
     @Transactional(readOnly = true)
@@ -85,7 +109,7 @@ public class ProductService implements PriceConstants {
 
     @Cacheable(value = "productDetails", key = "#id", unless = "#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
-    public Optional<Product> getProductById(Long id){
+    public Optional<Product> getProductById(Long id) {
         logger.info(">>> [ProductService] Vstupuji do getProductById (with details) using findByIdWithDetails. ID: {}", id);
         Optional<Product> result = Optional.empty();
         try {
@@ -98,7 +122,7 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    @Cacheable(value = "productBySlug", key = "T(String).valueOf(#slug).toLowerCase()", unless="#result == null or !#result.isPresent()")
+    @Cacheable(value = "productBySlug", key = "T(String).valueOf(#slug).toLowerCase()", unless = "#result == null or !#result.isPresent()")
     @Transactional(readOnly = true)
     public Optional<Product> getActiveProductBySlug(String slug) {
         logger.info(">>> [ProductService] Vstupuji do getActiveProductBySlug using findActiveBySlugWithDetails. Slug: {}", slug);
@@ -141,6 +165,8 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím getAllProductsList <<<");
         return result;
     }
+
+    // --- START: Simplified calculateDynamicProductPrice ---
 
     @Transactional(readOnly = true)
     public Map<String, Object> calculateFinalProductPrice(Product product, String currency) {
@@ -193,22 +219,22 @@ public class ProductService implements PriceConstants {
 
         return priceInfo;
     }
+    // --- END: Simplified calculateDynamicProductPrice ---
 
-    // --- START: Simplified calculateDynamicProductPrice ---
     /**
      * Calculates the BASE price for a customizable product based ONLY on its dimensions
      * and the per-unit prices defined in its ProductConfigurator.
      * Prices for selected attributes (Design, Glaze, RoofColor) and Addons
      * are handled separately (client-side or during cart/order processing).
      *
-     * @param product The customizable product.
+     * @param product    The customizable product.
      * @param dimensions A map containing "length", "width", and "height" keys with BigDecimal values.
-     * @param currency The target currency ("CZK" or "EUR").
+     * @param currency   The target currency ("CZK" or "EUR").
      * @return The calculated base price based on dimensions.
      * @throws IllegalArgumentException if product is null, inactive, not customizable,
-     * missing configurator, dimensions map is null or missing keys,
-     * or dimensions are outside the configured range.
-     * @throws IllegalStateException if required price configurations are missing in ProductConfigurator.
+     *                                  missing configurator, dimensions map is null or missing keys,
+     *                                  or dimensions are outside the configured range.
+     * @throws IllegalStateException    if required price configurations are missing in ProductConfigurator.
      */
     @Transactional(readOnly = true)
     public BigDecimal calculateDynamicProductPrice(Product product, Map<String, BigDecimal> dimensions,
@@ -218,9 +244,12 @@ public class ProductService implements PriceConstants {
         try {
             // --- Input Validations ---
             if (product == null) throw new IllegalArgumentException("Product cannot be null.");
-            if (!product.isActive()) throw new IllegalArgumentException("Cannot calculate price for inactive product ID: " + product.getId());
-            if (!product.isCustomisable()) throw new IllegalArgumentException("Product ID " + product.getId() + " is not customisable.");
-            if (product.getConfigurator() == null) throw new IllegalArgumentException("Product ID " + product.getId() + " is missing configurator.");
+            if (!product.isActive())
+                throw new IllegalArgumentException("Cannot calculate price for inactive product ID: " + product.getId());
+            if (!product.isCustomisable())
+                throw new IllegalArgumentException("Product ID " + product.getId() + " is not customisable.");
+            if (product.getConfigurator() == null)
+                throw new IllegalArgumentException("Product ID " + product.getId() + " is missing configurator.");
             if (dimensions == null) throw new IllegalArgumentException("Dimensions map cannot be null.");
 
             ProductConfigurator config = product.getConfigurator();
@@ -265,7 +294,6 @@ public class ProductService implements PriceConstants {
                 product != null ? product.getId() : "null", currency, basePrice);
         return basePrice;
     }
-    // --- END: Simplified calculateDynamicProductPrice ---
 
     // --- Helper method: getPriceForCurrency (Remains the same) ---
     private BigDecimal getPriceForCurrency(BigDecimal priceCZK, BigDecimal priceEUR, String currency, String priceName) {
@@ -303,8 +331,8 @@ public class ProductService implements PriceConstants {
 
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
-            @CacheEvict(value = "productDetails", key = "#result.id", condition="#result != null"),
-            @CacheEvict(value = "productBySlug", key = "T(String).valueOf(#result.slug).toLowerCase()", condition="#result != null")
+            @CacheEvict(value = "productDetails", key = "#result.id", condition = "#result != null"),
+            @CacheEvict(value = "productBySlug", key = "T(String).valueOf(#result.slug).toLowerCase()", condition = "#result != null")
     })
     @Transactional
     public Product createProduct(Product product) {
@@ -371,6 +399,7 @@ public class ProductService implements PriceConstants {
         }
         return savedProduct;
     }
+
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
             @CacheEvict(value = "productDetails", key = "#id"),
@@ -397,22 +426,66 @@ public class ProductService implements PriceConstants {
 
             // --- Update Basic Fields ---
             // (Tato část zůstává stejná jako v předchozí verzi, kopíruje základní atributy)
-            if (!Objects.equals(productData.getName(), productToUpdate.getName())) { logger.debug("Product ID {}: Změna Name", id); productToUpdate.setName(productData.getName()); }
-            if (productData.getShortDescription() != null && productData.getShortDescription().length() > 500) { throw new IllegalArgumentException("Krátký popis nesmí být delší než 500 znaků."); }
-            if (!Objects.equals(productData.getShortDescription(), productToUpdate.getShortDescription())) { logger.debug("Product ID {}: Změna ShortDescription", id); productToUpdate.setShortDescription(productData.getShortDescription()); }
-            if (!Objects.equals(productData.getDescription(), productToUpdate.getDescription())) { logger.debug("Product ID {}: Změna Description", id); productToUpdate.setDescription(productData.getDescription()); }
-            if (!Objects.equals(productData.getBasePriceCZK(), productToUpdate.getBasePriceCZK())) { logger.debug("Product ID {}: Změna BasePriceCZK", id); productToUpdate.setBasePriceCZK(productData.getBasePriceCZK()); }
-            if (!Objects.equals(productData.getBasePriceEUR(), productToUpdate.getBasePriceEUR())) { logger.debug("Product ID {}: Změna BasePriceEUR", id); productToUpdate.setBasePriceEUR(productData.getBasePriceEUR()); }
-            if (!Objects.equals(productData.getModel(), productToUpdate.getModel())) { logger.debug("Product ID {}: Změna Model", id); productToUpdate.setModel(productData.getModel()); }
-            if (!Objects.equals(productData.getMaterial(), productToUpdate.getMaterial())) { logger.debug("Product ID {}: Změna Material", id); productToUpdate.setMaterial(productData.getMaterial()); }
-            if (!Objects.equals(productData.getHeight(), productToUpdate.getHeight())) { logger.debug("Product ID {}: Změna Height", id); productToUpdate.setHeight(productData.getHeight()); }
-            if (!Objects.equals(productData.getLength(), productToUpdate.getLength())) { logger.debug("Product ID {}: Změna Length", id); productToUpdate.setLength(productData.getLength()); }
-            if (!Objects.equals(productData.getWidth(), productToUpdate.getWidth())) { logger.debug("Product ID {}: Změna Width", id); productToUpdate.setWidth(productData.getWidth()); }
-            if (!Objects.equals(productData.getRoofOverstep(), productToUpdate.getRoofOverstep())) { logger.debug("Product ID {}: Změna RoofOverstep", id); productToUpdate.setRoofOverstep(productData.getRoofOverstep()); }
-            if (productData.isActive() != productToUpdate.isActive()) { logger.debug("Product ID {}: Změna Active", id); productToUpdate.setActive(productData.isActive()); }
+            if (!Objects.equals(productData.getName(), productToUpdate.getName())) {
+                logger.debug("Product ID {}: Změna Name", id);
+                productToUpdate.setName(productData.getName());
+            }
+            if (productData.getShortDescription() != null && productData.getShortDescription().length() > 500) {
+                throw new IllegalArgumentException("Krátký popis nesmí být delší než 500 znaků.");
+            }
+            if (!Objects.equals(productData.getShortDescription(), productToUpdate.getShortDescription())) {
+                logger.debug("Product ID {}: Změna ShortDescription", id);
+                productToUpdate.setShortDescription(productData.getShortDescription());
+            }
+            if (!Objects.equals(productData.getDescription(), productToUpdate.getDescription())) {
+                logger.debug("Product ID {}: Změna Description", id);
+                productToUpdate.setDescription(productData.getDescription());
+            }
+            if (!Objects.equals(productData.getBasePriceCZK(), productToUpdate.getBasePriceCZK())) {
+                logger.debug("Product ID {}: Změna BasePriceCZK", id);
+                productToUpdate.setBasePriceCZK(productData.getBasePriceCZK());
+            }
+            if (!Objects.equals(productData.getBasePriceEUR(), productToUpdate.getBasePriceEUR())) {
+                logger.debug("Product ID {}: Změna BasePriceEUR", id);
+                productToUpdate.setBasePriceEUR(productData.getBasePriceEUR());
+            }
+            if (!Objects.equals(productData.getModel(), productToUpdate.getModel())) {
+                logger.debug("Product ID {}: Změna Model", id);
+                productToUpdate.setModel(productData.getModel());
+            }
+            if (!Objects.equals(productData.getMaterial(), productToUpdate.getMaterial())) {
+                logger.debug("Product ID {}: Změna Material", id);
+                productToUpdate.setMaterial(productData.getMaterial());
+            }
+            if (!Objects.equals(productData.getHeight(), productToUpdate.getHeight())) {
+                logger.debug("Product ID {}: Změna Height", id);
+                productToUpdate.setHeight(productData.getHeight());
+            }
+            if (!Objects.equals(productData.getLength(), productToUpdate.getLength())) {
+                logger.debug("Product ID {}: Změna Length", id);
+                productToUpdate.setLength(productData.getLength());
+            }
+            if (!Objects.equals(productData.getWidth(), productToUpdate.getWidth())) {
+                logger.debug("Product ID {}: Změna Width", id);
+                productToUpdate.setWidth(productData.getWidth());
+            }
+            if (!Objects.equals(productData.getRoofOverstep(), productToUpdate.getRoofOverstep())) {
+                logger.debug("Product ID {}: Změna RoofOverstep", id);
+                productToUpdate.setRoofOverstep(productData.getRoofOverstep());
+            }
+            if (productData.isActive() != productToUpdate.isActive()) {
+                logger.debug("Product ID {}: Změna Active", id);
+                productToUpdate.setActive(productData.isActive());
+            }
             // Customisable flag se nastavuje níže, zde neměnit
-            if (!Objects.equals(productData.getMetaTitle(), productToUpdate.getMetaTitle())) { logger.debug("Product ID {}: Změna MetaTitle", id); productToUpdate.setMetaTitle(productData.getMetaTitle()); }
-            if (!Objects.equals(productData.getMetaDescription(), productToUpdate.getMetaDescription())) { logger.debug("Product ID {}: Změna MetaDescription", id); productToUpdate.setMetaDescription(productData.getMetaDescription()); }
+            if (!Objects.equals(productData.getMetaTitle(), productToUpdate.getMetaTitle())) {
+                logger.debug("Product ID {}: Změna MetaTitle", id);
+                productToUpdate.setMetaTitle(productData.getMetaTitle());
+            }
+            if (!Objects.equals(productData.getMetaDescription(), productToUpdate.getMetaDescription())) {
+                logger.debug("Product ID {}: Změna MetaDescription", id);
+                productToUpdate.setMetaDescription(productData.getMetaDescription());
+            }
 
 
             // --- Handle Customisable Flag Change & Configurator Update ---
@@ -481,7 +554,7 @@ public class ProductService implements PriceConstants {
                 }
             } else { // Není custom, vyčistíme Addons
                 if (productToUpdate.getAvailableAddons() == null) productToUpdate.setAvailableAddons(new HashSet<>());
-                if (!productToUpdate.getAvailableAddons().isEmpty()){
+                if (!productToUpdate.getAvailableAddons().isEmpty()) {
                     logger.debug("Product ID {}: Čistím Addons pro standardní produkt.", id);
                     productToUpdate.getAvailableAddons().clear();
                 }
@@ -518,7 +591,8 @@ public class ProductService implements PriceConstants {
 
             // RoofColors (Barvy střechy)
             Set<RoofColor> incomingRoofColors = productData.getAvailableRoofColors() != null ? productData.getAvailableRoofColors() : Collections.emptySet();
-            if (productToUpdate.getAvailableRoofColors() == null) productToUpdate.setAvailableRoofColors(new HashSet<>());
+            if (productToUpdate.getAvailableRoofColors() == null)
+                productToUpdate.setAvailableRoofColors(new HashSet<>());
             Set<Long> existingRoofColorIds = productToUpdate.getAvailableRoofColors().stream().map(RoofColor::getId).collect(Collectors.toSet());
             Set<Long> incomingRoofColorIds = incomingRoofColors.stream().map(RoofColor::getId).collect(Collectors.toSet());
             if (!existingRoofColorIds.equals(incomingRoofColorIds)) {
@@ -566,8 +640,7 @@ public class ProductService implements PriceConstants {
                 throw new IllegalArgumentException("Produkt se slugem '" + productToUpdate.getSlug() + "' již existuje (chyba DB).");
             }
             throw e; // Propagujeme obecnější chybu integrity
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error("!!! [ProductService] Neočekávaná chyba v updateProduct pro ID {}: {} !!!", id, e.getMessage(), e);
             // Zabalíme do RuntimeException
             throw new RuntimeException("Neočekávaná chyba při aktualizaci produktu ID " + id + ": " + e.getMessage(), e);
@@ -638,7 +711,6 @@ public class ProductService implements PriceConstants {
         configurator.setPricePerCmWidthEUR(Optional.ofNullable(configurator.getPricePerCmWidthEUR()).orElse(new BigDecimal("1.00"))); // Assumes renamed field
 
 
-
         configurator.setStepLength(Optional.ofNullable(configurator.getStepLength()).orElse(BigDecimal.TEN));
         configurator.setStepWidth(Optional.ofNullable(configurator.getStepWidth()).orElse(BigDecimal.TEN));
         configurator.setStepHeight(Optional.ofNullable(configurator.getStepHeight()).orElse(BigDecimal.valueOf(5)));
@@ -655,25 +727,6 @@ public class ProductService implements PriceConstants {
         }
 
         logger.info("Applied/verified default values for configurator linked to product ID {}", configurator.getProduct() != null ? configurator.getProduct().getId() : "(unlinked)");
-    }
-
-    public static String generateSlug(String input) {
-        if (input == null || input.trim().isEmpty()) {
-            logger.warn("Attempted to generate slug from empty or null input. Returning empty string.");
-            return "";
-        }
-        String nowhitespace = WHITESPACE.matcher(input.trim()).replaceAll("-");
-        String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
-        String slug = NONLATIN.matcher(normalized).replaceAll("");
-        slug = slug.toLowerCase(Locale.ENGLISH);
-        slug = MULTIPLE_DASHES.matcher(slug).replaceAll("-");
-        slug = EDGES_DASHES.matcher(slug).replaceAll("");
-        if (slug.length() > 150) {
-            slug = slug.substring(0, 150);
-            slug = EDGES_DASHES.matcher(slug).replaceAll("");
-        }
-        logger.trace("Generated slug '{}' from input '{}'", slug, input);
-        return slug;
     }
 
     @Caching(evict = {
@@ -875,6 +928,7 @@ public class ProductService implements PriceConstants {
 
         logger.info(">>> [ProductService] Opouštím updateImageDisplayOrder. Product ID: {}", productId);
     }
+
     @Transactional(readOnly = true)
     public CustomPriceResponseDto calculateDetailedCustomPrice(CustomPriceRequestDto requestDto) {
         logger.info(">>> [ProductService] Vstupuji do calculateDetailedCustomPrice. Product ID: {}", requestDto.getProductId());

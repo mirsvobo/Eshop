@@ -1,6 +1,6 @@
 package org.example.eshop.dto;
 
-import jakarta.validation.constraints.NotBlank; // Pokud chceme validovat i zde
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data // Lombok pro gettery/settery

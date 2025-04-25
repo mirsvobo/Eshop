@@ -2,18 +2,17 @@ package org.example.eshop.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.model.TaxRate;
-import org.example.eshop.repository.ProductRepository; // Pro kontrolu závislostí
+import org.example.eshop.repository.ProductRepository;
 import org.example.eshop.repository.TaxRateRepository;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -25,11 +24,14 @@ public class TaxRateService {
 
     private static final Logger log = LoggerFactory.getLogger(TaxRateService.class);
 
-    @Autowired private TaxRateRepository taxRateRepository;
-    @Autowired private ProductRepository productRepository; // Pro kontrolu použití sazby
+    @Autowired
+    private TaxRateRepository taxRateRepository;
+    @Autowired
+    private ProductRepository productRepository; // Pro kontrolu použití sazby
 
     /**
      * Vrátí seznam všech daňových sazeb.
+     *
      * @return Seznam TaxRate.
      */
     @Cacheable("allTaxRates")
@@ -41,17 +43,19 @@ public class TaxRateService {
 
     /**
      * Najde daňovou sazbu podle jejího ID.
+     *
      * @param taxRateId ID sazby.
      * @return Optional obsahující TaxRate, pokud existuje.
      */
     @Transactional(readOnly = true)
-    public Optional<TaxRate> getTaxRateById(Long taxRateId){
+    public Optional<TaxRate> getTaxRateById(Long taxRateId) {
         log.debug("Fetching tax rate by ID: {}", taxRateId);
         return taxRateRepository.findById(taxRateId);
     }
 
     /**
      * Vytvoří novou daňovou sazbu.
+     *
      * @param taxRate Objekt sazby k vytvoření.
      * @return Uložená sazba.
      */
@@ -78,7 +82,8 @@ public class TaxRateService {
 
     /**
      * Aktualizuje existující daňovou sazbu.
-     * @param taxRateId ID sazby k aktualizaci.
+     *
+     * @param taxRateId   ID sazby k aktualizaci.
      * @param taxRateData Objekt s novými daty.
      * @return Optional s aktualizovanou sazbou.
      */
@@ -119,9 +124,10 @@ public class TaxRateService {
 
     /**
      * Smaže daňovou sazbu podle ID.
+     *
      * @param taxRateId ID sazby ke smazání.
      * @throws EntityNotFoundException pokud sazba neexistuje.
-     * @throws IllegalStateException pokud je sazba přiřazena k nějakým produktům.
+     * @throws IllegalStateException   pokud je sazba přiřazena k nějakým produktům.
      */
     @Caching(evict = {
             @CacheEvict(value = "allTaxRates", allEntries = true)

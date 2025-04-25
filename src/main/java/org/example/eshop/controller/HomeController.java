@@ -1,7 +1,7 @@
 package org.example.eshop.controller;
 
 import org.example.eshop.model.Product;
-import org.example.eshop.service.CurrencyService; // Import CurrencyService
+import org.example.eshop.service.CurrencyService;
 import org.example.eshop.service.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

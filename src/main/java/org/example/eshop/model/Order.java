@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -51,14 +50,15 @@ public class Order {
     @Column(nullable = false, length = 3)
     private String currency = "CZK"; // Výchozí měna
 
-    @Column(unique = true, nullable = false, updatable = false, length=36)
+    @Column(unique = true, nullable = false, updatable = false, length = 36)
     private String orderCode; // Unikátní kód objednávky (např. UUID nebo generované číslo)
 
     @ManyToOne(fetch = FetchType.LAZY) // LAZY načítání zákazníka
-    @JoinColumn(name="customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY) // LAZY načítání položek
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    // LAZY načítání položek
     @OrderBy("id ASC") // Řazení položek podle ID
     private List<OrderItem> orderItems;
 
@@ -76,40 +76,66 @@ public class Order {
     private LocalDateTime depositPaidDate; // Datum a čas platby zálohy
 
     // --- Dodací adresa (uložená kopie v době objednávky) ---
-    @Column(length = 100) private String deliveryFirstName;
-    @Column(length = 100) private String deliveryLastName;
-    @Column(length = 150) private String deliveryCompanyName;
-    @Column(nullable = false, length = 255) private String deliveryStreet;
-    @Column(nullable = false, length = 100) private String deliveryCity;
-    @Column(nullable = false, length = 20) private String deliveryZipCode;
-    @Column(nullable = false, length = 100) private String deliveryCountry;
-    @Column(length = 30) private String deliveryPhone; // Telefon pro dopravce
+    @Column(length = 100)
+    private String deliveryFirstName;
+    @Column(length = 100)
+    private String deliveryLastName;
+    @Column(length = 150)
+    private String deliveryCompanyName;
+    @Column(nullable = false, length = 255)
+    private String deliveryStreet;
+    @Column(nullable = false, length = 100)
+    private String deliveryCity;
+    @Column(nullable = false, length = 20)
+    private String deliveryZipCode;
+    @Column(nullable = false, length = 100)
+    private String deliveryCountry;
+    @Column(length = 30)
+    private String deliveryPhone; // Telefon pro dopravce
 
     // --- Fakturační adresa (uložená kopie v době objednávky) ---
-    @Column(length = 100) private String invoiceFirstName;
-    @Column(length = 100) private String invoiceLastName;
-    @Column(length = 150) private String invoiceCompanyName;
-    @Column(nullable = false, length = 255) private String invoiceStreet;
-    @Column(nullable = false, length = 100) private String invoiceCity;
-    @Column(nullable = false, length = 20) private String invoiceZipCode;
-    @Column(nullable = false, length = 100) private String invoiceCountry;
-    @Column(length = 20) private String invoiceTaxId; // IČO
-    @Column(length = 20) private String invoiceVatId; // DIČ
+    @Column(length = 100)
+    private String invoiceFirstName;
+    @Column(length = 100)
+    private String invoiceLastName;
+    @Column(length = 150)
+    private String invoiceCompanyName;
+    @Column(nullable = false, length = 255)
+    private String invoiceStreet;
+    @Column(nullable = false, length = 100)
+    private String invoiceCity;
+    @Column(nullable = false, length = 20)
+    private String invoiceZipCode;
+    @Column(nullable = false, length = 100)
+    private String invoiceCountry;
+    @Column(length = 20)
+    private String invoiceTaxId; // IČO
+    @Column(length = 20)
+    private String invoiceVatId; // DIČ
 
     // --- Poznámka a ceny ---
     @Lob // Pro delší text
     @Column(columnDefinition = "TEXT")
     private String note; // Poznámka od zákazníka
 
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal subTotalWithoutTax = BigDecimal.ZERO; // Mezisoučet položek bez DPH
-    @Column(precision = 10, scale = 2) private BigDecimal couponDiscountAmount = BigDecimal.ZERO; // Výše slevy z kupónu (bez DPH)
-    @Column(precision = 10, scale = 2) private BigDecimal shippingCostWithoutTax = BigDecimal.ZERO; // Cena dopravy bez DPH
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal totalItemsTax = BigDecimal.ZERO; // Celkové DPH z položek
-    @Column(precision = 5, scale = 4) private BigDecimal shippingTaxRate = BigDecimal.ZERO; // Sazba DPH pro dopravu (např. 0.21)
-    @Column(precision = 10, scale = 2) private BigDecimal shippingTax = BigDecimal.ZERO; // Výše DPH z dopravy
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal totalPriceWithoutTax = BigDecimal.ZERO; // Celková cena bez DPH (po slevě, vč. dopravy)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal totalTax = BigDecimal.ZERO; // Celkové DPH (položky + doprava)
-    @Column(nullable = false, precision = 10, scale = 2) private BigDecimal totalPrice = BigDecimal.ZERO; // Celková cena k úhradě (s DPH)
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal subTotalWithoutTax = BigDecimal.ZERO; // Mezisoučet položek bez DPH
+    @Column(precision = 10, scale = 2)
+    private BigDecimal couponDiscountAmount = BigDecimal.ZERO; // Výše slevy z kupónu (bez DPH)
+    @Column(precision = 10, scale = 2)
+    private BigDecimal shippingCostWithoutTax = BigDecimal.ZERO; // Cena dopravy bez DPH
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalItemsTax = BigDecimal.ZERO; // Celkové DPH z položek
+    @Column(precision = 5, scale = 4)
+    private BigDecimal shippingTaxRate = BigDecimal.ZERO; // Sazba DPH pro dopravu (např. 0.21)
+    @Column(precision = 10, scale = 2)
+    private BigDecimal shippingTax = BigDecimal.ZERO; // Výše DPH z dopravy
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPriceWithoutTax = BigDecimal.ZERO; // Celková cena bez DPH (po slevě, vč. dopravy)
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalTax = BigDecimal.ZERO; // Celkové DPH (položky + doprava)
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice = BigDecimal.ZERO; // Celková cena k úhradě (s DPH)
 
     // --- Záloha ---
     @Column(precision = 10, scale = 2)
@@ -127,17 +153,26 @@ public class Order {
     private String appliedCouponCode; // Kód použitého kupónu (historicky)
 
     // --- Fakturace SuperFaktura ---
-    @Column(unique = true) private Long sfProformaInvoiceId; // ID zálohové faktury v SF
-    @Column(length = 100) private String proformaInvoiceNumber; // Číslo zálohové faktury
-    @Column(length = 1000) private String sfProformaPdfUrl; // Odkaz na PDF zálohové faktury
+    @Column(unique = true)
+    private Long sfProformaInvoiceId; // ID zálohové faktury v SF
+    @Column(length = 100)
+    private String proformaInvoiceNumber; // Číslo zálohové faktury
+    @Column(length = 1000)
+    private String sfProformaPdfUrl; // Odkaz na PDF zálohové faktury
 
-    @Column(unique = true) private Long sfTaxDocumentId; // ID DDKP v SF (nebo ostré f. k záloze)
-    @Column(length = 100) private String taxDocumentNumber; // Číslo DDKP
-    @Column(length = 1000) private String sfTaxDocumentPdfUrl; // Odkaz na PDF DDKP
+    @Column(unique = true)
+    private Long sfTaxDocumentId; // ID DDKP v SF (nebo ostré f. k záloze)
+    @Column(length = 100)
+    private String taxDocumentNumber; // Číslo DDKP
+    @Column(length = 1000)
+    private String sfTaxDocumentPdfUrl; // Odkaz na PDF DDKP
 
-    @Column(unique = true) private Long sfFinalInvoiceId; // ID finální faktury v SF
-    @Column(length = 100) private String finalInvoiceNumber; // Číslo finální faktury
-    @Column(length = 1000) private String sfFinalInvoicePdfUrl; // Odkaz na PDF finální faktury
+    @Column(unique = true)
+    private Long sfFinalInvoiceId; // ID finální faktury v SF
+    @Column(length = 100)
+    private String finalInvoiceNumber; // Číslo finální faktury
+    @Column(length = 1000)
+    private String sfFinalInvoicePdfUrl; // Odkaz na PDF finální faktury
 
     @Column(nullable = false)
     private boolean finalInvoiceGenerated = false; // Příznak, zda byla finální faktura úspěšně generována
@@ -201,6 +236,7 @@ public class Order {
                 ", currency='" + currency + '\'' +
                 '}';
     }
+
     @Transient // Anotace @Transient značí, že toto pole/metoda se nemá mapovat do DB
     public boolean isAddressesMatchInOrder() {
         // Porovnáme relevantní pole (ignorujeme velká/malá písmena a bílé znaky pro jistotu)

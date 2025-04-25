@@ -5,14 +5,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.example.eshop.config.PriceConstants;
-import org.example.eshop.model.*;
+import org.example.eshop.model.Customer;
+import org.example.eshop.model.Order;
+import org.example.eshop.model.OrderItem;
 import org.example.eshop.repository.OrderRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.scheduling.annotation.Async; // <-- PŘIDAT IMPORT
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +25,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import org.hibernate.Hibernate;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -37,7 +38,18 @@ import java.util.stream.Collectors;
 public class SuperFakturaInvoiceService implements InvoiceService, PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(SuperFakturaInvoiceService.class);
-
+    // API Endpoints
+    private static final String INVOICES_ENDPOINT_CREATE = "/invoices/create.json";
+    private static final String INVOICES_ENDPOINT_SEND_EMAIL_ACTION = "/invoices/send";
+    private static final String INVOICES_ENDPOINT_MARK_AS_SENT = "/invoices/mark_as_sent";
+    private static final String INVOICES_ENDPOINT_PAY_PATTERN = "/invoice_payments/add/invoice_id:%d.json";
+    private static final String INVOICES_ENDPOINT_PDF_WITH_TOKEN_PATTERN = "/invoices/pdf/%d/token:%s";
+    // Ostatní konstanty
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final int PROFORMA_DUE_DAYS = 7;
+    private static final int FINAL_DUE_DAYS = 14;
+    private static final Long TAX_DOCUMENT_SEQUENCE_ID = 342836L; // ID číselné řady pro DDKP (ověřit!)
+    private static final String PAYMENT_STATUS_PAID = "PAID";
     // ... (ostatní fieldy a konstanty zůstávají stejné) ...
     @Value("${superfaktura.api.email}")
     private String sfApiEmail;
@@ -47,27 +59,12 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
     private String sfCompanyId;
     @Value("${superfaktura.api.url:https://moje.superfaktura.cz}")
     private String sfApiUrl;
-
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
     private OrderRepository orderRepository;
-
-    // API Endpoints
-    private static final String INVOICES_ENDPOINT_CREATE = "/invoices/create.json";
-    private static final String INVOICES_ENDPOINT_SEND_EMAIL_ACTION = "/invoices/send";
-    private static final String INVOICES_ENDPOINT_MARK_AS_SENT = "/invoices/mark_as_sent";
-    private static final String INVOICES_ENDPOINT_PAY_PATTERN = "/invoice_payments/add/invoice_id:%d.json";
-    private static final String INVOICES_ENDPOINT_PDF_WITH_TOKEN_PATTERN = "/invoices/pdf/%d/token:%s";
-
-    // Ostatní konstanty
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
-    private static final int PROFORMA_DUE_DAYS = 7;
-    private static final int FINAL_DUE_DAYS = 14;
-    private static final Long TAX_DOCUMENT_SEQUENCE_ID = 342836L; // ID číselné řady pro DDKP (ověřit!)
-    private static final String PAYMENT_STATUS_PAID = "PAID";
 
     // --- Implementace metod InvoiceService ---
 
@@ -510,7 +507,8 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         Map<String, Object> invoiceData = buildBaseInvoiceData(order);
         LocalDate paymentDate = order.getDepositPaidDate().toLocalDate();
         invoiceData.put("type", "regular"); // DDKP je technicky "regular" faktura
-        if (TAX_DOCUMENT_SEQUENCE_ID != null) invoiceData.put("sequence_id", TAX_DOCUMENT_SEQUENCE_ID); // Použijeme číselnou řadu pro DDKP
+        if (TAX_DOCUMENT_SEQUENCE_ID != null)
+            invoiceData.put("sequence_id", TAX_DOCUMENT_SEQUENCE_ID); // Použijeme číselnou řadu pro DDKP
         invoiceData.put("date", paymentDate.format(DATE_FORMATTER)); // Datum vystavení = datum platby zálohy
         invoiceData.put("delivery_date", paymentDate.format(DATE_FORMATTER)); // DUZP = datum platby zálohy
         invoiceData.put("due_date", paymentDate.format(DATE_FORMATTER)); // Splatnost = datum platby zálohy
@@ -788,6 +786,7 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         }
         return true;
     }
+
     // Metoda buildStandardInvoiceItemsWithRounding - OPRAVENO getShippingMethodName
     private java.util.List<java.util.Map<String, Object>> buildStandardInvoiceItemsWithRounding(Order order) {
         java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
@@ -865,6 +864,7 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
         }
         return items;
     }
+
     private java.util.Map<String, Object> buildDepositInvoiceItem(Order order, String itemName, java.math.BigDecimal amountWithTax) {
         java.util.Map<String, Object> depositItem = new java.util.HashMap<>();
 
@@ -910,6 +910,7 @@ public class SuperFakturaInvoiceService implements InvoiceService, PriceConstant
 
         return depositItem;
     }
+
     private Map<String, Object> createFinalPayload(Map<String, Object> invoiceData, Map<String, Object> clientData, List<Map<String, Object>> items) {
         Map<String, Object> finalPayload = new HashMap<>();
         finalPayload.put("Invoice", invoiceData);

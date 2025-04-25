@@ -7,13 +7,13 @@ import org.example.eshop.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,8 +24,10 @@ public class GlazeService {
 
     private static final Logger log = LoggerFactory.getLogger(GlazeService.class);
 
-    @Autowired private GlazeRepository glazeRepository;
-    @Autowired private ProductRepository productRepository; // Pro kontrolu použití
+    @Autowired
+    private GlazeRepository glazeRepository;
+    @Autowired
+    private ProductRepository productRepository; // Pro kontrolu použití
 
     @Cacheable("allGlazes")
     @Transactional(readOnly = true)
@@ -39,6 +41,7 @@ public class GlazeService {
         log.debug("Fetching glaze by ID: {}", id);
         return glazeRepository.findById(id);
     }
+
     @Caching(evict = {
             @CacheEvict(value = "allGlazes", allEntries = true)
     })

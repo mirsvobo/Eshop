@@ -2,7 +2,6 @@ package org.example.eshop.service;
 
 import com.google.maps.DistanceMatrixApi;
 import com.google.maps.GeoApiContext;
-import com.google.maps.GeoApiContext.Builder; // Explicitní import pro Builder
 import com.google.maps.model.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -12,10 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils; // Používáme Spring StringUtils
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,16 +24,14 @@ import java.util.concurrent.TimeUnit;
 public class GoogleMapsShippingService implements ShippingService, PriceConstants {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleMapsShippingService.class);
-
+    // Sazba DPH pro dopravu - konstanta
+    private static final BigDecimal SHIPPING_TAX_RATE = new BigDecimal("0.21");
     @Value("${google.maps.api.key}")
     private String apiKey;
-
     @Value("${eshop.shipping.origin.latitude}")
     private double originLatitude;
-
     @Value("${eshop.shipping.origin.longitude}")
     private double originLongitude;
-
     @Value("${eshop.shipping.fixed.price.czk}")
     private BigDecimal fixedPriceCZK;
     @Value("${eshop.shipping.perkm.price.czk}")
@@ -44,10 +40,6 @@ public class GoogleMapsShippingService implements ShippingService, PriceConstant
     private BigDecimal fixedPriceEUR;
     @Value("${eshop.shipping.perkm.price.eur}")
     private BigDecimal perKmPriceEUR;
-
-    // Sazba DPH pro dopravu - konstanta
-    private static final BigDecimal SHIPPING_TAX_RATE = new BigDecimal("0.21");
-
     private GeoApiContext geoApiContext;
     private LatLng originLatLng; // Uchováme si LatLng objekt
 
@@ -76,8 +68,7 @@ public class GoogleMapsShippingService implements ShippingService, PriceConstant
             log.error("Configuration error during Google Maps init: {}", iae.getMessage());
             geoApiContext = null;
             originLatLng = null;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Failed to initialize Google Maps API context or set origin coordinates: {}", e.getMessage(), e);
             geoApiContext = null;
             originLatLng = null;
@@ -101,7 +92,7 @@ public class GoogleMapsShippingService implements ShippingService, PriceConstant
      * Obalovací metoda: Provede volání Google Distance Matrix API a vrátí výsledek.
      * Protected pro umožnění mockování v testu.
      *
-     * @param origin Počáteční bod (LatLng).
+     * @param origin             Počáteční bod (LatLng).
      * @param destinationAddress Cílová adresa jako String.
      * @return Objekt DistanceMatrix nebo null při chybě kontextu.
      * @throws Exception Může vyhodit různé výjimky z Google API klienta (ApiException, IOException, InterruptedException).
@@ -156,8 +147,7 @@ public class GoogleMapsShippingService implements ShippingService, PriceConstant
 
             // Zpracování výsledku
             if (matrix != null && matrix.rows != null && matrix.rows.length > 0
-                    && matrix.rows[0].elements != null && matrix.rows[0].elements.length > 0)
-            {
+                    && matrix.rows[0].elements != null && matrix.rows[0].elements.length > 0) {
                 DistanceMatrixElement element = matrix.rows[0].elements[0];
                 if (element.status == DistanceMatrixElementStatus.OK && element.distance != null) {
                     // Máme platnou vzdálenost, spočítáme cenu
@@ -229,7 +219,7 @@ public class GoogleMapsShippingService implements ShippingService, PriceConstant
             if (!sb.isEmpty()) sb.append(", ");
             sb.append(order.getDeliveryCountry());
         }
-        log.trace("Built address string for Google API: '{}'", sb.toString());
+        log.trace("Built address string for Google API: '{}'", sb);
         return sb.toString(); // Není třeba odstraňovat úvodní čárku, pokud začínáme bez ní
     }
 }

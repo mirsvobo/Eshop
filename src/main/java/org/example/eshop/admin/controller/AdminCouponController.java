@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
@@ -29,10 +28,13 @@ public class AdminCouponController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminCouponController.class);
 
-    @Autowired private CouponService couponService;
+    @Autowired
+    private CouponService couponService;
 
     @ModelAttribute("currentUri")
-    public String getCurrentUri(HttpServletRequest request) { return request.getRequestURI(); }
+    public String getCurrentUri(HttpServletRequest request) {
+        return request.getRequestURI();
+    }
 
     @GetMapping
     public String listCoupons(Model model) {
@@ -230,7 +232,7 @@ public class AdminCouponController {
             // Chyba obecné validace kombinace polí
             model.addAttribute("errorMessage", message);
         } else if (message.contains("Platnost od") || message.contains("Platnost do")) {
-            if(bindingResult.hasFieldErrors("startDate") || bindingResult.hasFieldErrors("expirationDate")) {
+            if (bindingResult.hasFieldErrors("startDate") || bindingResult.hasFieldErrors("expirationDate")) {
                 // Chyba už byla přidána při parsování datumu
             } else {
                 // Chyba z validace v service
@@ -238,12 +240,16 @@ public class AdminCouponController {
                 bindingResult.rejectValue("expirationDate", "error.coupon.date", message);
             }
         } else if (message.contains("limit použití")) {
-            if (message.contains("nižší než aktuální")) bindingResult.rejectValue("usageLimit", "error.coupon.limit.count", message);
-            else if (message.contains("na zákazníka")) bindingResult.rejectValue("usageLimitPerCustomer", "error.coupon.limit.customer", message);
+            if (message.contains("nižší než aktuální"))
+                bindingResult.rejectValue("usageLimit", "error.coupon.limit.count", message);
+            else if (message.contains("na zákazníka"))
+                bindingResult.rejectValue("usageLimitPerCustomer", "error.coupon.limit.customer", message);
             else bindingResult.rejectValue("usageLimit", "error.coupon.limit", message);
         } else if (message.contains("Minimální hodnota")) {
-            if (message.contains("CZK")) bindingResult.rejectValue("minimumOrderValueCZK", "error.coupon.minvalue", message);
-            if (message.contains("EUR")) bindingResult.rejectValue("minimumOrderValueEUR", "error.coupon.minvalue", message);
+            if (message.contains("CZK"))
+                bindingResult.rejectValue("minimumOrderValueCZK", "error.coupon.minvalue", message);
+            if (message.contains("EUR"))
+                bindingResult.rejectValue("minimumOrderValueEUR", "error.coupon.minvalue", message);
         } else {
             model.addAttribute("errorMessage", message); // Obecná chyba
         }

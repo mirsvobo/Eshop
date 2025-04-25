@@ -16,7 +16,8 @@ public class AddressDto {
     private String companyName;
 
     @Size(max = 20, message = "DIČ je příliš dlouhé.")
-    @Pattern(regexp = "^(|[A-Z]{2}.*)$", message = "DIČ by mělo začínat kódem země (např. CZ, SK).") // Velmi základní kontrola
+    @Pattern(regexp = "^(|[A-Z]{2}.*)$", message = "DIČ by mělo začínat kódem země (např. CZ, SK).")
+    // Velmi základní kontrola
     private String vatId; // DIČ
 
     @Size(max = 20, message = "IČO je příliš dlouhé.")

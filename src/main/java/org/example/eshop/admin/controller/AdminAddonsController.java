@@ -3,8 +3,8 @@ package org.example.eshop.admin.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.model.Addon;
-import org.example.eshop.admin.service.AddonsService; // <-- SPRÁVNÝ IMPORT
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal; // Import pro BigDecimal
 import java.util.Collections;
 import java.util.List;
 
@@ -27,7 +26,8 @@ public class AdminAddonsController {
     private static final Logger log = LoggerFactory.getLogger(AdminAddonsController.class);
 
     // Používáme službu ze správného balíčku
-    @Autowired private AddonsService addonsService;
+    @Autowired
+    private AddonsService addonsService;
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -96,8 +96,7 @@ public class AdminAddonsController {
                 } else {
                     model.addAttribute("errorMessage", e.getMessage()); // Obecná validační chyba ze service
                 }
-            }
-            else {
+            } else {
                 model.addAttribute("errorMessage", e.getMessage()); // Jiné IllegalArgumentExceptions
             }
             model.addAttribute("pageTitle", "Vytvořit nový doplněk (Chyba)");
@@ -188,8 +187,7 @@ public class AdminAddonsController {
         } catch (EntityNotFoundException e) {
             log.warn("Cannot deactivate addon. Addon not found: ID={}", id, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error deactivating addon ID {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při deaktivaci doplňku nastala chyba: " + e.getMessage());
         }

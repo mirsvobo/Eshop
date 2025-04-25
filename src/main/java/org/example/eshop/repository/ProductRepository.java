@@ -38,12 +38,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByIdWithDetails(@Param("id") Long id);
 
     boolean existsBySlugIgnoreCaseAndIdNot(String newSlug, Long id);
+
     // findByActiveTrue(Pageable) - OPRAVENO: odstraněn "taxRate" z EntityGraph
-    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"}) // <-- Odstraněno "taxRate"
+    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"})
+    // <-- Odstraněno "taxRate"
     Page<Product> findByActiveTrue(Pageable pageable);
 
     // findAllByActiveTrue() - OPRAVENO: odstraněn "taxRate" z EntityGraph
-    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"}) // <-- Odstraněno "taxRate"
+    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"})
+    // <-- Odstraněno "taxRate"
     List<Product> findAllByActiveTrue();
 
     Optional<Object> findBySlugIgnoreCaseAndIdNot(String newSlug, Long id);

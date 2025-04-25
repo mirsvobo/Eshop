@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils; // <<< PŘIDANÝ IMPORT
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,20 +20,21 @@ import java.util.Optional;
 public class PaymentProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentProcessingService.class);
-
-    @Autowired private OrderRepository orderRepository;
-    @Autowired private InvoiceService invoiceService; // Pro generování DDKP
-    // @Autowired private OrderService orderService; // Pro změnu stavu objednávky
-
     private static final String PAYMENT_STATUS_PAID = "PAID";
     private static final String PAYMENT_STATUS_DEPOSIT_PAID = "DEPOSIT_PAID";
+    // @Autowired private OrderService orderService; // Pro změnu stavu objednávky
     private static final String PAYMENT_STATUS_AWAITING_DEPOSIT = "AWAITING_DEPOSIT"; // Konstanta pro porovnání
     private static final DateTimeFormatter SF_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    @Autowired
+    private OrderRepository orderRepository;
+    @Autowired
+    private InvoiceService invoiceService; // Pro generování DDKP
 
     /**
      * Zpracuje notifikaci (webhook) o platbě ze SuperFaktury.
      * Najde odpovídající objednávku, aktualizuje její stav platby a datum,
      * a případně spustí generování Daňového dokladu k přijaté platbě (DDKP).
+     *
      * @param webhookData JSON data z webhooku jako JsonNode.
      */
     @Transactional // Celé zpracování by mělo být v transakci
@@ -77,7 +78,7 @@ public class PaymentProcessingService {
         // *** Použití StringUtils zde ***
         if (!StringUtils.hasText(variableSymbol) || paidAmount == null || paymentDate == null || sfInvoiceId == null || sfInvoiceId <= 0) {
             log.error("Received incomplete payment notification webhook: VS={}, Amount={}, Date={}, SF_ID={}. Payload: {}",
-                    variableSymbol, paidAmount, paymentDate, sfInvoiceId, webhookData.toString());
+                    variableSymbol, paidAmount, paymentDate, sfInvoiceId, webhookData);
             return; // Nelze zpracovat
         }
 
@@ -108,7 +109,9 @@ public class PaymentProcessingService {
             try {
                 if (order.getSfTaxDocumentId() == null) {
                     invoiceService.generateTaxDocumentForDeposit(order);
-                } else { log.warn("Tax Document already exists for order {} (SF ID: {}), skipping generation based on webhook.", order.getOrderCode(), order.getSfTaxDocumentId()); }
+                } else {
+                    log.warn("Tax Document already exists for order {} (SF ID: {}), skipping generation based on webhook.", order.getOrderCode(), order.getSfTaxDocumentId());
+                }
             } catch (Exception e) {
                 log.error("Failed to trigger Tax Document generation for order {} after webhook processing: {}", order.getOrderCode(), e.getMessage());
             }
@@ -119,7 +122,8 @@ public class PaymentProcessingService {
             log.info("Processing FULL payment for order {}", order.getOrderCode());
             order.setPaymentStatus(PAYMENT_STATUS_PAID);
             order.setPaymentDate(paymentDateTime);
-            if(order.getDepositPaidDate() == null) order.setDepositPaidDate(paymentDateTime); // Pokud nebyla záloha, nastavíme i datum zálohy? Nebo nechat null?
+            if (order.getDepositPaidDate() == null)
+                order.setDepositPaidDate(paymentDateTime); // Pokud nebyla záloha, nastavíme i datum zálohy? Nebo nechat null?
             orderRepository.save(order);
             log.info("Order {} payment status updated to PAID, date set to {}", order.getOrderCode(), paymentDateTime);
             // TODO: Změnit stav objednávky?

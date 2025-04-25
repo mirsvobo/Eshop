@@ -6,6 +6,9 @@ import org.example.eshop.repository.AddonsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,19 +19,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 
 @Service
 public class AddonsService {
 
     private static final Logger log = LoggerFactory.getLogger(AddonsService.class);
-
+    private static final List<String> VALID_PRICING_TYPES = List.of("FIXED", "PER_CM_WIDTH", "PER_CM_LENGTH", "PER_CM_HEIGHT", "PER_SQUARE_METER");
     @Autowired
     private AddonsRepository addonsRepository;
-
-    private static final List<String> VALID_PRICING_TYPES = List.of("FIXED", "PER_CM_WIDTH", "PER_CM_LENGTH", "PER_CM_HEIGHT", "PER_SQUARE_METER");
 
     // --- Metody pro čtení (zůstávají) ---
     @Cacheable("allActiveAddons")
@@ -200,9 +198,12 @@ public class AddonsService {
 
     private void validateAddonCommonFields(Addon addon) {
         if (addon == null) throw new IllegalArgumentException("Addon object cannot be null.");
-        if (!StringUtils.hasText(addon.getName())) throw new IllegalArgumentException("Název doplňku nesmí být prázdný.");
-        if (!StringUtils.hasText(addon.getCategory())) throw new IllegalArgumentException("Kategorie doplňku musí být vyplněna.");
-        if (!StringUtils.hasText(addon.getPricingType())) throw new IllegalArgumentException("Typ ceny musí být vybrán.");
+        if (!StringUtils.hasText(addon.getName()))
+            throw new IllegalArgumentException("Název doplňku nesmí být prázdný.");
+        if (!StringUtils.hasText(addon.getCategory()))
+            throw new IllegalArgumentException("Kategorie doplňku musí být vyplněna.");
+        if (!StringUtils.hasText(addon.getPricingType()))
+            throw new IllegalArgumentException("Typ ceny musí být vybrán.");
         if (!VALID_PRICING_TYPES.contains(addon.getPricingType())) {
             throw new IllegalArgumentException("Neplatný typ ceny: " + addon.getPricingType() + ". Povolené hodnoty: " + VALID_PRICING_TYPES);
         }
@@ -222,10 +223,10 @@ public class AddonsService {
             // Validace pro FIXNÍ ceny (musí být > 0)
             if (addon.getPriceCZK() == null || addon.getPriceCZK().compareTo(BigDecimal.ZERO) <= 0) {
 
-                 throw new IllegalArgumentException("Pro typ ceny 'FIXED' musí být kladná 'Cena CZK'.");
+                throw new IllegalArgumentException("Pro typ ceny 'FIXED' musí být kladná 'Cena CZK'.");
             }
             if (addon.getPriceEUR() == null || addon.getPriceEUR().compareTo(BigDecimal.ZERO) <= 0) {
-                 throw new IllegalArgumentException("Pro typ ceny 'FIXED' musí být kladná 'Cena EUR'.");
+                throw new IllegalArgumentException("Pro typ ceny 'FIXED' musí být kladná 'Cena EUR'.");
             }
 
             // --- KLÍČOVÁ ZMĚNA: Nastavení cen za jednotku na NULU místo NULL ---
@@ -248,4 +249,4 @@ public class AddonsService {
             log.debug("Pricing type is '{}'. Setting fixed prices to ZERO for addon '{}'.", pricingType, addon.getName());
         }
     }
-    }
+}

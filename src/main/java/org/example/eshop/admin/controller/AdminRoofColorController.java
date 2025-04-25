@@ -3,8 +3,8 @@ package org.example.eshop.admin.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.example.eshop.model.RoofColor;
 import org.example.eshop.admin.service.RoofColorService;
+import org.example.eshop.model.RoofColor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,8 @@ public class AdminRoofColorController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminRoofColorController.class);
 
-    @Autowired private RoofColorService roofColorService;
+    @Autowired
+    private RoofColorService roofColorService;
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
