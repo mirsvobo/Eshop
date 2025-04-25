@@ -80,6 +80,17 @@
                         <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback"><span th:errors="*{phone}">Chyba telefonu</span></div>
                     </div>
                     <hr>
+                    <hr>
+                    <h5>Režim DPH</h5>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="applyReverseCharge" th:field="*{applyReverseCharge}">
+                        <label class="form-check-label" for="applyReverseCharge">
+                            Uplatnit přenesenou daňovou povinnost (pro plátce DPH dle § 92a)
+                        </label>
+                        <div class="form-text">Zaškrtněte pouze v případě, že jste plátce DPH a objednávka splňuje podmínky pro režim přenesené daňové povinnosti (např. stavební práce). Daňová povinnost přechází na Vás jako odběratele.</div>
+                        <div th:if="${#fields.hasErrors('applyReverseCharge')}" class="error"><span th:errors="*{applyReverseCharge}">Chyba</span></div>
+                    </div>
+                    <hr>
                     <h5>Fakturační adresa</h5>
                     <div class="mb-3">
                         <label for="invoiceCompanyName" class="form-label">Název firmy (volitelné)</label>

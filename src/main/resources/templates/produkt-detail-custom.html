@@ -219,20 +219,20 @@
                         <h4>6. Zvolte režim DPH <span class="text-danger">*</span></h4>
                         <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i></label>
                         <div class="form-check" th:each="taxRate, iterStat : ${availableTaxRates}">
-                            <input class="form-check-input tax-rate-radio config-input" type="radio" th:field="*{selectedTaxRateId}" th:id="'taxRate' + <span class="math-inline">\{taxRate\.id\}" th\:value\="</span>{taxRate.id}" required>
-                            <label class="form-check-label" th:for="'taxRate' + <span class="math-inline">\{taxRate\.id\}"\>
-                            <span th\:text\="</span>{taxRate.name}">Název sazby</span>
-                            <span th:if="${taxRate.note != null and not #strings.isEmpty(taxRate.note)}"
-                                  th:text="' - ' + <span class="math-inline">\{taxRate\.note\}"
-                            class\="text\-muted small"\> \- Poznámka</span\>
-                            </label\>
-                            <div class\="tax\-info\-details" th\:if\="</span>{taxRate.rate != null and taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
-                            <div class="tax-info-details" th:if="<span class="math-inline">\{taxRate\.rate \!\= null and taxRate\.rate \=\= 0\.21\}"\>Základní sazba 21 % platí pro firmy \(právnické osoby, OSVČ plátce DPH\) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu\.</div\>
-                        <div class\="tax\-info\-details" th\:if\="</span>{taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                            <input class="form-check-input tax-rate-radio config-input" type="radio" th:field="*{selectedTaxRateId}" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" required>
+                            <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}">
+                                <span th:text="${taxRate.name}">Název sazby</span>
+                                <span th:if="${taxRate.note != null and not #strings.isEmpty(taxRate.note)}"
+                                      th:text="' - ' + ${taxRate.note}"
+                                      class="text-muted small"> - Poznámka</span>
+                            </label>
+                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
+                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                        </div>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('*{selectedTaxRateId}')}" th:errors="*{selectedTaxRateId}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedTaxRateId}')}">Prosím, vyberte režim DPH.</div>
                     </div>
-                    <div class="invalid-feedback d-block" th:if="<span class="math-inline">\{\#fields\.hasErrors\('\*\{selectedTaxRateId\}'\)\}" th\:errors\="\*\{selectedTaxRateId\}"\></div\>
-                <div class\="invalid\-feedback" th\:unless\="</span>{#fields.hasErrors('*{selectedTaxRateId}')}">Prosím, vyberte režim DPH.</div>
-            </div>
 
                     <div class="configurator-step">
                         <h4>7. Počet kusů <span class="text-danger">*</span></h4>

@@ -192,11 +192,9 @@ public class CheckoutController implements PriceConstants {
     @PostMapping("/odeslat")
     @Transactional
     public String processCheckout(
-            // Validujeme pouze základní skupinu zde, specifické skupiny validujeme manuálně níže
-            @Validated({DefaultValidationGroup.class})
+            @Validated({DefaultValidationGroup.class}) // Validujeme standardní skupinu
             @ModelAttribute("checkoutForm") CheckoutFormDataDto checkoutForm,
             BindingResult bindingResult,
-            // Získáme přepočtené ceny dopravy ze skrytých polí
             @RequestParam(required = false) BigDecimal shippingCostNoTax,
             @RequestParam(required = false) BigDecimal shippingTax,
             Model model,
@@ -211,19 +209,18 @@ public class CheckoutController implements PriceConstants {
                 ? (checkoutForm.getEmail() != null ? checkoutForm.getEmail() : "GUEST")
                 : principal.getName();
         String orderCurrency = currencyService.getSelectedCurrency();
-        log.info("Processing checkout submission for {}: {} in currency: {}", (isGuest ? "guest" : "user"), userIdentifierForLog, orderCurrency);
+        // --- OPRAVA: Správná deklarace applyReverseCharge ZDE ---
+        boolean applyReverseCharge = checkoutForm.isApplyReverseCharge(); // Získáme hodnotu z DTO
+        log.info("Processing checkout submission for {}: {} in currency: {}. Apply RC: {}", (isGuest ? "guest" : "user"), userIdentifierForLog, orderCurrency, applyReverseCharge);
 
         Customer customer = null;
         Validator validator = customerService.getValidator(); // Získáme instanci validátoru
 
         // --- Krok 1: Základní validace a validace emailu ---
         if (!isGuest) {
-            // Pro přihlášeného uživatele načteme email z Principal a PŘEPÍŠEME hodnotu v DTO
-            // před dalšími kontrolami. Tím obejdeme problém s disabled polem ve formuláři.
             checkoutForm.setEmail(principal.getName());
             log.debug("Set email in DTO from principal for logged-in user: {}", principal.getName());
         } else {
-            // Pro hosta validujeme email a kontaktní údaje explicitně pomocí skupiny GuestValidation
             if (validator != null) {
                 ValidationUtils.invokeValidator((org.springframework.validation.Validator) validator, checkoutForm, bindingResult, GuestValidation.class);
                 log.debug("Guest validation invoked. Errors after guest validation: {}", bindingResult.hasErrors());
@@ -251,7 +248,6 @@ public class CheckoutController implements PriceConstants {
         // --- Zpracování, pokud nastaly chyby validace ---
         if (bindingResult.hasErrors()) {
             log.warn("Checkout form validation failed for {}: {}", userIdentifierForLog, bindingResult.getAllErrors());
-            // *** ZMĚNA: Použití this. ***
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
             return "pokladna"; // Vrátíme formulář s chybami
         }
@@ -267,11 +263,10 @@ public class CheckoutController implements PriceConstants {
                 customer = customerService.getCustomerByEmail(principal.getName())
                         .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + principal.getName()));
 
-                // Krok 4b: Aktualizace adresy přihlášeného uživatele POUZE pokud se liší od DTO
                 if (!addressMatches(customer, checkoutForm)) {
                     log.info("Customer {} address differs or useInvoice flag changed, updating from DTO.", customer.getId());
-                    customerService.updateCustomerFromDto(customer, checkoutForm); // Update entity
-                    customer = customerService.saveCustomer(customer); // Uložení změn
+                    customerService.updateCustomerFromDto(customer, checkoutForm);
+                    customer = customerService.saveCustomer(customer);
                     log.info("Updated address data saved for customer {}.", customer.getId());
                 } else {
                     log.debug("Customer {} address matches DTO, no update needed.", customer.getId());
@@ -293,7 +288,6 @@ public class CheckoutController implements PriceConstants {
             BigDecimal finalShippingTax;
 
             if (!freeShippingApplied) {
-                // Zkontrolujeme hodnoty ze skrytých polí
                 if (shippingCostNoTax == null || shippingTax == null || shippingCostNoTax.compareTo(BigDecimal.ZERO) < 0 || shippingTax.compareTo(BigDecimal.ZERO) < 0) {
                     log.error("Invalid or missing shipping costs submitted (ShippingRequired=true). CostNoTax: {}, Tax: {}", shippingCostNoTax, shippingTax);
                     bindingResult.reject("shipping.cost.missing", "Cena dopravy nebyla správně vypočtena nebo odeslána. Klikněte prosím na 'Spočítat dopravu'.");
@@ -307,35 +301,11 @@ public class CheckoutController implements PriceConstants {
                 finalShippingTax = BigDecimal.ZERO;
                 log.info("Overriding shipping cost to ZERO due to free shipping coupon {}.", validatedCoupon.getCode());
             }
-            // --- Krok 6.5: Výpočet finální ceny PŘED uložením objednávky ---
-            BigDecimal subtotal = sessionCart.calculateSubtotal(orderCurrency);
-            validatedCoupon = validateAndGetCoupon(sessionCart, customer, subtotal, orderCurrency); // Validujeme kupón znovu
-            BigDecimal couponDiscount = (validatedCoupon != null && !validatedCoupon.isFreeShippingOnly()) ? sessionCart.calculateDiscountAmount(orderCurrency) : BigDecimal.ZERO;
-            BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(orderCurrency);
-            BigDecimal totalPriceWithoutTaxAfterDiscount = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-
-            // Převezmeme finální vypočtené/validované ceny dopravy z kroku 6
-            BigDecimal actualShippingCostNoTax = finalShippingCostNoTax;
-            BigDecimal actualShippingTax = finalShippingTax;
-
-            // Výpočet PŮVODNÍ celkové ceny (před zaokrouhlením)
-            BigDecimal originalTotalPrice = totalPriceWithoutTaxAfterDiscount
-                    .add(actualShippingCostNoTax)
-                    .add(totalItemVat)
-                    .add(actualShippingTax)
-                    .setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-
-            // Výpočet finální ZAOKROUHLENÉ ceny, která se uloží do objednávky
-            BigDecimal roundedTotalPriceToSave = originalTotalPrice.setScale(0, RoundingMode.DOWN);
-
-            log.info("Calculating final order totals for saving: originalTotal={}, roundedTotal={}",
-                    originalTotalPrice, roundedTotalPriceToSave);
-            // --- KONEC výpočtu finální ceny ---
 
             // Krok 7: Vytvoření požadavku na objednávku
             CreateOrderRequest orderRequest = new CreateOrderRequest();
             orderRequest.setCustomerId(customer.getId());
-            orderRequest.setUseCustomerAddresses(true); // Vždy používáme adresy z Customer entity (po případné aktualizaci)
+            orderRequest.setUseCustomerAddresses(true);
             orderRequest.setPaymentMethod(checkoutForm.getPaymentMethod());
             orderRequest.setCustomerNote(checkoutForm.getCustomerNote());
             orderRequest.setCouponCode(validatedCoupon != null ? validatedCoupon.getCode() : null);
@@ -345,20 +315,22 @@ public class CheckoutController implements PriceConstants {
             List<CartItemDto> orderItemsDto = sessionCart.getItemsList().stream().map(this::mapCartItemToDto).collect(Collectors.toList());
             orderRequest.setItems(orderItemsDto);
 
-            // --- Krok 8: Vytvoření objednávky ---
-            log.info("Attempting to create order with request: {}", orderRequest);
-            // OrderService.createOrder nyní MUSÍ použít PŘEDPOČÍTANOU zaokrouhlenou cenu
-            // Můžeme ji buď přidat do CreateOrderRequest, nebo upravit OrderService, aby si ji spočítal znovu
-            // -> Úprava OrderService je čistší.
-            Order createdOrder = orderService.createOrder(orderRequest); // OrderService si zaokrouhlení spočítá interně
+            // Krok 8: Vytvoření objednávky
+            log.info("Attempting to create order with request: {}, Apply RC Flag: {}", orderRequest, applyReverseCharge);
+            // --- OPRAVA: Předání applyReverseCharge a pouze JEDNA deklarace createdOrder ---
+            Order createdOrder = orderService.createOrder(orderRequest, applyReverseCharge);
+            // --- KONEC OPRAVY ---
 
-            // Ověření, že uložená cena je zaokrouhlená (pro logování/debug)
-            if (createdOrder.getTotalPrice().compareTo(roundedTotalPriceToSave) != 0) {
+            // Ověření ceny (zůstává)
+            // Poznámka: recalculateRoundedTotalForComparison by měla být pomocná metoda pro konzistentní výpočet
+            BigDecimal roundedTotalToCompare = recalculateRoundedTotalForComparison(orderCurrency, finalShippingCostNoTax, finalShippingTax);
+            if (createdOrder.getTotalPrice().compareTo(roundedTotalToCompare) != 0) {
                 log.warn("Mismatch between calculated rounded price ({}) and saved order price ({}) for order {}",
-                        roundedTotalPriceToSave, createdOrder.getTotalPrice(), createdOrder.getOrderCode());
+                        roundedTotalToCompare, createdOrder.getTotalPrice(), createdOrder.getOrderCode());
             }
 
             log.info("Order {} successfully created with currency {} for {}: {}", createdOrder.getOrderCode(), orderCurrency, (isGuest ? "guest" : "user"), userIdentifierForLog);
+
             // Krok 9: Vyčištění košíku a přesměrování
             sessionCart.clearCart();
             log.info("Session cart cleared for {}", userIdentifierForLog);
@@ -367,125 +339,34 @@ public class CheckoutController implements PriceConstants {
             return isGuest ? "redirect:/dekujeme?orderCode=" + createdOrder.getOrderCode() : "redirect:/muj-ucet/objednavky";
 
         } catch (ValidationException | CustomerService.EmailRegisteredException e) {
-            // Zpracování ValidationException a EmailRegisteredException (vrácení formuláře)
             log.warn("Validation or processing error during checkout for {}: {}", userIdentifierForLog, e.getMessage());
             if (e instanceof CustomerService.EmailRegisteredException) {
                 bindingResult.rejectValue("email", "email.registered", e.getMessage());
             }
-            // Připravíme model pro zobrazení chyb
-            // *** ZMĚNA: Použití this. ***
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
             return "pokladna";
         } catch (IllegalStateException | EntityNotFoundException e) {
-            // Zpracování kritických chyb (přesměrování)
             log.error("Illegal state or entity not found during checkout for {}: {}", userIdentifierForLog, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("checkoutError", "Nastala chyba při zpracování objednávky: " + e.getMessage());
-            return isGuest ? "redirect:/kosik" : "redirect:/muj-ucet/objednavky"; // Přesměrování na bezpečné místo
+            return isGuest ? "redirect:/kosik" : "redirect:/muj-ucet/objednavky";
         } catch (Exception e) {
-            // Zpracování neočekávaných chyb (zobrazení chyby ve formuláři)
             log.error("Unexpected error during checkout for {}: {}", userIdentifierForLog, e.getMessage(), e);
             model.addAttribute("checkoutError", "Při zpracování objednávky nastala neočekávaná chyba.");
-            model.addAttribute("checkoutErrorDetail", e.getMessage()); // Můžeme přidat detail chyby
-            // *** ZMĚNA: Použití this. ***
+            model.addAttribute("checkoutErrorDetail", e.getMessage());
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
             return "pokladna";
         }
     }
-    // Validator bude získán z CustomerService
-
-    // --- AJAX Endpoint a Pomocné metody (zůstávají stejné jako v předchozí odpovědi) ---
-    @PostMapping("/calculate-shipping")
-    @ResponseBody
-    @Transactional(readOnly = true)
-    public ResponseEntity<ShippingCalculationResponseDto> calculateShippingAjax(@RequestBody @Valid ShippingAddressDto addressDto) {
-        String currentCurrency = currencyService.getSelectedCurrency();
-        String currencySymbol = EURO_CURRENCY.equals(currentCurrency) ? "€" : "Kč";
-        log.info("AJAX request to calculate shipping for address: {} in currency {}", addressDto, currentCurrency);
-
-        Order tempOrder = createTemporaryOrderForShippingFromDto(addressDto, currentCurrency);
-
-        if (!isShippingAddressAvailable(tempOrder)) {
-            log.warn("AJAX Shipping Calc: Incomplete address provided: {}", addressDto);
-            ShippingCalculationResponseDto errorResponse = new ShippingCalculationResponseDto(
-                    BigDecimal.valueOf(-1), BigDecimal.ZERO, null, Collections.emptySortedMap(), BigDecimal.ZERO,
-                    "Chybí povinné údaje adresy (Ulice, Město, PSČ, Země).", currencySymbol, null, null, BigDecimal.ZERO);
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
-
-        BigDecimal subtotal = sessionCart.calculateSubtotal(currentCurrency);
-        // Pro AJAX volání nemusíme načítat skutečného zákazníka, ale můžeme simulovat hosta pro validaci kupónu
-        Coupon validatedCoupon = validateAndGetCoupon(sessionCart, null, subtotal, currentCurrency);
-        BigDecimal couponDiscount = (validatedCoupon != null && !validatedCoupon.isFreeShippingOnly())
-                ? sessionCart.calculateDiscountAmount(currentCurrency) : BigDecimal.ZERO;
-        BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(currentCurrency);
-        BigDecimal totalPriceWithoutTaxAfterDiscount = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-        Map<BigDecimal, BigDecimal> rawVatBreakdown = sessionCart.calculateVatBreakdown(currentCurrency);
-        SortedMap<BigDecimal, BigDecimal> sortedVatBreakdown = new TreeMap<>(rawVatBreakdown);
-
-        try {
-            BigDecimal originalShippingCostNoTax = shippingService.calculateShippingCost(tempOrder, currentCurrency);
-            BigDecimal shippingTaxRate = shippingService.getShippingTaxRate();
-            BigDecimal originalShippingTax = BigDecimal.ZERO;
-
-            if (originalShippingCostNoTax == null || originalShippingCostNoTax.compareTo(BigDecimal.ZERO) < 0) {
-                log.warn("Shipping calculation returned invalid cost: {}", originalShippingCostNoTax);
-                throw new ShippingCalculationException("Nepodařilo se vypočítat cenu dopravy pro zadanou adresu.");
-            }
-            originalShippingCostNoTax = originalShippingCostNoTax.setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-
-            if (originalShippingCostNoTax.compareTo(BigDecimal.ZERO) > 0 && shippingTaxRate != null && shippingTaxRate.compareTo(BigDecimal.ZERO) > 0) {
-                originalShippingTax = originalShippingCostNoTax.multiply(shippingTaxRate).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-            }
-
-            BigDecimal finalShippingCostNoTax = originalShippingCostNoTax;
-            BigDecimal finalShippingTax = originalShippingTax;
-            BigDecimal shippingDiscountAmount = BigDecimal.ZERO;
-
-            if (validatedCoupon != null && validatedCoupon.isFreeShipping()) {
-                log.info("AJAX Shipping Calc: Free shipping applied (Coupon: {}). Orig cost: {}", validatedCoupon.getCode(), originalShippingCostNoTax);
-                finalShippingCostNoTax = BigDecimal.ZERO;
-                finalShippingTax = BigDecimal.ZERO;
-                shippingDiscountAmount = originalShippingCostNoTax;
-            }
-
-            BigDecimal finalTotalPrice = totalPriceWithoutTaxAfterDiscount
-                    .add(finalShippingCostNoTax)
-                    .add(totalItemVat)
-                    .add(finalShippingTax)
-                    .setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-            BigDecimal finalTotalVatWithShipping = totalItemVat.add(finalShippingTax).setScale(PRICE_SCALE, RoundingMode.HALF_UP);
-
-            log.info("AJAX Shipping Calc OK: origCost={}, origTax={}, shipDiscount={}, finalCost={}, finalTax={}, finalTotal={}, finalTotalVat={}",
-                    originalShippingCostNoTax, originalShippingTax, shippingDiscountAmount, finalShippingCostNoTax, finalShippingTax, finalTotalPrice, finalTotalVatWithShipping);
-
-            ShippingCalculationResponseDto response = new ShippingCalculationResponseDto(
-                    finalShippingCostNoTax, finalShippingTax, finalTotalPrice, sortedVatBreakdown, finalTotalVatWithShipping, null, currencySymbol,
-                    originalShippingCostNoTax, originalShippingTax, shippingDiscountAmount
-            );
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error during AJAX shipping calculation for address {}: {}", addressDto, e.getMessage(), e);
-            String userFriendlyError = (e instanceof ShippingCalculationException || e instanceof IllegalArgumentException)
-                    ? e.getMessage() : "Výpočet dopravy selhal. Zkuste to prosím znovu.";
-
-            ShippingCalculationResponseDto errorResponse = new ShippingCalculationResponseDto(
-                    BigDecimal.valueOf(-1),           // shippingCostNoTax - indicate error with -1
-                    BigDecimal.ZERO,                  // shippingTax
-                    null,                             // totalPrice
-                    sortedVatBreakdown,               // vatBreakdown (items only)
-                    totalItemVat,                     // totalVatWithShipping (items only)
-                    userFriendlyError,                // errorMessage
-                    currencySymbol,                   // currencySymbol
-                    null,                             // originalShippingCostNoTax
-                    null,                             // originalShippingTax
-                    BigDecimal.ZERO                   // shippingDiscountAmount
-            );
-            HttpStatus status = (e instanceof ShippingCalculationException || e instanceof IllegalArgumentException) ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
-            return ResponseEntity.status(status).body(errorResponse);
-        }
+    private BigDecimal recalculateRoundedTotalForComparison(String currency, BigDecimal shippingCostNoTax, BigDecimal shippingTax) {
+        BigDecimal subtotal = sessionCart.calculateSubtotal(currency);
+        BigDecimal discount = sessionCart.calculateDiscountAmount(currency);
+        BigDecimal totalItemVat = sessionCart.calculateTotalVatAmount(currency);
+        BigDecimal subTotalAfterDiscount = subtotal.subtract(discount);
+        BigDecimal finalTotalWithoutTax = subTotalAfterDiscount.add(Optional.ofNullable(shippingCostNoTax).orElse(BigDecimal.ZERO));
+        BigDecimal finalTotalTax = totalItemVat.add(Optional.ofNullable(shippingTax).orElse(BigDecimal.ZERO));
+        BigDecimal originalTotalPriceWithTax = finalTotalWithoutTax.add(finalTotalTax);
+        return originalTotalPriceWithTax.setScale(0, RoundingMode.DOWN);
     }
-
     /**
      * Prepares model attributes needed for rendering the checkout page, especially after a form error.
      * Includes calculation of summary values based on current cart and potential shipping costs.

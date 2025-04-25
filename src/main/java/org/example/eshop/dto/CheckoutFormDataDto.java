@@ -81,6 +81,7 @@ public class CheckoutFormDataDto {
     private String customerNote;
     @AssertTrue(message = "Musíte souhlasit s obchodními podmínkami.", groups = DefaultValidationGroup.class)
     private boolean agreeTerms;
+    private boolean applyReverseCharge = false;
 
     // --- Metoda initializeFromCustomer (upravená) ---
     public void initializeFromCustomer(Customer customer) {
