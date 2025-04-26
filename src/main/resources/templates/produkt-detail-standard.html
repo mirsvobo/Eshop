@@ -5,104 +5,11 @@
 
 <head>
     <title th:text="${product.name} + ' | Dřevníky Kolář'">Detail produktu</title>
-
+    <th:block th:if="${jsonLdDataString != null}">
+        <script type="application/ld+json" th:utext="${jsonLdDataString}"></script>
+    </th:block>
     <th:block layout:fragment="css">
-        <style>
-            /* Základní styly pro produktovou stránku (Standard) */
-            .product-detail-container {
-                padding-top: 2rem;
-                padding-bottom: 2rem;
-            }
-            /* Obrázky */
-            .main-product-image { max-width: 100%; height: auto; border: 1px solid #dee2e6; margin-bottom: 1rem; }
-            .thumbnail-images img { width: 80px; height: 80px; object-fit: cover; cursor: pointer; border: 1px solid #dee2e6; margin-right: 0.5rem; margin-bottom: 0.5rem; opacity: 0.7; transition: opacity 0.2s ease-in-out; }
-            .thumbnail-images img.active, .thumbnail-images img:hover { opacity: 1; border-color: #007bff; }
-
-            /* === ZAČÁTEK NOVÝCH/UPRAVENÝCH STYLŮ PRO CENU === */
-            .product-price-section {
-                margin-bottom: 1rem; /* Odsazení pod celou sekcí ceny */
-            }
-            /* Přeškrtnutá původní cena */
-            .original-price {
-                font-size: 1rem; /* Větší než předtím */
-                color: #6c757d;
-                text-decoration: line-through;
-                display: block; /* Zajistí, že je na samostatném řádku */
-                margin-bottom: -0.2em; /* Mírné přiblížení k finální ceně */
-                line-height: 1;
-            }
-            /* Finální cena */
-            .product-price-section .price {
-                font-size: 2rem; /* Větší hlavní cena (třída h2 přidána v HTML) */
-                font-weight: 700; /* Tučnější */
-                color: var(--bs-primary); /* Hlavní zelená */
-                line-height: 1.1;
-                margin-right: 0.2rem; /* Malá mezera od měny */
-            }
-            /* Měna vedle finální ceny */
-            .product-price-section .ms-1 { /* Cílíme na span s měnou */
-                font-size: 1.1rem; /* Menší než hlavní cena */
-                font-weight: 600;
-                color: #495057; /* Tmavší šedá */
-                padding-left: 0.2rem;
-            }
-            /* Odznak slevy */
-            .discount-badge {
-                font-size: 0.7em;
-                vertical-align: baseline; /* Lepší zarovnání s textem ceny */
-                padding: 0.3em 0.5em;
-                font-weight: bold;
-                /* ms-2 třída v HTML zajistí odsazení zleva */
-            }
-            /* Poznámka pod cenou */
-            .product-price-section .price-note {
-                font-size: 0.85rem; /* Menší text */
-                color: #6c757d;
-                margin-top: 0.1rem; /* Malá mezera nad poznámkou */
-                margin-bottom: 0;
-                display: block; /* Na samostatném řádku */
-            }
-            /* === KONEC NOVÝCH/UPRAVENÝCH STYLŮ PRO CENU === */
-
-            .product-short-description { margin-top: 1rem; margin-bottom: 1.5rem; color: #495057; }
-            /* Formulář variant */
-            .product-options-form .form-label { font-weight: bold; }
-            .product-options-form .form-select, .product-options-form .form-control { margin-bottom: 1rem; }
-            /* Informace o DPH */
-            .tax-selection .form-check { margin-bottom: 0.5rem; }
-            .tax-info-icon { cursor: pointer; color: #007bff; margin-left: 5px; }
-            .tax-info-details { font-size: 0.85rem; color: #6c757d; margin-left: 1.5rem; margin-bottom: 1rem; display: none; border-left: 3px solid #007bff; padding-left: 10px; }
-            .tax-selection .form-check:has(input:checked) + .tax-info-details { display: block; }
-            /* Množství a tlačítko košíku */
-            .quantity-input { width: 80px; }
-            .add-to-cart-btn { padding: 0.75rem 1.5rem; font-size: 1.1rem; }
-            /* Klíčové informace */
-            .key-info-banner { background-color: #e9f5ff; border-left: 5px solid #007bff; padding: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
-            .key-info-banner p { margin-bottom: 0.5rem; font-weight: 500; }
-            .key-info-banner i { margin-right: 0.5rem; color: #007bff; }
-            /* Popis a galerie variant */
-            .product-long-description { margin-top: 2rem; clear: both; }
-            .product-long-description h3 { margin-top: 1.5rem; margin-bottom: 1rem; }
-            .variation-gallery { margin-top: 1rem; margin-bottom: 2rem; }
-            .variation-gallery h4 { font-size: 1.1rem; margin-bottom: 0.8rem; }
-            .variation-gallery img { width: 100px; height: 100px; object-fit: cover; margin-right: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #dee2e6; cursor: pointer; }
-            .variation-gallery img:hover { border-color: #007bff; }
-            /* Sekce výhod */
-            .advantages-section { background-color: #f8f9fa; padding: 2rem 1rem; margin-top: 2rem; border-radius: 5px; }
-            .advantages-section h3 { text-align: center; margin-bottom: 1.5rem; }
-            .advantages-section ul { list-style: none; padding-left: 0; }
-            .advantages-section li { display: flex; align-items: center; margin-bottom: 1rem; font-size: 1.1rem; }
-            .advantages-section i { color: #28a745; font-size: 1.5rem; margin-right: 1rem; width: 30px; text-align: center; }
-            /* Responzivita pro desktop */
-            @media (min-width: 768px) {
-                .product-images-column { position: sticky; top: 80px; /* Upraveno kvůli fixed-top navbaru */ max-height: calc(100vh - 100px); overflow-y: auto; padding-right: 1rem; }
-                .product-info-column { padding-left: 1rem; }
-                .product-long-description { margin-top: 0; }
-                .advantages-section { padding: 2rem; }
-            }
-            /* Úprava odsazení kvůli fixed-top navbaru */
-            body { padding-top: 70px; /* Výška navbaru + malé odsazení */ }
-        </style>
+        <link rel="stylesheet" type="text/css" th:href="@{/css/custom.css}"/>
     </th:block>
 </head>
 
@@ -136,10 +43,10 @@
                                th:text="${#numbers.formatDecimal(pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
                         </small>
                     </div>
-
                     <div class="d-flex align-items-baseline">
-                        <span class="price h2" id="productPrice"> <span th:if="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}"
-                                                                        th:text="${#numbers.formatDecimal(pInfo.discountedPrice ?: pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')}">
+                        <span class="price h2" id="productPrice">
+                            <span th:if="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}"
+                                  th:text="${#numbers.formatDecimal(pInfo.discountedPrice ?: pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')}">
                                 Cena
                             </span>
                             <span th:unless="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}">
@@ -153,12 +60,13 @@
                             SLEVA
                         </span>
                     </div>
-
                     <p class="price-note mb-0">Cena bez DPH.</p>
                 </div>
+
                 <div class="product-short-description" th:if="${product.shortDescription}" th:text="${product.shortDescription}">
                     Krátký popis produktu zde...
                 </div>
+
                 <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form">
                     <input type="hidden" name="productId" th:value="${product.id}" />
                     <input type="hidden" name="isCustom" value="false" />
@@ -215,15 +123,9 @@
                                       th:text="' - ' + ${taxRate.note}"
                                       class="text-muted small"> - Poznámka</span>
                             </label>
-                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">
-                                Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong>
-                            </div>
-                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">
-                                Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.
-                            </div>
-                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">
-                                Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.
-                            </div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
                         </div>
                     </div>
                     <div class="alert alert-warning" th:if="${product.availableTaxRates == null or product.availableTaxRates.isEmpty()}">
@@ -293,40 +195,12 @@
             </div>
         </div>
 
-        <th:block th:if="${jsonLdDataString != null}">
-            <script type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}">
-            </script>
-            <script th:inline="javascript">
-                /*<![CDATA[*/
-                try {
-                    // Zkusíme najít data a vypsat je do konzole
-                    const schemaDataElement = document.getElementById('schema-org-data');
-                    if (schemaDataElement && schemaDataElement.textContent) {
-                        const jsonData = JSON.parse(schemaDataElement.textContent);
-                        console.log("--- Schema.org Product Data (JSON-LD) ---");
-                        console.dir(jsonData); // dir() pro lepší formátování objektu v konzoli
-                        console.log("--- Konec Schema.org ---");
-                    } else {
-                        console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
-                    }
-                } catch (e) {
-                    console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
-                    // Případně vypsat i původní string, pokud parsování selhalo
-                    const schemaDataElement = document.getElementById('schema-org-data');
-                    if (schemaDataElement) {
-                        console.error("Původní JSON-LD string:", schemaDataElement.textContent);
-                    }
-                }
-                /*]]>*/
-            </script>
-        </th:block>
-
     </div>
 </section>
 
 <th:block layout:fragment="javascript">
     <script>
-        // Funkce pro změnu hlavního obrázku (beze změny)
+        // Funkce pro změnu hlavního obrázku
         function changeMainImage(newImageUrl, thumbnailElement) {
             const mainImg = document.getElementById('mainProductImage');
             if (mainImg) mainImg.src = newImageUrl;
@@ -334,20 +208,11 @@
             if (thumbnailElement) thumbnailElement.classList.add('active');
         }
 
-        // Funkce pro update ceny (nyní už není potřeba, cena se nemění dynamicky)
-        // function updateDisplayedPrice() { ... }
-
-        // Odstranění listenerů pro update ceny
-        // document.querySelectorAll('#add-to-cart-form select').forEach(select => {
-        //    select.removeEventListener('change', updateDisplayedPrice);
-        // });
-
-        // Inicializace tooltipů (zůstává)
+        // Inicializace tooltipů (pro ikonu informací o DPH)
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-
     </script>
 </th:block>
 

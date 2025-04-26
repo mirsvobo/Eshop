@@ -1,5 +1,5 @@
 /* src/main/resources/static/css/custom.css */
-/* Verze: 2025-04-24 - Odstraněny duplicitní bloky */
+/* Verze: 2025-04-27 - Přesunuty styly z index.html a detailů produktu */
 
 /* Definice vlastních CSS proměnných inspirovaných originálem a Bootstrapem */
 :root {
@@ -207,30 +207,34 @@
     margin-top: -2px; /* Jemné doladění pozice ikony */
 }
 
-/* Šipka dolů - animace */
-.hero-section::after {
-    content: '\F282'; /* Bootstrap Ikona šipky dolů */
-    font-family: 'bootstrap-icons';
+/* === NOVÉ STYLY PRO ŠIPKU JAKO ODKAZ === */
+.hero-scroll-down-arrow {
     position: absolute;
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 2.5rem;
+    z-index: 10;
+    display: inline-block;
+    padding: 0.5rem;
     color: rgba(255, 255, 255, 0.7);
-    animation: bounce 2s infinite;
-    cursor: pointer; /* Naznačuje možnost kliknutí (i když JS zatím není) */
+    font-size: 2.5rem; /* Velikost ikony */
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    animation: bounce 2s infinite; /* Použití stejné animace */
 }
 
+.hero-scroll-down-arrow:hover {
+    color: #fff;
+    transform: translateX(-50%) scale(1.1);
+    animation-play-state: paused;
+}
+
+/* Animace bounce (pokud už ji nemáš, přidej ji) */
 @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-        transform: translateX(-50%) translateY(0);
-    }
-    40% {
-        transform: translateX(-50%) translateY(-15px);
-    }
-    60% {
-        transform: translateX(-50%) translateY(-10px);
-    }
+    0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+    40% { transform: translateX(-50%) translateY(-15px); }
+    60% { transform: translateX(-50%) translateY(-10px); }
 }
 
 
@@ -323,6 +327,7 @@
     padding: 4rem 0;
 }
 
+/* === STYLY PRO KARTY VARIANT (Přesunuto z index.html) === */
 .product-variants-section .card {
     transition: box-shadow 0.2s ease-in-out;
     border: 1px solid #eee;
@@ -330,6 +335,18 @@
 
 .product-variants-section .card:hover {
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+/* Styl pro obalovač obrázku s poměrem stran */
+.product-variants-section .card .product-image-wrapper {
+    overflow: hidden; /* Zajistí, že obrázek nepřesahuje */
+}
+
+/* Styl pro samotný obrázek uvnitř obalovače */
+.product-variants-section .card .card-img-top {
+    width: 100%;
+    height: 100%; /* Vyplní výšku ratio divu */
+    object-fit: cover; /* Ořízne obrázek, aby vyplnil prostor bez deformace */
 }
 
 .product-variants-section .card-body ul {
@@ -352,7 +369,7 @@
 .product-variants-section .card-body {
     display: flex;
     flex-direction: column;
-    min-height: 180px; /* Zajistí konzistentní výšku karet */
+    /* min-height odstraněna nebo upravena - výška bude dána obsahem a obrázkem */
     padding: 1rem;
 }
 
@@ -363,9 +380,22 @@
 }
 
 .product-variants-section .card-text {
-    flex-grow: 1; /* Popis zabere zbylé místo */
-    margin-bottom: 0;
+    flex-grow: 1; /* Popis zabere volné místo */
+    margin-bottom: 0.75rem; /* Přidána mezera pod popisem */
 }
+
+/* Styly pro cenu a slevu v kartě produktu (Přesunuto z index.html) */
+.price-container { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; margin-right: 0.5rem; }
+.original-price { font-size: 0.8em; color: #6c757d; text-decoration: line-through; }
+.final-price { font-size: 1.1em; color: var(--bs-primary); font-weight: 600; }
+.discount-badge { font-size: 0.65em; vertical-align: text-bottom; padding: 0.2em 0.45em; font-weight: bold; }
+.price-note { font-size: 0.75em; color: #6c757d; }
+
+/* Zarovnání obsahu karty produktu (Přesunuto z index.html) */
+.product-variants-section .card-body { display: flex; flex-direction: column; }
+.product-variants-section .price-container-wrapper { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #eee; }
+/* === KONEC PŘESUNUTÝCH STYLŮ PRO KARTY VARIANT === */
+
 
 /* === Sekce Google Recenzí (placeholder - možná zastaralé?) === */
 /* Pokud nepoužíváš tuto sekci s #google-reviews-widget, můžeš ji smazat */
@@ -385,227 +415,47 @@
 }
 
 
-/* === STYLY PRO SEKCI RECENZÍ (index.html - nová verze se Swiperem) === */
-.reviews-section-new {
-    padding: 4rem 0;
-    background-color: #ffffff; /* Bílé pozadí */
-}
+/* === STYLY PRO SEKCI RECENZÍ (index.html - nová verze se Swiperem - Přesunuto z index.html) === */
+.reviews-section-new { padding: 4rem 0; background-color: #ffffff; }
+.review-summary { text-align: center; padding-right: 2rem; margin-bottom: 2rem; }
+.review-summary .summary-title { font-weight: 600; font-size: 1.2rem; margin-bottom: 0.5rem; }
+.review-summary .stars { color: #ffc107; font-size: 1.5rem; margin-bottom: 0.5rem; }
+.review-summary .summary-text { font-size: 0.9em; color: #6c757d; margin-bottom: 1rem; }
+.review-summary .google-logo img { height: 40px; width: auto; }
+.review-slider-container { position: relative; padding: 0 45px; margin: 0 auto; max-width: 100%; overflow: hidden; }
+.swiper-review { width: 100%; height: auto; padding-bottom: 1.5rem; position: static; }
+.swiper-slide { height: auto; display: flex; width: auto; }
+.review-card-new { width: 100%; height: 100%; border: none; background-color: #f8f9fa; border-radius: 0.375rem; padding: 1.5rem; display: flex; flex-direction: column; }
+.review-card-new .review-header { display: flex; align-items: center; margin-bottom: 1rem; }
+.review-card-new .reviewer-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 0.75rem; background-color: var(--bs-secondary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; overflow: hidden; }
+.review-card-new .reviewer-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.review-card-new .reviewer-info { flex-grow: 1; }
+.review-card-new .review-name { font-weight: 600; margin-bottom: 0; font-size: 0.95rem; }
+.review-card-new .review-date { font-size: 0.75em; color: #6c757d; }
+.review-card-new .google-icon { height: 40px; width: auto; margin-left: 0.5rem; }
+.review-card-new .stars { color: #ffc107; font-size: 1rem; margin-bottom: 0.75rem; }
+.review-card-new .review-text { font-size: 0.9rem; line-height: 1.5; color: #495057; margin-bottom: 1rem; overflow: hidden; display: block; min-height: calc(1.5 * 0.9rem); }
+.review-card-new .review-text.truncated { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; }
+.review-card-new .read-more { font-size: 0.85em; color: var(--bs-primary); text-decoration: none; font-weight: 500; cursor: pointer; display: inline-block; margin-top: 0.5rem; }
+.review-card-new .read-more:hover { text-decoration: underline; }
+.review-card-new .read-more.hidden { display: none; }
+.review-slider-container .swiper-button-prev, .review-slider-container .swiper-button-next { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; margin-top: 0; background-color: rgba(255, 255, 255, 0.85); border-radius: 50%; color: var(--bs-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; z-index: 10; }
+.review-slider-container .swiper-button-prev:hover, .review-slider-container .swiper-button-next:hover { background-color: var(--bs-primary); color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+.review-slider-container .swiper-button-prev { left: 0px; }
+.review-slider-container .swiper-button-next { right: 0px; }
+.review-slider-container .swiper-button-prev::after, .review-slider-container .swiper-button-next::after { font-size: 18px; font-weight: bold; }
+.review-slider-container .swiper-button-disabled { opacity: 0.25; pointer-events: none; }
+/* === KONEC PŘESUNUTÝCH STYLŮ PRO RECENZE === */
 
-.review-summary { /* Shrnutí vlevo na desktopu */
-    text-align: center;
-    padding-right: 2rem; /* Odsazení od slideru */
-    margin-bottom: 2rem;
-}
 
-.review-summary .summary-title {
-    font-weight: 600;
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-}
+/* === STYLY PRO FAQ (Přesunuto z index.html) === */
+.faq-section { padding: 4rem 0; background-color: var(--bs-light); }
+.faq-section .accordion-button { font-weight: 600; color: var(--bs-dark); }
+.faq-section .accordion-button:not(.collapsed) { background-color: rgba(var(--bs-primary-rgb), 0.1); color: var(--bs-primary); }
+.faq-section .accordion-button:focus { box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25); }
+.faq-section .accordion-body { font-size: 0.95em; line-height: 1.6; }
+/* === KONEC PŘESUNUTÝCH STYLŮ PRO FAQ === */
 
-.review-summary .stars {
-    color: #ffc107; /* Zlatá pro hvězdy */
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.review-summary .summary-text {
-    font-size: 0.9em;
-    color: #6c757d;
-    margin-bottom: 1rem;
-}
-
-.review-summary .google-logo img {
-    height: 40px; /* Výška Google loga */
-    width: auto;
-}
-
-.review-slider-container { /* Kontejner pro Swiper a šipky */
-    position: relative;
-    padding: 0 45px; /* Prostor pro šipky po stranách */
-    margin: 0 auto;
-    max-width: 100%;
-    overflow: hidden; /* Skryje části slidů mimo kontejner */
-}
-
-.swiper-review { /* Samotný Swiper */
-    width: 100%;
-    height: auto; /* Výška se přizpůsobí obsahu */
-    padding-bottom: 1.5rem; /* Prostor pod slidery (např. pro paginaci, pokud by byla) */
-    position: static; /* Důležité pro správné fungování šipek */
-}
-
-.swiper-slide { /* Jednotlivý slide ve Swiperu */
-    height: auto; /* Výška se přizpůsobí kartě */
-    display: flex; /* Zarovnání karty uvnitř */
-    width: auto; /* Šířka se přizpůsobí, pokud máš slidesPerView: 'auto' */
-}
-
-.review-card-new { /* Karta s recenzí */
-    width: 100%;
-    height: 100%; /* Karta vyplní slide */
-    border: none; /* Bez rámečku */
-    background-color: #f8f9fa; /* Světlé pozadí karty */
-    border-radius: 0.375rem; /* Zaoblené rohy */
-    padding: 1.5rem; /* Vnitřní odsazení */
-    display: flex;
-    flex-direction: column; /* Obsah pod sebou */
-}
-
-.review-card-new .review-header { /* Hlavička karty */
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.review-card-new .reviewer-avatar { /* Avatar recenzenta */
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 0.75rem;
-    background-color: var(--bs-secondary); /* Záložní barva */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 1.1rem;
-    overflow: hidden;
-}
-.review-card-new .reviewer-avatar img { /* Obrázek v avataru */
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Vyplní avatar bez deformace */
-}
-
-.review-card-new .reviewer-info { /* Info vedle avataru */
-    flex-grow: 1; /* Zabere zbylé místo */
-}
-
-.review-card-new .review-name { /* Jméno recenzenta */
-    font-weight: 600;
-    margin-bottom: 0;
-    font-size: 0.95rem;
-}
-
-.review-card-new .review-date { /* Datum recenze */
-    font-size: 0.75em;
-    color: #6c757d;
-}
-
-.review-card-new .google-icon { /* Malé Google logo */
-    height: 40px; /* Shodná výška s velkým logem */
-    width: auto;
-    margin-left: 0.5rem;
-}
-
-.review-card-new .stars { /* Hvězdičky v kartě */
-    color: #ffc107;
-    font-size: 1rem; /* Menší než ve shrnutí */
-    margin-bottom: 0.75rem;
-}
-
-.review-card-new .review-text { /* Text recenze */
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: #495057;
-    margin-bottom: 1rem;
-    overflow: hidden; /* Skryje přebytečný text */
-    display: block; /* Potřeba pro -webkit-line-clamp */
-    min-height: calc(1.5 * 0.9rem * 3); /* Výška pro 3 řádky - upravit podle potřeby */
-}
-
-.review-card-new .review-text.truncated { /* Oříznutý text */
-    display: -webkit-box;
-    -webkit-line-clamp: 3; /* Zobrazí max 3 řádky */
-    -webkit-box-orient: vertical;
-    text-overflow: ellipsis; /* Přidá ... na konec */
-}
-
-.review-card-new .read-more { /* Odkaz "Přečíst více" */
-    font-size: 0.85em;
-    color: var(--bs-primary);
-    text-decoration: none;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-block;
-    margin-top: auto; /* Posune odkaz na spodek karty */
-}
-
-.review-card-new .read-more:hover {
-    text-decoration: underline;
-}
-
-.review-card-new .read-more.hidden { /* Skrytí odkazu */
-    display: none;
-}
-
-/* Šipky Swiperu */
-.review-slider-container .swiper-button-prev,
-.review-slider-container .swiper-button-next {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 44px;
-    height: 44px;
-    margin-top: 0; /* Reset výchozího marginu */
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 50%;
-    color: var(--bs-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    z-index: 10; /* Nad slidery */
-}
-
-.review-slider-container .swiper-button-prev:hover,
-.review-slider-container .swiper-button-next:hover {
-    background-color: var(--bs-primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.review-slider-container .swiper-button-prev {
-    left: 0px; /* Pozice levé šipky */
-}
-.review-slider-container .swiper-button-next {
-    right: 0px; /* Pozice pravé šipky */
-}
-
-.review-slider-container .swiper-button-prev::after,
-.review-slider-container .swiper-button-next::after {
-    font-size: 18px; /* Velikost ikony v šipce */
-    font-weight: bold;
-}
-
-.review-slider-container .swiper-button-disabled { /* Neaktivní šipka */
-    opacity: 0.25;
-    pointer-events: none;
-}
-
-/* === STYLY PRO FAQ === */
-.faq-section {
-    padding: 4rem 0;
-    background-color: var(--bs-light);
-}
-
-.faq-section .accordion-button {
-    font-weight: 600;
-    color: var(--bs-dark);
-}
-
-.faq-section .accordion-button:not(.collapsed) {
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
-    color: var(--bs-primary);
-}
-
-.faq-section .accordion-button:focus {
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-.faq-section .accordion-body {
-    font-size: 0.95em;
-    line-height: 1.6;
-}
 
 /* === Sekce Kontakt s ikonami (pro index.html) === */
 .contact-section-icons {
@@ -918,7 +768,7 @@
 /* === Globální úpravy === */
 html {
     scroll-behavior: smooth; /* Plynulé skrolování pro kotvy */
-    scroll-padding-top: 75px; /* <<< PŘIDÁNO: Odsazení pro kotvy kvůli fixnímu navbaru */
+    scroll-padding-top: 85px; /* Odsazení pro kotvy kvůli fixnímu navbaru */
     height: 100%;
 }
 
@@ -966,6 +816,7 @@ main {
         margin-bottom: 2rem; /* Nebo jiná vhodná hodnota */
     }
 }
+
 /* === NOVÉ STYLY PRO ŠIPKU JAKO ODKAZ === */
 .hero-scroll-down-arrow {
     position: absolute;
@@ -989,12 +840,133 @@ main {
     animation-play-state: paused;
 }
 
-/* Animace bounce (pokud už ji nemáš, přidej ji) */
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
-    40% { transform: translateX(-50%) translateY(-15px); }
-    60% { transform: translateX(-50%) translateY(-10px); }
+/* === STYLY PŘESUNUTÉ Z produkt-detail-standard.html === */
+.product-detail-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
 }
+/* Obrázky */
+.main-product-image { max-width: 100%; height: auto; border: 1px solid #dee2e6; margin-bottom: 1rem; }
+.thumbnail-images img { width: 80px; height: 80px; object-fit: cover; cursor: pointer; border: 1px solid #dee2e6; margin-right: 0.5rem; margin-bottom: 0.5rem; opacity: 0.7; transition: opacity 0.2s ease-in-out; }
+.thumbnail-images img.active, .thumbnail-images img:hover { opacity: 1; border-color: #007bff; }
+
+/* Cena (Standard) */
+.product-price-section {
+    margin-bottom: 1rem;
+}
+.product-price-section .original-price {
+    font-size: 1rem;
+    color: #6c757d;
+    text-decoration: line-through;
+    display: block;
+    margin-bottom: -0.2em;
+    line-height: 1;
+}
+.product-price-section .price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--bs-primary);
+    line-height: 1.1;
+    margin-right: 0.2rem;
+}
+.product-price-section .ms-1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+    padding-left: 0.2rem;
+}
+/* .discount-badge je již definován výše */
+.product-price-section .price-note {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.1rem;
+    margin-bottom: 0;
+    display: block;
+}
+
+.product-short-description { margin-top: 1rem; margin-bottom: 1.5rem; color: #495057; }
+/* Formulář variant */
+.product-options-form .form-label { font-weight: bold; }
+.product-options-form .form-select, .product-options-form .form-control { margin-bottom: 1rem; }
+/* Informace o DPH */
+.tax-selection .form-check { margin-bottom: 0.5rem; }
+.tax-info-icon { cursor: pointer; color: #007bff; margin-left: 5px; }
+.tax-info-details { font-size: 0.85rem; color: #6c757d; margin-left: 1.5rem; margin-bottom: 1rem; display: none; border-left: 3px solid #007bff; padding-left: 10px; }
+.tax-selection .form-check:has(input:checked) + .tax-info-details { display: block; }
+/* Množství a tlačítko košíku */
+.quantity-input { width: 80px; }
+.add-to-cart-btn { padding: 0.75rem 1.5rem; font-size: 1.1rem; }
+/* Klíčové informace */
+.key-info-banner { background-color: #e9f5ff; border-left: 5px solid #007bff; padding: 1rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.key-info-banner p { margin-bottom: 0.5rem; font-weight: 500; }
+.key-info-banner i { margin-right: 0.5rem; color: #007bff; }
+/* Popis a galerie variant */
+.product-long-description { margin-top: 2rem; clear: both; }
+.product-long-description h3 { margin-top: 1.5rem; margin-bottom: 1rem; }
+.variation-gallery { margin-top: 1rem; margin-bottom: 2rem; }
+.variation-gallery h4 { font-size: 1.1rem; margin-bottom: 0.8rem; }
+.variation-gallery img { width: 100px; height: 100px; object-fit: cover; margin-right: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #dee2e6; cursor: pointer; }
+.variation-gallery img:hover { border-color: #007bff; }
+/* Sekce výhod (používá .advantages-section) */
+.advantages-section h3 { text-align: center; margin-bottom: 1.5rem; }
+.advantages-section ul { list-style: none; padding-left: 0; }
+.advantages-section li { display: flex; align-items: center; margin-bottom: 1rem; font-size: 1.1rem; }
+.advantages-section i { color: #28a745; font-size: 1.5rem; margin-right: 1rem; width: 30px; text-align: center; }
+/* Responzivita pro standardní detail */
+@media (min-width: 768px) {
+    .product-images-column { position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto; padding-right: 1rem; }
+    .product-info-column { padding-left: 1rem; }
+    .product-long-description { margin-top: 0; }
+    .advantages-section { padding: 2rem; }
+}
+
+/* === STYLY PŘESUNUTÉ Z produkt-detail-custom.html === */
+/* .product-detail-container je již definován */
+.configurator-column {}
+.configurator-column h2 { text-align: center; margin-bottom: 2rem; color: #343a40; }
+.configurator-step { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef; }
+.configurator-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.configurator-step h4 { margin-bottom: 1rem; color: #007bff; font-weight: 500; }
+.configurator-step .form-label { font-weight: bold; }
+.dimension-slider-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.dimension-value { font-weight: bold; background-color: #e9ecef; padding: 0.2rem 0.5rem; border-radius: 4px; min-width: 60px; text-align: right; }
+.form-range { margin-bottom: 1rem; }
+.addon-category { margin-bottom: 1.5rem; }
+/* .tax-selection, .tax-info-icon, .tax-info-details jsou již definovány */
+/* #config-summary-sticky je definován výše */
+#config-summary-sticky h2 { margin-bottom: 1.5rem; font-size: 1.5rem; color: #343a40; text-align: center; }
+.price-summary { margin-top: 1rem; text-align: center; }
+.price-summary .price-label { font-size: 1.1rem; color: #6c757d; }
+.price-summary .price-value-container { font-size: 2rem; font-weight: bold; color: #28a745; display: block; margin-bottom: 0.5rem; position: relative; min-height: 36px; }
+.price-summary .price-value {}
+.price-summary .price-loading .price-value { opacity: 0.5; }
+.price-summary .price-loading-spinner { display: none; margin-left: 10px; }
+.price-summary.price-loading .price-loading-spinner { display: inline-block; }
+.price-summary .price-note { font-size: 0.85rem; color: #6c757d; margin-bottom: 1rem; }
+/* .add-to-cart-btn je již definován */
+.product-description-section, .variation-gallery, .advantages-section-custom { margin-top: 2rem; }
+.product-description-section h3, .variation-gallery h3, .advantages-section-custom h3 { margin-bottom: 1.5rem; }
+/* .variation-gallery img je již definován */
+.advantages-section-custom { background-color: #f8f9fa; padding: 2rem 1rem; border-radius: 5px; }
+.advantages-section-custom h3 { text-align: center; }
+.advantages-section-custom ul { list-style: none; padding-left: 0; }
+.advantages-section-custom li { display: flex; align-items: center; margin-bottom: 1rem; font-size: 1.1rem; }
+.advantages-section-custom i { color: #28a745; font-size: 1.5rem; margin-right: 1rem; width: 30px; text-align: center; }
+@media (min-width: 768px) { .advantages-section-custom { padding: 2rem; } }
+#price-breakdown h5 { font-size: 1.1rem; }
+#price-breakdown span { font-size: 0.95em; }
+#price-breakdown .fw-bold { font-weight: 600 !important; }
+#breakdown-addons-container h6 { font-size: 1rem; margin-bottom: 0.5rem; }
+#breakdown-addons-list div span:first-child { color: #495057; }
+.invalid-feedback { display: none; width: 100%; margin-top: 0.25rem; font-size: .875em; color: var(--bs-danger); }
+.was-validated :invalid ~ .invalid-feedback, /* Používá se i :invalid CSS pseudo-třída */
+.was-validated :invalid ~ .invalid-tooltip,
+.is-invalid ~ .invalid-feedback, /* Používá se i třída .is-invalid (např. pro DPH) */
+.is-invalid ~ .invalid-tooltip { display: block; }
+.form-select.is-invalid, .form-control.is-invalid { border-color: var(--bs-danger); }
+.tax-selection.is-invalid .form-label { color: var(--bs-danger); } /* Zvýraznění labelu DPH při chybě */
+.hidden-fields { display: none !important; }
+
 /* Můžeš také upravit původní styly pro .configurator-section, pokud se některé už nehodí,
    nebo je přejmenovat a aplikovat na .configurator-column, jak jsem naznačil ve <style> bloku výše */
 
