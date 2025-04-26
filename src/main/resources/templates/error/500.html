@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+
+<head>
+    <title>Chyba serveru (500) | Dřevníky Kolář</title>
+    <meta name="robots" content="noindex, nofollow"/>
+    <th:block layout:fragment="css">
+        <style>
+            .error-container {
+                min-height: 60vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            }
+            .error-code {
+                font-size: 6rem;
+                font-weight: bold;
+                color: var(--bs-danger); /* Červená pro 500 */
+                margin-bottom: 0;
+                line-height: 1;
+            }
+            .error-title {
+                font-size: 2rem;
+                margin-top: 0.5rem;
+                margin-bottom: 1rem;
+                color: var(--bs-secondary);
+            }
+            .error-message {
+                font-size: 1.1rem;
+                color: var(--bs-secondary);
+                margin-bottom: 2rem;
+            }
+            .error-actions a {
+                margin: 0 0.5rem;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5 error-container">
+        <div class="error-code">500</div>
+        <h1 class="error-title" th:text="${errorTitle ?: 'Interní chyba serveru'}">Interní chyba serveru</h1>
+
+        <p class="error-message col-md-8 mx-auto"
+           th:text="${errorMessage ?: 'Omlouváme se, na serveru došlo k neočekávané technické chybě. Problém byl zaznamenán a pracujeme na nápravě.'}">
+            Popis chyby...
+        </p>
+
+        <p th:if="${path}" class="text-muted small">
+            Adresa, kde chyba nastala: <code th:text="${path}">/cesta/k/chybě</code>
+        </p>
+        <p th:if="${timestamp}" class="text-muted small">
+            Čas chyby: <span th:text="${#temporals.format(timestamp, 'dd.MM.yyyy HH:mm:ss')}"></span>
+        </p>
+
+
+        <div class="error-actions">
+            <a th:href="@{/}" class="btn btn-primary">
+                <i class="bi bi-house-door-fill me-1"></i> Přejít na úvodní stránku
+            </a>
+            <a href="javascript:location.reload();" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-repeat me-1"></i> Zkusit znovu
+            </a>
+        </div>
+
+    </div>
+</section>
+
+</body>
+</html>

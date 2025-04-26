@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+
+<head>
+  <title>Přístup odepřen (403) | Dřevníky Kolář</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <th:block layout:fragment="css">
+    <style>
+      .error-container {
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .error-code {
+        font-size: 6rem;
+        font-weight: bold;
+        /* Použijeme oranžovou nebo jinou varovnou barvu pro 403 */
+        color: #fd7e14; /* Bootstrap orange */
+        margin-bottom: 0;
+        line-height: 1;
+      }
+      .error-title {
+        font-size: 2rem;
+        margin-top: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--bs-secondary);
+      }
+      .error-message {
+        font-size: 1.1rem;
+        color: var(--bs-secondary);
+        margin-bottom: 2rem;
+      }
+      .error-actions a {
+        margin: 0 0.5rem;
+      }
+    </style>
+  </th:block>
+</head>
+
+<body>
+
+<section layout:fragment="content">
+  <div class="container mt-5 mb-5 error-container">
+    <div class="error-code">403</div>
+    <h1 class="error-title" th:text="${errorTitle ?: 'Přístup odepřen'}">Přístup odepřen</h1>
+
+    <p class="error-message col-md-8 mx-auto"
+       th:text="${errorMessage ?: 'Omlouváme se, ale nemáte dostatečná oprávnění pro zobrazení této stránky.'}">
+      Nemáte oprávnění pro přístup k této stránce nebo provedení požadované akce.
+    </p>
+
+    <p th:if="${path}" class="text-muted small">
+      Požadovaná adresa: <code th:text="${path}">/zabezpecena/cesta</code>
+    </p>
+
+    <div class="error-actions">
+      <a th:href="@{/}" class="btn btn-primary">
+        <i class="bi bi-house-door-fill me-1"></i> Přejít na úvodní stránku
+      </a>
+      <a th:href="@{/prihlaseni}" class="btn btn-outline-secondary" th:if="${#authentication == null or #authentication.principal == 'anonymousUser'}">
+        <i class="bi bi-person-circle me-1"></i> Přihlásit se
+      </a>
+      <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Zpět
+      </a>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="cs" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+
+<head>
+  <title>Stránka nenalezena (404) | Dřevníky Kolář</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <th:block layout:fragment="css">
+    <style>
+      .error-container {
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+      .error-code {
+        font-size: 6rem;
+        font-weight: bold;
+        color: var(--bs-warning); /* Barva pro 404 */
+        margin-bottom: 0;
+        line-height: 1;
+      }
+      .error-title {
+        font-size: 2rem;
+        margin-top: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--bs-secondary);
+      }
+      .error-message {
+        font-size: 1.1rem;
+        color: var(--bs-secondary);
+        margin-bottom: 2rem;
+      }
+      .error-actions a {
+        margin: 0 0.5rem;
+      }
+    </style>
+  </th:block>
+</head>
+
+<body>
+
+<section layout:fragment="content">
+  <div class="container mt-5 mb-5 error-container">
+    <div class="error-code">404</div>
+    <h1 class="error-title">Jejda! Stránka nenalezena</h1>
+
+    <p class="error-message col-md-8 mx-auto">
+      Omlouváme se, ale stránka, kterou hledáte, neexistuje nebo byla přesunuta.
+      Zkontrolujte prosím zadanou adresu nebo se vraťte na úvodní stránku.
+    </p>
+
+    <p th:if="${path}" class="text-muted small">
+      Požadovaná adresa: <code th:text="${path}">/cesta/k/chybě</code>
+    </p>
+
+    <div class="error-actions">
+      <a th:href="@{/}" class="btn btn-primary">
+        <i class="bi bi-house-door-fill me-1"></i> Přejít na úvodní stránku
+      </a>
+      <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Zpět na předchozí stránku
+      </a>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
