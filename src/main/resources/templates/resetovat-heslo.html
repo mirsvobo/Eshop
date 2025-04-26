@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Nastavení nového hesla</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <style>
+        .error { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <h1 class="mb-4 text-center">Nastavení nového hesla</h1>
+
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${successMessage}">Úspěch.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${errorMessage}">Chyba při nastavování hesla.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/resetovat-heslo}" th:object="${resetPasswordDto}" method="post" novalidate>
+                </form>
+
+                <form th:action="@{/resetovat-heslo}" th:object="${resetPasswordDto}" method="post" novalidate>
+                    <input type="hidden" th:field="*{token}" />
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Nové heslo <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="newPassword" th:field="*{newPassword}" required aria-describedby="passwordHelp">
+                        <div id="passwordHelp" class="form-text">Heslo musí mít alespoň 8 znaků.</div>
+                        <div th:if="${#fields.hasErrors('newPassword')}" class="invalid-feedback">
+                            <span th:errors="*{newPassword}">Chyba nového hesla</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Potvrzení nového hesla <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" th:errorclass="is-invalid" id="confirmPassword" th:field="*{confirmPassword}" required>
+                        <div th:if="${#fields.hasErrors('confirmPassword')}" class="invalid-feedback">
+                            <span th:errors="*{confirmPassword}">Chyba potvrzení hesla</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Nastavit nové heslo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+</body>
+</html>

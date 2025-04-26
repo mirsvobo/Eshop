@@ -2,6 +2,7 @@ package org.example.eshop.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.example.eshop.model.Customer;
 import org.example.eshop.model.EmailTemplateConfig;
 import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderState;
@@ -15,11 +16,14 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.exceptions.TemplateProcessingException;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -292,6 +296,65 @@ public class EmailService {
 
         } catch (Exception e) {
             log.error("Failed to send admin notification email to {} for order {}: {}", adminEmail, orderCode, e.getMessage(), e);
+        }
+    }
+    /**
+     * Odešle email s odkazem pro resetování hesla zákazníkovi.
+     *
+     * @param customer Zákazník, kterému se má email poslat.
+     * @param token Unikátní token pro reset hesla.
+     */
+    @Async // Doporučeno pro odesílání emailů, aby neblokovalo hlavní vlákno
+    public void sendPasswordResetEmail(Customer customer, String token) {
+        if (customer == null || !StringUtils.hasText(customer.getEmail()) || !StringUtils.hasText(token)) {
+            log.error("Cannot send password reset email. Customer, email or token is missing. Customer ID: {}",
+                    (customer != null ? customer.getId() : "N/A"));
+            return;
+        }
+        if (isMailConfigured()) { // Použij tvou existující metodu pro kontrolu konfigurace SMTP
+            log.warn("Mail is not configured, skipping password reset email for {}.", customer.getEmail());
+            return;
+        }
+
+        String recipientEmail = customer.getEmail();
+        String subject = shopName + " - Resetování hesla";
+        String templateName = "emails/password-reset-email"; // Název Thymeleaf šablony
+
+        try {
+            // Sestavení odkazu pro reset hesla
+            // Je bezpečnější token URL-encodovat, i když UUID by nemělo obsahovat problematické znaky
+            String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
+            String resetUrl = UriComponentsBuilder.fromHttpUrl(shopUrl) // shopUrl z @Value
+                    .path("/resetovat-heslo")
+                    .queryParam("token", encodedToken) // Použijeme enkodovaný token
+                    .build()
+                    .toUriString();
+
+            log.debug("Generated password reset URL for {}: {}", recipientEmail, resetUrl);
+
+            Context context = new Context(defaultLocale); // defaultLocale by mělo být definováno ve třídě
+            context.setVariable("customerName", customer.getFirstName()); // Jméno pro oslovení
+            context.setVariable("resetUrl", resetUrl); // Odkaz pro šablonu
+            context.setVariable("shopName", shopName); // Název obchodu
+            context.setVariable("shopUrl", shopUrl);   // Adresa obchodu
+
+            String htmlBody = templateEngine.process(templateName, context);
+
+            // Použijeme existující privátní metodu pro odeslání
+            sendHtmlEmail(recipientEmail, subject, htmlBody);
+
+            log.info("Password reset email sent successfully to {} (Token: ...{})", recipientEmail, token.substring(Math.max(0, token.length() - 6)));
+
+        } catch (TemplateProcessingException tpe) {
+            log.error("Failed to process Thymeleaf template '{}' for password reset email to {}: {}",
+                    templateName, recipientEmail, tpe.getMessage(), tpe);
+            // Zde můžeš přidat specifické zpracování chyby šablony
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            log.error("Failed to send password reset email to {}: {}", recipientEmail, e.getMessage(), e);
+            // Zde můžeš přidat specifické zpracování chyby odeslání (např. opakování)
+        } catch (Exception e) {
+            // Zachycení jakýchkoli jiných neočekávaných chyb
+            log.error("Unexpected error sending password reset email to {}: {}", recipientEmail, e.getMessage(), e);
         }
     }
 }

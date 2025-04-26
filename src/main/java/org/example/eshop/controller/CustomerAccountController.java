@@ -1,7 +1,6 @@
 package org.example.eshop.controller;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.example.eshop.dto.AddressDto;
 import org.example.eshop.dto.ChangePasswordDto;
@@ -19,11 +18,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional; // Správný import
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+// Odebrán import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.security.Principal;
 import java.util.ArrayList;
@@ -39,10 +40,14 @@ public class CustomerAccountController {
 
     private final CustomerService customerService;
     private final OrderService orderService;
+    // Odebrána @Autowired pro passwordEncoder
+
     @Autowired
     private ConversationService conversationService;
     @Autowired
     private ConversationRepository conversationRepository;
+
+    // Konstruktor pro DI
     @Autowired
     public CustomerAccountController(CustomerService customerService, OrderService orderService) {
         this.customerService = customerService;
@@ -58,8 +63,9 @@ public class CustomerAccountController {
                 .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen."));
     }
 
-    // --- Profil Zákazníka (Beze změny) ---
+    // --- Profil Zákazníka ---
     @GetMapping("/profil")
+    @Transactional(readOnly = true) // Přidáno
     public String viewProfile(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {
             Customer customer = getCurrentCustomer(principal);
@@ -78,6 +84,7 @@ public class CustomerAccountController {
     }
 
     @PostMapping("/profil")
+    @Transactional // Přidáno
     public String updateProfile(@Valid @ModelAttribute("profile") ProfileUpdateDto profileUpdateDto,
                                 BindingResult bindingResult, Principal principal, RedirectAttributes redirectAttributes, Model model) {
         if (bindingResult.hasErrors()) {
@@ -90,12 +97,14 @@ public class CustomerAccountController {
             redirectAttributes.addFlashAttribute("profileSuccess", "Profil byl úspěšně aktualizován.");
         } catch (Exception e) {
             log.error("Chyba při aktualizaci profilu pro {}: {}", principal.getName(), e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("profileError", "Aktualizace profilu selhala: " + e.getMessage());
+            model.addAttribute("profileError", "Aktualizace profilu selhala: " + e.getMessage());
+            model.addAttribute("customerEmail", principal.getName());
+            return "muj-ucet/profil";
         }
         return "redirect:/muj-ucet/profil";
     }
 
-    // --- Změna Hesla (Beze změny) ---
+    // --- Změna Hesla (Opraveno) ---
     @GetMapping("/zmena-hesla")
     public String showChangePasswordForm(Model model) {
         model.addAttribute("passwordChange", new ChangePasswordDto());
@@ -103,20 +112,29 @@ public class CustomerAccountController {
     }
 
     @PostMapping("/zmena-hesla")
+    @Transactional // Přidáno
     public String processChangePassword(@Valid @ModelAttribute("passwordChange") ChangePasswordDto passwordDto,
                                         BindingResult bindingResult, Principal principal, RedirectAttributes redirectAttributes, Model model) {
+
+        // Kontrola shody hesel
         if (passwordDto.getNewPassword() != null && !passwordDto.getNewPassword().equals(passwordDto.getConfirmNewPassword())) {
             bindingResult.rejectValue("confirmNewPassword", "error.passwordChange", "Nové heslo a potvrzení se neshodují.");
         }
+
+        // Kontrola ostatních validačních chyb z DTO
         if (bindingResult.hasErrors()) {
             return "muj-ucet/zmena-hesla";
         }
+
         try {
             Customer customer = getCurrentCustomer(principal);
+            // --- OPRAVA: Volání metody v CustomerService ---
             customerService.changePassword(customer.getId(), passwordDto);
+            // --- KONEC OPRAVY ---
             redirectAttributes.addFlashAttribute("passwordSuccess", "Heslo bylo úspěšně změněno.");
-            return "redirect:/muj-ucet/profil";
+            return "redirect:/muj-ucet/profil"; // Přesměrování na profil po úspěšné změně
         } catch (IllegalArgumentException e) {
+            // Chyba ze service (např. špatné staré heslo)
             bindingResult.rejectValue("currentPassword", "error.passwordChange", e.getMessage());
             return "muj-ucet/zmena-hesla";
         } catch (Exception e) {
@@ -126,8 +144,9 @@ public class CustomerAccountController {
         }
     }
 
-    // --- Objednávky (Beze změny) ---
+    // --- Objednávky ---
     @GetMapping("/objednavky")
+    @Transactional(readOnly = true) // Přidáno
     public String viewOrders(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {
             Customer customer = getCurrentCustomer(principal);
@@ -142,14 +161,13 @@ public class CustomerAccountController {
     }
 
     @GetMapping("/objednavky/{orderCode}")
-    @Transactional() // Ponecháme, pokud OrderService potřebuje
+    @Transactional(readOnly = true) // Přidáno
     public String viewOrderDetail(@PathVariable String orderCode,
                                   Model model,
                                   Principal principal,
                                   RedirectAttributes redirectAttributes) {
         Customer loggedInCustomer = null;
         try {
-            // ... (kód pro získání zákazníka a základní kontroly) ...
             if (principal == null) {
                 throw new IllegalStateException("Uživatel není přihlášen.");
             }
@@ -158,24 +176,22 @@ public class CustomerAccountController {
                     .orElseThrow(() -> new IllegalStateException("Profil přihlášeného uživatele nebyl nalezen. Email: " + userEmail));
             log.debug("Customer {} (ID: {}) viewing order detail for CODE: {}", loggedInCustomer.getEmail(), loggedInCustomer.getId(), orderCode);
 
-            // Voláme optimalizovanou metodu service, která používá findFullDetailByOrderCode
             Order order = orderService.findOrderByCode(orderCode)
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka s kódem '" + orderCode + "' nenalezena."));
 
             if (order.getCustomer() == null || !order.getCustomer().getId().equals(loggedInCustomer.getId())) {
                 throw new SecurityException("K této objednávce nemáte přístup.");
             }
+
+            // Načtení externích zpráv
             List<Message> externalMessages = conversationRepository
                     .findByOrderIdAndType(order.getId(), Conversation.ConversationType.EXTERNAL)
-                    .map(conversation -> conversationRepository.findByIdWithMessages(conversation.getId())) // Načteme i zprávy
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
+                    .flatMap(conversation -> conversationRepository.findByIdWithMessages(conversation.getId())) // Načteme i zprávy
                     .map(Conversation::getMessages)
                     .orElse(new ArrayList<>()); // Vrátí prázdný seznam, pokud konverzace nebo zprávy neexistují
 
             model.addAttribute("externalMessages", externalMessages);
-
-            model.addAttribute("order", order); // Data jsou již načtena
+            model.addAttribute("order", order);
             log.info("Order detail for CODE {} loaded successfully for customer {}", orderCode, loggedInCustomer.getEmail());
             return "muj-ucet/objednavka-detail";
 
@@ -191,8 +207,10 @@ public class CustomerAccountController {
             return "redirect:/muj-ucet/objednavky";
         }
     }
+
     // Endpoint pro odeslání zprávy zákazníkem
     @PostMapping("/objednavky/{orderCode}/poslat-zpravu")
+    @Transactional // Přidáno
     public String sendCustomerMessage(@PathVariable String orderCode,
                                       @RequestParam String content,
                                       Principal principal,
@@ -204,43 +222,38 @@ public class CustomerAccountController {
         }
 
         try {
-            // 1. Získat přihlášeného zákazníka
-            Customer customer = getCurrentCustomer(principal); // Použij existující metodu
-
-            // 2. Najít objednávku a ověřit vlastnictví
+            Customer customer = getCurrentCustomer(principal);
             Order order = orderService.findOrderByCode(orderCode)
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka nenalezena."));
             if (!order.getCustomer().getId().equals(customer.getId())) {
                 throw new SecurityException("Nemáte oprávnění k této objednávce.");
             }
-
-            // 3. Získat nebo vytvořit externí konverzaci
             Conversation externalConversation = conversationService.getOrCreateConversation(order.getId(), Conversation.ConversationType.EXTERNAL);
-
-            // 4. Přidat zprávu
             conversationService.addMessage(
                     externalConversation.getId(),
                     content,
                     Message.SenderType.CUSTOMER,
                     customer.getId(),
-                    customer.getFirstName() + " " + customer.getLastName() // Jméno zákazníka
+                    customer.getFirstName() + " " + customer.getLastName()
             );
-
             redirectAttributes.addFlashAttribute("successMessage", "Vaše zpráva byla odeslána.");
             log.info("Customer {} sent message for order {}", customer.getEmail(), orderCode);
 
         } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
             log.warn("Error sending customer message for order {}: {}", orderCode, e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Chyba: " + e.getMessage());
-            return "redirect:/muj-ucet/objednavky"; // Zpět na přehled při chybě
+            return "redirect:/muj-ucet/objednavky";
         } catch (Exception e) {
             log.error("Unexpected error sending customer message for order {}: {}", orderCode, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při odesílání zprávy nastala neočekávaná chyba.");
         }
 
-        return "redirect:/muj-ucet/objednavky/" + orderCode; // Zpět na detail objednávky
+        return "redirect:/muj-ucet/objednavky/" + orderCode;
     }
+
+    // --- Adresy ---
     @GetMapping("/adresy")
+    @Transactional(readOnly = true) // Přidáno
     public String viewAddresses(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {
             setupAddressModel(model, principal);
@@ -253,38 +266,48 @@ public class CustomerAccountController {
     }
 
     @PostMapping("/adresy/fakturacni")
+    @Transactional // Přidáno
     public String updateInvoiceAddress(@Valid @ModelAttribute("invoiceAddress") AddressDto addressDto,
                                        BindingResult bindingResult, Principal principal, RedirectAttributes redirectAttributes, Model model) {
         return updateAddressInternal(addressDto, bindingResult, principal, redirectAttributes, model, CustomerService.AddressType.INVOICE);
     }
 
     @PostMapping("/adresy/dodaci")
+    @Transactional // Přidáno
     public String updateDeliveryAddress(@Valid @ModelAttribute("deliveryAddress") AddressDto addressDto,
                                         BindingResult bindingResult, Principal principal, RedirectAttributes redirectAttributes, Model model) {
-        if (!bindingResult.hasFieldErrors("companyName") &&
-                !org.springframework.util.StringUtils.hasText(addressDto.getCompanyName())) {
-            if (!org.springframework.util.StringUtils.hasText(addressDto.getFirstName())) {
+        // Dodatečná validace pro dodací adresu
+        if (!bindingResult.hasFieldErrors("companyName") && !StringUtils.hasText(addressDto.getCompanyName())) {
+            if (!StringUtils.hasText(addressDto.getFirstName())) {
                 bindingResult.rejectValue("firstName", "error.deliveryAddress", "Jméno nebo firma musí být vyplněno.");
             }
-            if (!org.springframework.util.StringUtils.hasText(addressDto.getLastName())) {
+            if (!StringUtils.hasText(addressDto.getLastName())) {
                 bindingResult.rejectValue("lastName", "error.deliveryAddress", "Příjmení nebo firma musí být vyplněno.");
             }
         }
         return updateAddressInternal(addressDto, bindingResult, principal, redirectAttributes, model, CustomerService.AddressType.DELIVERY);
     }
 
+    // Interní metoda pro update adresy
     private String updateAddressInternal(AddressDto addressDto, BindingResult bindingResult, Principal principal,
                                          RedirectAttributes redirectAttributes, Model model, CustomerService.AddressType addressType) {
         String addressTypeName = (addressType == CustomerService.AddressType.INVOICE ? "fakturační" : "dodací");
         String errorModelAttributeName = (addressType == CustomerService.AddressType.INVOICE ? "invoiceAddressError" : "deliveryAddressError");
-        if (!bindingResult.hasFieldErrors("companyName") && !org.springframework.util.StringUtils.hasText(addressDto.getCompanyName()) &&
-                (!org.springframework.util.StringUtils.hasText(addressDto.getFirstName()) || !org.springframework.util.StringUtils.hasText(addressDto.getLastName()))) {
-            bindingResult.rejectValue("firstName", "error." + addressTypeName + "Address", "Musí být vyplněn název firmy nebo jméno a příjmení.");
+
+        // Kontrola recipienta
+        if (!addressDto.hasRecipient()) {
+            bindingResult.rejectValue("companyName", "recipient.required", "Musí být vyplněn název firmy nebo jméno a příjmení.");
+            if (!StringUtils.hasText(addressDto.getCompanyName())) {
+                if (!StringUtils.hasText(addressDto.getFirstName())) bindingResult.rejectValue("firstName", "recipient.required", "Jméno nebo firma musí být vyplněno.");
+                if (!StringUtils.hasText(addressDto.getLastName())) bindingResult.rejectValue("lastName", "recipient.required", "Příjmení nebo firma musí být vyplněno.");
+            }
         }
+
         if (bindingResult.hasErrors()) {
             log.warn("Validation errors while updating {} address for {}", addressTypeName, principal.getName());
+            model.addAttribute(addressType == CustomerService.AddressType.INVOICE ? "invoiceAddress" : "deliveryAddress", addressDto);
+            setupAddressModel(model, principal); // Znovu načteme data pro druhý formulář
             model.addAttribute(errorModelAttributeName, "Formulář pro " + addressTypeName + " adresu obsahuje chyby.");
-            setupAddressModel(model, principal);
             return "muj-ucet/adresy";
         }
         try {
@@ -298,19 +321,17 @@ public class CustomerAccountController {
         return "redirect:/muj-ucet/adresy";
     }
 
-    // *** UPRAVENÁ METODA ZDE ***
+    // Přepnutí dodací adresy
     @PostMapping("/adresy/prepnout-dodaci")
+    @Transactional // Přidáno
     public String setUseInvoiceAddressAsDelivery(
-            // Parametr 'useInvoiceAddress' již není povinný (required = false)
-            // Pokud nepřijde (checkbox je odškrtnutý), použije se výchozí hodnota "false"
             @RequestParam(name = "useInvoiceAddress", required = false, defaultValue = "false") boolean useInvoiceAddress,
             Principal principal,
             RedirectAttributes redirectAttributes) {
         try {
             Customer customer = getCurrentCustomer(principal);
-            // Service metoda přijímá boolean a uloží ho
             customerService.setUseInvoiceAddressAsDelivery(customer.getId(), useInvoiceAddress);
-            log.info("Set useInvoiceAddressAsDelivery to {} for customer {}", useInvoiceAddress, principal.getName()); // Logování
+            log.info("Set useInvoiceAddressAsDelivery to {} for customer {}", useInvoiceAddress, principal.getName());
             redirectAttributes.addFlashAttribute("addressSuccess", "Nastavení dodací adresy bylo aktualizováno.");
         } catch (Exception e) {
             log.error("Chyba při nastavování useInvoiceAddressAsDelivery pro {}: {}", principal.getName(), e.getMessage(), e);
@@ -319,7 +340,7 @@ public class CustomerAccountController {
         return "redirect:/muj-ucet/adresy";
     }
 
-    // --- Pomocné metody (Beze změny) ---
+    // --- Pomocné metody ---
     private void setupAddressModel(Model model, Principal principal) {
         Customer customer = getCurrentCustomer(principal);
         model.addAttribute("customer", customer);
@@ -356,7 +377,7 @@ public class CustomerAccountController {
             dto.setZipCode(customer.getDeliveryZipCode());
             dto.setCountry(customer.getDeliveryCountry());
             dto.setPhone(customer.getDeliveryPhone());
-            if (!org.springframework.util.StringUtils.hasText(dto.getPhone())) {
+            if (!StringUtils.hasText(dto.getPhone()) && StringUtils.hasText(customer.getPhone())) {
                 dto.setPhone(customer.getPhone());
             }
         }

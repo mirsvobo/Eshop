@@ -14,15 +14,32 @@
             <div class="col-md-6 col-lg-5">
                 <h1 class="mb-4 text-center">Přihlášení</h1>
 
-                <div th:if="${param.error}" class="alert alert-danger" role="alert">
+                <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show" role="alert">
                     Nesprávné uživatelské jméno nebo heslo.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div th:if="${param.logout}" class="alert alert-success" role="alert">
+                <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show" role="alert">
                     Byli jste úspěšně odhlášeni.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div th:if="${param.registraceSuccess}" class="alert alert-success" role="alert">
-                    Registrace proběhla úspěšně. Nyní se můžete přihlásit.
+                <div th:if="${registraceSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${registraceSuccess}">Registrace proběhla úspěšně.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+                <div th:if="${passwordResetSuccess}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${passwordResetSuccess}">Heslo úspěšně změněno.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span th:text="${successMessage}">Úspěch.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span th:text="${errorMessage}">Chyba.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/prihlaseni}" method="post">
+                </form>
 
                 <form th:action="@{/prihlaseni}" method="post">
                     <div class="mb-3">
@@ -36,7 +53,7 @@
                     <button type="submit" class="btn btn-primary w-100">Přihlásit se</button>
 
                     <div class="mt-3 text-center">
-                        <a href="#">Zapomenuté heslo?</a>
+                        <a th:href="@{/zapomenute-heslo}">Zapomenuté heslo?</a>
                     </div>
                     <div class="mt-4 text-center">
                         Chcete vytvořit účet? <a th:href="@{/registrace}">Zaregistrovat se</a>
