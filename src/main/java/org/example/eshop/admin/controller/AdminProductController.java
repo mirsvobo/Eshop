@@ -7,6 +7,7 @@ import org.example.eshop.admin.service.AddonsService;
 import org.example.eshop.admin.service.DesignService;
 import org.example.eshop.admin.service.GlazeService;
 import org.example.eshop.admin.service.RoofColorService;
+import org.example.eshop.dto.ImageDto;
 import org.example.eshop.dto.ImageOrderUpdateRequest;
 import org.example.eshop.model.*;
 import org.example.eshop.service.ProductService;
@@ -595,41 +596,48 @@ public class AdminProductController {
     }
 
 
-    // --- Metody pro obrázky (zůstávají víceméně stejné) ---
-
+    // *** OPRAVENÁ METODA UPLOADIMAGE ***
     @PostMapping("/{productId}/images/upload")
-    public String uploadImage(@PathVariable Long productId,
-                              @RequestParam("imageFile") MultipartFile imageFile,
-                              @RequestParam(required = false) String altText,
-                              @RequestParam(required = false) String titleText,
-                              @RequestParam(required = false) Integer displayOrder,
-                              RedirectAttributes redirectAttributes) {
+    @ResponseBody // Důležité pro REST odpověď
+    // *** ZMĚNA ZDE: Návratový typ je nyní ResponseEntity<ImageDto> ***
+    public ResponseEntity<ImageDto> uploadImage(@PathVariable Long productId,
+                                                @RequestParam("imageFile") MultipartFile imageFile,
+                                                @RequestParam(required = false) String altText,
+                                                @RequestParam(required = false) String titleText,
+                                                @RequestParam(required = false) Integer displayOrder) {
         log.info("Attempting to upload image for product ID: {}", productId);
         if (imageFile.isEmpty()) {
-            redirectAttributes.addFlashAttribute("imageError", "Vyberte prosím soubor k nahrání.");
-            return "redirect:/admin/products/" + productId + "/edit";
+            // Vracíme chybu 400 Bad Request s JSON tělem
+            return ResponseEntity.badRequest().body(createErrorDto("Vyberte prosím soubor k nahrání."));
         }
         try {
-            // Uložíme obrázek pomocí ProductService, který použije FileStorageService
-            Image savedImage = productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder); //
-            redirectAttributes.addFlashAttribute("imageSuccess", "Obrázek '" + imageFile.getOriginalFilename() + "' byl úspěšně nahrán.");
-            log.info("Image successfully uploaded for product {}, image ID: {}", productId, savedImage.getId()); //
-        } catch (IOException e) {
+            Image savedImage = productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder);
+            log.info("Image successfully uploaded for product {}, image ID: {}", productId, savedImage.getId());
+            // Vracíme ImageDto s daty uloženého obrázku a statusem 200 OK
+            ImageDto imageDto = new ImageDto(savedImage);
+            return ResponseEntity.ok(imageDto);
+        } catch (IOException | IllegalArgumentException | EntityNotFoundException e) {
             log.error("Failed to store image file for product {}: {}", productId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Nahrání obrázku selhalo: " + e.getMessage());
-        } catch (EntityNotFoundException e) {
-            log.warn("Product ID {} not found when trying to upload image.", productId);
-            redirectAttributes.addFlashAttribute("errorMessage", "Produkt nebyl nalezen pro nahrání obrázku.");
-            return "redirect:/admin/products"; // Přesměrování na seznam, pokud produkt neexistuje
+            // Vracíme JSON s chybou a statusem 500 Internal Server Error
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorDto("Nahrání obrázku selhalo: " + e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error uploading image for product {}: {}", productId, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("imageError", "Nahrání obrázku selhalo z neočekávaného důvodu.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorDto("Neočekávaná chyba při nahrávání obrázku."));
         }
-        // Po úspěšném nahrání přesměrujeme na editaci produktu
-        return "redirect:/admin/products/" + productId + "/edit";
     }
+    // *** KONEC OPRAVENÉ METODY UPLOADIMAGE ***
 
-
+    // Pomocná metoda pro vytvoření chybového DTO (místo Map)
+    private ImageDto createErrorDto(String message) {
+        ImageDto errorDto = new ImageDto();
+        // Můžeme přidat pole pro chybu do ImageDto nebo vytvořit specifické ErrorDto
+        // Pro jednoduchost zde nevracíme nic specifického, spoléháme na HTTP status
+        log.warn("Returning error DTO (though currently empty) with message: {}", message); // Logování pro debug
+        return errorDto; // Vracíme prázdné DTO, JS by měl kontrolovat status
+        // Alternativně: Přidat pole `private String errorMessage;` do ImageDto a nastavit ho zde.
+    }
     // Příklad úpravy deleteImage
     @PostMapping("/images/{imageId}/delete")
     @ResponseBody // Důležité pro AJAX odpověď

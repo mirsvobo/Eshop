@@ -790,40 +790,56 @@ public class ProductService implements PriceConstants {
             throw new IllegalArgumentException("Cannot add an empty image file.");
         }
 
-        Product product = productRepository.findById(productId)
+        // *** OPRAVA: Znovu načteme produkt včetně obrázků v rámci transakce ***
+        Product product = productRepository.findByIdWithDetails(productId) // Použijeme metodu, která načte i obrázky (nebo zajistíme EAGER loading)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId + " when adding image."));
+        logger.debug("Product ID {} found with {} existing images (loaded eagerly).", productId, product.getImages().size());
 
-        String fileUrl = fileStorageService.storeFile(file, "products"); // Assuming file storage service returns URL or path
+        // Uložení fyzického souboru
+        String fileUrl = fileStorageService.storeFile(file, "products");
 
         Image newImage = new Image();
-        newImage.setUrl(fileUrl); // Store the URL/path returned by storage service
+        newImage.setUrl(fileUrl);
         newImage.setAltText(altText);
         newImage.setTitleText(titleText);
-        newImage.setProduct(product);
+        newImage.setProduct(product); // Přiřadíme načtený produkt
 
-        // Calculate display order if not provided
+        // Výpočet displayOrder - nyní by měl `product.getImages()` fungovat korektně
         if (displayOrder == null) {
-            int maxOrder = product.getImages().stream()
-                    .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
-                    .max()
-                    .orElse(-1);
-            newImage.setDisplayOrder(maxOrder + 1);
-            logger.debug("Calculated next displayOrder for new image: {}", newImage.getDisplayOrder());
+            try {
+                int maxOrder = product.getImages().stream() // Přístup ke kolekci obrázků
+                        .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
+                        .max()
+                        .orElse(-1);
+                newImage.setDisplayOrder(maxOrder + 1);
+                logger.debug("Calculated next displayOrder for new image: {}", newImage.getDisplayOrder());
+            } catch (Exception e) {
+                logger.error("!!! Error accessing product images stream for product ID {}: {} !!!", productId, e.getMessage(), e);
+                // Zde bychom měli buď hodit specifickou výjimku, nebo nastavit defaultní order
+                // Vzhledem k EntityNotFoundException v logu je pravděpodobné, že problém je v datech/cache
+                // Můžeme zkusit nastavit default 0, ale je to jen workaround
+                newImage.setDisplayOrder(0);
+                logger.warn("Could not calculate max display order due to error. Setting displayOrder to 0 for new image.");
+                // Důležité: Pokud tato chyba nastane, je nutné prošetřit konzistenci dat/cache!
+            }
         } else {
             newImage.setDisplayOrder(displayOrder);
         }
 
-        // Save the image entity
+        // Uložení entity Image
         Image savedImage = imageRepository.save(newImage);
-        // Add to the product's collection (important if not using CascadeType.PERSIST/MERGE from Product side)
-        // product.getImages().add(savedImage); // Might not be needed if cascade/mappedBy is correct
+
+        // *** DŮLEŽITÉ: Přidání do kolekce v paměti a uložení produktu ***
+        // Toto zajistí, že vztah je konzistentní a cache (pokud se používá) se aktualizuje.
+        // product.getImages().add(savedImage); // Přidáme do setu v paměti
+        // productRepository.save(product); // Uložíme produkt, aby se aktualizovala cache kolekce
+        // Poznámka: Pokud save(newImage) správně nastaví vztah a cache se invaliduje, explicitní save produktu nemusí být nutné.
+        // Ale pro jistotu může pomoci. Pokud by to způsobovalo problémy, zakomentuj productRepository.save(product).
+
         logger.info(">>> [ProductService] Image successfully saved (ID: {}) and associated with product ID: {}", savedImage.getId(), productId);
         return savedImage;
     }
 
-    // addProductImage might be redundant if addImageToProduct does the full logic
-    // @Transactional
-    // public Image addProductImage(Long productId, Image image) { ... }
 
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
@@ -840,18 +856,31 @@ public class ProductService implements PriceConstants {
             String fileUrl = image.getUrl();
             Long productId = image.getProduct() != null ? image.getProduct().getId() : null;
 
-            // Explicitly remove from owning side if necessary (depends on mapping)
-            // if (image.getProduct() != null) {
-            //     image.getProduct().getImages().remove(image);
-            // }
+            // Explicitní odstranění z kolekce produktu PŘED smazáním obrázku
+            if (image.getProduct() != null) {
+                // Načteme produkt znovu, abychom měli jistotu, že pracujeme s aktuální session
+                Product product = productRepository.findByIdWithDetails(image.getProduct().getId())
+                        .orElse(null); // Nebo orElseThrow, pokud produkt musí existovat
+                if (product != null) {
+                    boolean removed = product.getImages().remove(image);
+                    if (removed) {
+                        logger.debug("Image ID {} removed from product ID {} collection in memory.", imageId, productId);
+                        // productRepository.save(product); // Volitelně uložit produkt pro aktualizaci cache
+                    } else {
+                        logger.warn("Image ID {} was not found in product ID {} collection during removal.", imageId, productId);
+                    }
+                } else {
+                    logger.warn("Associated product ID {} not found when trying to remove image ID {} from collection.", productId, imageId);
+                }
+            }
 
-            // Delete the entity
+            // Smazání entity Image
             imageRepository.delete(image);
             logger.info("[ProductService] Image entity ID {} deleted from database (associated with product ID {}).", imageId, productId);
 
-            // Delete the physical file
+            // Smazání fyzického souboru
             if (StringUtils.hasText(fileUrl)) {
-                fileStorageService.deleteFile(fileUrl); // Assumes deleteFile works with the stored URL/path
+                fileStorageService.deleteFile(fileUrl);
                 logger.info("[ProductService] Physical file deleted for image ID {}: {}", imageId, fileUrl);
             } else {
                 logger.warn("Cannot delete physical file for image ID {}: URL is missing.", imageId);

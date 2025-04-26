@@ -1,6 +1,6 @@
 package org.example.eshop.service;
 
-import com.google.api.client.util.Value;
+import org.springframework.beans.factory.annotation.Value; // <-- SPRÁVNÝ IMPORT
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils; // Přidat import
@@ -57,7 +57,12 @@ public class FileStorageService {
             Path normalizedSubDir = Paths.get(subDirectory).normalize();
             if (normalizedSubDir.startsWith("..") || normalizedSubDir.isAbsolute()) {
                 throw new IllegalArgumentException("Invalid subDirectory: " + subDirectory);
+            }if (uploadDir == null) {
+                log.error("!!! Kritická chyba: uploadDir je null! Zkontroluj konfiguraci 'eshop.upload.dir'.");
+                throw new IOException("Konfigurace adresáře pro ukládání chybí.");
             }
+            log.debug("Používám uploadDir: [{}]", uploadDir); // Logování hodnoty
+
             targetLocation = Paths.get(uploadDir).resolve(normalizedSubDir).normalize();
             log.debug("Target upload directory: {}", targetLocation);
             Files.createDirectories(targetLocation);

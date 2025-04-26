@@ -1,5 +1,6 @@
 package org.example.eshop.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference; // <-- Přidán import
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -51,31 +52,28 @@ public class Product {
     @Column(length = 100)
     private String roofOverstep;
     @Version
-    @Column(length = 100)
-    private Integer version; // Poznámka: @Column(length=100) zde asi nemá smysl pro @Version
+    private Integer version;
 
-    // --- NOVÉ @ManyToMany RELACE ---
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "product_designs",
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "design_id"))
     @OrderBy("name ASC")
-    private Set<Design> availableDesigns = new HashSet<>(); // Inicializováno
+    private Set<Design> availableDesigns = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "product_glazes",
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "glaze_id"))
     @OrderBy("name ASC")
-    private Set<Glaze> availableGlazes = new HashSet<>(); // Inicializováno
+    private Set<Glaze> availableGlazes = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "product_roof_colors",
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "roof_color_id"))
     @OrderBy("name ASC")
-    private Set<RoofColor> availableRoofColors = new HashSet<>(); // Inicializováno
-    // --- KONEC NOVÝCH RELACÍ ---
+    private Set<RoofColor> availableRoofColors = new HashSet<>();
 
     @Column(nullable = false)
     private boolean customisable = false;
@@ -88,25 +86,25 @@ public class Product {
             inverseJoinColumns = @JoinColumn(name = "tax_rate_id"))
     @NotEmpty(message = "Produkt musí mít přiřazenu alespoň jednu daňovou sazbu.")
     @org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-    private Set<TaxRate> availableTaxRates = new HashSet<>(); // Bylo již OK
+    private Set<TaxRate> availableTaxRates = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "product_available_addons",
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "addon_id"))
-    private Set<Addon> availableAddons = new HashSet<>(); // Inicializováno
+    private Set<Addon> availableAddons = new HashSet<>();
 
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    // Přidáno FetchType.LAZY pro konzistenci
-    private ProductConfigurator configurator; // OneToOne se neinicializuje zde
+    private ProductConfigurator configurator;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC, id ASC")
-    @org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE) // Přidána cache pro konzistenci
-    private Set<Image> images = new HashSet<>(); // Bylo již OK
+    @org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @JsonManagedReference // <-- PŘIDÁNO: Říká Jacksonu, že toto je "hlavní" strana reference
+    private Set<Image> images = new HashSet<>();
 
     @ManyToMany(mappedBy = "products", fetch = FetchType.LAZY)
-    private Set<Discount> discounts = new HashSet<>(); // Inicializováno
+    private Set<Discount> discounts = new HashSet<>();
 
     private String metaTitle;
     @Column(length = 1000)
@@ -120,17 +118,16 @@ public class Product {
         return sortedList;
     }
 
-    // Je dobré mít i equals a hashCode založené na ID, pokud objekty porovnáváš nebo ukládáš do Setů mimo JPA kontext
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Product product = (Product) o;
-        return id != null && id.equals(product.id); // Porovnání jen podle ID, pokud není null
+        return id != null && id.equals(product.id);
     }
 
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : System.identityHashCode(this); // Hash kód podle ID nebo identity
+        return id != null ? id.hashCode() : System.identityHashCode(this);
     }
 }

@@ -229,7 +229,6 @@
                     Zaškrtněte možnosti, které si zákazník bude moci zvolit v konfigurátoru na e-shopu.
                     Příplatky za jednotlivé možnosti se nastavují v sekcích Designy, Lazury, Barvy střechy.
                 </p>
-
                 <div class="mb-3">
                     <label class="form-label">Dostupné designy:</label>
                     <div th:if="${allDesigns == null or #lists.isEmpty(allDesigns)}" class="alert alert-light alert-sm">
@@ -242,7 +241,6 @@
                     </div>
                     <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableDesigns')}" th:errors="*{availableDesigns}"></div>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">Dostupné lazury:</label>
                     <div th:if="${allGlazes == null or #lists.isEmpty(allGlazes)}" class="alert alert-light alert-sm">
@@ -255,7 +253,6 @@
                     </div>
                     <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableGlazes')}" th:errors="*{availableGlazes}"></div>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">Dostupné barvy střechy:</label>
                     <div th:if="${allRoofColors == null or #lists.isEmpty(allRoofColors)}" class="alert alert-light alert-sm">
@@ -268,9 +265,11 @@
                     </div>
                     <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('availableRoofColors')}" th:errors="*{availableRoofColors}"></div>
                 </div>
-            </div> </th:block> <div th:if="${product.configurator == null}" class="alert alert-warning mt-3">
-        Konfigurátor pro tento produkt nebyl nalezen nebo inicializován. Zkontrolujte data produktu nebo kontaktujte administrátora. Uložení formuláře může vytvořit defaultní konfigurátor.
-    </div>
+            </div>
+        </th:block>
+        <div th:if="${product.configurator == null}" class="alert alert-warning mt-3">
+            Konfigurátor pro tento produkt nebyl nalezen nebo inicializován. Zkontrolujte data produktu nebo kontaktujte administrátora. Uložení formuláře může vytvořit defaultní konfigurátor.
+        </div>
 
         <hr>
         <h4>SEO</h4>
@@ -338,110 +337,358 @@
                     <i class="bi bi-upload"></i> Nahrát obrázek
                 </button>
             </div>
-        </div> <hr>
+        </div>
+
+        <hr>
         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> [[${product.id == null ? 'Vytvořit produkt' : 'Uložit změny'}]]</button>
         <a th:href="@{/admin/products}" class="btn btn-secondary">Zrušit</a>
 
     </form>
 </div>
+
 <th:block layout:fragment="javascript">
-    <script th:src="@{/js/product-configurator.js}"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
-        // --- Definice datového objektu pro JS ---
-        const configuratorInitData = {
-            calculatePriceUrl: /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price',
-            currency: /*[[${currentGlobalCurrency}]]*/ 'CZK',
-            csrfToken: /*[[${_csrf?.token}]]*/ null,
-            csrfHeaderName: /*[[${_csrf?.headerName}]]*/ null,
-            productId: /*[[${product.id}]]*/ null,
-            configuratorValues: {
-                minLength: /*[[${product.configurator?.minLength}]]*/ null,
-                maxLength: /*[[${product.configurator?.maxLength}]]*/ null,
-                stepLength: /*[[${product.configurator?.stepLength}]]*/ null,
-                defaultLength: /*[[${product.configurator?.defaultLength ?: product.configurator?.minLength}]]*/ null,
-                minWidth: /*[[${product.configurator?.minWidth}]]*/ null,
-                maxWidth: /*[[${product.configurator?.maxWidth}]]*/ null,
-                stepWidth: /*[[${product.configurator?.stepWidth}]]*/ null,
-                defaultWidth: /*[[${product.configurator?.defaultWidth ?: product.configurator?.minWidth}]]*/ null,
-                minHeight: /*[[${product.configurator?.minHeight}]]*/ null,
-                maxHeight: /*[[${product.configurator?.maxHeight}]]*/ null,
-                stepHeight: /*[[${product.configurator?.stepHeight}]]*/ null,
-                defaultHeight: /*[[${product.configurator?.defaultHeight ?: product.configurator?.minHeight}]]*/ null
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Custom Product Form JS (within fragment) - START"); // Diagnostika
+
+            // --- 1. Získání klíčových proměnných ---
+            const csrfToken = document.querySelector("meta[name='_csrf']")?.getAttribute("content");
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']")?.getAttribute("content");
+            const formElement = document.getElementById('productFormCustom'); // ID formuláře
+            const productIdInput = formElement ? formElement.querySelector('input[name="id"]') : null;
+            const productId = productIdInput ? productIdInput.value : null;
+
+            console.log("CSRF Token:", csrfToken ? 'nalezen' : 'CHYBÍ!');
+            console.log("CSRF Header:", csrfHeader ? 'nalezen' : 'CHYBÍ!');
+            console.log("Form Element (#productFormCustom):", formElement); // Logování správného formuláře
+            console.log("Product ID Input Element:", productIdInput);
+            console.log("Product ID Value:", productId);
+
+            if (!csrfToken || !csrfHeader) {
+                console.error("CHYBA: CSRF token nebo header chybí! AJAX nebude fungovat.");
             }
-        };
-        // --- Konec definice dat ---
+            if (!productId && window.location.pathname.includes('/edit')) {
+                console.warn("POZOR: Product ID nebylo nalezeno, i když jsme na editační stránce!");
+            } else if (!productId) {
+                console.info("INFO: Product ID není k dispozici (pravděpodobně nový produkt). Akce vyžadující ID nemusí být dostupné.");
+            }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializace tooltipů
-            const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(tooltipTriggerEl => { new bootstrap.Tooltip(tooltipTriggerEl); });
+            // --- 2. Získání elementů pro UI a Listenery ---
+            const imageMessagesDiv = document.getElementById('imageMessages');
+            const currentImagesDiv = document.getElementById('currentImages');
+            const noImagesTextDiv = document.getElementById('noImagesText');
+            const updateOrderButton = document.getElementById('updateImageOrderBtn');
+            const uploadButtonAjax = document.getElementById('uploadImageBtnAjax');
+            const fileInput = document.getElementById('newImageFile');
+            const altTextInput = document.getElementById('newAltText');
+            const titleTextInput = document.getElementById('newTitleText');
+            const displayOrderInput = document.getElementById('newDisplayOrder');
+            const uploadSpinner = uploadButtonAjax?.querySelector('.spinner-border');
 
-            // --- VOLÁNÍ INICIALIZAČNÍ FUNKCE z product-configurator.js ---
-            if (typeof initializeConfigurator === 'function') {
-                initializeConfigurator(configuratorInitData);
-                console.log('Product Configurator Initialized via function call.');
+            console.log("Check Elements - imageMessagesDiv:", imageMessagesDiv);
+            console.log("Check Elements - currentImagesDiv:", currentImagesDiv);
+            console.log("Check Elements - noImagesTextDiv:", noImagesTextDiv);
+            console.log("Check Elements - updateOrderButton:", updateOrderButton);
+            console.log("Check Elements - uploadButtonAjax:", uploadButtonAjax);
+            console.log("Check Elements - fileInput:", fileInput);
+
+            // --- 3. Pomocné funkce ---
+            function showImageMessage(message, isSuccess = true) {
+                if (!imageMessagesDiv) { console.error("showImageMessage: #imageMessages element not found."); return; }
+                const alertClass = isSuccess ? 'alert-success' : 'alert-danger';
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `alert ${alertClass} alert-sm mt-2 alert-dismissible fade show`;
+                messageDiv.setAttribute('role', 'alert');
+                messageDiv.textContent = message;
+                const closeButton = document.createElement('button');
+                closeButton.type = 'button';
+                closeButton.className = 'btn-close';
+                closeButton.setAttribute('data-bs-dismiss', 'alert');
+                closeButton.setAttribute('aria-label', 'Close');
+                messageDiv.appendChild(closeButton);
+                imageMessagesDiv.innerHTML = '';
+                imageMessagesDiv.appendChild(messageDiv);
+            }
+
+            function createImagePreviewHTML(image) {
+                const imageId = image.id;
+                // Použijeme baseUrlPath, pokud je definován, jinak relativní cestu
+                const baseUrl = /*[[@{/}]]*/ '/'; // Získáme base path z Thymeleafu
+                const imageUrl = (image.url && image.url.startsWith('/') ? '' : baseUrl) + (image.url || '');
+                const altText = image.altText || 'Náhled';
+                const displayOrder = image.displayOrder || 0;
+                const escapeHtml = (unsafe) => {
+                    if (!unsafe) return '';
+                    return unsafe.toString()
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+                return `
+            <div class="image-preview d-flex align-items-center mb-2 border-bottom pb-2" id="image-preview-${imageId}">
+                <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(altText)}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 10px;">
+                <div class="flex-grow-1">
+                    <input type="number" class="form-control form-control-sm mb-1 image-order-input" value="${escapeHtml(displayOrder.toString())}" min="0" placeholder="Pořadí" data-image-id="${imageId}">
+                    <small>${escapeHtml(image.url)}</small>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm ms-2 delete-image-btn" title="Smazat obrázek" data-image-id="${imageId}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>`;
+            }
+
+            function checkImagesState() {
+                if (!currentImagesDiv) return;
+                const hasImages = currentImagesDiv.querySelector('.image-preview') !== null;
+                console.log("checkImagesState - hasImages:", hasImages);
+                if (noImagesTextDiv) {
+                    noImagesTextDiv.style.display = hasImages ? 'none' : 'block';
+                }
+                if (updateOrderButton) {
+                    updateOrderButton.style.display = hasImages ? 'inline-block' : 'none';
+                } else {
+                    console.log("checkImagesState - updateOrderButton not found during check.");
+                }
+            }
+
+            if (productId) {
+                console.log("checkImagesState called on initial load for existing product.");
+                checkImagesState();
             } else {
-                console.error('Chyba: Funkce initializeConfigurator nebyla nalezena v product-configurator.js');
-                const errorDiv = document.getElementById('customPriceErrorDisplay');
-                if(errorDiv) { errorDiv.textContent = 'Chyba načítání konfigurátoru.'; errorDiv.style.display = 'block'; }
-                const submitBtn = document.querySelector('#custom-product-form button[type="submit"]');
-                if (submitBtn) submitBtn.disabled = true;
+                console.log("checkImagesState skipped on initial load (new product).");
             }
-            // --- KONEC VOLÁNÍ ---
 
-            // Bootstrap validace formuláře
-            const form = document.getElementById('custom-product-form');
-            if(form) {
-                form.addEventListener('submit', event => {
-                    // ==================================================================
-                    // === KROK 3: ZAKOMENTUJ TENTO ŘÁDEK PŘIDÁNÍM // NA ZAČÁTEK ===
-                    // ==================================================================
-                    if (typeof prepareFormDataBeforeSubmit === 'function') { prepareFormDataBeforeSubmit(); }
-                    // else { console.warn('Funkce prepareFormDataBeforeSubmit nebyla nalezena.'); }
-                    // ==================================================================
+            // --- 4. Navázání Event Listenerů ---
 
-                    if (!form.checkValidity()) {
+            // ---- Mazání obrázku ----
+            if (currentImagesDiv) {
+                currentImagesDiv.addEventListener('click', function(event) {
+                    const deleteButton = event.target.closest('.delete-image-btn');
+                    console.log('Kliknuto v #currentImages. Cíl:', event.target, 'Nalezené delete tlačítko:', deleteButton);
+                    if (deleteButton) {
                         event.preventDefault();
-                        event.stopPropagation();
-                        console.warn("Form validation failed before submission.");
-                        // Explicitní kontrola a zvýraznění chybějících required prvků
-                        form.querySelectorAll('[required]').forEach(el => {
-                            if (el.type === 'radio') {
-                                const radioGroup = form.querySelectorAll(`input[name="${el.name}"]`);
-                                const isChecked = Array.from(radioGroup).some(radio => radio.checked);
-                                if (!isChecked) {
-                                    const container = el.closest('.tax-selection');
-                                    if (container) container.classList.add('is-invalid');
-                                } else {
-                                    const container = el.closest('.tax-selection');
-                                    if (container) container.classList.remove('is-invalid');
-                                }
-                            } else if (!el.value) {
-                                el.classList.add('is-invalid');
-                            } else {
-                                el.classList.remove('is-invalid');
-                            }
-                        });
+                        const imageId = deleteButton.dataset.imageId;
+                        console.log('Delete button CLICKED! Image ID:', imageId, 'Product ID:', productId);
+
+                        if (!imageId || !productId || !csrfToken || !csrfHeader) {
+                            showImageMessage('Chyba: Chybí potřebná data pro smazání obrázku (ID obrázku, ID produktu nebo CSRF token).', false);
+                            console.error('Delete Error: Missing required data.', {imageId, productId, csrfToken, csrfHeader});
+                            return;
+                        }
+
+                        if (confirm('Opravdu smazat tento obrázek?')) {
+                            const url = `/admin/products/images/${imageId}/delete`;
+                            console.log('Fetch DELETE request to:', url);
+                            fetch(url, {
+                                method: 'POST',
+                                headers: { 'Accept': 'application/json', [csrfHeader]: csrfToken }
+                            })
+                                .then(response => {
+                                    console.log('Delete response status:', response.status);
+                                    if (response.ok) {
+                                        const imagePreviewDiv = document.getElementById(`image-preview-${imageId}`);
+                                        if (imagePreviewDiv) { imagePreviewDiv.remove(); }
+                                        showImageMessage('Obrázek byl úspěšně smazán.', true);
+                                        checkImagesState();
+                                    } else {
+                                        // Zkusíme získat text chyby z těla odpovědi
+                                        return response.text().then(text => {
+                                            let errorMessage = `Chyba ${response.status}: ${response.statusText}`;
+                                            try {
+                                                // Zkusíme parsovat jako JSON, pokud by controller vracel JSON chybu
+                                                const errorJson = JSON.parse(text);
+                                                if (errorJson && errorJson.errorMessage) {
+                                                    errorMessage = errorJson.errorMessage;
+                                                }
+                                            } catch (e) {
+                                                // Pokud to není JSON, použijeme text odpovědi (může být HTML)
+                                                if(text && text.length < 200) { // Omezíme délku zobrazené chyby
+                                                    errorMessage += ` (${text})`;
+                                                }
+                                            }
+                                            throw new Error(errorMessage);
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Delete error:', error);
+                                    showImageMessage('Chyba při mazání obrázku: ' + error.message, false);
+                                });
+                        }
                     }
-                    form.classList.add('was-validated');
-                }, false);
-                // Odstranění třídy is-invalid při změně selectů nebo radio buttonů
-                form.querySelectorAll('select[required], input[type="radio"][required]').forEach(el => {
-                    el.addEventListener('change', () => {
-                        if (el.type === 'radio') {
-                            const container = el.closest('.tax-selection');
-                            if (container) container.classList.remove('is-invalid');
-                        } else {
-                            el.classList.remove('is-invalid');
+                });
+                console.log("Listener pro MAZÁNÍ obrázků navázán na #currentImages.");
+            } else {
+                console.error("CHYBA: Element #currentImages nenalezen! Mazání obrázků nebude fungovat.");
+            }
+
+            // ---- Aktualizace pořadí ----
+            if (updateOrderButton) {
+                updateOrderButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    console.log('Update order button CLICKED! Product ID:', productId);
+
+                    if (!productId || !csrfToken || !csrfHeader) {
+                        showImageMessage('Chyba: Chybí potřebná data pro aktualizaci pořadí (ID produktu nebo CSRF token).', false);
+                        console.error('Update Order Error: Missing required data.', {productId, csrfToken, csrfHeader});
+                        return;
+                    }
+
+                    const imageOrderInputs = document.querySelectorAll('#currentImages .image-order-input');
+                    const imageOrderData = {};
+                    let foundInputs = 0;
+                    imageOrderInputs.forEach(input => {
+                        const imageId = input.dataset.imageId;
+                        if (imageId) {
+                            const orderValue = parseInt(input.value, 10);
+                            imageOrderData[imageId] = isNaN(orderValue) ? 0 : orderValue;
+                            foundInputs++;
                         }
                     });
+                    console.log('Collected image order data:', imageOrderData);
+
+                    if (foundInputs === 0) {
+                        showImageMessage('Nebyly nalezeny žádné obrázky k aktualizaci pořadí.', false);
+                        return;
+                    }
+
+                    const url = `/admin/products/images/update-order`;
+                    console.log('Fetch UPDATE ORDER request to:', url);
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', [csrfHeader]: csrfToken },
+                        body: JSON.stringify({ productId: productId, orderMap: imageOrderData })
+                    })
+                        .then(response => {
+                            console.log('Update order response status:', response.status);
+                            if (response.ok) {
+                                return response.text(); // Očekáváme textovou zprávu
+                            } else {
+                                // Zkusíme získat text chyby
+                                return response.text().then(text => {
+                                    let errorMessage = `Chyba ${response.status}: ${response.statusText}`;
+                                    try {
+                                        const errorJson = JSON.parse(text);
+                                        if (errorJson && errorJson.errorMessage) {
+                                            errorMessage = errorJson.errorMessage;
+                                        }
+                                    } catch (e) { if(text && text.length < 200) errorMessage += ` (${text})`; }
+                                    throw new Error(errorMessage);
+                                });
+                            }
+                        })
+                        .then(successMessageText => {
+                            console.log('Update order success:', successMessageText);
+                            showImageMessage(successMessageText || 'Pořadí obrázků bylo úspěšně aktualizováno.', true);
+                        })
+                        .catch(error => {
+                            console.error('Update order error:', error);
+                            showImageMessage(error.message || 'Aktualizace pořadí selhala.', false);
+                        });
                 });
+                console.log("Listener pro AKTUALIZACI POŘADÍ navázán na #updateImageOrderBtn.");
+            } else if (productId) {
+                console.warn("UPOZORNĚNÍ: Element #updateImageOrderBtn nenalezen! Aktualizace pořadí nebude fungovat.");
             }
+
+            // ---- Nahrání obrázku ----
+            if (uploadButtonAjax && fileInput) {
+                uploadButtonAjax.addEventListener('click', function() {
+                    console.log('Upload button CLICKED! Product ID:', productId);
+
+                    if (!productId || !csrfToken || !csrfHeader) {
+                        showImageMessage('Chyba: Chybí potřebná data pro nahrání obrázku (ID produktu nebo CSRF token).', false);
+                        console.error('Upload Error: Missing required data.', {productId, csrfToken, csrfHeader});
+                        return;
+                    }
+
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        showImageMessage('Nebyl vybrán žádný soubor k nahrání.', false);
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('imageFile', file);
+                    formData.append('altText', altTextInput ? altTextInput.value : '');
+                    formData.append('titleText', titleTextInput ? titleTextInput.value : '');
+                    formData.append('displayOrder', displayOrderInput ? displayOrderInput.value : '');
+
+                    const url = `/admin/products/${productId}/images/upload`;
+                    console.log('Fetch UPLOAD request to:', url);
+
+                    if (uploadSpinner) uploadSpinner.style.display = 'inline-block';
+                    uploadButtonAjax.disabled = true;
+                    showImageMessage('Nahrávám obrázek...', true);
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', [csrfHeader]: csrfToken },
+                        body: formData
+                    })
+                        .then(response => {
+                            console.log('Upload response status:', response.status);
+                            if (response.ok) { return response.json(); } // Očekáváme JSON
+                            else {
+                                // Zkusíme získat text chyby z těla odpovědi
+                                return response.json().then(errData => { // Předpokládáme JSON chybu
+                                    throw new Error(errData.errorMessage || `Chyba ${response.status}`);
+                                }).catch(() => { // Fallback, pokud to není JSON
+                                    return response.text().then(text => {
+                                        let errMsg = `Chyba ${response.status}: ${response.statusText}`;
+                                        if(text && text.length < 200) errMsg += ` (${text})`;
+                                        throw new Error(errMsg);
+                                    });
+                                });
+                            }
+                        })
+                        .then(savedImageData => { // Zde očekáváme ImageDto
+                            console.log('Upload success data:', savedImageData);
+                            if (!savedImageData || !savedImageData.id || !savedImageData.url) {
+                                console.error("Chybná data obrázku přijata ze serveru:", savedImageData);
+                                throw new Error("Server vrátil neplatná data obrázku.");
+                            }
+                            const newImageHTML = createImagePreviewHTML(savedImageData);
+                            if (noImagesTextDiv) noImagesTextDiv.style.display = 'none';
+                            if (currentImagesDiv) currentImagesDiv.insertAdjacentHTML('beforeend', newImageHTML);
+                            if (fileInput) fileInput.value = '';
+                            if (altTextInput) altTextInput.value = '';
+                            if (titleTextInput) titleTextInput.value = '';
+                            if (displayOrderInput) displayOrderInput.value = '';
+                            showImageMessage('Obrázek byl úspěšně nahrán.', true);
+                            checkImagesState();
+                        })
+                        .catch(error => {
+                            console.error('Upload error:', error);
+                            showImageMessage(error.message || 'Nahrání obrázku selhalo.', false);
+                        })
+                        .finally(() => {
+                            if (uploadSpinner) uploadSpinner.style.display = 'none';
+                            if (uploadButtonAjax) uploadButtonAjax.disabled = false;
+                        });
+                });
+                console.log("Listener pro NAHRÁNÍ obrázku navázán na #uploadImageBtnAjax.");
+            } else if (productId) {
+                console.warn("UPOZORNĚNÍ: Element #uploadImageBtnAjax nebo #newImageFile nenalezen! Nahrávání obrázků nebude fungovat.");
+            }
+
+            // --- Logování hlavního formuláře ---
+            if (formElement) {
+                console.log('[LOG] Hlavní formulář (#productFormCustom) nalezen.');
+                formElement.addEventListener('submit', function(event) {
+                    console.log('[LOG] HLAVNÍ FORM SUBMIT EVENT TRIGGERED! Odesílám na:', formElement.action);
+                });
+            } else {
+                console.error('[ERROR] Nepodařilo se najít hlavní formulář (#productFormCustom)!');
+            }
+
+            console.log("Custom Product Form JS (within fragment) - END");
         });
         /*]]>*/
     </script>
 </th:block>
-
 </body>
 </html>
