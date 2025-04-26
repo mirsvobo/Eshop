@@ -202,4 +202,96 @@ public class EmailService {
         log.info("Clearing email template configuration cache.");
         configCache.clear();
     }
+    /**
+     * Odešle email zákazníkovi obsahující externí poznámku k objednávce.
+     * Email se odešle pouze pokud je poznámka vyplněna.
+     * Metoda nyní přijímá pouze potřebná data, ne celou entitu Order.
+     *
+     * @param customerEmail Email zákazníka.
+     * @param customerFirstName Křestní jméno zákazníka.
+     * @param orderCode Kód objednávky.
+     * @param externalNote Text externí poznámky.
+     * @param locale Locale pro email (ovlivňuje formátování).
+     */
+    @Async
+    public void sendOrderExternalNoteEmail(String customerEmail, String customerFirstName, String orderCode, String externalNote, Locale locale) {
+        // Kontrola základních parametrů
+        if (!StringUtils.hasText(customerEmail) || !StringUtils.hasText(orderCode) || !StringUtils.hasText(externalNote)) {
+            log.warn("Cannot send external note email. Required parameters (email, orderCode, externalNote) are missing or empty. Order Code: {}", orderCode != null ? orderCode : "N/A");
+            return;
+        }
+        if (isMailConfigured()) { // isMailConfigured() kontroluje nastavení SMTP
+            log.warn("Mail is not configured, skipping external note email for order {}.", orderCode);
+            return;
+        }
+
+        String to = customerEmail;
+        // Předmět emailu - můžeš ho upravit dle potřeby
+        String subject = shopName + " - Důležitá informace k objednávce č. " + orderCode;
+        // Název šablony je pevně daný
+        String templateName = "emails/order-external-note";
+
+        try {
+            Context context = new Context(locale != null ? locale : defaultLocale);
+            // Předáme pouze potřebné proměnné do šablony
+            context.setVariable("orderCode", orderCode);
+            context.setVariable("customerFirstName", "Vážený zákazníku"); // Předáme jméno pro oslovení
+            context.setVariable("externalNote", externalNote); // Předáme text poznámky
+            context.setVariable("shopName", shopName);
+            context.setVariable("shopUrl", shopUrl);
+            // Tracking URL nyní sestavíme přímo zde
+            String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + orderCode;
+            context.setVariable("trackingUrl", trackingUrl);
+
+
+            String htmlBody = templateEngine.process(templateName, context);
+            sendHtmlEmail(to, subject, htmlBody); // sendHtmlEmail zůstává stejná
+            log.info("External note email sent successfully to {} for order {}", to, orderCode);
+
+        } catch (TemplateProcessingException tpe) {
+            log.error("Failed to process Thymeleaf template '{}' for external note email (Order {}): {}", templateName, orderCode, tpe.getMessage(), tpe);
+        } catch (Exception e) {
+            log.error("Failed to send external note email to {} for order {}: {}", to, orderCode, e.getMessage(), e);
+        }
+    }
+    /**
+     * Odešle notifikační email administrátorovi o nové zprávě od zákazníka.
+     *
+     * @param adminEmail       Email administrátora (kam se má email poslat).
+     * @param orderCode        Kód objednávky.
+     * @param customerEmail    Email zákazníka, který zprávu poslal.
+     * @param customerName     Jméno zákazníka.
+     * @param messageContent   Obsah zprávy od zákazníka.
+     */
+    @Async
+    public void sendAdminNotificationEmail(String adminEmail, String orderCode, String customerEmail, String customerName, String messageContent) {
+        if (!StringUtils.hasText(adminEmail) || !StringUtils.hasText(orderCode) || !StringUtils.hasText(messageContent)) {
+            log.warn("Cannot send admin notification email. Admin email, order code, or message content is missing. Order Code: {}", orderCode != null ? orderCode : "N/A");
+            return;
+        }
+        if (isMailConfigured()) {
+            log.warn("Mail is not configured, skipping admin notification email for order {}.", orderCode);
+            return;
+        }
+
+        String subject = shopName + " - Nová zpráva od zákazníka k objednávce č. " + orderCode;
+        String templateName = "emails/new-customer-message-admin-notification"; // Nová šablona
+
+        try {
+            Context context = new Context(defaultLocale);
+            context.setVariable("orderCode", orderCode);
+            context.setVariable("customerEmail", customerEmail);
+            context.setVariable("customerName", customerName != null ? customerName : customerEmail); // Fallback na email
+            context.setVariable("messageContent", messageContent);
+            context.setVariable("shopName", shopName);
+            context.setVariable("adminOrderDetailUrl", shopUrl + "/admin/orders/" + orderCode); // Odkaz do adminu
+
+            String htmlBody = templateEngine.process(templateName, context);
+            sendHtmlEmail(adminEmail, subject, htmlBody);
+            log.info("Admin notification email sent successfully to {} for order {}", adminEmail, orderCode);
+
+        } catch (Exception e) {
+            log.error("Failed to send admin notification email to {} for order {}: {}", adminEmail, orderCode, e.getMessage(), e);
+        }
+    }
 }

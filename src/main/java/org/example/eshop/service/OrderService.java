@@ -6,6 +6,7 @@ import org.example.eshop.dto.CartItemDto;
 import org.example.eshop.dto.CreateOrderRequest;
 import org.example.eshop.model.*;
 import org.example.eshop.repository.*;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1210,5 +1211,4 @@ public class OrderService implements PriceConstants {
 
         return coupon; // Return the valid coupon
     }
-
-} // Konec třídy OrderService
+}

@@ -2,8 +2,12 @@ package org.example.eshop.admin.controller;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.example.eshop.model.Conversation;
+import org.example.eshop.model.Message;
 import org.example.eshop.model.Order;
 import org.example.eshop.model.OrderState;
+import org.example.eshop.repository.ConversationRepository;
+import org.example.eshop.service.ConversationService;
 import org.example.eshop.service.OrderService;
 import org.example.eshop.service.OrderStateService;
 import org.example.eshop.service.SuperFakturaInvoiceService;
@@ -29,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -43,16 +48,20 @@ public class AdminOrderController {
     private final OrderService orderService;
     private final OrderStateService orderStateService;
     private final SuperFakturaInvoiceService superFakturaInvoiceService;
+    private final ConversationService conversationService;
+    private final ConversationRepository conversationRepository;
 
     @Value("${superfaktura.api.url:https://moje.superfaktura.cz}")
     private String superFakturaBaseUrl;
 
     // Konstruktor pro dependency injection
     @Autowired
-    public AdminOrderController(OrderService orderService, OrderStateService orderStateService, SuperFakturaInvoiceService superFakturaInvoiceService) {
+    public AdminOrderController(OrderService orderService, OrderStateService orderStateService, SuperFakturaInvoiceService superFakturaInvoiceService, ConversationService conversionService, ConversationRepository conversationRepository) {
         this.orderService = orderService;
         this.orderStateService = orderStateService;
         this.superFakturaInvoiceService = superFakturaInvoiceService;
+        this.conversationService = conversionService;
+        this.conversationRepository = conversationRepository;
     }
 
 
@@ -140,18 +149,32 @@ public class AdminOrderController {
     }
 
     @GetMapping("/{id}")
-    @Transactional(readOnly = true) // Transakce může zůstat, pokud OrderService potřebuje
+    @Transactional(readOnly = true) // Může zůstat, service metody mají své transakce
     public String viewOrderDetail(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
         log.info("Requesting admin order detail view for ID: {}", id);
         try {
-            // Voláme optimalizovanou metodu service, která používá findFullDetailById
-            Order order = orderService.findOrderById(id)
+            Order order = orderService.findOrderById(id) // Použij optimalizovanou metodu, pokud ji máš
                     .orElseThrow(() -> new EntityNotFoundException("Objednávka s ID " + id + " nenalezena."));
 
-            model.addAttribute("order", order); // Data jsou již načtena
+            // --- Načtení konverzací ---
+            List<Conversation> conversations = conversationRepository.findByOrderIdWithMessages(id); // Načteme rovnou se zprávami
+            Map<Conversation.ConversationType, List<Message>> conversationMap = conversations.stream()
+                    .collect(Collectors.toMap(
+                            Conversation::getType,
+                            Conversation::getMessages // Zprávy jsou již načtené
+                    ));
+
+            model.addAttribute("internalMessages", conversationMap.getOrDefault(Conversation.ConversationType.INTERNAL, List.of()));
+            model.addAttribute("externalMessages", conversationMap.getOrDefault(Conversation.ConversationType.EXTERNAL, List.of()));
+            // -------------------------
+
+            model.addAttribute("order", order);
             List<OrderState> allStates = orderStateService.getAllOrderStatesSorted();
             model.addAttribute("allOrderStates", allStates);
             model.addAttribute("superFakturaBaseUrl", this.superFakturaBaseUrl);
+
+            // Označení zpráv jako přečtených adminem (pokud je třeba - spíše na AJAX request?)
+            // conversationService.markExternalMessagesAsRead(id, Message.SenderType.ADMIN);
 
             log.info("Order detail loaded successfully for ID: {}", id);
 
@@ -382,6 +405,58 @@ public class AdminOrderController {
         } catch (Exception e) {
             log.error("Error marking invoice sent for order {}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Označení faktury jako odeslané selhalo: " + e.getMessage());
+        }
+        return "redirect:/admin/orders/" + id;
+    }
+    // Endpoint pro přidání INTERNÍ zprávy adminem
+    @PostMapping("/{id}/messages/internal")
+    public String addInternalMessage(@PathVariable Long id,
+                                     @RequestParam String content,
+                                     RedirectAttributes redirectAttributes) {
+        if (!StringUtils.hasText(content)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Obsah interní zprávy nesmí být prázdný.");
+            return "redirect:/admin/orders/" + id;
+        }
+        try {
+            Conversation internalConversation = conversationService.getOrCreateConversation(id, Conversation.ConversationType.INTERNAL);
+            // Získání jména admina (implementuj getAdminName() nebo použij principal)
+            String adminName = conversationService.getCurrentAdminUsername(); // Nebo z principal
+            Long adminId = conversationService.getCurrentAdminId(); // Získat ID admina, pokud máš
+            conversationService.addMessage(internalConversation.getId(), content, Message.SenderType.ADMIN, adminId, adminName);
+            redirectAttributes.addFlashAttribute("successMessage", "Interní zpráva byla přidána.");
+            log.info("Admin added INTERNAL message to order ID {}", id);
+        } catch (EntityNotFoundException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Objednávka nenalezena.");
+            return "redirect:/admin/orders";
+        } catch (Exception e) {
+            log.error("Error adding internal message to order ID {}: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Nepodařilo se přidat interní zprávu: " + e.getMessage());
+        }
+        return "redirect:/admin/orders/" + id;
+    }
+
+    // Endpoint pro přidání EXTERNÍ zprávy adminem (pro zákazníka)
+    @PostMapping("/{id}/messages/external")
+    public String addExternalMessage(@PathVariable Long id,
+                                     @RequestParam String content,
+                                     RedirectAttributes redirectAttributes) {
+        if (!StringUtils.hasText(content)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Obsah externí zprávy nesmí být prázdný.");
+            return "redirect:/admin/orders/" + id;
+        }
+        try {
+            Conversation externalConversation = conversationService.getOrCreateConversation(id, Conversation.ConversationType.EXTERNAL);
+            String adminName = conversationService.getCurrentAdminUsername(); // Nebo z principal
+            Long adminId = conversationService.getCurrentAdminId(); // Získat ID admina
+            conversationService.addMessage(externalConversation.getId(), content, Message.SenderType.ADMIN, adminId, adminName);
+            redirectAttributes.addFlashAttribute("successMessage", "Externí zpráva byla přidána a zákazník byl upozorněn.");
+            log.info("Admin added EXTERNAL message to order ID {}", id);
+        } catch (EntityNotFoundException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Objednávka nenalezena.");
+            return "redirect:/admin/orders";
+        } catch (Exception e) {
+            log.error("Error adding external message to order ID {}: {}", id, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Nepodařilo se přidat externí zprávu: " + e.getMessage());
         }
         return "redirect:/admin/orders/" + id;
     }

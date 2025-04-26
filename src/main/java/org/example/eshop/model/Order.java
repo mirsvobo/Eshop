@@ -7,8 +7,10 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Getter
 @Setter
@@ -61,7 +63,6 @@ public class Order {
     // LAZY načítání položek
     @OrderBy("id ASC") // Řazení položek podle ID
     private List<OrderItem> orderItems;
-
     @ManyToOne(fetch = FetchType.LAZY) // LAZY načítání stavu
     @JoinColumn(name = "order_state_id", nullable = false)
     private OrderState stateOfOrder; // Aktuální stav objednávky
@@ -176,6 +177,10 @@ public class Order {
 
     @Column(nullable = false)
     private boolean finalInvoiceGenerated = false; // Příznak, zda byla finální faktura úspěšně generována
+    // PŘIDAT NOVOU VAZBU:
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("type ASC") // Seřadí konverzace (INTERNAL, EXTERNAL)
+    private List<Conversation> conversations = new ArrayList<>();
 
     // --- JPA Lifecycle Callbacks ---
     @PrePersist
@@ -270,6 +275,17 @@ public class Order {
 
         return streetsMatch && citiesMatch && zipCodesMatch && countriesMatch && recipientsMatch;
     }
-    // --- KONEC NOVÉ METODY ---
+    @Transient
+    public Optional<Conversation> getInternalConversation() {
+        return conversations.stream()
+                .filter(c -> c.getType() == Conversation.ConversationType.INTERNAL)
+                .findFirst();
+    }
 
+    @Transient
+    public Optional<Conversation> getExternalConversation() {
+        return conversations.stream()
+                .filter(c -> c.getType() == Conversation.ConversationType.EXTERNAL)
+                .findFirst();
+    }
 }

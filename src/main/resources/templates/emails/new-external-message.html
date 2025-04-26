@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Informace k objednávce</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; color: #333; }
+        .container { padding: 20px; border: 1px solid #eee; background-color: #f9f9f9; max-width: 600px; margin: 20px auto; }
+        .note-box { background-color: #fff; border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 4px; }
+        a { color: #6A8D3E; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .footer { margin-top: 20px; font-size: 0.9em; color: #777; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Důležitá informace k Vaší objednávce č. <span th:text="${orderCode}">[Kód objednávky]</span></h2>
+    <p>Dobrý den <span th:text="${customerFirstName}">[Jméno]</span>,</p>
+    <p>
+        máme pro Vás novou informaci týkající se Vaší objednávky č.
+        <strong th:text="${orderCode}">[Kód objednávky]</strong> v našem obchodě
+        <strong th:text="${shopName}">[Název obchodu]</strong>.
+    </p>
+
+    <div class="note-box">
+        <p><strong>Zpráva od nás:</strong></p>
+        <p style="white-space: pre-wrap;" th:text="${externalNote}">[Text externí poznámky]</p>
+    </div>
+
+    <p style="margin-top: 20px;">
+        Aktuální stav Vaší objednávky a celou komunikaci naleznete po přihlášení ve Vašem účtu zde:
+        <a th:href="${trackingUrl}" th:text="${trackingUrl}">[Odkaz na sledování]</a>
+    </p>
+    <p>Pokud máte jakékoli dotazy, neváhejte nám odpovědět na tento email nebo nás kontaktovat.</p>
+    <p>S pozdravem,<br/>Tým <span th:text="${shopName}">[Název obchodu]</span></p>
+</div>
+<div class="footer">
+    Toto je automaticky generovaný email. Prosím, neodpovídejte přímo na něj, pokud to není výslovně uvedeno.
+</div>
+</body>
+</html>

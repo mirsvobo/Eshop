@@ -5,6 +5,7 @@
 <head>
     <title th:text="'Detail objednávky ' + ${order?.orderCode}">Detail objednávky</title>
     <style>
+        /* Styly zůstávají stejné jako v původním souboru */
         .action-buttons .btn, .action-buttons .form-select, .action-buttons .input-group { margin-right: 0.5rem; margin-bottom: 0.5rem; vertical-align: middle; }
         .invoice-actions .btn-sm { margin-left: 5px; vertical-align: middle; }
         .sf-link { font-weight: normal; margin-right: 5px; }
@@ -19,6 +20,50 @@
         .summary-box ul { list-style: none; padding-left: 0; margin-bottom: 0; }
         .summary-box li { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #eee; }
         .summary-box li:last-child { border-bottom: none; }
+        /* ----- NOVÉ STYLY PRO CHAT ----- */
+        .chat-box {
+            height: 300px; /* Nebo jiná vhodná výška */
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: #fff;
+            border-radius: .25rem;
+        }
+        .chat-message {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px dashed #eee;
+        }
+        .chat-message:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .chat-message .sender-info {
+            font-size: 0.9em;
+            margin-bottom: 0.25rem;
+        }
+        .chat-message .sender-name {
+            font-weight: bold;
+        }
+        .chat-message .message-time {
+            color: #6c757d;
+            font-size: 0.8em;
+            margin-left: 0.5rem;
+        }
+        .chat-message .message-content {
+            white-space: pre-wrap; /* Zachová zalomení řádků z textarea */
+            word-wrap: break-word;
+        }
+        .chat-message.admin-message .sender-name {
+            color: #0d6efd; /* Modrá pro admina */
+        }
+        .chat-message.customer-message .sender-name {
+            color: #198754; /* Zelená pro zákazníka */
+        }
+        .chat-form textarea { resize: vertical; }
+        /* ----------------------------- */
     </style>
 </head>
 <body>
@@ -32,18 +77,9 @@
     </div>
 
     <div th:if="${order != null}">
-        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <span th:text="${successMessage}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <span th:text="${errorMessage}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">
-            <span th:text="${warningMessage}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">...</div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">...</div>
+        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">...</div>
 
         <div class="row mb-4">
             <div class="col-md-7">
@@ -58,8 +94,7 @@
                          <th:block th:case="'PROCESSING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Zpracovává se</span></th:block>
                          <th:block th:case="'IN_PRODUCTION'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Ve výrobě</span></th:block>
                          <th:block th:case="'AT_ZINC_PLATING'"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">V zinkovně</span></th:block>
-                         <th:block th:case="'READY_TO_SHIP'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Připraveno</span></th:block>
-                         <th:block th:case="'SHIPPED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Odesláno</span></th:block>
+                         <th:block th:case="'READY_TO_SHIP'"><span class="bg-info text-dark" th:text="${order.stateOfOrder.name}">Připraveno k montáži</span></th:block> <th:block th:case="'SHIPPED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Odesláno</span></th:block>
                          <th:block th:case="'DELIVERED'"><span class="bg-success" th:text="${order.stateOfOrder.name}">Doručeno</span></th:block>
                          <th:block th:case="'CANCELLED'"><span class="bg-danger" th:text="${order.stateOfOrder.name}">Zrušeno</span></th:block>
                          <th:block th:case="*"><span class="bg-secondary" th:text="${order.stateOfOrder.name}">Neznámý</span></th:block>
@@ -82,6 +117,12 @@
                 <p><strong>Zaplacená záloha:</strong> <span th:text="${order.depositPaidDate != null ? #temporals.format(order.depositPaidDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
                 <p><strong>Zaplaceno celkem:</strong> <span th:text="${order.paymentDate != null ? #temporals.format(order.paymentDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
                 <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}"></span></p>
+
+                <p><strong>Režim DPH:</strong>
+                    <span th:if="${order.orderItems != null and !order.orderItems.isEmpty() and order.orderItems[0].isReverseCharge()}" class="badge bg-danger">Přenesená daň. pov.</span>
+                    <span th:unless="${order.orderItems != null and !order.orderItems.isEmpty() and order.orderItems[0].isReverseCharge()}" class="badge bg-secondary">Běžný</span>
+                    <span th:if="${order.orderItems == null or order.orderItems.isEmpty()}" class="badge bg-light text-dark">N/A</span>
+                </p>
                 <p><strong>Datum objednání:</strong> <span th:text="${order.orderDate != null ? #temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm') : '---'}"></span></p>
                 <p><strong>Zákazník:</strong> <a th:if="${order.customer != null}" th:href="@{/admin/customers/{id}(id=${order.customer.id})}" th:text="${order.customer.email}"></a><span th:unless="${order.customer != null}">Neznámý</span></p>
             </div>
@@ -283,14 +324,44 @@
         </div>
 
         <div class="row mt-4">
-            <div th:if="${not #strings.isEmpty(order.note)}" class="col-md-6 detail-section">
-                <h4>Poznámka zákazníka</h4>
-                <p class="fst-italic bg-light p-3 rounded" th:text="${order.note}"></p>
-            </div>
             <div class="col-md-6 detail-section">
-                <h4>Interní poznámky</h4>
-                <textarea class="form-control form-control-sm" rows="3" placeholder="Zde můžete přidat interní poznámky k objednávce..."></textarea>
-                <button class="btn btn-sm btn-secondary mt-2 disabled">Uložit poznámku (TODO)</button>
+                <h4><i class="bi bi-chat-left-dots-fill text-secondary me-2"></i>Interní poznámky (pouze pro CMS)</h4>
+                <div class="chat-box border rounded p-3 mb-3 bg-light">
+                    <div th:if="${#lists.isEmpty(internalMessages)}" class="text-muted text-center p-3 fst-italic">Žádné interní zprávy.</div>
+                    <div th:each="msg : ${internalMessages}" class="chat-message">
+                        <div class="sender-info">
+                            <span class="sender-name" th:text="${msg.senderName}">Admin</span>
+                            <span class="message-time" th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}"></span>
+                        </div>
+                        <p class="message-content" th:text="${msg.content}"></p>
+                    </div>
+                </div>
+                <form class="chat-form" th:action="@{/admin/orders/{id}/messages/internal(id=${order.id})}" method="post">
+                    <div class="mb-2">
+                        <textarea class="form-control form-control-sm" name="content" rows="3" placeholder="Napište interní poznámku..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-secondary"><i class="bi bi-send"></i> Odeslat interní</button>
+                </form>
+            </div>
+
+            <div class="col-md-6 detail-section">
+                <h4><i class="bi bi-chat-dots-fill text-primary me-2"></i>Komunikace se zákazníkem</h4>
+                <div class="chat-box border rounded p-3 mb-3">
+                    <div th:if="${#lists.isEmpty(externalMessages)}" class="text-muted text-center p-3 fst-italic">Žádná komunikace se zákazníkem.</div>
+                    <div th:each="msg : ${externalMessages}" th:class="${msg.senderType.name() == 'ADMIN' ? 'chat-message admin-message' : 'chat-message customer-message'}">
+                        <div class="sender-info">
+                            <span class="sender-name" th:text="${msg.senderName}">Odesílatel</span>
+                            <span class="message-time" th:text="${#temporals.format(msg.sentAt, 'dd.MM.yyyy HH:mm')}"></span>
+                        </div>
+                        <p class="message-content" th:text="${msg.content}"></p>
+                    </div>
+                </div>
+                <form class="chat-form" th:action="@{/admin/orders/{id}/messages/external(id=${order.id})}" method="post">
+                    <div class="mb-2">
+                        <textarea class="form-control form-control-sm" name="content" rows="3" placeholder="Napište zprávu zákazníkovi..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-warning"><i class="bi bi-send-fill"></i> Odeslat zákazníkovi</button>
+                </form>
             </div>
         </div>
 

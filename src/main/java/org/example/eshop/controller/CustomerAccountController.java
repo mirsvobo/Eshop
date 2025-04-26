@@ -6,8 +6,12 @@ import jakarta.validation.Valid;
 import org.example.eshop.dto.AddressDto;
 import org.example.eshop.dto.ChangePasswordDto;
 import org.example.eshop.dto.ProfileUpdateDto;
+import org.example.eshop.model.Conversation;
 import org.example.eshop.model.Customer;
+import org.example.eshop.model.Message;
 import org.example.eshop.model.Order;
+import org.example.eshop.repository.ConversationRepository;
+import org.example.eshop.service.ConversationService;
 import org.example.eshop.service.CustomerService;
 import org.example.eshop.service.OrderService;
 import org.slf4j.Logger;
@@ -16,12 +20,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/muj-ucet")
@@ -32,7 +39,10 @@ public class CustomerAccountController {
 
     private final CustomerService customerService;
     private final OrderService orderService;
-
+    @Autowired
+    private ConversationService conversationService;
+    @Autowired
+    private ConversationRepository conversationRepository;
     @Autowired
     public CustomerAccountController(CustomerService customerService, OrderService orderService) {
         this.customerService = customerService;
@@ -155,6 +165,15 @@ public class CustomerAccountController {
             if (order.getCustomer() == null || !order.getCustomer().getId().equals(loggedInCustomer.getId())) {
                 throw new SecurityException("K této objednávce nemáte přístup.");
             }
+            List<Message> externalMessages = conversationRepository
+                    .findByOrderIdAndType(order.getId(), Conversation.ConversationType.EXTERNAL)
+                    .map(conversation -> conversationRepository.findByIdWithMessages(conversation.getId())) // Načteme i zprávy
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(Conversation::getMessages)
+                    .orElse(new ArrayList<>()); // Vrátí prázdný seznam, pokud konverzace nebo zprávy neexistují
+
+            model.addAttribute("externalMessages", externalMessages);
 
             model.addAttribute("order", order); // Data jsou již načtena
             log.info("Order detail for CODE {} loaded successfully for customer {}", orderCode, loggedInCustomer.getEmail());
@@ -172,7 +191,55 @@ public class CustomerAccountController {
             return "redirect:/muj-ucet/objednavky";
         }
     }
+    // Endpoint pro odeslání zprávy zákazníkem
+    @PostMapping("/objednavky/{orderCode}/poslat-zpravu")
+    public String sendCustomerMessage(@PathVariable String orderCode,
+                                      @RequestParam String content,
+                                      Principal principal,
+                                      RedirectAttributes redirectAttributes) {
 
+        if (!StringUtils.hasText(content)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Obsah zprávy nesmí být prázdný.");
+            return "redirect:/muj-ucet/objednavky/" + orderCode;
+        }
+
+        try {
+            // 1. Získat přihlášeného zákazníka
+            Customer customer = getCurrentCustomer(principal); // Použij existující metodu
+
+            // 2. Najít objednávku a ověřit vlastnictví
+            Order order = orderService.findOrderByCode(orderCode)
+                    .orElseThrow(() -> new EntityNotFoundException("Objednávka nenalezena."));
+            if (!order.getCustomer().getId().equals(customer.getId())) {
+                throw new SecurityException("Nemáte oprávnění k této objednávce.");
+            }
+
+            // 3. Získat nebo vytvořit externí konverzaci
+            Conversation externalConversation = conversationService.getOrCreateConversation(order.getId(), Conversation.ConversationType.EXTERNAL);
+
+            // 4. Přidat zprávu
+            conversationService.addMessage(
+                    externalConversation.getId(),
+                    content,
+                    Message.SenderType.CUSTOMER,
+                    customer.getId(),
+                    customer.getFirstName() + " " + customer.getLastName() // Jméno zákazníka
+            );
+
+            redirectAttributes.addFlashAttribute("successMessage", "Vaše zpráva byla odeslána.");
+            log.info("Customer {} sent message for order {}", customer.getEmail(), orderCode);
+
+        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
+            log.warn("Error sending customer message for order {}: {}", orderCode, e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Chyba: " + e.getMessage());
+            return "redirect:/muj-ucet/objednavky"; // Zpět na přehled při chybě
+        } catch (Exception e) {
+            log.error("Unexpected error sending customer message for order {}: {}", orderCode, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Při odesílání zprávy nastala neočekávaná chyba.");
+        }
+
+        return "redirect:/muj-ucet/objednavky/" + orderCode; // Zpět na detail objednávky
+    }
     @GetMapping("/adresy")
     public String viewAddresses(Model model, Principal principal, RedirectAttributes redirectAttributes) {
         try {

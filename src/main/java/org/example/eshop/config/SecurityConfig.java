@@ -45,7 +45,9 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/prihlaseni"),
                                 new AntPathRequestMatcher("/registrace"),
                                 new AntPathRequestMatcher("/nastavit-menu"),
-                                new AntPathRequestMatcher("/pokladna/calculate-shipping")
+                                new AntPathRequestMatcher("/pokladna/calculate-shipping"),
+                                new AntPathRequestMatcher("/o-nas")
+
 
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
