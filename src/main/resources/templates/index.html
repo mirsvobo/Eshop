@@ -147,27 +147,26 @@
                     <i class="bi bi-pencil-square me-2"></i> Navrhnout na míru
                 </a>
             </div>
+        </div> <a href="#vyhody" class="hero-scroll-down-arrow" aria-label="Přejít na další sekci">
+        <i class="bi bi-chevron-down"></i>
+    </a>
+    </div> <section class="advantages-section text-center" id="vyhody"> <div class="container">
+    <h2 class="mb-5">Proč si vybrat dřevník od nás?</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4 mb-md-0 advantage-item"><i class="bi bi-rulers"></i> <h5 class="fw-bold">
+            Výroba na míru</h5>
+            <p class="text-muted">Přizpůsobíme rozměry, barvu i doplňky přesně vašim potřebám a prostoru.</p>
         </div>
+        <div class="col-md-4 mb-4 mb-md-0 advantage-item"><i class="bi bi-shield-check"></i> <h5
+                class="fw-bold">Bezúdržbové provedení</h5>
+            <p class="text-muted">Používáme certifikované a odolné materiály pro dlouhou životnost.</p></div>
+        <div class="col-md-4 advantage-item"><i class="bi bi-truck"></i> <h5 class="fw-bold">Odborné sestavení
+            zdarma</h5>
+            <p class="text-muted">Zajistíme bezpečné usazení i odbornou montáž vašeho nového dřevníku. To vše
+                <b>zdarma</b>.</p></div>
     </div>
-
-    <section class="advantages-section text-center">
-        <div class="container">
-            <h2 class="mb-5">Proč si vybrat dřevník od nás?</h2>
-            <div class="row">
-                <div class="col-md-4 mb-4 mb-md-0 advantage-item"><i class="bi bi-rulers"></i> <h5 class="fw-bold">
-                    Výroba na míru</h5>
-                    <p class="text-muted">Přizpůsobíme rozměry, barvu i doplňky přesně vašim potřebám a prostoru.</p>
-                </div>
-                <div class="col-md-4 mb-4 mb-md-0 advantage-item"><i class="bi bi-shield-check"></i> <h5
-                        class="fw-bold">Bezúdržbové provedení</h5>
-                    <p class="text-muted">Používáme certifikované a odolné materiály pro dlouhou životnost.</p></div>
-                <div class="col-md-4 advantage-item"><i class="bi bi-truck"></i> <h5 class="fw-bold">Odborné sestavení
-                    zdarma</h5>
-                    <p class="text-muted">Zajistíme bezpečné usazení i odbornou montáž vašeho nového dřevníku. To vše
-                        <b>zdarma</b>.</p></div>
-            </div>
-        </div>
-    </section>
+</div>
+</section>
 
     <section class="gallery-section py-5">
         <div class="container">
@@ -337,50 +336,48 @@
                                 </div>
                             </div>
                         </div>
-                    </div> <th:block th:if="${productJsonLdList != null and iterStat.index < #lists.size(productJsonLdList)}">
-                    <script type="application/ld+json"
-                            th:id="'schema-product-' + ${product.id}"
-                            th:utext="${productJsonLdList[iterStat.index]}">
-                        /* Product Schema */
-                    </script>
-                    <script th:inline="javascript">
-                        /*<![CDATA[*/
-                        (function(productId) { // Použití IIFE s parametrem pro bezpečné předání ID
-                            // Tento kód se spustí až po načtení celého DOMu,
-                            // ale přidáme malou pojistku, kdyby se vykresloval asynchronně.
-                            // Použijeme setTimeout s nulovým zpožděním, aby se kód vykonal
-                            // až po dokončení aktuálního vykreslovacího cyklu prohlížeče.
-                            setTimeout(function() {
-                                const elementId = 'schema-product-' + productId;
-                                try {
-                                    const schemaElement = document.getElementById(elementId);
-                                    if (schemaElement && typeof schemaElement.textContent === 'string' && schemaElement.textContent.trim().length > 0) {
-                                        try {
-                                            const jsonData = JSON.parse(schemaElement.textContent);
-                                            console.log(`--- Schema.org Product (JS Log for ID: ${elementId}) ---`);
-                                            console.dir(jsonData); // dir() pro lepší formátování
-                                        } catch (parseError) {
-                                            console.error(`Chyba parsování JSON-LD pro element ID '${elementId}':`, parseError);
-                                            console.error("Původní obsah:", schemaElement.textContent);
+                    </div>
+                    <th:block th:if="${productJsonLdList != null and iterStat.index < #lists.size(productJsonLdList)}">
+                        <script type="application/ld+json"
+                                th:id="'schema-product-' + ${product.id}"
+                                th:utext="${productJsonLdList[iterStat.index]}">
+                            /* Product Schema */
+                        </script>
+                        <script th:inline="javascript">
+                            /*<![CDATA[*/
+                            (function(productId) {
+                                setTimeout(function() {
+                                    const elementId = 'schema-product-' + productId;
+                                    try {
+                                        const schemaElement = document.getElementById(elementId);
+                                        if (schemaElement && typeof schemaElement.textContent === 'string' && schemaElement.textContent.trim().length > 0) {
+                                            try {
+                                                const jsonData = JSON.parse(schemaElement.textContent);
+                                                console.log(`--- Schema.org Product (JS Log for ID: ${elementId}) ---`);
+                                                console.dir(jsonData);
+                                            } catch (parseError) {
+                                                console.error(`Chyba parsování JSON-LD pro element ID '${elementId}':`, parseError);
+                                                console.error("Původní obsah:", schemaElement.textContent);
+                                            }
+                                        } else {
+                                            if (!schemaElement) {
+                                                console.warn(`Schema element s ID '${elementId}' nebyl nalezen pro logování.`);
+                                            }
                                         }
-                                    } else {
-                                        // Logujeme pouze pokud element chybí, ne pokud je prázdný (může být validní případ)
-                                        if (!schemaElement) {
-                                            console.warn(`Schema element s ID '${elementId}' nebyl nalezen pro logování.`);
-                                        }
+                                    } catch (e) {
+                                        console.error(`Obecná chyba při logování JSON-LD pro element ID '${elementId}':`, e);
                                     }
-                                } catch (e) {
-                                    console.error(`Obecná chyba při logování JSON-LD pro element ID '${elementId}':`, e);
-                                }
-                            }, 0); // Nulové zpoždění stačí
-                        })(/*[[${product.id}]]*/); // Předání ID produktu do IIFE
-                        /*]]>*/
-                    </script>
-                </th:block>
-                </div> </div> <div th:unless="${featuredProducts != null and not #lists.isEmpty(featuredProducts)}"
-                                   class="alert alert-light text-center" role="alert">
-            Informace o standardních variantách se připravují.
-        </div>
+                                }, 0);
+                            })(/*[[${product.id}]]*/);
+                            /*]]>*/
+                        </script>
+                    </th:block>
+                </div>
+            </div>
+            <div th:unless="${featuredProducts != null and not #lists.isEmpty(featuredProducts)}"
+                 class="alert alert-light text-center" role="alert">
+                Informace o standardních variantách se připravují.
+            </div>
             <div class="text-center mt-4">
                 <a th:href="@{/produkty}" class="btn btn-primary">
                     <i class="bi bi-grid-3x3-gap-fill me-1"></i> Prohlédnout všechny produkty
