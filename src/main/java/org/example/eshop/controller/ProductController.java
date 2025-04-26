@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,7 +24,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.example.eshop.config.PriceConstants.EURO_CURRENCY;
+import static org.example.eshop.config.PriceConstants.*;
 
 @Controller
 public class ProductController {
@@ -81,7 +82,7 @@ public class ProductController {
     public String productDetail(@PathVariable String slug, Model model, HttpServletRequest request) {
         logger.info(">>> [ProductController] Vstupuji do productDetail. Slug: {}", slug);
         String currentCurrency = currencyService.getSelectedCurrency();
-        model.addAttribute("currentGlobalCurrency", currentCurrency);
+        model.addAttribute("currentGlobalCurrency", currentCurrency); // Přidáno pro konzistenci
 
         Product product = null;
         try {
@@ -100,11 +101,15 @@ public class ProductController {
             cartItemDto.setProductId(product.getId());
             cartItemDto.setCustom(product.isCustomisable());
 
-            // Výpočet počáteční/minimální ceny (potřebné pro JSON-LD i model)
-            BigDecimal initialCustomPriceCZK = BigDecimal.ZERO;
-            BigDecimal initialCustomPriceEUR = BigDecimal.ZERO;
+            // Výpočet počáteční/minimální ceny pro JSON-LD a zobrazení
+            BigDecimal initialCustomPriceCZK = null;
+            BigDecimal initialCustomPriceEUR = null;
+            BigDecimal finalPriceForSchema = null; // Cena pro JSON-LD
             String initialPriceError = null;
+            Map<String, Object> standardPriceInfo = null;
+
             if (product.isCustomisable() && product.getConfigurator() != null) {
+                // --- Custom Produkt ---
                 try {
                     ProductConfigurator config = product.getConfigurator();
                     Map<String, BigDecimal> minDimensions = new HashMap<>();
@@ -113,11 +118,11 @@ public class ProductController {
                     minDimensions.put("width", config.getDefaultWidth() != null ? config.getDefaultWidth() : config.getMinWidth());
                     minDimensions.put("height", config.getDefaultHeight() != null ? config.getDefaultHeight() : config.getMinHeight());
 
-                    // Zvalidujme, jestli minimální rozměry nejsou null
                     if (minDimensions.get("length") == null || minDimensions.get("width") == null || minDimensions.get("height") == null) {
                         throw new IllegalStateException("Chybí minimální nebo výchozí rozměry v konfigurátoru produktu ID: " + product.getId());
                     }
 
+                    // Počítáme ceny pro obě měny
                     initialCustomPriceCZK = productService.calculateDynamicProductPrice(product, minDimensions, "CZK");
                     initialCustomPriceEUR = productService.calculateDynamicProductPrice(product, minDimensions, "EUR");
 
@@ -125,44 +130,72 @@ public class ProductController {
                     cartItemDto.setCustomDimensions(minDimensions);
                     logger.debug("[ProductController] Výchozí ZÁKLADNÍ cena (bez doplňků/atributů) pro custom produkt ID {}: CZK={}, EUR={}", product.getId(), initialCustomPriceCZK, initialCustomPriceEUR);
 
+                    // Cena pro schema bude cena v aktuální měně
+                    finalPriceForSchema = EURO_CURRENCY.equals(currentCurrency) ? initialCustomPriceEUR : initialCustomPriceCZK;
+
                 } catch (Exception e) {
                     logger.error("[ProductController] Chyba při výpočtu výchozí základní ceny pro custom produkt ID {}: {}", product.getId(), e.getMessage(), e);
                     initialPriceError = "Nepodařilo se vypočítat výchozí cenu: " + e.getMessage();
+                    finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
                 }
+                model.addAttribute("initialCustomPriceCZK", initialCustomPriceCZK);
+                model.addAttribute("initialCustomPriceEUR", initialCustomPriceEUR);
+                model.addAttribute("initialCustomPriceError", initialPriceError);
+
+            } else if (!product.isCustomisable()) {
+                // --- Standardní produkt ---
+                try {
+                    standardPriceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
+                    model.addAttribute("priceInfo", standardPriceInfo);
+                    // Cena pro schema je konečná (zlevněná nebo původní)
+                    finalPriceForSchema = (BigDecimal) standardPriceInfo.getOrDefault("discountedPrice", standardPriceInfo.get("originalPrice"));
+                    if (finalPriceForSchema == null) {
+                        finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
+                        logger.warn("Missing price for standard product ID {} in schema calculation.", product.getId());
+                    }
+                } catch (Exception e) {
+                    logger.error("[ProductController] Chyba při výpočtu ceny pro standardní produkt ID {}: {}", product.getId(), e.getMessage());
+                    model.addAttribute("priceInfo", Collections.emptyMap()); // Prázdná mapa při chybě
+                    finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
+                }
+            } else {
+                finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema, pokud je custom bez konfigurátoru
             }
-            // Přidání počátečních cen do modelu pro Thymeleaf (např. pro zobrazení ceny)
-            model.addAttribute("initialCustomPriceCZK", initialCustomPriceCZK);
-            model.addAttribute("initialCustomPriceEUR", initialCustomPriceEUR);
-            model.addAttribute("initialCustomPriceError", initialPriceError);
 
-
-            // --- Generování JSON-LD dat ---
+            // --- Generování JSON-LD dat (Přesunuto sem, aby se použila finalPriceForSchema) ---
             try {
                 List<String> imageUrls = Collections.emptyList();
                 if (product.getImages() != null && !product.getImages().isEmpty()) {
-                    String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath();
+                    // Použijeme base URL z requestu
+                    String baseUrl = request.getScheme() + "://" + request.getServerName() + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort()) + request.getContextPath();
                     logger.debug("Base URL pro obrázky JSON-LD: {}", baseUrl);
-                    imageUrls = product.getImages().stream()
-                            .sorted(Comparator.comparing(Image::getDisplayOrder, Comparator.nullsLast(Integer::compareTo))
-                                    .thenComparing(Image::getId, Comparator.nullsLast(Long::compareTo)))
+                    imageUrls = product.getImagesOrdered().stream() // Použijeme seřazené
                             .map(img -> {
                                 String imageUrl = img.getUrl();
-                                if (imageUrl != null && !imageUrl.startsWith("http")) {
+                                // Pokud URL nezačíná http nebo https, přidáme base URL
+                                if (imageUrl != null && !imageUrl.toLowerCase().startsWith("http")) {
+                                    // Zajistíme, aby tam nebylo dvojité lomítko
                                     return baseUrl + (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
                                 }
-                                return imageUrl;
+                                return imageUrl; // Jinak vrátíme původní (mohlo by být absolutní z CDN)
                             })
-                            .filter(Objects::nonNull) // Odstraní null hodnoty
+                            .filter(Objects::nonNull)
                             .collect(Collectors.toList());
+                    logger.debug("Image URLs for JSON-LD: {}", imageUrls);
                 }
 
                 Map<String, Object> jsonLdMap = new LinkedHashMap<>();
                 jsonLdMap.put("@context", "https://schema.org/");
                 jsonLdMap.put("@type", "Product");
                 jsonLdMap.put("name", product.getName());
-                jsonLdMap.put("description", product.getShortDescription() != null ? product.getShortDescription() : abbreviate(product.getDescription()));
-                jsonLdMap.put("image", imageUrls);
-                jsonLdMap.put("sku", (product.isCustomisable() ? "CUSTOM-" : "STD-") + product.getId()); // Rozlišení SKU
+                // Použijeme krátký popis, pokud existuje, jinak zkrácený hlavní popis
+                String schemaDescription = StringUtils.hasText(product.getShortDescription())
+                        ? product.getShortDescription()
+                        : abbreviate(product.getDescription()); // Použijeme pomocnou metodu
+                jsonLdMap.put("description", schemaDescription);
+                if (!imageUrls.isEmpty()) { jsonLdMap.put("image", imageUrls); }
+                // Generování SKU pro rozlišení
+                jsonLdMap.put("sku", (product.isCustomisable() ? "CUSTOM-" : "STD-") + product.getId());
 
                 Map<String, Object> brandMap = new LinkedHashMap<>();
                 brandMap.put("@type", "Brand");
@@ -175,17 +208,7 @@ public class ProductController {
 
                 Map<String, Object> priceSpecMap = new LinkedHashMap<>();
                 priceSpecMap.put("@type", "UnitPriceSpecification");
-                // Pro standardní produkt vezmeme základní cenu, pro custom počáteční
-                BigDecimal offerPrice;
-                if (product.isCustomisable()) {
-                    offerPrice = EURO_CURRENCY.equals(currentCurrency) ? initialCustomPriceEUR : initialCustomPriceCZK;
-                    priceSpecMap.put("priceType", "StartingPrice"); // U custom je to cena "od"
-                } else {
-                    Map<String, Object> standardPriceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
-                    offerPrice = (BigDecimal) standardPriceInfo.getOrDefault("discountedPrice", standardPriceInfo.get("originalPrice"));
-                    // priceType zde můžeme nechat, nebo specifikovat jinak
-                }
-                priceSpecMap.put("price", offerPrice != null ? offerPrice : BigDecimal.ZERO); // Zajistíme, že cena není null
+                priceSpecMap.put("price", finalPriceForSchema.setScale(PRICE_SCALE, ROUNDING_MODE)); // Použijeme vypočtenou cenu
                 priceSpecMap.put("priceCurrency", currentCurrency);
                 priceSpecMap.put("valueAddedTaxIncluded", false); // Cena je bez DPH
                 offersMap.put("priceSpecification", priceSpecMap);
@@ -194,21 +217,22 @@ public class ProductController {
                 offersMap.put("itemCondition", "https://schema.org/NewCondition");
                 jsonLdMap.put("offers", offersMap);
 
+                // Přidání additionalProperty
                 List<Map<String, Object>> additionalProperties = new ArrayList<>();
-                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Materiál", "value", product.getMaterial() != null ? product.getMaterial() : "Smrkové dřevo"));
+                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Materiál", "value", StringUtils.hasText(product.getMaterial()) ? product.getMaterial() : "Smrkové dřevo"));
                 additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Konfigurace", "value", product.isCustomisable() ? "Na míru dle zákazníka" : "Standardní"));
-                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Montáž zdarma", "value", "Ano")); // Může být konfigurovatelné?
-                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Dodání do", "value", "5 týdnů")); // Může být konfigurovatelné?
+                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Montáž zdarma", "value", "Ano"));
+                additionalProperties.add(Map.of("@type", "PropertyValue", "name", "Dodání do", "value", "5 týdnů"));
                 jsonLdMap.put("additionalProperty", additionalProperties);
 
-                // Převod Map na JSON String
+                // Převod Map na JSON String pomocí Jackson ObjectMapper
                 String jsonLdString = objectMapper.writeValueAsString(jsonLdMap);
-                model.addAttribute("jsonLdData", jsonLdString);
+                model.addAttribute("jsonLdDataString", jsonLdString); // Přidáme hotový JSON string do modelu
                 logger.debug("JSON-LD data vygenerována a přidána do modelu.");
 
             } catch (Exception e) {
                 logger.error("!!! Chyba při generování JSON-LD dat: {} !!!", e.getMessage(), e);
-                model.addAttribute("jsonLdData", "{}"); // Přidat prázdný objekt v případě chyby
+                model.addAttribute("jsonLdDataString", "{}"); // Přidat prázdný objekt v případě chyby
             }
             // --- Konec generování JSON-LD ---
 
@@ -228,7 +252,6 @@ public class ProductController {
             }
 
             // Načtení dostupných Designů, Lazur, Barev střech pro select boxy
-            // (Potřebujeme je pro custom i standard, pokud je custom má také vybírat)
             Set<Design> designs = product.getAvailableDesigns();
             Set<Glaze> glazes = product.getAvailableGlazes();
             Set<RoofColor> roofColors = product.getAvailableRoofColors();
@@ -243,7 +266,7 @@ public class ProductController {
 
             // Rozlišení podle typu produktu
             if (product.isCustomisable()) {
-                // --- Custom Produkt ---
+                // --- Custom Produkt (další logika) ---
                 logger.info("[ProductController] Zpracovávám detail pro CUSTOM produkt ID {}", product.getId());
                 ProductConfigurator configurator = product.getConfigurator();
                 if (configurator != null) {
@@ -260,41 +283,42 @@ public class ProductController {
                 } else {
                     logger.error("!!! [ProductController] Custom produkt ID {} nemá konfigurátor !!!", product.getId());
                     model.addAttribute("configuratorError", "Chybí data konfigurátoru.");
-                    model.addAttribute("productError", "Produkt nelze nakonfigurovat."); // Přidáno
+                    model.addAttribute("productError", "Produkt nelze nakonfigurovat.");
                 }
                 model.addAttribute("cartItemDto", cartItemDto); // Přidání DTO do modelu
                 logger.info(">>> [ProductController] Opouštím productDetail (CUSTOM). Vracím 'produkt-detail-custom'. Model keys: {}", model.asMap().keySet());
                 return "produkt-detail-custom";
 
             } else {
-                // --- Standardní produkt ---
+                // --- Standardní produkt (další logika) ---
                 logger.info("[ProductController] Zpracovávám detail pro STANDARD produkt ID {}", product.getId());
-                Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
-                model.addAttribute("priceInfo", priceInfo);
+                // PriceInfo je již v modelu z bloku výše
                 // Dostupne atributy jsou již načteny výše a přidány do modelu
                 model.addAttribute("cartItemDto", cartItemDto); // Přidání DTO do modelu
                 logger.info(">>> [ProductController] Opouštím productDetail (STANDARD). Vracím 'produkt-detail-standard'. Model keys: {}", model.asMap().keySet());
                 return "produkt-detail-standard";
             }
         } catch (ResponseStatusException e) {
-            // Pokud produkt nebyl nalezen, vyvolá se tato výjimka
             logger.warn("ResponseStatusException v productDetail: {}", e.getMessage());
-            throw e; // Necháme Spring, ať zobrazí chybovou stránku (např. 404)
+            throw e;
         } catch (Exception e) {
-            // Zachycení všech ostatních neočekávaných chyb
             logger.error("!!! [ProductController] Neočekávaná chyba v productDetail pro slug {}: {} !!!", slug, e.getMessage(), e);
             model.addAttribute("errorMessage", "Při načítání detailu produktu došlo k neočekávané chybě.");
-            // Můžeme přesměrovat na obecnou chybovou stránku nebo zpět na seznam produktů
             return "redirect:/produkty?error=detail_unexpected";
         }
     }
 
+    // Pomocná metoda pro zkrácení textu (přidána na konec třídy, pokud již neexistuje)
     private String abbreviate(String text) {
-        if (text == null || text.length() <= 250) {
+        if (text == null) {
+            return ""; // Vrátit prázdný řetězec pro null
+        }
+        int maxLength = 250; // Max délka pro popis v JSON-LD
+        if (text.length() <= maxLength) {
             return text;
         }
         // Jednoduché zkrácení, Apache Commons Lang StringUtils.abbreviate je robustnější
-        return text.substring(0, 250 - 3) + "...";
+        return text.substring(0, maxLength - 3) + "...";
     }
 
 

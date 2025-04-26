@@ -277,13 +277,13 @@
             </div>
         </div>
     </section>
-
     <section class="product-variants-section py-5">
         <div class="container">
             <h2 class="text-center mb-4">Nejoblíbenější standardní rozměry</h2>
             <div th:if="${featuredProducts != null and not #lists.isEmpty(featuredProducts)}"
                  class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                <div class="col" th:each="product : ${featuredProducts}">
+
+                <div class="col" th:each="product, iterStat : ${featuredProducts}">
                     <div class="card h-100 shadow-sm">
                         <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}">
                             <div class="ratio ratio-1x1 product-image-wrapper">
@@ -337,13 +337,50 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div th:unless="${featuredProducts != null and not #lists.isEmpty(featuredProducts)}"
-                 class="alert alert-light text-center" role="alert">
-                Informace o standardních variantách se připravují.
-            </div>
+                    </div> <th:block th:if="${productJsonLdList != null and iterStat.index < #lists.size(productJsonLdList)}">
+                    <script type="application/ld+json"
+                            th:id="'schema-product-' + ${product.id}"
+                            th:utext="${productJsonLdList[iterStat.index]}">
+                        /* Product Schema */
+                    </script>
+                    <script th:inline="javascript">
+                        /*<![CDATA[*/
+                        (function(productId) { // Použití IIFE s parametrem pro bezpečné předání ID
+                            // Tento kód se spustí až po načtení celého DOMu,
+                            // ale přidáme malou pojistku, kdyby se vykresloval asynchronně.
+                            // Použijeme setTimeout s nulovým zpožděním, aby se kód vykonal
+                            // až po dokončení aktuálního vykreslovacího cyklu prohlížeče.
+                            setTimeout(function() {
+                                const elementId = 'schema-product-' + productId;
+                                try {
+                                    const schemaElement = document.getElementById(elementId);
+                                    if (schemaElement && typeof schemaElement.textContent === 'string' && schemaElement.textContent.trim().length > 0) {
+                                        try {
+                                            const jsonData = JSON.parse(schemaElement.textContent);
+                                            console.log(`--- Schema.org Product (JS Log for ID: ${elementId}) ---`);
+                                            console.dir(jsonData); // dir() pro lepší formátování
+                                        } catch (parseError) {
+                                            console.error(`Chyba parsování JSON-LD pro element ID '${elementId}':`, parseError);
+                                            console.error("Původní obsah:", schemaElement.textContent);
+                                        }
+                                    } else {
+                                        // Logujeme pouze pokud element chybí, ne pokud je prázdný (může být validní případ)
+                                        if (!schemaElement) {
+                                            console.warn(`Schema element s ID '${elementId}' nebyl nalezen pro logování.`);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error(`Obecná chyba při logování JSON-LD pro element ID '${elementId}':`, e);
+                                }
+                            }, 0); // Nulové zpoždění stačí
+                        })(/*[[${product.id}]]*/); // Předání ID produktu do IIFE
+                        /*]]>*/
+                    </script>
+                </th:block>
+                </div> </div> <div th:unless="${featuredProducts != null and not #lists.isEmpty(featuredProducts)}"
+                                   class="alert alert-light text-center" role="alert">
+            Informace o standardních variantách se připravují.
+        </div>
             <div class="text-center mt-4">
                 <a th:href="@{/produkty}" class="btn btn-primary">
                     <i class="bi bi-grid-3x3-gap-fill me-1"></i> Prohlédnout všechny produkty
@@ -586,54 +623,6 @@
             </div>
         </div>
     </section>
-    <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-                {
-                    "@type": "Question",
-                    "name": "Jaké rozměry dřevníku si mohu objednat?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Nabízíme několik standardních rozměrů, které naleznete v naší nabídce. Pokud vám standardní rozměry nevyhovují, rádi pro vás vyrobíme dřevník přesně na míru vašim požadavkům. Stačí využít náš online konfigurátor nebo nás kontaktovat s vašimi představami."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Z jakého materiálu jsou dřevníky vyrobeny?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Naše dřevníky vyrábíme primárně z kvalitního smrkového nebo modřínového dřeva. Používáme pevné KVH hranoly a odolné palubky. Veškerý spojovací materiál je pozinkovaný pro maximální odolnost proti korozi."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Je montáž dřevníku zahrnuta v ceně?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Ano, odborná montáž dřevníku na vámi připravený podklad je zdarma v rámci celé České a Slovenské republiky. Dopravu účtujeme zvlášť dle vzdálenosti, cenu si můžete snadno spočítat v pokladně po zadání adresy."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Jak dlouho trvá dodání a montáž?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Standardní doba dodání se pohybuje obvykle mezi 2-4 týdny od potvrzení objednávky a případné úhrady zálohy (u produktů na míru). Termín montáže s vámi domluvíme individuálně po dokončení výroby. Samotná montáž obvykle trvá několik hodin."
-                    }
-                },
-                {
-                    "@type": "Question",
-                    "name": "Jaký podklad je potřeba pro montáž dřevníku?",
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": "Dřevník je nutné usadit na pevný a rovný podklad. Ideální jsou betonové patky, zámková dlažba nebo betonová deska. Podklad si zákazník zajišťuje sám dle našich doporučení, která vám rádi poskytneme. Důležité je, aby byl podklad v rovině."
-                    }
-                }
-            ]
-        }
-    </script>
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",

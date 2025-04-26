@@ -329,102 +329,30 @@
 
     </div> </section>
 
-<th:block layout:fragment="javascript">
-    <script th:src="@{/js/product-configurator.js}"></script>
+<th:block th:if="${jsonLdDataString != null}">
+    <script type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}">
+    </script>
     <script th:inline="javascript">
         /*<![CDATA[*/
-        // --- Definice datového objektu pro JS ---
-        const configuratorInitData = {
-            calculatePriceUrl: /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price',
-            currency: /*[[${currentGlobalCurrency}]]*/ 'CZK',
-            csrfToken: /*[[${_csrf?.token}]]*/ null,
-            csrfHeaderName: /*[[${_csrf?.headerName}]]*/ null,
-            productId: /*[[${product.id}]]*/ null,
-            // Pouze potřebná data z konfigurátoru
-            configuratorValues: {
-                minLength: /*[[${product.configurator?.minLength}]]*/ null,
-                maxLength: /*[[${product.configurator?.maxLength}]]*/ null,
-                stepLength: /*[[${product.configurator?.stepLength}]]*/ null,
-                defaultLength: /*[[${product.configurator?.defaultLength ?: product.configurator?.minLength}]]*/ null,
-                minWidth: /*[[${product.configurator?.minWidth}]]*/ null,
-                maxWidth: /*[[${product.configurator?.maxWidth}]]*/ null,
-                stepWidth: /*[[${product.configurator?.stepWidth}]]*/ null,
-                defaultWidth: /*[[${product.configurator?.defaultWidth ?: product.configurator?.minWidth}]]*/ null,
-                minHeight: /*[[${product.configurator?.minHeight}]]*/ null,
-                maxHeight: /*[[${product.configurator?.maxHeight}]]*/ null,
-                stepHeight: /*[[${product.configurator?.stepHeight}]]*/ null,
-                defaultHeight: /*[[${product.configurator?.defaultHeight ?: product.configurator?.minHeight}]]*/ null
-            }
-        };
-        // --- Konec definice dat ---
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializace tooltipů
-            const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.forEach(tooltipTriggerEl => { new bootstrap.Tooltip(tooltipTriggerEl); });
-
-            // --- VOLÁNÍ INICIALIZAČNÍ FUNKCE z product-configurator.js ---
-            if (typeof initializeConfigurator === 'function') {
-                initializeConfigurator(configuratorInitData);
-                console.log('Product Configurator Initialized via function call.');
+        try {
+            // Zkusíme najít data a vypsat je do konzole
+            const schemaDataElement = document.getElementById('schema-org-data');
+            if (schemaDataElement && schemaDataElement.textContent) {
+                const jsonData = JSON.parse(schemaDataElement.textContent);
+                console.log("--- Schema.org Product Data (JSON-LD) ---");
+                console.dir(jsonData); // dir() pro lepší formátování objektu v konzoli
+                console.log("--- Konec Schema.org ---");
             } else {
-                console.error('Chyba: Funkce initializeConfigurator nebyla nalezena v product-configurator.js');
-                const errorDiv = document.getElementById('customPriceErrorDisplay');
-                if(errorDiv) { errorDiv.textContent = 'Chyba načítání konfigurátoru.'; errorDiv.style.display = 'block'; }
-                const submitBtn = document.querySelector('#custom-product-form button[type="submit"]');
-                if (submitBtn) submitBtn.disabled = true;
+                console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
             }
-            // --- KONEC VOLÁNÍ ---
-
-            // Bootstrap validace formuláře
-            const form = document.getElementById('custom-product-form');
-            if(form) {
-                form.addEventListener('submit', event => {
-                    if (typeof prepareFormDataBeforeSubmit === 'function') { prepareFormDataBeforeSubmit(); }
-                    else { console.warn('Funkce prepareFormDataBeforeSubmit nebyla nalezena.'); }
-
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        console.warn("Form validation failed before submission.");
-                        // Explicitní kontrola a zvýraznění chybějících required prvků
-                        form.querySelectorAll('[required]').forEach(el => {
-                            if (el.type === 'radio') {
-                                const radioGroup = form.querySelectorAll(`input[name="${el.name}"]`);
-                                const isChecked = Array.from(radioGroup).some(radio => radio.checked);
-                                if (!isChecked) {
-                                    // Označíme kontejner radio buttonů jako nevalidní
-                                    const container = el.closest('.tax-selection'); // Nebo jiný vhodný kontejner
-                                    if (container) container.classList.add('is-invalid');
-                                } else {
-                                    const container = el.closest('.tax-selection');
-                                    if (container) container.classList.remove('is-invalid');
-                                }
-                            } else if (!el.value) { // Pro selecty a jiné inputy
-                                el.classList.add('is-invalid');
-                            } else {
-                                el.classList.remove('is-invalid');
-                            }
-                        });
-                    }
-                    form.classList.add('was-validated');
-                }, false);
-                // Odstranění třídy is-invalid při změně selectů nebo radio buttonů
-                form.querySelectorAll('select[required], input[type="radio"][required]').forEach(el => {
-                    el.addEventListener('change', () => {
-                        if (el.type === 'radio') {
-                            const container = el.closest('.tax-selection');
-                            if (container) container.classList.remove('is-invalid');
-                        } else {
-                            el.classList.remove('is-invalid');
-                        }
-                        // Po změně můžeme odstranit i hlavní třídu 'was-validated' z formuláře,
-                        // aby se chyby zobrazily až při dalším pokusu o submit, nebo nechat
-                        // form.classList.remove('was-validated');
-                    });
-                });
+        } catch (e) {
+            console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
+            // Případně vypsat i původní string, pokud parsování selhalo
+            const schemaDataElement = document.getElementById('schema-org-data');
+            if (schemaDataElement) {
+                console.error("Původní JSON-LD string:", schemaDataElement.textContent);
             }
-        });
+        }
         /*]]>*/
     </script>
 </th:block>

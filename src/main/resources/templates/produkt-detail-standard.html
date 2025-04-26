@@ -293,38 +293,33 @@
             </div>
         </div>
 
-        <script type="application/ld+json" th:inline="javascript">
-            /*<![CDATA[*/
-            {
-                "@context": "https://schema.org/",
-                "@type": "Product",
-                "name": /*[[${product.name}]]*/ "Název Dřevníku",
-                "description": /*[[${product.shortDescription ?: #strings.abbreviate(product.description, 250)}]]*/ "Popis dřevníku...",
-                "image": [
-                    /*[# th:each="img, iterStat : ${product.getImagesOrdered()}"]*/
-                    /*[[${#request.scheme + '://' + #request.serverName + #request.contextPath + img.url}]]*/
-                    /*[# th:if="${!iterStat.last}"]*/, /*[/]*/
-                    /*[/]*/
-                ],
-                "sku": /*[[${product.slug}]]*/ "SKU123",
-                "brand": { "@type": "Brand", "name": "Dřevníky Kolář" },
-                "offers": {
-                    "@type": "Offer",
-                    "url": /*[[${#request.requestURL}]]*/ "URL produktu",
-                    "price": /*[[${(priceInfo != null ? (priceInfo.discountedPrice ?: priceInfo.originalPrice) : (currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK)) ?: '0.00'}]]*/ "15000.00",
-                    "priceCurrency": /*[[${currentGlobalCurrency}]]*/ "CZK",
-                    "availability": "https://schema.org/InStock",
-                    "priceValidUntil": /*[[${#dates.format(#dates.createNow().plusDays(90), 'yyyy-MM-dd')}]]*/ "2025-12-31",
-                    "itemCondition": "https://schema.org/NewCondition"
-                },
-                "additionalProperty": [
-                    {"@type": "PropertyValue", "name": "Materiál", "value": /*[[${product.material} ?: 'Smrkové dřevo']]*/ "Smrkové dřevo"},
-                    {"@type": "PropertyValue", "name": "Montáž zdarma", "value": "Ano"},
-                    {"@type": "PropertyValue", "name": "Dodání do", "value": "5 týdnů"}
-                ]
-            }
-            /*]]>*/
-        </script>
+        <th:block th:if="${jsonLdDataString != null}">
+            <script type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}">
+            </script>
+            <script th:inline="javascript">
+                /*<![CDATA[*/
+                try {
+                    // Zkusíme najít data a vypsat je do konzole
+                    const schemaDataElement = document.getElementById('schema-org-data');
+                    if (schemaDataElement && schemaDataElement.textContent) {
+                        const jsonData = JSON.parse(schemaDataElement.textContent);
+                        console.log("--- Schema.org Product Data (JSON-LD) ---");
+                        console.dir(jsonData); // dir() pro lepší formátování objektu v konzoli
+                        console.log("--- Konec Schema.org ---");
+                    } else {
+                        console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
+                    }
+                } catch (e) {
+                    console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
+                    // Případně vypsat i původní string, pokud parsování selhalo
+                    const schemaDataElement = document.getElementById('schema-org-data');
+                    if (schemaDataElement) {
+                        console.error("Původní JSON-LD string:", schemaDataElement.textContent);
+                    }
+                }
+                /*]]>*/
+            </script>
+        </th:block>
 
     </div>
 </section>
