@@ -22,45 +22,53 @@ public class HomeController {
     private static final Logger log = LoggerFactory.getLogger(HomeController.class);
 
     private final ProductService productService;
-    private final CurrencyService currencyService; // Inject CurrencyService
+    private final CurrencyService currencyService;
 
-    // Konstruktor pro injektáž
-    @Autowired // Přidáno @Autowired
+    @Autowired
     public HomeController(ProductService productService, CurrencyService currencyService) {
         this.productService = productService;
-        this.currencyService = currencyService; // Uložení instance
+        this.currencyService = currencyService;
     }
 
     @GetMapping("/")
     public String home(Model model) {
         log.info("Accessing home page");
-        String currentCurrency = currencyService.getSelectedCurrency(); // Získání aktuální měny
-        model.addAttribute("currentGlobalCurrency", currentCurrency); // Předání do modelu (pro layout)
+        String currentCurrency = currencyService.getSelectedCurrency();
+        model.addAttribute("currentGlobalCurrency", currentCurrency); // Pro layout
 
         try {
-            // TODO: Nahradit logikou pro výběr konkrétních 4 variant
-            // Příklad: Načtení prvních 4 aktivních standardních produktů seřazených podle ID
-            List<Product> allActiveStandard = productService.getAllActiveProducts().stream()
-                    .filter(p -> !p.isCustomisable())
-                    .limit(4) // Omezit na 4
-                    .collect(Collectors.toList()); // Použít .toList() v novějších Javách
+            // Načtení produktů (stejná logika jako předtím, nebo jiná dle potřeby)
+            List<Product> featuredProducts = productService.getAllActiveProducts().stream()
+                    .filter(p -> !p.isCustomisable()) // Pouze standardní produkty
+                    .limit(4) // Omezení na 4
+                    .collect(Collectors.toList()); // .toList() pro Java 16+
 
-            model.addAttribute("featuredProducts", allActiveStandard);
+            model.addAttribute("featuredProducts", featuredProducts);
 
-            // Vypočítat ceny pro tyto produkty
-            Map<Long, Map<String, Object>> priceMap = new HashMap<>();
-            for (Product p : allActiveStandard) {
-                priceMap.put(p.getId(), productService.calculateFinalProductPrice(p, currentCurrency));
+            // ***** ZAČÁTEK NOVÉ ČÁSTI PRO CENY *****
+            Map<Long, Map<String, Object>> featuredProductPrices = new HashMap<>();
+            for (Product product : featuredProducts) {
+                if (product != null && product.getId() != null) { // Kontrola pro jistotu
+                    try {
+                        Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
+                        featuredProductPrices.put(product.getId(), priceInfo);
+                    } catch (Exception priceEx) {
+                        log.error("Error calculating price for featured product ID {}: {}", product.getId(), priceEx.getMessage());
+                        // Můžeme přidat null nebo prázdnou mapu, aby Thymeleaf nespadl
+                        featuredProductPrices.put(product.getId(), Collections.emptyMap());
+                    }
+                }
             }
-            model.addAttribute("featuredProductPrices", priceMap);
+            model.addAttribute("featuredProductPrices", featuredProductPrices); // Předání mapy cen do modelu
             log.debug("Featured products and prices added to model for currency: {}", currentCurrency);
+            // ***** KONEC NOVÉ ČÁSTI PRO CENY *****
 
         } catch (Exception e) {
             log.error("Error fetching featured products for homepage: {}", e.getMessage(), e);
             model.addAttribute("featuredProducts", Collections.emptyList());
-            model.addAttribute("featuredProductPrices", Collections.emptyMap());
+            model.addAttribute("featuredProductPrices", Collections.emptyMap()); // Přidat prázdnou mapu i při chybě
         }
 
-        return "index"; // Název Thymeleaf šablony
+        return "index";
     }
 }

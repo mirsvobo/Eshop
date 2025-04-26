@@ -58,6 +58,39 @@
                 .product-long-description { margin-top: 0; }
                 .advantages-section { padding: 2rem; }
             }
+            .original-price {
+                font-size: 0.9em; /* Mírně menší */
+                color: #6c757d;
+                text-decoration: line-through;
+                margin-right: 0.5rem; /* Mezera od finální ceny */
+                display: inline-block; /* Aby byla na stejném řádku */
+            }
+            .discount-badge {
+                font-size: 0.7em; /* Menší odznak */
+                vertical-align: middle;
+                padding: 0.2em 0.45em;
+                font-weight: bold;
+            }
+            /* Případně upravit velikost hlavní ceny, pokud se překrývá */
+            .product-price-section .price {
+                font-size: 1.8rem; /* Nebo upravit podle potřeby */
+                font-weight: bold;
+                color: var(--bs-primary); /* Použití primární barvy */
+            }
+
+            /* Zarovnání prvků v sekci ceny */
+            .product-price-section {
+                display: flex;
+                align-items: baseline; /* Zarovnání na účaří */
+                flex-wrap: wrap; /* Povolí zalamování na menších obrazovkách */
+                margin-bottom: 0.5rem; /* Menší mezera pod cenou */
+            }
+            .product-price-section .price-note {
+                margin-bottom: 0; /* Odebrat spodní margin poznámky */
+                margin-left: 0.5rem;
+                flex-basis: 100%; /* Poznámka bude na novém řádku */
+                margin-top: 0.2rem;
+            }
             /* Úprava odsazení kvůli fixed-top navbaru */
             body { padding-top: 70px; /* Výška navbaru + malé odsazení */ }
         </style>
@@ -88,15 +121,28 @@
             <div class="col-md-6 product-info-column">
                 <h1 class="product-title" th:text="${product.name}">Název Produktu</h1>
 
-                <div class="product-price-section">
-                    <span class="price" id="productPrice"
-                          th:data-base-price-czk="${product.basePriceCZK}"
-                          th:data-base-price-eur="${product.basePriceEUR}"
-                          th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK, 1, 'COMMA', 2, 'POINT')}">
-                        Cena
+                <div class="product-price-section" th:with="pInfo=${priceInfo}"> <small class="original-price"
+                                                                                        th:if="${pInfo != null and pInfo.discountedPrice != null and pInfo.originalPrice != null}"
+                                                                                        th:text="${#numbers.formatDecimal(pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
+                </small>
+
+                    <span class="price" id="productPrice">
+                        <span th:if="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}"
+                              th:text="${#numbers.formatDecimal(pInfo.discountedPrice ?: pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')}">
+                            Cena
+                        </span>
+                        <span th:unless="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}">
+                            Cena nezadána
+                        </span>
                     </span>
-                    <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
-                    <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
+                    <span th:text="' ' + ${currentGlobalCurrency == 'EUR' ? '€' : 'Kč' + ' bez DPH'}"></span>
+
+                    <span th:if="${pInfo != null and pInfo.discountApplied != null}"
+                          class="badge bg-danger discount-badge ms-2"
+                          th:title="${pInfo.discountApplied.name}">
+                        SLEVA
+                    </span>
+
                 </div>
 
                 <div class="product-short-description" th:if="${product.shortDescription}" th:text="${product.shortDescription}">

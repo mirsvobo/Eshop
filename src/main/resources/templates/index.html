@@ -278,6 +278,49 @@
                 font-size: 0.95em;
                 line-height: 1.6;
             }
+            /* Styly pro cenu a slevu v kartě produktu */
+            .price-container {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* Zarovnání doleva */
+                line-height: 1.2;
+                margin-right: 0.5rem;
+            }
+            .original-price {
+                font-size: 0.8em;
+                color: #6c757d;
+                text-decoration: line-through;
+            }
+            .final-price {
+                font-size: 1.1em;
+                color: var(--bs-primary); /* Hlavní zelená */
+                font-weight: 600;
+            }
+            .discount-badge {
+                font-size: 0.65em; /* Trochu větší */
+                vertical-align: text-bottom; /* Lepší zarovnání s cenou */
+                padding: 0.2em 0.45em;
+                font-weight: bold;
+            }
+            .price-note {
+                font-size: 0.75em;
+                color: #6c757d;
+            }
+
+            /* Zarovnání obsahu karty produktu */
+            .product-variants-section .card-body {
+                display: flex;
+                flex-direction: column;
+            }
+            .product-variants-section .card-text {
+                flex-grow: 1; /* Popis zabere volné místo, cena bude dole */
+            }
+            /* Oddělení ceny od zbytku obsahu */
+            .product-variants-section .price-container-wrapper { /* Použij tento název pro div obalující cenu a tlačítko */
+                margin-top: auto; /* Přitlačí dolů */
+                padding-top: 0.75rem; /* Mezera nad */
+                border-top: 1px solid #eee; /* Linka nad */
+            }
 
         </style>
     </th:block>
@@ -446,26 +489,50 @@
                  class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
                 <div class="col" th:each="product : ${featuredProducts}">
                     <div class="card h-100 shadow-sm">
-                        <a th:href="@{/produkty}">
-                            <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}"
+                        <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}">
+                            <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered()[0].url}"
                                  th:alt="${product.name}" class="card-img-top"
-                                 style="height: 250px; object-fit: contain;" loading="lazy"/>
+                                 style="height: 200px; object-fit: cover;" loading="lazy"/>
                         </a>
-                        <div class="card-body">
-                            <h5 class="card-title" th:text="${product.name}">Název varianty</h5>
-                            <ul class="list-unstyled mb-3 text-muted">
-                                <li th:if="${product.height}"><strong>Výška:</strong> <span
-                                        th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
-                                </li>
-                                <li th:if="${product.length}"><strong>Šířka:</strong> <span
-                                        th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
-                                </li>
+                        <a th:unless="${product.slug}" href="#">
+                            <img src="/images/placeholder.png" th:alt="${product.name}" class="card-img-top"
+                                 style="height: 200px; object-fit: cover;" loading="lazy"/>
+                        </a>
+                        <div class="card-body d-flex flex-column"> <h5 class="card-title" th:text="${product.name}">Název varianty</h5>
+                            <ul class="list-unstyled mb-2 text-muted small"> <li th:if="${product.length}"><strong>Šířka:</strong> <span
+                                    th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
                                 <li th:if="${product.width}"><strong>Hloubka:</strong> <span
-                                        th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
-                                </li>
+                                        th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
+                                <li th:if="${product.height}"><strong>Výška:</strong> <span
+                                        th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
                             </ul>
-                            <p class="card-text small text-muted" th:if="${product.description != null}"
-                               th:text="${#strings.abbreviate(product.description, 80)}">Krátký popis varianty...</p>
+                            <p class="card-text small text-muted flex-grow-1" th:if="${product.shortDescription != null}"
+                               th:text="${#strings.abbreviate(product.shortDescription, 80)}">Krátký popis...</p>
+
+                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                                <div class="price-container" th:with="priceInfo=${featuredProductPrices[product.id]}">
+                                    <th:block th:if="${priceInfo != null and priceInfo.originalPrice != null}">
+                                        <small class="original-price"
+                                               th:if="${priceInfo.discountedPrice != null}"
+                                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
+                                        </small>
+                                        <strong class="fs-5 text-primary final-price">
+                                            <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}"></span>
+                                            <span th:if="${priceInfo.discountApplied != null}"
+                                                  class="badge bg-danger discount-badge ms-1"
+                                                  th:title="${priceInfo.discountApplied.name}">SLEVA</span>
+                                        </strong>
+                                        <small class="text-muted price-note">cena bez DPH</small>
+                                    </th:block>
+                                    <th:block th:unless="${priceInfo != null and priceInfo.originalPrice != null}">
+                                        <strong class="fs-6 text-muted">Cena na dotaz</strong>
+                                    </th:block>
+                                </div>
+                                <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}"
+                                   class="btn btn-outline-secondary btn-sm">Detail</a>
+                                <a th:unless="${product.slug}" href="#"
+                                   class="btn btn-outline-secondary btn-sm disabled">Detail</a>
+                            </div>
                         </div>
                     </div>
                 </div>
