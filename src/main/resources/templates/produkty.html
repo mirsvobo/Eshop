@@ -4,35 +4,94 @@
       layout:decorate="~{layout/main}">
 <head>
     <title>Naše Produkty</title>
-    <style>
-        .product-card img {
-            height: 200px;
-            object-fit: cover;
-        }
-        .pagination {
-            margin-top: 2rem;
-        }
-        /* Přidáno pro cenu */
-        .price-container {
-            display: flex;
-            flex-direction: column; /* Ceny pod sebou */
-            align-items: flex-end; /* Zarovnání doprava */
-            line-height: 1.2; /* Menší řádkování */
-        }
-        .original-price {
-            font-size: 0.8em;
-            color: #6c757d;
-            text-decoration: line-through;
-        }
-        .final-price {
-            font-size: 1.15em; /* Mírně větší finální cena */
-        }
-        .discount-badge {
-            font-size: 0.6em;
-            vertical-align: middle;
-            margin-left: 4px;
-        }
-    </style>
+    <th:block layout:fragment="css">
+        <style>
+            .pagination {
+                margin-top: 2rem;
+            }
+            /* === STYLY PRO KARTY PRODUKTŮ (Sjednocené s index.html) === */
+            .product-card {
+                transition: box-shadow 0.2s ease-in-out;
+                border: 1px solid #eee;
+            }
+            .product-card:hover {
+                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            }
+            /* Styl pro obalovač obrázku s poměrem stran */
+            .product-card .product-image-wrapper {
+                overflow: hidden; /* Zajistí, že obrázek nepřesahuje */
+            }
+            /* Styl pro samotný obrázek uvnitř obalovače */
+            .product-card .card-img-top {
+                width: 100%;
+                height: 100%; /* Vyplní výšku ratio divu */
+                object-fit: cover; /* Ořízne obrázek, aby vyplnil prostor bez deformace */
+            }
+            .product-card .card-body ul { /* Seznam rozměrů */
+                font-size: 0.9em;
+                list-style: none;
+                padding-left: 0;
+                margin-bottom: 0.75rem;
+            }
+            .product-card .card-body ul li {
+                margin-bottom: 0.2rem;
+            }
+            .product-card .card-body ul li strong {
+                min-width: 60px;
+                display: inline-block;
+                color: var(--bs-secondary);
+            }
+            .product-card .card-body {
+                display: flex;
+                flex-direction: column;
+                padding: 1rem;
+            }
+            .product-card .card-title {
+                margin-bottom: 0.5rem;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+            .product-card .card-text { /* Krátký popis */
+                flex-grow: 1; /* Popis zabere volné místo */
+                margin-bottom: 0.75rem; /* Mezera pod popisem */
+            }
+            /* Styly pro cenu a slevu v kartě produktu */
+            .price-container {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* Zarovnání doleva */
+                line-height: 1.2;
+                margin-right: 0.5rem;
+            }
+            .original-price {
+                font-size: 0.8em;
+                color: #6c757d;
+                text-decoration: line-through;
+            }
+            .final-price {
+                font-size: 1.1em;
+                color: var(--bs-primary); /* Hlavní zelená */
+                font-weight: 600;
+            }
+            .discount-badge {
+                font-size: 0.65em; /* Trochu větší */
+                vertical-align: text-bottom; /* Lepší zarovnání s cenou */
+                padding: 0.2em 0.45em;
+                font-weight: bold;
+            }
+            .price-note {
+                font-size: 0.75em;
+                color: #6c757d;
+            }
+            /* Wrapper pro cenu a tlačítko */
+            .product-card .price-container-wrapper {
+                margin-top: auto; /* Přitlačí dolů */
+                padding-top: 0.75rem; /* Mezera nad */
+                border-top: 1px solid #eee; /* Linka nad */
+            }
+            /* ================================================ */
+        </style>
+    </th:block>
 </head>
 <body>
 
@@ -43,55 +102,73 @@
             <p class="lead">Vyberte si z naší nabídky standardních dřevníků nebo si navrhněte vlastní.</p>
         </div>
 
-        <div th:if="${productPage != null and not productPage.empty}" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        <div th:if="${productPage != null and not productPage.empty}" class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
 
             <div th:each="product : ${productPage.content}" th:if="${product != null and !product.customisable}" class="col">
                 <div class="card shadow-sm product-card h-100">
                     <a th:href="@{${product.slug != null ? '/produkt/' + product.slug : '#'}}">
-                        <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}" class="card-img-top" th:alt="${product.name ?: 'Produkt'}">
+                        <div class="ratio ratio-1x1 product-image-wrapper">
+                            <img th:src="${not #lists.isEmpty(product.images) ? product.images[0].url : '/images/placeholder.png'}"
+                                 class="card-img-top"
+                                 th:alt="${product.name ?: 'Produkt'}"
+                                 loading="lazy"/>
+                        </div>
                     </a>
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title" th:text="${product.name ?: 'Produkt bez názvu'}">Název produktu</h5>
-                        <p class="card-text flex-grow-1" th:if="${product.description != null}" th:text="${#strings.abbreviate(product.description, 100)}"></p>
-                        <div class="d-flex justify-content-between align-items-center mt-auto">
-                            <div class="price-container" th:with="priceInfo=${productPrices[product.id]}">
-                                <th:block th:if="${priceInfo != null}">
-                                    <small class="original-price"
-                                           th:if="${priceInfo.discountedPrice != null}"
-                                           th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}">
-                                    </small>
-                                    <strong class="fs-5 text-primary final-price">
-                                        <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currentGlobalCurrency}"></span>
-                                        <span th:if="${priceInfo.discountApplied != null}"
-                                              class="badge bg-danger discount-badge"
-                                              th:title="${priceInfo.discountApplied.name}">
-                                            SLEVA
-                                        </span>
-                                    </strong>
-                                </th:block>
-                                <th:block th:unless="${priceInfo != null}">
-                                    <strong class="fs-5 text-primary">Cena nezadána</strong>
-                                </th:block>
+                        <p class="card-text small text-muted flex-grow-1"
+                           th:if="${product.shortDescription != null}"
+                           th:text="${#strings.abbreviate(product.shortDescription, 80)}">
+                            Krátký popis produktu...
+                        </p>
+                        <div class="price-container-wrapper">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="price-container" th:with="priceInfo=${productPrices[product.id]}">
+                                    <th:block th:if="${priceInfo != null}">
+                                        <small class="original-price"
+                                               th:if="${priceInfo.discountedPrice != null}"
+                                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
+                                        </small>
+                                        <strong class="fs-5 text-primary final-price">
+                                            <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice ?: 0, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}"></span>
+                                            <span th:if="${priceInfo.discountApplied != null}"
+                                                  class="badge bg-danger discount-badge ms-1"
+                                                  th:title="${priceInfo.discountApplied.name}">
+                                                SLEVA
+                                            </span>
+                                        </strong>
+                                        <small class="text-muted price-note">cena bez DPH</small>
+                                    </th:block>
+                                    <th:block th:unless="${priceInfo != null}">
+                                        <strong class="fs-6 text-muted">Cena na dotaz</strong>
+                                    </th:block>
+                                </div>
+                                <a th:href="@{${product.slug != null ? '/produkt/' + product.slug : '#'}}"
+                                   class="btn btn-outline-secondary btn-sm"
+                                   th:classappend="${product.slug == null ? 'disabled' : ''}">Zobrazit detail</a>
                             </div>
-                            <a th:href="@{${product.slug != null ? '/produkt/' + product.slug : '#'}}"
-                               class="btn btn-outline-secondary btn-sm"
-                               th:classappend="${product.slug == null ? 'disabled' : ''}">Zobrazit detail</a>
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="col">
                 <div class="card shadow-sm product-card h-100">
                     <a th:href="@{/produkt/na-miru}">
-                        <img src="/images/placeholder-custom.png" th:src="@{/images/placeholder-custom.png}" class="card-img-top" alt="Dřevník na míru">
+                        <div class="ratio ratio-1x1 product-image-wrapper">
+                            <img src="/images/placeholder-custom.png" th:src="@{/images/placeholder-custom.png}"
+                                 class="card-img-top"
+                                 alt="Dřevník na míru"
+                                 loading="lazy">
+                        </div>
                     </a>
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">Dřevník na míru</h5>
                         <p class="card-text flex-grow-1">Navrhněte si dřevník přesně podle vašich představ.</p>
-                        <div class="d-flex justify-content-between align-items-center mt-auto">
-                            <strong class="fs-5 text-primary"><span>Cena dle konfigurace</span></strong>
-                            <a th:href="@{/produkt/na-miru}" class="btn btn-primary btn-sm">Navrhnout</a>
+                        <div class="price-container-wrapper">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="fs-5 text-primary"><span>Cena dle konfigurace</span></strong>
+                                <a th:href="@{/produkt/na-miru}" class="btn btn-primary btn-sm">Navrhnout</a>
+                            </div>
                         </div>
                     </div>
                 </div>

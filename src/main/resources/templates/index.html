@@ -11,7 +11,7 @@
         <link rel="stylesheet" type="text/css" th:href="@{/css/custom.css}"/>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
         <style>
-            /* === STYLY PRO KARTY VARIANT === */
+            /* === STYLY PRO KARTY VARIANT (Upraveno pro 1:1 poměr) === */
             .product-variants-section .card {
                 transition: box-shadow 0.2s ease-in-out;
                 border: 1px solid #eee;
@@ -19,6 +19,18 @@
 
             .product-variants-section .card:hover {
                 box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            }
+
+            /* Styl pro obalovač obrázku s poměrem stran */
+            .product-variants-section .card .product-image-wrapper {
+                overflow: hidden; /* Zajistí, že obrázek nepřesahuje */
+            }
+
+            /* Styl pro samotný obrázek uvnitř obalovače */
+            .product-variants-section .card .card-img-top {
+                width: 100%;
+                height: 100%; /* Vyplní výšku ratio divu */
+                object-fit: cover; /* Ořízne obrázek, aby vyplnil prostor bez deformace */
             }
 
             .product-variants-section .card-body ul {
@@ -41,7 +53,7 @@
             .product-variants-section .card-body {
                 display: flex;
                 flex-direction: column;
-                min-height: 180px;
+                /* min-height odstraněna nebo upravena - výška bude dána obsahem a obrázkem */
                 padding: 1rem;
             }
 
@@ -52,275 +64,59 @@
             }
 
             .product-variants-section .card-text {
-                flex-grow: 1;
-                margin-bottom: 0;
+                flex-grow: 1; /* Popis zabere volné místo */
+                margin-bottom: 0.75rem; /* Přidána mezera pod popisem */
             }
 
-            /* === STYLY PRO SEKCI RECENZÍ === */
-            .reviews-section-new {
-                padding: 4rem 0;
-                background-color: #ffffff;
-            }
+            /* === STYLY PRO SEKCI RECENZÍ (beze změny) === */
+            .reviews-section-new { padding: 4rem 0; background-color: #ffffff; }
+            .review-summary { text-align: center; padding-right: 2rem; margin-bottom: 2rem; }
+            .review-summary .summary-title { font-weight: 600; font-size: 1.2rem; margin-bottom: 0.5rem; }
+            .review-summary .stars { color: #ffc107; font-size: 1.5rem; margin-bottom: 0.5rem; }
+            .review-summary .summary-text { font-size: 0.9em; color: #6c757d; margin-bottom: 1rem; }
+            .review-summary .google-logo img { height: 40px; width: auto; }
+            .review-slider-container { position: relative; padding: 0 45px; margin: 0 auto; max-width: 100%; overflow: hidden; }
+            .swiper-review { width: 100%; height: auto; padding-bottom: 1.5rem; position: static; }
+            .swiper-slide { height: auto; display: flex; width: auto; }
+            .review-card-new { width: 100%; height: 100%; border: none; background-color: #f8f9fa; border-radius: 0.375rem; padding: 1.5rem; display: flex; flex-direction: column; }
+            .review-card-new .review-header { display: flex; align-items: center; margin-bottom: 1rem; }
+            .review-card-new .reviewer-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 0.75rem; background-color: var(--bs-secondary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; overflow: hidden; }
+            .review-card-new .reviewer-avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .review-card-new .reviewer-info { flex-grow: 1; }
+            .review-card-new .review-name { font-weight: 600; margin-bottom: 0; font-size: 0.95rem; }
+            .review-card-new .review-date { font-size: 0.75em; color: #6c757d; }
+            .review-card-new .google-icon { height: 40px; width: auto; margin-left: 0.5rem; }
+            .review-card-new .stars { color: #ffc107; font-size: 1rem; margin-bottom: 0.75rem; }
+            .review-card-new .review-text { font-size: 0.9rem; line-height: 1.5; color: #495057; margin-bottom: 1rem; overflow: hidden; display: block; min-height: calc(1.5 * 0.9rem); }
+            .review-card-new .review-text.truncated { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; }
+            .review-card-new .read-more { font-size: 0.85em; color: var(--bs-primary); text-decoration: none; font-weight: 500; cursor: pointer; display: inline-block; margin-top: 0.5rem; }
+            .review-card-new .read-more:hover { text-decoration: underline; }
+            .review-card-new .read-more.hidden { display: none; }
+            .review-slider-container .swiper-button-prev, .review-slider-container .swiper-button-next { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; margin-top: 0; background-color: rgba(255, 255, 255, 0.85); border-radius: 50%; color: var(--bs-primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; z-index: 10; }
+            .review-slider-container .swiper-button-prev:hover, .review-slider-container .swiper-button-next:hover { background-color: var(--bs-primary); color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+            .review-slider-container .swiper-button-prev { left: 0px; }
+            .review-slider-container .swiper-button-next { right: 0px; }
+            .review-slider-container .swiper-button-prev::after, .review-slider-container .swiper-button-next::after { font-size: 18px; font-weight: bold; }
+            .review-slider-container .swiper-button-disabled { opacity: 0.25; pointer-events: none; }
 
-            .review-summary {
-                text-align: center;
-                padding-right: 2rem;
-                margin-bottom: 2rem;
-            }
+            /* --- STYLY PRO FAQ (beze změny) --- */
+            .faq-section { padding: 4rem 0; background-color: var(--bs-light); }
+            .faq-section .accordion-button { font-weight: 600; color: var(--bs-dark); }
+            .faq-section .accordion-button:not(.collapsed) { background-color: rgba(var(--bs-primary-rgb), 0.1); color: var(--bs-primary); }
+            .faq-section .accordion-button:focus { box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25); }
+            .faq-section .accordion-body { font-size: 0.95em; line-height: 1.6; }
 
-            .review-summary .summary-title {
-                font-weight: 600;
-                font-size: 1.2rem;
-                margin-bottom: 0.5rem;
-            }
+            /* Styly pro cenu a slevu v kartě produktu (beze změny) */
+            .price-container { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; margin-right: 0.5rem; }
+            .original-price { font-size: 0.8em; color: #6c757d; text-decoration: line-through; }
+            .final-price { font-size: 1.1em; color: var(--bs-primary); font-weight: 600; }
+            .discount-badge { font-size: 0.65em; vertical-align: text-bottom; padding: 0.2em 0.45em; font-weight: bold; }
+            .price-note { font-size: 0.75em; color: #6c757d; }
 
-            .review-summary .stars {
-                color: #ffc107;
-                font-size: 1.5rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .review-summary .summary-text {
-                font-size: 0.9em;
-                color: #6c757d;
-                margin-bottom: 1rem;
-            }
-
-            .review-summary .google-logo img {
-                height: 40px;
-                width: auto;
-            }
-
-            .review-slider-container {
-                position: relative; /* Pro pozicování šipek */
-                padding: 0 45px; /* Prostor pro šipky */
-                margin: 0 auto;
-                max-width: 100%;
-                overflow: hidden;
-            }
-
-            .swiper-review {
-                width: 100%;
-                height: auto;
-                padding-bottom: 1.5rem;
-                position: static;
-            }
-
-            .swiper-slide {
-                height: auto;
-                display: flex;
-                width: auto;
-            }
-
-            .review-card-new {
-                width: 100%;
-                height: 100%;
-                border: none;
-                background-color: #f8f9fa;
-                border-radius: 0.375rem;
-                padding: 1.5rem;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .review-card-new .review-header {
-                display: flex;
-                align-items: center;
-                margin-bottom: 1rem;
-            }
-
-            .review-card-new .reviewer-avatar {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                margin-right: 0.75rem;
-                background-color: var(--bs-secondary);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: bold;
-                font-size: 1.1rem;
-                overflow: hidden;
-            }
-
-            .review-card-new .reviewer-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-            .review-card-new .reviewer-info {
-                flex-grow: 1;
-            }
-
-            .review-card-new .review-name {
-                font-weight: 600;
-                margin-bottom: 0;
-                font-size: 0.95rem;
-            }
-
-            .review-card-new .review-date {
-                font-size: 0.75em;
-                color: #6c757d;
-            }
-
-            .review-card-new .google-icon {
-                height: 40px;
-                width: auto;
-                margin-left: 0.5rem;
-            }
-
-            .review-card-new .stars {
-                color: #ffc107;
-                font-size: 1rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .review-card-new .review-text {
-                font-size: 0.9rem;
-                line-height: 1.5;
-                color: #495057;
-                margin-bottom: 1rem;
-                overflow: hidden;
-                display: block;
-                min-height: calc(1.5 * 0.9rem);
-            }
-
-            .review-card-new .review-text.truncated {
-                display: -webkit-box;
-                -webkit-line-clamp: 3;
-                -webkit-box-orient: vertical;
-                text-overflow: ellipsis;
-            }
-
-            .review-card-new .read-more {
-                font-size: 0.85em;
-                color: var(--bs-primary);
-                text-decoration: none;
-                font-weight: 500;
-                cursor: pointer;
-                display: inline-block;
-                margin-top: 0.5rem;
-            }
-
-            .review-card-new .read-more:hover {
-                text-decoration: underline;
-            }
-
-            .review-card-new .read-more.hidden {
-                display: none;
-            }
-
-            .review-slider-container .swiper-button-prev,
-            .review-slider-container .swiper-button-next {
-                position: absolute;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 44px;
-                height: 44px;
-                margin-top: 0;
-                background-color: rgba(255, 255, 255, 0.85);
-                border-radius: 50%;
-                color: var(--bs-primary);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                transition: all 0.2s ease;
-                z-index: 10;
-            }
-
-            .review-slider-container .swiper-button-prev:hover,
-            .review-slider-container .swiper-button-next:hover {
-                background-color: var(--bs-primary);
-                color: white;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-
-            .review-slider-container .swiper-button-prev {
-                left: 0px;
-            }
-
-            .review-slider-container .swiper-button-next {
-                right: 0px;
-            }
-
-            .review-slider-container .swiper-button-prev::after,
-            .review-slider-container .swiper-button-next::after {
-                font-size: 18px;
-                font-weight: bold;
-            }
-
-            .review-slider-container .swiper-button-disabled {
-                opacity: 0.25;
-                pointer-events: none;
-            }
-
-            /* --- STYLY PRO FAQ --- */
-            .faq-section {
-                padding: 4rem 0;
-                background-color: var(--bs-light);
-            }
-
-            .faq-section .accordion-button {
-                font-weight: 600;
-                color: var(--bs-dark);
-            }
-
-            .faq-section .accordion-button:not(.collapsed) {
-                background-color: rgba(var(--bs-primary-rgb), 0.1);
-                color: var(--bs-primary);
-            }
-
-            .faq-section .accordion-button:focus {
-                box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-            }
-
-            .faq-section .accordion-body {
-                font-size: 0.95em;
-                line-height: 1.6;
-            }
-            /* Styly pro cenu a slevu v kartě produktu */
-            .price-container {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start; /* Zarovnání doleva */
-                line-height: 1.2;
-                margin-right: 0.5rem;
-            }
-            .original-price {
-                font-size: 0.8em;
-                color: #6c757d;
-                text-decoration: line-through;
-            }
-            .final-price {
-                font-size: 1.1em;
-                color: var(--bs-primary); /* Hlavní zelená */
-                font-weight: 600;
-            }
-            .discount-badge {
-                font-size: 0.65em; /* Trochu větší */
-                vertical-align: text-bottom; /* Lepší zarovnání s cenou */
-                padding: 0.2em 0.45em;
-                font-weight: bold;
-            }
-            .price-note {
-                font-size: 0.75em;
-                color: #6c757d;
-            }
-
-            /* Zarovnání obsahu karty produktu */
-            .product-variants-section .card-body {
-                display: flex;
-                flex-direction: column;
-            }
-            .product-variants-section .card-text {
-                flex-grow: 1; /* Popis zabere volné místo, cena bude dole */
-            }
-            /* Oddělení ceny od zbytku obsahu */
-            .product-variants-section .price-container-wrapper { /* Použij tento název pro div obalující cenu a tlačítko */
-                margin-top: auto; /* Přitlačí dolů */
-                padding-top: 0.75rem; /* Mezera nad */
-                border-top: 1px solid #eee; /* Linka nad */
-            }
+            /* Zarovnání obsahu karty produktu (beze změny) */
+            .product-variants-section .card-body { display: flex; flex-direction: column; }
+            /* .product-variants-section .card-text { flex-grow: 1; } */ /* Odstraněno z popisu, použito výše */
+            .product-variants-section .price-container-wrapper { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #eee; }
 
         </style>
     </th:block>
@@ -490,48 +286,55 @@
                 <div class="col" th:each="product : ${featuredProducts}">
                     <div class="card h-100 shadow-sm">
                         <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}">
-                            <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered()[0].url}"
-                                 th:alt="${product.name}" class="card-img-top"
-                                 style="height: 200px; object-fit: cover;" loading="lazy"/>
+                            <div class="ratio ratio-1x1 product-image-wrapper">
+                                <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered()[0].url}"
+                                     th:alt="${product.name}"
+                                     class="card-img-top" loading="lazy"/>
+                            </div>
                         </a>
                         <a th:unless="${product.slug}" href="#">
-                            <img src="/images/placeholder.png" th:alt="${product.name}" class="card-img-top"
-                                 style="height: 200px; object-fit: cover;" loading="lazy"/>
+                            <div class="ratio ratio-1x1 product-image-wrapper">
+                                <img src="/images/placeholder.png" th:alt="${product.name}"
+                                     class="card-img-top" loading="lazy"/>
+                            </div>
                         </a>
-                        <div class="card-body d-flex flex-column"> <h5 class="card-title" th:text="${product.name}">Název varianty</h5>
-                            <ul class="list-unstyled mb-2 text-muted small"> <li th:if="${product.length}"><strong>Šířka:</strong> <span
-                                    th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
-                                <li th:if="${product.width}"><strong>Hloubka:</strong> <span
-                                        th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
-                                <li th:if="${product.height}"><strong>Výška:</strong> <span
-                                        th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
+
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title" th:text="${product.name}">Název varianty</h5>
+                            <ul class="list-unstyled mb-2 text-muted small">
+                                <li th:if="${product.length}"><strong>Šířka:</strong> <span th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
+                                <li th:if="${product.width}"><strong>Hloubka:</strong> <span th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
+                                <li th:if="${product.height}"><strong>Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span></li>
                             </ul>
-                            <p class="card-text small text-muted flex-grow-1" th:if="${product.shortDescription != null}"
+                            <p class="card-text small text-muted flex-grow-1"
+                               th:if="${product.shortDescription != null}"
                                th:text="${#strings.abbreviate(product.shortDescription, 80)}">Krátký popis...</p>
 
-                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
-                                <div class="price-container" th:with="priceInfo=${featuredProductPrices[product.id]}">
-                                    <th:block th:if="${priceInfo != null and priceInfo.originalPrice != null}">
-                                        <small class="original-price"
-                                               th:if="${priceInfo.discountedPrice != null}"
-                                               th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
-                                        </small>
-                                        <strong class="fs-5 text-primary final-price">
-                                            <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}"></span>
-                                            <span th:if="${priceInfo.discountApplied != null}"
-                                                  class="badge bg-danger discount-badge ms-1"
-                                                  th:title="${priceInfo.discountApplied.name}">SLEVA</span>
-                                        </strong>
-                                        <small class="text-muted price-note">cena bez DPH</small>
-                                    </th:block>
-                                    <th:block th:unless="${priceInfo != null and priceInfo.originalPrice != null}">
-                                        <strong class="fs-6 text-muted">Cena na dotaz</strong>
-                                    </th:block>
+                            <div class="price-container-wrapper">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="price-container" th:with="priceInfo=${featuredProductPrices[product.id]}">
+                                        <th:block th:if="${priceInfo != null and priceInfo.originalPrice != null}">
+                                            <small class="original-price"
+                                                   th:if="${priceInfo.discountedPrice != null}"
+                                                   th:text="${#numbers.formatDecimal(priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
+                                            </small>
+                                            <strong class="fs-5 text-primary final-price">
+                                                <span th:text="${#numbers.formatDecimal(priceInfo.discountedPrice ?: priceInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}"></span>
+                                                <span th:if="${priceInfo.discountApplied != null}"
+                                                      class="badge bg-danger discount-badge ms-1"
+                                                      th:title="${priceInfo.discountApplied.name}">SLEVA</span>
+                                            </strong>
+                                            <small class="text-muted price-note">cena bez DPH</small>
+                                        </th:block>
+                                        <th:block th:unless="${priceInfo != null and priceInfo.originalPrice != null}">
+                                            <strong class="fs-6 text-muted">Cena na dotaz</strong>
+                                        </th:block>
+                                    </div>
+                                    <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}"
+                                       class="btn btn-outline-secondary btn-sm">Detail</a>
+                                    <a th:unless="${product.slug}" href="#"
+                                       class="btn btn-outline-secondary btn-sm disabled">Detail</a>
                                 </div>
-                                <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}"
-                                   class="btn btn-outline-secondary btn-sm">Detail</a>
-                                <a th:unless="${product.slug}" href="#"
-                                   class="btn btn-outline-secondary btn-sm disabled">Detail</a>
                             </div>
                         </div>
                     </div>
@@ -548,8 +351,6 @@
             </div>
         </div>
     </section>
-
-
     <section id="faq" class="faq-section">
         <div class="container">
             <h2 class="text-center mb-4">Často kladené otázky</h2>

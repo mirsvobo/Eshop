@@ -8,7 +8,6 @@
 
     <th:block layout:fragment="css">
         <style>
-            /* --- Zde jsou stejné CSS styly jako v předchozí verzi --- */
             /* Základní styly pro produktovou stránku (Standard) */
             .product-detail-container {
                 padding-top: 2rem;
@@ -18,10 +17,53 @@
             .main-product-image { max-width: 100%; height: auto; border: 1px solid #dee2e6; margin-bottom: 1rem; }
             .thumbnail-images img { width: 80px; height: 80px; object-fit: cover; cursor: pointer; border: 1px solid #dee2e6; margin-right: 0.5rem; margin-bottom: 0.5rem; opacity: 0.7; transition: opacity 0.2s ease-in-out; }
             .thumbnail-images img.active, .thumbnail-images img:hover { opacity: 1; border-color: #007bff; }
-            /* Informace o produktu */
-            .product-title { margin-bottom: 0.5rem; }
-            .product-price-section .price { font-size: 1.8rem; font-weight: bold; color: #28a745; }
-            .product-price-section .price-note { font-size: 0.9rem; color: #6c757d; margin-bottom: 1rem; }
+
+            /* === ZAČÁTEK NOVÝCH/UPRAVENÝCH STYLŮ PRO CENU === */
+            .product-price-section {
+                margin-bottom: 1rem; /* Odsazení pod celou sekcí ceny */
+            }
+            /* Přeškrtnutá původní cena */
+            .original-price {
+                font-size: 1rem; /* Větší než předtím */
+                color: #6c757d;
+                text-decoration: line-through;
+                display: block; /* Zajistí, že je na samostatném řádku */
+                margin-bottom: -0.2em; /* Mírné přiblížení k finální ceně */
+                line-height: 1;
+            }
+            /* Finální cena */
+            .product-price-section .price {
+                font-size: 2rem; /* Větší hlavní cena (třída h2 přidána v HTML) */
+                font-weight: 700; /* Tučnější */
+                color: var(--bs-primary); /* Hlavní zelená */
+                line-height: 1.1;
+                margin-right: 0.2rem; /* Malá mezera od měny */
+            }
+            /* Měna vedle finální ceny */
+            .product-price-section .ms-1 { /* Cílíme na span s měnou */
+                font-size: 1.1rem; /* Menší než hlavní cena */
+                font-weight: 600;
+                color: #495057; /* Tmavší šedá */
+                padding-left: 0.2rem;
+            }
+            /* Odznak slevy */
+            .discount-badge {
+                font-size: 0.7em;
+                vertical-align: baseline; /* Lepší zarovnání s textem ceny */
+                padding: 0.3em 0.5em;
+                font-weight: bold;
+                /* ms-2 třída v HTML zajistí odsazení zleva */
+            }
+            /* Poznámka pod cenou */
+            .product-price-section .price-note {
+                font-size: 0.85rem; /* Menší text */
+                color: #6c757d;
+                margin-top: 0.1rem; /* Malá mezera nad poznámkou */
+                margin-bottom: 0;
+                display: block; /* Na samostatném řádku */
+            }
+            /* === KONEC NOVÝCH/UPRAVENÝCH STYLŮ PRO CENU === */
+
             .product-short-description { margin-top: 1rem; margin-bottom: 1.5rem; color: #495057; }
             /* Formulář variant */
             .product-options-form .form-label { font-weight: bold; }
@@ -58,39 +100,6 @@
                 .product-long-description { margin-top: 0; }
                 .advantages-section { padding: 2rem; }
             }
-            .original-price {
-                font-size: 0.9em; /* Mírně menší */
-                color: #6c757d;
-                text-decoration: line-through;
-                margin-right: 0.5rem; /* Mezera od finální ceny */
-                display: inline-block; /* Aby byla na stejném řádku */
-            }
-            .discount-badge {
-                font-size: 0.7em; /* Menší odznak */
-                vertical-align: middle;
-                padding: 0.2em 0.45em;
-                font-weight: bold;
-            }
-            /* Případně upravit velikost hlavní ceny, pokud se překrývá */
-            .product-price-section .price {
-                font-size: 1.8rem; /* Nebo upravit podle potřeby */
-                font-weight: bold;
-                color: var(--bs-primary); /* Použití primární barvy */
-            }
-
-            /* Zarovnání prvků v sekci ceny */
-            .product-price-section {
-                display: flex;
-                align-items: baseline; /* Zarovnání na účaří */
-                flex-wrap: wrap; /* Povolí zalamování na menších obrazovkách */
-                margin-bottom: 0.5rem; /* Menší mezera pod cenou */
-            }
-            .product-price-section .price-note {
-                margin-bottom: 0; /* Odebrat spodní margin poznámky */
-                margin-left: 0.5rem;
-                flex-basis: 100%; /* Poznámka bude na novém řádku */
-                margin-top: 0.2rem;
-            }
             /* Úprava odsazení kvůli fixed-top navbaru */
             body { padding-top: 70px; /* Výška navbaru + malé odsazení */ }
         </style>
@@ -121,39 +130,35 @@
             <div class="col-md-6 product-info-column">
                 <h1 class="product-title" th:text="${product.name}">Název Produktu</h1>
 
-                <div class="product-price-section" th:with="pInfo=${priceInfo}"> <small class="original-price"
-                                                                                        th:if="${pInfo != null and pInfo.discountedPrice != null and pInfo.originalPrice != null}"
-                                                                                        th:text="${#numbers.formatDecimal(pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
-                </small>
+                <div class="product-price-section mb-3" th:with="pInfo=${priceInfo}">
+                    <div th:if="${pInfo != null and pInfo.discountedPrice != null and pInfo.originalPrice != null}">
+                        <small class="original-price"
+                               th:text="${#numbers.formatDecimal(pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currentGlobalCurrency}">
+                        </small>
+                    </div>
 
-                    <span class="price" id="productPrice">
-                        <span th:if="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}"
-                              th:text="${#numbers.formatDecimal(pInfo.discountedPrice ?: pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')}">
-                            Cena
+                    <div class="d-flex align-items-baseline">
+                        <span class="price h2" id="productPrice"> <span th:if="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}"
+                                                                        th:text="${#numbers.formatDecimal(pInfo.discountedPrice ?: pInfo.originalPrice, 1, 'WHITESPACE', 2, 'COMMA')}">
+                                Cena
+                            </span>
+                            <span th:unless="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}">
+                                Cena nezadána
+                            </span>
                         </span>
-                        <span th:unless="${pInfo != null and (pInfo.discountedPrice != null or pInfo.originalPrice != null)}">
-                            Cena nezadána
+                        <span class="ms-1" th:text="' ' + ${currentGlobalCurrency == 'EUR' ? '€' : 'Kč'}"></span>
+                        <span th:if="${pInfo != null and pInfo.discountApplied != null}"
+                              class="badge bg-danger discount-badge ms-2"
+                              th:title="${pInfo.discountApplied.name}">
+                            SLEVA
                         </span>
-                    </span>
-                    <span th:text="' ' + ${currentGlobalCurrency == 'EUR' ? '€' : 'Kč' + ' bez DPH'}"></span>
+                    </div>
 
-                    <span th:if="${pInfo != null and pInfo.discountApplied != null}"
-                          class="badge bg-danger discount-badge ms-2"
-                          th:title="${pInfo.discountApplied.name}">
-                        SLEVA
-                    </span>
-
+                    <p class="price-note mb-0">Cena bez DPH.</p>
                 </div>
-
                 <div class="product-short-description" th:if="${product.shortDescription}" th:text="${product.shortDescription}">
                     Krátký popis produktu zde...
                 </div>
-
-                <div class="key-info-banner">
-                    <p><i class="bi bi-tools"></i> Montáž ZDARMA po celé ČR.</p>
-                    <p><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</p>
-                </div>
-
                 <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form">
                     <input type="hidden" name="productId" th:value="${product.id}" />
                     <input type="hidden" name="isCustom" value="false" />
@@ -236,41 +241,43 @@
                     </button>
                 </form>
             </div>
-        </div><div class="row">
-        <div class="col-12 product-long-description">
-            <hr class="my-4">
-            <h3>Podrobný popis produktu</h3>
-            <div th:utext="${product.description}">
-                Zde bude hlavní popis produktu z backendu...
-            </div>
+        </div>
 
-            <div class="variation-gallery mt-4">
-                <div th:if="${!product.availableDesigns.isEmpty()}" class="mb-4">
-                    <h4>Možné designy</h4>
-                    <img th:each="design : ${product.availableDesigns}"
-                         th:src="@{${design.imageUrl} ?: '/images/placeholder.png'}"
-                         th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
+        <div class="row">
+            <div class="col-12 product-long-description">
+                <hr class="my-4">
+                <h3>Podrobný popis produktu</h3>
+                <div th:utext="${product.description}">
+                    Zde bude hlavní popis produktu z backendu...
                 </div>
-                <div th:if="${!product.availableGlazes.isEmpty()}" class="mb-4">
-                    <h4>Dostupné lazury</h4>
-                    <img th:each="glaze : ${product.availableGlazes}"
-                         th:src="@{${glaze.imageUrl} ?: '/images/placeholder.png'}"
-                         th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
-                </div>
-                <div th:if="${!product.availableRoofColors.isEmpty()}" class="mb-4">
-                    <h4>Barvy střešní krytiny</h4>
-                    <img th:each="roofColor : ${product.availableRoofColors}"
-                         th:src="@{${roofColor.imageUrl} ?: '/images/placeholder.png'}"
-                         th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
+
+                <div class="variation-gallery mt-4">
+                    <div th:if="${!product.availableDesigns.isEmpty()}" class="mb-4">
+                        <h4>Možné designy</h4>
+                        <img th:each="design : ${product.availableDesigns}"
+                             th:src="@{${design.imageUrl} ?: '/images/placeholder.png'}"
+                             th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
+                    </div>
+                    <div th:if="${!product.availableGlazes.isEmpty()}" class="mb-4">
+                        <h4>Dostupné lazury</h4>
+                        <img th:each="glaze : ${product.availableGlazes}"
+                             th:src="@{${glaze.imageUrl} ?: '/images/placeholder.png'}"
+                             th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
+                    </div>
+                    <div th:if="${!product.availableRoofColors.isEmpty()}" class="mb-4">
+                        <h4>Dostupné barvy střech</h4>
+                        <img th:each="roofColor : ${product.availableRoofColors}"
+                             th:src="@{${roofColor.imageUrl} ?: '/images/placeholder.png'}"
+                             th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
         <div class="row">
             <div class="col-12">
                 <section class="advantages-section">
-                    <h3>Proč dřevník od Koláře?</h3>
+                    <h3>Proč dřevník od nás?</h3>
                     <div class="row justify-content-center">
                         <div class="col-md-8">
                             <ul>
@@ -287,20 +294,24 @@
         </div>
 
         <script type="application/ld+json" th:inline="javascript">
+            /*<![CDATA[*/
             {
                 "@context": "https://schema.org/",
                 "@type": "Product",
                 "name": /*[[${product.name}]]*/ "Název Dřevníku",
                 "description": /*[[${product.shortDescription ?: #strings.abbreviate(product.description, 250)}]]*/ "Popis dřevníku...",
                 "image": [
-                    th:each="img : ${product.getImagesOrdered()}" th:text="${#request.scheme + '://' + #request.serverName + #request.contextPath + img.url} + ${!imgStat.last ? ',' : ''}"
+                    /*[# th:each="img, iterStat : ${product.getImagesOrdered()}"]*/
+                    /*[[${#request.scheme + '://' + #request.serverName + #request.contextPath + img.url}]]*/
+                    /*[# th:if="${!iterStat.last}"]*/, /*[/]*/
+                    /*[/]*/
                 ],
                 "sku": /*[[${product.slug}]]*/ "SKU123",
                 "brand": { "@type": "Brand", "name": "Dřevníky Kolář" },
                 "offers": {
                     "@type": "Offer",
                     "url": /*[[${#request.requestURL}]]*/ "URL produktu",
-                    "price": /*[[${currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK}]]*/ "15000.00",
+                    "price": /*[[${(priceInfo != null ? (priceInfo.discountedPrice ?: priceInfo.originalPrice) : (currentGlobalCurrency == 'EUR' ? product.basePriceEUR : product.basePriceCZK)) ?: '0.00'}]]*/ "15000.00",
                     "priceCurrency": /*[[${currentGlobalCurrency}]]*/ "CZK",
                     "availability": "https://schema.org/InStock",
                     "priceValidUntil": /*[[${#dates.format(#dates.createNow().plusDays(90), 'yyyy-MM-dd')}]]*/ "2025-12-31",
@@ -312,13 +323,15 @@
                     {"@type": "PropertyValue", "name": "Dodání do", "value": "5 týdnů"}
                 ]
             }
+            /*]]>*/
         </script>
 
-    </div> </section>
+    </div>
+</section>
 
 <th:block layout:fragment="javascript">
     <script>
-        // Funkce pro změnu hlavního obrázku po kliknutí na náhled
+        // Funkce pro změnu hlavního obrázku (beze změny)
         function changeMainImage(newImageUrl, thumbnailElement) {
             const mainImg = document.getElementById('mainProductImage');
             if (mainImg) mainImg.src = newImageUrl;
@@ -326,42 +339,19 @@
             if (thumbnailElement) thumbnailElement.classList.add('active');
         }
 
-        // Funkce pro aktualizaci zobrazené ceny na základě vybraných variant
-        function updateDisplayedPrice() {
-            const priceElement = document.getElementById('productPrice');
-            if (!priceElement) return; // Ochrana, pokud element neexistuje
+        // Funkce pro update ceny (nyní už není potřeba, cena se nemění dynamicky)
+        // function updateDisplayedPrice() { ... }
 
-            const basePriceCZK = parseFloat(priceElement.getAttribute('data-base-price-czk')) || 0;
-            const basePriceEUR = parseFloat(priceElement.getAttribute('data-base-price-eur')) || 0;
-            const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK';
-            let totalSurchargeCZK = 0;
-            let totalSurchargeEUR = 0;
+        // Odstranění listenerů pro update ceny
+        // document.querySelectorAll('#add-to-cart-form select').forEach(select => {
+        //    select.removeEventListener('change', updateDisplayedPrice);
+        // });
 
-            document.querySelectorAll('#add-to-cart-form select').forEach(select => {
-                const selectedOption = select.options[select.selectedIndex];
-                if (selectedOption && selectedOption.value) {
-                    totalSurchargeCZK += parseFloat(selectedOption.getAttribute('data-surcharge-czk')) || 0;
-                    totalSurchargeEUR += parseFloat(selectedOption.getAttribute('data-surcharge-eur')) || 0;
-                }
-            });
-
-            const finalPrice = currency === 'EUR' ? (basePriceEUR + totalSurchargeEUR) : (basePriceCZK + totalSurchargeCZK);
-            priceElement.textContent = finalPrice.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        // Přidat posluchače událostí na selecty pro aktualizaci ceny
-        document.querySelectorAll('#add-to-cart-form select').forEach(select => {
-            select.addEventListener('change', updateDisplayedPrice);
-        });
-
-        // Inicializace tooltipů
+        // Inicializace tooltipů (zůstává)
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-
-        // Volitelné: Zavolat updateDisplayedPrice() i při načtení stránky, pokud by mohly být předvybrané hodnoty
-        // document.addEventListener('DOMContentLoaded', updateDisplayedPrice);
 
     </script>
 </th:block>

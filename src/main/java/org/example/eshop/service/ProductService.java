@@ -841,56 +841,48 @@ public class ProductService implements PriceConstants {
     }
 
 
+    // src/main/java/org/example/eshop/service/ProductService.java
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
-            @CacheEvict(value = "productDetails", allEntries = true),
+            @CacheEvict(value = "productDetails", allEntries = true), // Jednodušší invalidovat vše zde
             @CacheEvict(value = "productBySlug", allEntries = true)
     })
-    @Transactional
+    @Transactional // Důležité pro správu transakcí
     public void deleteImage(Long imageId) {
         logger.warn(">>> [ProductService] Attempting to DELETE image ID: {}", imageId);
         try {
+            // 1. Najít obrázek NEBO vyhodit výjimku
             Image image = imageRepository.findById(imageId)
                     .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
 
-            String fileUrl = image.getUrl();
-            Long productId = image.getProduct() != null ? image.getProduct().getId() : null;
+            String fileUrl = image.getUrl(); // Získat URL PŘED smazáním entity
+            Long productId = image.getProduct() != null ? image.getProduct().getId() : null; // Získat ID produktu pro logování
 
-            // Explicitní odstranění z kolekce produktu PŘED smazáním obrázku
-            if (image.getProduct() != null) {
-                // Načteme produkt znovu, abychom měli jistotu, že pracujeme s aktuální session
-                Product product = productRepository.findByIdWithDetails(image.getProduct().getId())
-                        .orElse(null); // Nebo orElseThrow, pokud produkt musí existovat
-                if (product != null) {
-                    boolean removed = product.getImages().remove(image);
-                    if (removed) {
-                        logger.debug("Image ID {} removed from product ID {} collection in memory.", imageId, productId);
-                        // productRepository.save(product); // Volitelně uložit produkt pro aktualizaci cache
-                    } else {
-                        logger.warn("Image ID {} was not found in product ID {} collection during removal.", imageId, productId);
-                    }
-                } else {
-                    logger.warn("Associated product ID {} not found when trying to remove image ID {} from collection.", productId, imageId);
-                }
-            }
+            logger.debug("Image found: ID={}, URL={}, ProductID={}", imageId, fileUrl, productId);
 
-            // Smazání entity Image
+            // 2. Smazat entitu Image z databáze
+            // Explicitní odstranění z kolekce produktu PŘED smazáním entity může pomoci s Hibernate session,
+            // i když Cascade a orphanRemoval by to měly řešit. Zkusme to bez explicitního remove z kolekce nejprve.
             imageRepository.delete(image);
+            imageRepository.flush(); // Zajistí provedení delete SQL ihned v rámci transakce
+
             logger.info("[ProductService] Image entity ID {} deleted from database (associated with product ID {}).", imageId, productId);
 
-            // Smazání fyzického souboru
+            // 3. Smazat fyzický soubor
             if (StringUtils.hasText(fileUrl)) {
-                fileStorageService.deleteFile(fileUrl);
-                logger.info("[ProductService] Physical file deleted for image ID {}: {}", imageId, fileUrl);
+                logger.debug("Attempting to delete physical file via FileStorageService: {}", fileUrl);
+                fileStorageService.deleteFile(fileUrl); // Tato metoda už loguje úspěch/chybu
             } else {
-                logger.warn("Cannot delete physical file for image ID {}: URL is missing.", imageId);
+                logger.warn("Cannot delete physical file for image ID {}: URL is missing or blank in the database.", imageId);
             }
 
         } catch (EntityNotFoundException e) {
             logger.error("!!! [ProductService] Image ID {} not found for deletion.", imageId);
-            throw e;
+            // Zde můžeme zvážit, zda výjimku propagovat dál, nebo jen zalogovat
+            throw e; // Propagujeme, aby Controller mohl reagovat
         } catch (Exception e) {
             logger.error("!!! [ProductService] Error deleting image ID {}: {} !!!", imageId, e.getMessage(), e);
+            // Zabalíme do RuntimeException, aby se transakce rollbackovala
             throw new RuntimeException("Failed to delete image " + imageId, e);
         }
         logger.info(">>> [ProductService] Image deletion process finished for ID: {}", imageId);

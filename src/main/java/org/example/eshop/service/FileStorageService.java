@@ -116,34 +116,44 @@ public class FileStorageService {
         return relativeUrl;
     }
 
-    // Metoda deleteFile zůstává stejná...
+    // src/main/java/org/example/eshop/service/FileStorageService.java
     public void deleteFile(String fileUrl) {
         if (fileUrl == null || fileUrl.isBlank() || !fileUrl.startsWith(baseUrlPath)) {
-            log.warn("Invalid file URL provided for deletion: {}", fileUrl);
+            log.warn("Invalid or non-managed file URL provided for deletion: {}", fileUrl);
             return;
         }
         try {
             // Odstranění baseUrlPath a převedení na systémovou cestu
             String relativePath = fileUrl.substring(baseUrlPath.length());
-            Path filePath = Paths.get(uploadDir).resolve(relativePath.startsWith("/") ? relativePath.substring(1) : relativePath).normalize();
+            // Zajistíme, že relativePath nezačíná lomítkem, pokud baseUrlPath ano
+            if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+                relativePath = relativePath.substring(1);
+            }
+            Path filePath = Paths.get(uploadDir).resolve(relativePath).normalize(); // Sestavení absolutní cesty
+
+            log.debug("Attempting to delete file at path: {}", filePath);
 
             // Bezpečnostní kontrola, abychom nemazali mimo uploadDir
-            if (!filePath.startsWith(Paths.get(uploadDir).normalize())) {
-                log.error("Attempted to delete file outside the upload directory: {}", filePath);
-                return;
+            Path normalizedUploadDir = Paths.get(uploadDir).normalize();
+            if (!filePath.startsWith(normalizedUploadDir)) {
+                log.error("Path traversal attempt detected! Tried to delete file outside upload directory: {}", filePath);
+                return; // Nevyhazujeme výjimku, jen logujeme a končíme
             }
 
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
+            boolean deleted = Files.deleteIfExists(filePath); // Použijeme deleteIfExists
+
+            if (deleted) {
                 log.info("Successfully deleted file: {}", filePath);
             } else {
-                log.warn("File not found for deletion: {}", filePath);
+                log.warn("File not found for deletion or already deleted: {}", filePath);
             }
         } catch (IOException e) {
-            log.error("Could not delete file URL {}: {}", fileUrl, e.getMessage());
-            // Neodhazujeme zde výjimku, logování stačí
+            log.error("Could not delete file corresponding to URL {}: {}", fileUrl, e.getMessage());
+            // Nevyhazujeme výjimku, chyba při mazání souboru by neměla shodit aplikaci
         } catch (InvalidPathException e) {
             log.error("Invalid path derived from file URL for deletion: {}", fileUrl, e);
+        } catch(Exception e){ // Catch any other unexpected exceptions
+            log.error("Unexpected error during file deletion for URL {}: {}", fileUrl, e.getMessage(), e);
         }
     }
 }
