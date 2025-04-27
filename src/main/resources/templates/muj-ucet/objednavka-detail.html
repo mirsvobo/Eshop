@@ -134,7 +134,14 @@
                                      <span th:case="*" class="bg-light text-dark" th:text="${order.paymentStatus}">?</span>
                                  </span>
                             </p>
-                            <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}"></span></p>
+                            <p>
+                                <strong>Způsob platby:</strong>
+                                <span th:switch="${order.paymentMethod?.toUpperCase()}">
+        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block>
+    </span>
+                            </p>
 
                             <p th:if="${order.orderItems != null and !order.orderItems.isEmpty() and order.orderItems[0].isReverseCharge()}">
                                 <strong>Režim DPH:</strong> <span class="badge bg-danger">Přenesená daňová povinnost</span>

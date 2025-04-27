@@ -116,7 +116,14 @@
                 </p>
                 <p><strong>Zaplacená záloha:</strong> <span th:text="${order.depositPaidDate != null ? #temporals.format(order.depositPaidDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
                 <p><strong>Zaplaceno celkem:</strong> <span th:text="${order.paymentDate != null ? #temporals.format(order.paymentDate, 'dd.MM.yyyy') : 'Ne'}"></span></p>
-                <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}"></span></p>
+                <p>
+                    <strong>Způsob platby:</strong>
+                    <span th:switch="${order.paymentMethod?.toUpperCase()}">
+        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block>
+    </span>
+                </p>
 
                 <p><strong>Režim DPH:</strong>
                     <span th:if="${order.orderItems != null and !order.orderItems.isEmpty() and order.orderItems[0].isReverseCharge()}" class="badge bg-danger">Přenesená daň. pov.</span>

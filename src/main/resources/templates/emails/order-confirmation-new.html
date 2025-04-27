@@ -104,7 +104,13 @@
     </table>
 
     <h2>Platební a doručovací údaje</h2>
-    <p><strong>Způsob platby:</strong> <span th:text="${order.paymentMethod}">[Metoda]</span></p>
+    <p>
+        <strong>Způsob platby:</strong>
+        <span th:switch="${order.paymentMethod?.toUpperCase()}">
+        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block> </span>
+    </p>
 
     <div th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
         <p style="color: #dc3545; font-weight: bold;">

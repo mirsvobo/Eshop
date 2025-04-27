@@ -109,6 +109,14 @@
             <td class="value" th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
     </table>
+    <h2>Platební údaje</h2>
+    <p>
+        <strong>Způsob platby:</strong>
+        <span th:switch="${order.paymentMethod?.toUpperCase()}">
+        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block> </span>
+    </p>
 
     <div th:if="${order.note != null and not #strings.isEmpty(order.note)}">
         <h2>Poznámka zákazníka</h2>

@@ -33,24 +33,30 @@
         Nový stav objednávky je: <strong class="status-highlight" th:text="${newState.name}">[Nový stav]</strong>.
     </p>
 
-    <div th:switch="${newState.code}">
-        <p th:case="'AWAITING_DEPOSIT'">
-            Vyčkejte prosím na zaslání zálohové faktury s platebními údaji.
+    <div th:switch="${newState.code?.toUpperCase()}">
+        <p th:case="'NEW'">
+            Vaši objednávku jsme přijali a brzy ji začneme zpracovávat.
         </p>
-        <p th:case="'AWAITING_PAYMENT'">
-            Platební údaje naleznete v samostatném emailu nebo po přihlášení do Vašeho účtu.
+        <p th:case="'AWAITING_DEPOSIT'">
+            Čekáme na úhradu zálohy. Platební údaje naleznete v samostatném emailu se zálohovou fakturou.
         </p>
         <p th:case="'PROCESSING'">
-            Vaši objednávku nyní zpracováváme a připravujeme.
+            Vaši objednávku nyní zpracováváme a kontrolujeme všechny detaily před výrobou.
         </p>
         <p th:case="'IN_PRODUCTION'">
-            Váš produkt je nyní ve výrobě. Budeme Vás informovat o dalším postupu.
+            Váš dřevník je nyní ve výrobě. Budeme Vás informovat o dalším postupu.
         </p>
-        <p th:case="'SHIPPED'">
-            Vaši objednávku jsme předali dopravci. Bližší informace o doručení obdržíte od přepravní společnosti.
+        <p th:case="'AT_ZINC_PLATING'">
+            Konstrukce Vašeho dřevníku je aktuálně v zinkovně pro zajištění maximální odolnosti.
         </p>
-        <p th:case="'READY_TO_SHIP'">
-            Vaše objednávka je připravena k expedici/montáži. V nejbližší době Vás budeme kontaktovat ohledně termínu.
+        <p th:case="'READY_TO_SHIP'"> Vaše objednávka je vyrobena a připravena k montáži. V nejbližší době Vás budeme kontaktovat ohledně termínu instalace.
+        </p>
+        <p th:case="'DELIVERED'"> Vaše objednávka byla úspěšně dokončena a předána. Děkujeme za Váš nákup!
+        </p>
+        <p th:case="'CANCELLED'"> Vaše objednávka byla zrušena. Pokud máte dotazy, kontaktujte nás.
+        </p>
+        <p th:case="*">
+            O dalším průběhu Vás budeme brzy informovat.
         </p>
     </div>
 
