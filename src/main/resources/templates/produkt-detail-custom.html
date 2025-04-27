@@ -286,11 +286,20 @@
             csrfToken: /*[[${_csrf?.token}]]*/ null,
             csrfHeaderName: /*[[${_csrf?.headerName}]]*/ null,
             productId: /*[[${product.id}]]*/ null,
-            configuratorData: /*[[${product.configurator}]]*/ null // Předání dat konfigurátoru
-        };
+            // Použijeme DTO místo plné entity konfigurátoru - odstraněn fallback 'null'
+            configuratorData: /*[[${configuratorDto}]]*/
+        }; // <-- Konec objektu initData
         // Inicializace konfigurátoru po načtení DOM
         document.addEventListener('DOMContentLoaded', function() {
-            initializeConfigurator(initData);
+            // Ošetření, pokud by configuratorData bylo přesto null nebo undefined
+            if (typeof initializeConfigurator === 'function' && initData.configuratorData) {
+                initializeConfigurator(initData);
+            } else if (!initData.configuratorData) {
+                console.error("Chyba: Data konfigurátoru (initData.configuratorData) nejsou dostupná pro inicializaci.");
+                // Zde můžete zobrazit chybovou hlášku uživateli nebo provést jinou akci
+            } else {
+                console.error("Chyba: Funkce initializeConfigurator není definována.");
+            }
         });
 
         // Inicializace tooltipů (pro ikonu informací o DPH)
