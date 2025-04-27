@@ -143,7 +143,6 @@ public class ConversationService {
                 // Použijeme Locale z kontextu nebo default
                 emailService.sendOrderExternalNoteEmail(
                         customerEmail,
-                        customer.getFirstName(),
                         order.getOrderCode(),
                         message.getContent(), // Předáme obsah nové zprávy
                         Locale.forLanguageTag("cs-CZ") // Nebo jiný způsob získání locale

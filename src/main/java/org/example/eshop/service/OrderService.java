@@ -369,6 +369,19 @@ public class OrderService implements PriceConstants {
                 log.error("Non-critical error sending confirmation email for order {}: {}. Order creation continues.",
                         savedOrder.getOrderCode(), e.getMessage(), e);
             }
+            try {
+                // Zde zadej email admina, ideálně z konfigurace
+                String adminEmail = "info@drevniky-kolar.cz"; // <-- NAHRAĎ SKUTEČNÝM EMAILEM ADMINA (nebo načti z properties)
+                if (StringUtils.hasText(adminEmail)) {
+                    log.debug("Attempting to send new order notification to admin {} for order {}", adminEmail, savedOrder.getOrderCode());
+                    emailService.sendNewOrderAdminNotification(savedOrder, adminEmail);
+                } else {
+                    log.warn("Admin notification email not configured. Skipping notification for order {}.", savedOrder.getOrderCode());
+                }
+            } catch (Exception e) {
+                log.error("Non-critical error sending admin notification email for order {}: {}. Order creation continues.",
+                        savedOrder.getOrderCode(), e.getMessage(), e);
+            }
             // 11. Generating Proforma Invoice (if needed)
             if (PAYMENT_STATUS_AWAITING_DEPOSIT.equals(savedOrder.getPaymentStatus()) && savedOrder.getDepositAmount() != null && savedOrder.getDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
                 log.debug("[Order Creation - Step 11] Triggering proforma invoice generation for order {}. Currency: {}", savedOrder.getOrderCode(), savedOrder.getCurrency());

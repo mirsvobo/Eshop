@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informace k objednávce</title>
+    <title>Aktualizace stavu objednávky</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
         .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 25px; border: 1px solid #dddddd; border-radius: 5px; }
         .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eeeeee; }
         .header img { max-width: 180px; height: auto; }
         h1 { color: #6A8D3E; font-size: 22px; margin-bottom: 15px; }
-        .note-box { background-color: #f9f9f9; border-left: 4px solid #6A8D3E; padding: 15px; margin-top: 15px; margin-bottom: 20px; font-style: italic; }
+        .status-highlight { font-weight: bold; color: #6A8D3E; /* Or adjust based on status */ }
         .footer { margin-top: 25px; text-align: center; font-size: 12px; color: #888888; }
         .footer a { color: #6A8D3E; text-decoration: none; }
         .button { display: inline-block; background-color: #6A8D3E; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; }
@@ -23,23 +23,43 @@
         <img th:src="${shopUrl + '/images/logo.webp'}" th:alt="${shopName}" alt="Logo obchodu"/>
     </div>
 
-    <h1>Informace k Vaší objednávce č. <span th:text="${orderCode}">[Kód]</span></h1>
+    <h1>Aktualizace stavu objednávky č. <span th:text="${order.orderCode}">[Kód]</span></h1>
 
     <p>Vážený zákazníku,</p>
     <p>
-        posíláme Vám novou zprávu týkající se Vaší objednávky č. <strong th:text="${orderCode}">[Kód]</strong>
-        v našem obchodě <strong th:text="${shopName}">Dřevníky Kolář</strong>.
+        rádi bychom Vás informovali, že stav Vaší objednávky č. <strong th:text="${order.orderCode}">[Kód]</strong> byl aktualizován.
+    </p>
+    <p>
+        Nový stav objednávky je: <strong class="status-highlight" th:text="${newState.name}">[Nový stav]</strong>.
     </p>
 
-    <div class="note-box">
-        <p style="white-space: pre-wrap; margin: 0;" th:text="${externalNote}">[Text zprávy od obchodu]</p>
+    <div th:switch="${newState.code}">
+        <p th:case="'AWAITING_DEPOSIT'">
+            Vyčkejte prosím na zaslání zálohové faktury s platebními údaji.
+        </p>
+        <p th:case="'AWAITING_PAYMENT'">
+            Platební údaje naleznete v samostatném emailu nebo po přihlášení do Vašeho účtu.
+        </p>
+        <p th:case="'PROCESSING'">
+            Vaši objednávku nyní zpracováváme a připravujeme.
+        </p>
+        <p th:case="'IN_PRODUCTION'">
+            Váš produkt je nyní ve výrobě. Budeme Vás informovat o dalším postupu.
+        </p>
+        <p th:case="'SHIPPED'">
+            Vaši objednávku jsme předali dopravci. Bližší informace o doručení obdržíte od přepravní společnosti.
+        </p>
+        <p th:case="'READY_TO_SHIP'">
+            Vaše objednávka je připravena k expedici/montáži. V nejbližší době Vás budeme kontaktovat ohledně termínu.
+        </p>
     </div>
 
     <p>
-        Celou historii komunikace a aktuální stav objednávky naleznete po přihlášení ve Vašem účtu:
-        <a th:href="${trackingUrl}" class="button">Detail objednávky</a>
+        Aktuální stav své objednávky můžete sledovat zde:
+        <a th:href="${trackingUrl}" class="button">Sledovat objednávku</a>
     </p>
-    <p>Pokud máte jakékoli dotazy, neváhejte nám odpovědět na tento email nebo nás kontaktovat jiným způsobem.</p>
+
+    <p>Pokud máte jakékoli dotazy, neváhejte nás kontaktovat.</p>
 
     <p>S pozdravem,<br/>Tým <span th:text="${shopName}">[Název obchodu]</span></p>
 
