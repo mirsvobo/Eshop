@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}"> <head>
+    <title>Zásady práce s osobními údaji | Dřevníky Kolář</title>
+    <meta name="description"
+          content="Informace o zpracování osobních údajů (GDPR) a používání cookies na webu Dřevníky Kolář."
+          layout:fragment="meta-description"/> <meta name="robots" content="noindex, follow"/>
+    <th:block layout:fragment="css">
+        <link rel="stylesheet" type="text/css" th:href="@{/css/custom.css}"/>
+        <style>
+            .cookies-table {
+                width: 100%;
+                margin-top: 1.5rem;
+                border-collapse: collapse;
+                font-size: 0.9em;
+            }
+            .cookies-table th, .cookies-table td {
+                border: 1px solid #dee2e6;
+                padding: 0.6rem 0.8rem;
+                text-align: left;
+                vertical-align: top;
+            }
+            .cookies-table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+            }
+            .cookies-table code {
+                background-color: #e9ecef;
+                padding: 0.2em 0.4em;
+                border-radius: 3px;
+                font-size: 0.9em;
+            }
+            .cookies-table .purpose-col {
+                min-width: 250px;
+            }
+            .cookies-table .duration-col {
+                white-space: nowrap;
+            }
+        </style>
+    </th:block>
+</head>
+<body>
+
+<section layout:fragment="content"> <main class="container py-5">
+
+    <section>
+        <h1>Zásady práce s Vašimi údaji</h1>
+
+        <p>Jsme společnost <strong>Martin Kolář</strong>, se sídlem <strong>Řečany nad Labem, Družstevní 304, PSČ 53313</strong>, IČO <strong>73589292</strong>, e-mail <strong>info@drevniky-kolar.cz</strong>, telefonní číslo <strong>+420 773 961 824</strong>, adresa provozovny <strong>Obránců míru 50, Labětín, 533 13 Řečany nad Labem</strong>.</p>
+
+        <p>Provozujeme e-shop na webových stránkách <strong>www.drevniky-kolar.cz</strong>.</p>
+
+        <p>Pro poskytování našich služeb, prodej zboží a provoz našich webových stránek zpracováváme některé osobní údaje.</p>
+
+        <p>Zpracování osobních údajů upravuje zejména Nařízení Evropského parlamentu a Rady (EU) 2016/679 ("GDPR").</p>
+    </section>
+
+    <section class="mt-5">
+        <h2>I. Zpracování osobních údajů</h2>
+
+        <h3>A. Zpracování v případě použití kontaktního formuláře</h3>
+        <p>Pokud poptáváte naše produkty a služby, budeme pracovat s vašimi kontaktními údaji: jméno, příjmení, adresa, platební a doručovací údaje, e-mailová adresa.</p>
+
+        <p><strong>Důvod:</strong> Kontaktujeme vás pro další domluvu ohledně zboží a služeb.</p>
+
+        <p><strong>Právní důvod:</strong> Čl. 6 odst. 1 písm. b) GDPR – jednání o smlouvě.</p>
+
+        <p><strong>Doba zpracování:</strong> Nejdéle 12 měsíců od poslední komunikace.</p>
+
+        <h3>B. Zpracování v případě nákupu</h3>
+        <p>Při nákupu zpracováváme vaše údaje: jméno, příjmení, adresa, e-mail apod.</p>
+
+        <p><strong>Důvod:</strong> Plnění smlouvy a zákonné povinnosti (účetnictví, daně, reklamace).</p>
+
+        <p><strong>Právní důvod:</strong> Čl. 6 odst. 1 písm. b) a c) GDPR.</p>
+
+        <p><strong>Doba zpracování:</strong> Po dobu plnění a 12 měsíců po dodání.</p>
+
+        <h3>C. Newslettery (obchodní sdělení)</h3>
+        <p>Pokud jste nakoupili a nezakázali to, použijeme váš e-mail k zasílání novinek.</p>
+
+        <p><strong>Právní důvod:</strong> § 7 odst. 3 zákona č. 480/2004 Sb.</p>
+
+        <p><strong>Doba zpracování:</strong> 5 let od posledního nákupu. Možnost odhlášení kdykoli.</p>
+    </section>
+
+    <section class="mt-5">
+        <h2>II. Kdo se k datům dostane?</h2>
+
+        <p>Vaše data zůstanou u nás. Některé společnosti nám pomáhají s chodem e-shopu:</p>
+        <ul>
+            <li>Poskytovatelé analytických nástrojů (např. Google LLC)</li>
+            <li>Poskytovatelé reklamních systémů (např. Google LLC, Seznam.cz, a.s., Heureka Group a.s.)</li>
+        </ul>
+        <p>Osobní údaje zpracováváme pouze v rámci EU.</p>
+    </section>
+
+    <section class="mt-5">
+        <h2>III. Co byste měli vědět</h2>
+
+        <p>Nemáme jmenovaného pověřence pro ochranu osobních údajů.</p>
+        <p>Nedochází u nás k automatizovanému rozhodování nebo profilování.</p>
+        <p>Pro dotazy nás kontaktujte na <a href="mailto:info@drevniky-kolar.cz">info@drevniky-kolar.cz</a> nebo na tel. +420 773 961 824.</p>
+    </section>
+
+    <section class="mt-5">
+        <h2>IV. Používání souborů cookies</h2>
+
+        <p>Cookies jsou textové soubory ukládané do vašeho zařízení. Pomáhají nám například zlepšovat navigaci a přizpůsobovat obsah.</p>
+
+        <h3>Na našem webu používáme:</h3>
+        <ul>
+            <li><strong>Nezbytné cookies:</strong> potřebné pro provoz stránek (např. session ID, obsah košíku).</li>
+            <li><strong>Analytické/statistické cookies:</strong> měří návštěvnost a chování na webu (pouze se souhlasem).</li>
+            <li><strong>Marketingové/Reklamní cookies:</strong> pro přizpůsobení reklamy a měření její účinnosti (pouze se souhlasem).</li>
+        </ul>
+
+        <p><strong>Cookies třetích stran:</strong> Pro analytické a marketingové účely využíváme nástroje třetích stran, které mohou ukládat vlastní cookies. Mezi hlavní patří:</p>
+        <ul>
+            <li>Google (Analytics, Ads, Tag Manager)</li>
+            <li>Seznam.cz (Sklik)</li>
+            <li>Heureka Group (Heureka)</li>
+        </ul>
+
+        <h3 class="mt-4">Konkrétní používané cookies</h3>
+        <div class="table-responsive">
+            <table class="cookies-table">
+                <thead>
+                <tr>
+                    <th>Název cookie(s)</th>
+                    <th>Poskytovatel</th>
+                    <th class="purpose-col">Účel</th>
+                    <th class="duration-col">Doba platnosti</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>JSESSIONID</code>, <code>session_id</code>, apod.</td>
+                    <td>Dřevníky Kolář (náš web)</td>
+                    <td>Zajištění základních funkcí webu, přihlášení, zabezpečení, obsah košíku.</td>
+                    <td>Session (do zavření prohlížeče)</td>
+                </tr>
+                <tr>
+                    <td><code>cookie_consent_status</code>, <code>cc_</code>*</td>
+                    <td>Nástroj pro správu souhlasu (CookieConsent)</td>
+                    <td>Uložení vašich preferencí ohledně souhlasu s cookies.</td>
+                    <td>~ 6 měsíců</td>
+                </tr>
+                <tr>
+                    <td><code>_ga</code>, <code>_gid</code>, <code>_gat_</code>*</td>
+                    <td>Google Analytics (Google LLC)</td>
+                    <td class="purpose-col">Shromažďování anonymních statistických údajů o návštěvnosti a chování uživatelů na webu pro účely analýzy a vylepšování webu.</td>
+                    <td class="duration-col"><code>_ga</code>: ~2 roky<br><code>_gid</code>: ~24 hodin<br><code>_gat</code>: ~1 minuta</td>
+                </tr>
+                <tr>
+                    <td><code>_gcl_au</code>, <code>IDE</code>, <code>test_cookie</code>, <code>NID</code>, <code>1P_JAR</code>, <code>ANID</code>, <code>CONSENT</code></td>
+                    <td>Google Ads / DoubleClick (Google LLC)</td>
+                    <td class="purpose-col">Sledování konverzí z reklam, zobrazování relevantních reklam na webových stránkách Google a partnerských webech, remarketing.</td>
+                    <td class="duration-col">Různé (od session po ~2 roky)</td>
+                </tr>
+                <tr>
+                    <td><code>_fbp</code>, <code>fr</code></td>
+                    <td>Facebook (Meta Platforms, Inc.)</td>
+                    <td class="purpose-col">Sledování konverzí, vytváření cílových publik pro reklamy, optimalizace reklamních kampaní na Facebooku. (Pokud používáte FB Pixel)</td>
+                    <td class="duration-col">~3 měsíce</td>
+                </tr>
+                <tr>
+                    <td><code>retargeting</code>, <code>sklikSid</code></td>
+                    <td>Sklik (Seznam.cz, a.s.)</td>
+                    <td class="purpose-col">Měření efektivity reklam, retargeting (zobrazování relevantních reklam uživatelům, kteří navštívili web).</td>
+                    <td class="duration-col">Různé (session, měsíce)</td>
+                </tr>
+                <tr>
+                    <td><code>huid</code>, <code>p</code>, <code>c</code>, <code>_hj</code>*</td>
+                    <td>Heureka (Heureka Group a.s.)</td>
+                    <td class="purpose-col">Měření konverzí programu "Ověřeno zákazníky", porovnávání cen, případně personalizace nabídek.</td>
+                    <td class="duration-col">Různé (od session po ~1 rok)</td>
+                </tr>
+                <tr>
+                    <td>(Nespecifikováno)</td>
+                    <td>Google Tag Manager (Google LLC)</td>
+                    <td class="purpose-col">Nástroj pro správu a nasazování měřicích kódů a marketingových tagů (např. Google Analytics, Google Ads). Samotný GTM obvykle nevytváří cookies, ale spravuje skripty, které je vytvářet mohou.</td>
+                    <td class="duration-col">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 class="mt-4">Více informací a nastavení cookies ve vašem prohlížeči:</h3>
+        <ul>
+            <li><a href="https://support.microsoft.com/cs-cz/help/17442/windows-internet-explorer-delete-manage-cookies" target="_blank" rel="noopener noreferrer">Internet Explorer</a></li>
+            <li><a href="https://support.google.com/chrome/answer/95647?hl=cs" target="_blank" rel="noopener noreferrer">Google Chrome</a></li>
+            <li><a href="https://support.mozilla.org/cs/kb/povoleni-zakazani-cookies" target="_blank" rel="noopener noreferrer">Mozilla Firefox</a></li>
+            <li><a href="https://support.apple.com/cs-cz/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer">Safari</a></li>
+            <li><a href="https://help.opera.com/cs/latest/security-and-privacy/" target="_blank" rel="noopener noreferrer">Opera</a></li>
+            <li><a href="https://support.microsoft.com/cs-cz/microsoft-edge" target="_blank" rel="noopener noreferrer">Microsoft Edge</a></li>
+        </ul>
+    </section>
+
+    <section class="mt-5">
+        <h2>V. Vaše práva</h2>
+
+        <p>Máte právo požadovat informace, opravu, výmaz, omezení zpracování, přenositelnost údajů a vznést námitku.</p>
+        <p>Pokud máte pochybnosti o správnosti zpracování, můžete podat stížnost na <a href="http://www.uoou.cz/" target="_blank" rel="noopener noreferrer">Úřadu pro ochranu osobních údajů</a> nebo se obrátit na soud.</p>
+        <p class="text-muted mt-4">Tyto podmínky jsou účinné od 01.01.2023</p>
+    </section>
+</main>
+</section> </body>
+</html>

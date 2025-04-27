@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}"> <head>
+  <title>Všeobecné obchodní podmínky | Dřevníky Kolář</title>
+  <meta name="description"
+        content="Přečtěte si všeobecné obchodní podmínky platné pro nákup na e-shopu Dřevníky Kolář."
+        layout:fragment="meta-description"/>
+  <meta name="robots" content="noindex, follow"/>
+  <th:block layout:fragment="css">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/custom.css}"/>
+    <style>
+      .vop-table {
+        width: 100%;
+        margin-top: 1rem;
+        border-collapse: collapse;
+        font-size: 0.9em;
+      }
+      .vop-table th, .vop-table td {
+        border: 1px solid #dee2e6;
+        padding: 0.6rem 0.8rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .vop-table td:first-child {
+        font-weight: 500;
+        width: 30%; /* Šířka prvního sloupce */
+      }
+    </style>
+  </th:block>
+</head>
+<body>
+
+<section layout:fragment="content"> <main class="container py-5">
+
+  <section>
+    <h1>Všeobecné obchodní podmínky</h1>
+
+    <p>Tyto všeobecné obchodní podmínky (“<strong>Podmínky</strong>”) společnosti <strong>Martin Kolář</strong>, se sídlem <strong>Řečany nad Labem, Družstevní 304, PSČ 53313</strong>, IČO <strong>73589292</strong>, e-mail <strong>info@drevniky-kolar.cz</strong>, telefonní číslo <strong>+420 773 961 824</strong>, adresa provozovny <strong>Obránců míru 50, Labětín, 533 13 Řečany nad Labem</strong> (“<strong>My</strong>” nebo “<strong>Prodávající</strong>”) upravují v souladu s ustanovením § 1751 odst. 1 zákona č. 89/2012 Sb., občanský zákoník, ve znění pozdějších předpisů (“<strong>Občanský zákoník</strong>”) vzájemná práva a povinnosti Vás, jakožto kupujících, a Nás, jakožto prodávajících, vzniklá v souvislosti nebo na základě kupní smlouvy (“<strong>Smlouva</strong>”) uzavřené prostřednictvím E-shopu na webových stránkách <strong>www.drevniky-kolar.cz</strong>.</p>
+
+    <p>Všechny informace o zpracování Vašich osobních údajů jsou obsaženy v&nbsp;<a th:href="@{/gdpr}"><strong>Zásadách zpracování osobních údajů</strong></a>.</p>
+
+    <p>Ustanovení těchto Podmínek jsou nedílnou součástí Smlouvy. Smlouva a Podmínky jsou vyhotoveny v českém jazyce. Znění Podmínek můžeme jednostranně měnit či doplňovat. Tímto ustanovením nejsou dotčena práva a povinnosti vzniklá po dobu účinnosti předchozího znění Podmínek.</p>
+
+    <p>Jak jistě víte, tak komunikujeme primárně na dálku. Proto i pro naši Smlouvu platí, že jsou použity prostředky komunikace na dálku, které umožňují, abychom se spolu dohodli bez současné fyzické přítomnosti Nás a Vás, a Smlouva je tak uzavřena distančním způsobem v prostředí E-shopu, a to prostřednictvím rozhraní webové stránky (“<strong>webové rozhraní E-shopu</strong>”).</p>
+
+    <p>Pokud některá část Podmínek odporuje tomu, co jsme si společně schválili v rámci procesu Vašeho nákupu na Našem E-shopu, bude mít tato konkrétní dohoda před Podmínkami přednost.</p>
+  </section>
+
+  <section class="mt-5">
+    <h2>1. Některé definice</h2>
+    <ol>
+      <li><strong>Cena</strong> je finanční částka, kterou budete hradit za Zboží;</li>
+      <li><strong>Cena za dopravu</strong> je finanční částka, kterou budete hradit za doručení Zboží, a to včetně ceny za jeho zabalení;</li>
+      <li><strong>Celková cena</strong> je součet Ceny a Ceny za dopravu;</li>
+      <li><strong>DPH</strong> je daň z přidané hodnoty dle platných právních předpisů;</li>
+      <li><strong>Faktura</strong> je daňový doklad vystavený v souladu se zákonem o dani z přidané hodnoty na Celkovou cenu;</li>
+      <li><strong>Objednávka</strong> je Váš závazný návrh na uzavření Smlouvy o koupi Zboží s Námi;</li>
+      <li><strong>Uživatelský účet</strong> je účet zřízený na základě Vámi sdělených údajů, jež umožňuje uchování zadaných údajů a uchovávání historie objednaného Zboží a uzavřených Smluv;</li>
+      <li><strong>Vy</strong> jste osoba nakupující na Našem E-shopu, právními předpisy označovaná jako kupující;</li>
+      <li><strong>Zboží</strong> je vše, co můžete nakoupit na E-shopu.</li>
+    </ol>
+  </section>
+  <section class="mt-5">
+    <h2>2. Obecná ustanovení a poučení</h2>
+    <ul>
+      <li>Koupě Zboží je možná jen přes webové rozhraní E-shopu.</li>
+      <li>Vaše povinnost je poskytnout nám všechny informace správně a pravdivě. Informace uvedené v Objednávce budeme považovat za správné a pravdivé.</li>
+      <li>Na našem E-shopu také poskytujeme přístup k hodnocení Zboží provedenému jinými spotřebiteli. Autenticitu takových recenzí zajišťujeme propojením hodnocení s konkrétními objednávkami.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>3. Uživatelský účet</h2>
+    <ul>
+      <li>Na základě Vaší registrace v rámci E-shopu můžete přistupovat do svého Uživatelského účtu.</li>
+      <li>Je Vaší povinností uvádět správné a pravdivé údaje a tyto údaje aktualizovat.</li>
+      <li>Přístup k Uživatelskému účtu je zabezpečen uživatelským jménem a heslem. Vaší povinností je tyto údaje chránit.</li>
+      <li>Uživatelský účet je osobní, nesmíte jej poskytnout třetím osobám.</li>
+      <li>Uživatelský účet můžeme zrušit při jeho nevyužívání více než 30 dní nebo při porušení smluvních povinností.</li>
+      <li>Uživatelský účet nemusí být dostupný nepřetržitě.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>4. Cenové a platební podmínky, výhrada vlastnického práva</h2>
+    <ul>
+      <li>Cena je vždy uvedena na E-shopu, v návrhu Objednávky a ve Smlouvě. Rozhodující je Cena v návrhu Objednávky.</li>
+      <li>Celková cena je uvedena včetně DPH a všech zákonných poplatků.</li>
+      <li>Faktura bude přiložena ke Zboží a bude dostupná v Uživatelském účtu.</li>
+      <li>Vlastnické právo ke Zboží na Vás přechází až po úplném zaplacení Celkové ceny a převzetí Zboží.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>5. Doručení Zboží, přechod nebezpečí škody na věci</h2>
+    <ul>
+      <li>Zboží doručujeme způsobem zvoleným v objednávce, v rámci ČR a SR.</li>
+      <li>Doba doručení závisí na dostupnosti Zboží a zvoleném způsobu doručení.</li>
+      <li>Pokud Zboží nepřevezmete, máme právo na odstoupení od Smlouvy a účtování nákladů na uskladnění ve výši 10 000 Kč.</li>
+      <li>Riziko škody na Zboží přechází na Vás okamžikem, kdy jste měli možnost Zboží převzít, i když jste tak neučinili.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>6. Práva z vadného plnění</h2>
+    <p>Zaručujeme, že v době přechodu nebezpečí škody na Zboží je Zboží bez vad, zejména:</p>
+    <ul>
+      <li>Má vlastnosti sjednané, popsané nebo očekávané.</li>
+      <li>Je vhodné k účelu, který uvádíme nebo ke kterému se zboží obvykle používá.</li>
+      <li>Odpovídá jakostí nebo provedením sjednané ukázce nebo vzoru.</li>
+    </ul>
+
+    <p>Pokud Zboží má vadu, můžete ji reklamovat zasláním e-mailu nebo dopisu na Naše kontakty.</p>
+
+    <p>V případě, že jste podnikatel, je Vaší povinností vytknout vadu bez zbytečného odkladu, nejpozději do tří dnů od převzetí Zboží. Pokud jste spotřebitel, máte právo reklamovat vadu do 24 měsíců od převzetí.</p>
+  </section>
+
+  <section class="mt-5">
+    <h2>7. Odstoupení od Smlouvy</h2>
+    <ul>
+      <li>Spotřebitel má právo odstoupit od Smlouvy do 14 dnů od převzetí Zboží.</li>
+      <li>Nelze odstoupit v případech uvedených v § 1837 Občanského zákoníku.</li>
+      <li>V případě odstoupení nám musíte Zboží vrátit do 14 dnů od odstoupení.</li>
+      <li>Vrátíme Vám Cenu včetně nákladů na dopravu (nejlevnější dostupnou variantu) do 14 dnů, ovšem až po obdržení Zboží nebo prokázání jeho odeslání.</li>
+      <li>Odpovídáte za snížení hodnoty Zboží v důsledku zacházení jinak, než je nutné pro seznámení se s jeho povahou a vlastnostmi.</li>
+    </ul>
+
+    <p>My jsme oprávněni odstoupit od Smlouvy např. v případě nemožnosti dodání Zboží nebo při poskytnutí nesprávných údajů.</p>
+  </section>
+
+  <section class="mt-5">
+    <h2>8. Řešení sporů se spotřebiteli</h2>
+    <ul>
+      <li>Stížnosti spotřebitelů vyřizujeme přes e-mail <a href="mailto:info@drevniky-kolar.cz">info@drevniky-kolar.cz</a>.</li>
+      <li>K mimosoudnímu řešení sporů je příslušná Česká obchodní inspekce.</li>
+      <li>Pro online řešení sporů lze využít platformu ODR: <a href="http://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">http://ec.europa.eu/consumers/odr</a>.</li>
+      <li>Kontaktní místo: Evropské spotřebitelské centrum, Štěpánská 796/44, Praha 1.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>9. Závěrečná ustanovení</h2>
+    <ul>
+      <li>Na Smlouvu se vztahuje české právo.</li>
+      <li>Smlouvu lze měnit pouze písemnou dohodou, Podmínky můžeme jednostranně změnit.</li>
+      <li>Při změně Podmínek Vás budeme informovat e-mailem nejméně 14 dní předem.</li>
+      <li>V případě vyšší moci nejsme odpovědní za nemožnost plnění.</li>
+      <li>Podmínky jsou účinné od 1. 1. 2023.</li>
+    </ul>
+  </section>
+
+  <section class="mt-5">
+    <h2>Příloha 1 – Formulář pro reklamaci</h2>
+    <table class="vop-table table table-bordered">
+      <tbody>
+      <tr><td>Datum uzavření Smlouvy:</td><td></td></tr>
+      <tr><td>Jméno a příjmení:</td><td></td></tr>
+      <tr><td>Adresa:</td><td></td></tr>
+      <tr><td>E-mailová adresa:</td><td></td></tr>
+      <tr><td>Zboží, které je reklamováno:</td><td></td></tr>
+      <tr><td>Popis vad Zboží:</td><td></td></tr>
+      <tr><td>Navrhovaný způsob pro vyřízení reklamace:</td><td></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="mt-5">
+    <h2>Příloha 2 – Formulář pro odstoupení od Smlouvy</h2>
+    <table class="vop-table table table-bordered">
+      <tbody>
+      <tr><td>Datum uzavření Smlouvy:</td><td></td></tr>
+      <tr><td>Jméno a příjmení:</td><td></td></tr>
+      <tr><td>Adresa:</td><td></td></tr>
+      <tr><td>E-mailová adresa:</td><td></td></tr>
+      <tr><td>Specifikace Zboží:</td><td></td></tr>
+      <tr><td>Způsob vrácení peněz:</td><td></td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</section> </body>
+</html>

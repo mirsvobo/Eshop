@@ -145,6 +145,17 @@ public class HomeController {
 
         return "index";
     }
+    @GetMapping("/gdpr")
+    public String showGdprPage() {
+        log.debug("Zobrazuji stránku GDPR.");
+        return "gdpr"; // Vrátí název šablony gdpr.html
+    }
+
+    @GetMapping("/obchodni-podminky")
+    public String showVopPage() {
+        log.debug("Zobrazuji stránku Všeobecné obchodní podmínky.");
+        return "obchodni-podminky"; // Vrátí název šablony obchodni-podminky.html
+    }
 
     // Přidej tuto pomocnou metodu do HomeController, pokud tam ještě není
     private String abbreviate(String text) {
