@@ -5,18 +5,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.admin.service.RoofColorService;
 import org.example.eshop.model.RoofColor;
+import org.example.eshop.repository.RoofColorRepository; // Přidáno
+import org.example.eshop.service.FileStorageService; // Přidáno
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired; // Přidáno
+import org.springframework.http.HttpStatus; // Přidáno
+import org.springframework.http.ResponseEntity; // Přidáno
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile; // Přidáno
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException; // Přidáno
 import java.util.Collections;
 import java.util.List;
+import java.util.Map; // Přidáno
 
 @Controller
 @RequestMapping("/admin/roof-colors")
@@ -28,16 +35,19 @@ public class AdminRoofColorController {
     @Autowired
     private RoofColorService roofColorService;
 
+    // --- Přidané závislosti ---
+    @Autowired
+    private FileStorageService fileStorageService;
+    @Autowired
+    private RoofColorRepository roofColorRepository; // Pro přímé uložení po změně URL
+    // --------------------------
+
+
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
-        // Získáme URI bez případných query parametrů
         String uri = request.getRequestURI();
         log.trace("Setting currentUri model attribute to: {}", uri);
         return uri;
-        // Nebo pokud potřebujeme identifikovat podsekce:
-        // if (uri.contains("/new")) return "/admin/roof-colors/new";
-        // if (uri.matches(".*/\\d+/edit")) return "/admin/roof-colors/edit"; // Obecnější pro editaci
-        // return "/admin/roof-colors"; // Výchozí pro seznam
     }
 
 
@@ -153,6 +163,60 @@ public class AdminRoofColorController {
             return "admin/roof-color-form";
         }
     }
+
+    // --- Nová metoda pro AJAX upload ---
+    @PostMapping("/{roofColorId}/upload-image")
+    @ResponseBody
+    public ResponseEntity<?> uploadRoofColorImage(@PathVariable Long roofColorId,
+                                                  @RequestParam("attributeImageFile") MultipartFile imageFile) {
+        log.info("Attempting to upload image for RoofColor ID: {}", roofColorId);
+        if (imageFile.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Vyberte prosím soubor k nahrání."));
+        }
+        if (roofColorId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chybí ID barvy střechy."));
+        }
+
+        try {
+            RoofColor roofColor = roofColorRepository.findById(roofColorId)
+                    .orElseThrow(() -> new EntityNotFoundException("Barva střechy s ID " + roofColorId + " nenalezena."));
+
+            if (roofColor.getImageUrl() != null && !roofColor.getImageUrl().isEmpty()) {
+                try {
+                    log.debug("Attempting to delete old image for RoofColor ID {}: {}", roofColorId, roofColor.getImageUrl());
+                    fileStorageService.deleteFile(roofColor.getImageUrl());
+                } catch (Exception e) {
+                    log.warn("Could not delete old image file {} for RoofColor ID {}: {}", roofColor.getImageUrl(), roofColorId, e.getMessage());
+                }
+            }
+
+            String fileUrl = fileStorageService.storeFile(imageFile, "roof-colors"); // Podadresář "roof-colors"
+            log.info("New image stored for RoofColor ID {}. URL: {}", roofColorId, fileUrl);
+
+            roofColor.setImageUrl(fileUrl);
+            roofColorRepository.save(roofColor);
+            log.info("Image URL updated in database for RoofColor ID {}", roofColorId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Obrázek úspěšně nahrán.",
+                    "imageUrl", fileUrl,
+                    "roofColorId", roofColorId // Vrátíme ID pro případnou JS kontrolu
+            ));
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot upload image. RoofColor not found: ID={}", roofColorId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IOException | IllegalArgumentException e) {
+            log.error("Failed to store image file for RoofColor ID {}: {}", roofColorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Nahrání obrázku selhalo: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error uploading image for RoofColor ID {}: {}", roofColorId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
+        }
+    }
+    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteRoofColor(@PathVariable Long id, RedirectAttributes redirectAttributes) {

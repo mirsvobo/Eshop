@@ -5,18 +5,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.admin.service.GlazeService;
 import org.example.eshop.model.Glaze;
+import org.example.eshop.repository.GlazeRepository; // Přidáno
+import org.example.eshop.service.FileStorageService; // Přidáno
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired; // Přidáno
+import org.springframework.http.HttpStatus; // Přidáno
+import org.springframework.http.ResponseEntity; // Přidáno
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile; // Přidáno
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException; // Přidáno
 import java.util.Collections;
 import java.util.List;
+import java.util.Map; // Přidáno
 
 @Controller
 @RequestMapping("/admin/glazes")
@@ -27,6 +34,13 @@ public class AdminGlazeController {
 
     @Autowired
     private GlazeService glazeService;
+
+    // --- Přidané závislosti ---
+    @Autowired
+    private FileStorageService fileStorageService;
+    @Autowired
+    private GlazeRepository glazeRepository; // Pro přímé uložení po změně URL
+    // --------------------------
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -145,6 +159,60 @@ public class AdminGlazeController {
             return "admin/glaze-form";
         }
     }
+
+    // --- Nová metoda pro AJAX upload ---
+    @PostMapping("/{glazeId}/upload-image")
+    @ResponseBody
+    public ResponseEntity<?> uploadGlazeImage(@PathVariable Long glazeId,
+                                              @RequestParam("attributeImageFile") MultipartFile imageFile) {
+        log.info("Attempting to upload image for Glaze ID: {}", glazeId);
+        if (imageFile.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Vyberte prosím soubor k nahrání."));
+        }
+        if (glazeId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chybí ID lazury."));
+        }
+
+        try {
+            Glaze glaze = glazeRepository.findById(glazeId)
+                    .orElseThrow(() -> new EntityNotFoundException("Lazura s ID " + glazeId + " nenalezena."));
+
+            if (glaze.getImageUrl() != null && !glaze.getImageUrl().isEmpty()) {
+                try {
+                    log.debug("Attempting to delete old image for Glaze ID {}: {}", glazeId, glaze.getImageUrl());
+                    fileStorageService.deleteFile(glaze.getImageUrl());
+                } catch (Exception e) {
+                    log.warn("Could not delete old image file {} for Glaze ID {}: {}", glaze.getImageUrl(), glazeId, e.getMessage());
+                }
+            }
+
+            String fileUrl = fileStorageService.storeFile(imageFile, "glazes"); // Podadresář "glazes"
+            log.info("New image stored for Glaze ID {}. URL: {}", glazeId, fileUrl);
+
+            glaze.setImageUrl(fileUrl);
+            glazeRepository.save(glaze);
+            log.info("Image URL updated in database for Glaze ID {}", glazeId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Obrázek úspěšně nahrán.",
+                    "imageUrl", fileUrl,
+                    "glazeId", glazeId // Vrátíme ID pro případnou JS kontrolu
+            ));
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot upload image. Glaze not found: ID={}", glazeId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IOException | IllegalArgumentException e) {
+            log.error("Failed to store image file for Glaze ID {}: {}", glazeId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Nahrání obrázku selhalo: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error uploading image for Glaze ID {}: {}", glazeId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
+        }
+    }
+    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteGlaze(@PathVariable Long id, RedirectAttributes redirectAttributes) {

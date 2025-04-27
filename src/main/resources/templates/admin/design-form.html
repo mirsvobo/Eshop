@@ -6,6 +6,22 @@
     <title th:text="${pageTitle ?: 'Správa Designu'}">Správa Designu</title>
     <style>
         .error, .invalid-feedback { color: var(--bs-danger); font-size: 0.875em; display: block; margin-top: 0.25rem; }
+        /* --- Přidané styly pro nahrávání obrázku --- */
+        #imagePreviewContainer img {
+            max-width: 150px;
+            max-height: 150px;
+            display: block;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        #uploadImageError, #uploadImageSuccess {
+            font-size: 0.875em;
+            margin-top: 0.5rem;
+        }
+        #uploadImageError { color: var(--bs-danger); }
+        #uploadImageSuccess { color: var(--bs-success); }
+        #uploadImageBtn .spinner-border { width: 1rem; height: 1rem; }
+        /* ------------------------------------------- */
     </style>
 </head>
 <body>
@@ -29,7 +45,7 @@
           th:action="${design.id == null} ? @{/admin/designs} : @{/admin/designs/{id}(id=${design.id})}"
           method="post" novalidate>
 
-        <input type="hidden" name="_method" th:if="${design.id != null}" value="POST"/>
+        <input type="hidden" th:field="*{id}"/>
 
         <div class="card">
             <div class="card-body">
@@ -59,9 +75,25 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="imageUrl" class="form-label">URL obrázku vzorku</label>
-                    <input type="url" class="form-control" th:errorclass="is-invalid" id="imageUrl" th:field="*{imageUrl}" placeholder="https://...">
-                    <div th:if="${#fields.hasErrors('imageUrl')}" class="invalid-feedback" th:errors="*{imageUrl}">Chyba URL</div>
+                    <label class="form-label">Obrázek vzorku</label>
+                    <div id="imagePreviewContainer" class="mb-2">
+                        <img th:if="${design.imageUrl}" th:src="@{${design.imageUrl}}"
+                             id="imagePreview" alt="Náhled obrázku"
+                             style="max-width: 150px; max-height: 150px; display: block; border: 1px solid #ddd; margin-bottom: 10px;">
+                        <span th:unless="${design.imageUrl}" id="noImageText" class="text-muted">Žádný obrázek nebyl nahrán.</span>
+                    </div>
+
+                    <input type="hidden" id="hiddenImageUrl" th:field="*{imageUrl}">
+
+                    <div class="input-group" th:if="${design.id != null}"> <input type="file" class="form-control" id="attributeImageFile" accept="image/png, image/jpeg, image/webp, image/gif">
+                        <button class="btn btn-outline-secondary" type="button" id="uploadImageBtn">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style="display: none;"></span>
+                            Nahrát nový
+                        </button>
+                    </div>
+                    <div th:if="${design.id == null}" class="form-text text-muted">Obrázek lze nahrát až po uložení designu.</div>
+                    <div id="uploadImageError" class="invalid-feedback d-block mt-1"></div>
+                    <div id="uploadImageSuccess" class="text-success small mt-1"></div>
                 </div>
                 <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" role="switch" id="active" th:field="*{active}">
@@ -76,6 +108,120 @@
         </div>
     </form>
 </section>
+
+<th:block layout:fragment="javascript">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Attribute Form JS - START");
+
+            const designId = /*[[${design.id}]]*/ null;
+            const uploadButton = document.getElementById('uploadImageBtn');
+            const fileInput = document.getElementById('attributeImageFile');
+            const imagePreview = document.getElementById('imagePreview');
+            const noImageText = document.getElementById('noImageText');
+            const hiddenImageUrlInput = document.getElementById('hiddenImageUrl');
+            const uploadErrorDiv = document.getElementById('uploadImageError');
+            const uploadSuccessDiv = document.getElementById('uploadImageSuccess');
+            const uploadSpinner = uploadButton ? uploadButton.querySelector('.spinner-border') : null;
+
+            // Získání CSRF tokenu (předpokládá, že je v meta tagu v admin-layout.html)
+            const csrfToken = document.querySelector("meta[name='_csrf']")?.getAttribute("content");
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']")?.getAttribute("content");
+
+            console.log("Design ID:", designId);
+            console.log("Upload Button:", uploadButton);
+            console.log("File Input:", fileInput);
+            console.log("CSRF Token:", csrfToken ? 'OK' : 'Missing!');
+            console.log("CSRF Header:", csrfHeader ? 'OK' : 'Missing!');
+
+            if (uploadButton && fileInput && designId && csrfToken && csrfHeader) {
+                uploadButton.addEventListener('click', function() {
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        if (uploadErrorDiv) uploadErrorDiv.textContent = 'Nebyl vybrán žádný soubor.';
+                        if (uploadSuccessDiv) uploadSuccessDiv.textContent = '';
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('attributeImageFile', file);
+
+                    const url = `/admin/designs/${designId}/upload-image`;
+                    console.log('Sending AJAX upload request to:', url);
+
+                    // Reset messages and show spinner
+                    if (uploadErrorDiv) uploadErrorDiv.textContent = '';
+                    if (uploadSuccessDiv) uploadSuccessDiv.textContent = '';
+                    if (uploadSpinner) uploadSpinner.style.display = 'inline-block';
+                    uploadButton.disabled = true;
+
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            [csrfHeader]: csrfToken
+                        },
+                        body: formData
+                    })
+                        .then(response => {
+                            console.log('Upload response status:', response.status);
+                            if (!response.ok) {
+                                return response.json().then(err => {
+                                    throw new Error(err.error || `Chyba serveru: ${response.statusText}`);
+                                }).catch(parseError => {
+                                    console.error("Error parsing error response:", parseError);
+                                    throw new Error(`Chyba serveru (${response.status})`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Upload successful, data:', data);
+                            if (data.imageUrl && hiddenImageUrlInput) {
+                                hiddenImageUrlInput.value = data.imageUrl;
+                                const previewSrc = /*[[@{/}]]*/ '' + data.imageUrl; // Sestavení URL pro náhled
+                                if (imagePreview) {
+                                    imagePreview.src = previewSrc;
+                                    imagePreview.style.display = 'block';
+                                } else {
+                                    // If preview didn't exist, create it
+                                    const newPreview = document.createElement('img');
+                                    newPreview.id = 'imagePreview';
+                                    newPreview.src = previewSrc;
+                                    newPreview.alt = 'Náhled obrázku';
+                                    newPreview.style = 'max-width: 150px; max-height: 150px; display: block; border: 1px solid #ddd; margin-bottom: 10px;';
+                                    const previewContainer = document.getElementById('imagePreviewContainer');
+                                    if (previewContainer) previewContainer.prepend(newPreview); // Add the new preview
+                                }
+
+                                if (noImageText) {
+                                    noImageText.style.display = 'none';
+                                }
+                                if (uploadSuccessDiv) uploadSuccessDiv.textContent = data.message || 'Obrázek nahrán.';
+                                if (fileInput) fileInput.value = '';
+                            } else {
+                                throw new Error('Server nevrátil platnou URL obrázku.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Upload failed:', error);
+                            if (uploadErrorDiv) uploadErrorDiv.textContent = 'Chyba: ' + error.message;
+                        })
+                        .finally(() => {
+                            if (uploadSpinner) uploadSpinner.style.display = 'none';
+                            if (uploadButton) uploadButton.disabled = false;
+                        });
+                });
+            } else {
+                if (!designId) console.warn("Upload button listener not added: Design ID missing.");
+                if (!uploadButton || !fileInput) console.warn("Upload button listener not added: Button or File Input missing.");
+                if (!csrfToken || !csrfHeader) console.warn("Upload button listener not added: CSRF data missing.");
+            }
+        });
+        /*]]>*/
+    </script>
+</th:block>
 
 </body>
 </html>

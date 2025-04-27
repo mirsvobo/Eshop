@@ -1,20 +1,30 @@
 package org.example.eshop.admin.controller;
 
-import jakarta.persistence.EntityNotFoundException;
+import java.io.IOException;
+import java.util.Map;
+import org.example.eshop.model.Design;
+import org.example.eshop.repository.DesignRepository; // Přidáno
+import org.example.eshop.service.FileStorageService; // Přidáno
+import org.springframework.beans.factory.annotation.Autowired; // Přidáno
+import org.springframework.http.HttpStatus; // Přidáno
+import org.springframework.http.ResponseEntity; // Přidáno
+import org.springframework.web.bind.annotation.PathVariable; // Přidáno
+import org.springframework.web.bind.annotation.PostMapping; // Přidáno
+import org.springframework.web.bind.annotation.RequestParam; // Přidáno
+import org.springframework.web.bind.annotation.ResponseBody; // Přidáno
+import org.springframework.web.multipart.MultipartFile; // Přidáno
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import jakarta.persistence.EntityNotFoundException; // Ujisti se, že tento import existuje
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.example.eshop.admin.service.DesignService;
-import org.example.eshop.model.Design;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -27,6 +37,13 @@ public class AdminDesignController {
 
     @Autowired
     private DesignService designService;
+
+    // --- Přidané závislosti ---
+    @Autowired
+    private FileStorageService fileStorageService;
+    @Autowired
+    private DesignRepository designRepository; // Pro přímé uložení po změně URL
+    // --------------------------
 
     @ModelAttribute("currentUri")
     public String getCurrentUri(HttpServletRequest request) {
@@ -147,6 +164,69 @@ public class AdminDesignController {
             return "admin/design-form";
         }
     }
+
+    // --- Nová metoda pro AJAX upload ---
+    @PostMapping("/{designId}/upload-image")
+    @ResponseBody
+    public ResponseEntity<?> uploadDesignImage(@PathVariable Long designId,
+                                               @RequestParam("attributeImageFile") MultipartFile imageFile) {
+        log.info("Attempting to upload image for Design ID: {}", designId);
+        if (imageFile.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Vyberte prosím soubor k nahrání."));
+        }
+        if (designId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chybí ID designu."));
+        }
+
+        try {
+            // Najít existující Design
+            Design design = designRepository.findById(designId)
+                    .orElseThrow(() -> new EntityNotFoundException("Design s ID " + designId + " nenalezen."));
+
+            // Pokud existuje starý obrázek, pokusíme se ho smazat
+            if (design.getImageUrl() != null && !design.getImageUrl().isEmpty()) {
+                try {
+                    log.debug("Attempting to delete old image for Design ID {}: {}", designId, design.getImageUrl());
+                    fileStorageService.deleteFile(design.getImageUrl());
+                } catch (Exception e) {
+                    log.warn("Could not delete old image file {} for Design ID {}: {}", design.getImageUrl(), designId, e.getMessage());
+                    // Nepřerušujeme proces, i když se starý soubor nepodaří smazat
+                }
+            }
+
+            // Uložit nový soubor a získat URL
+            // Použijeme podadresář 'designs'
+            String fileUrl = fileStorageService.storeFile(imageFile, "designs");
+            log.info("New image stored for Design ID {}. URL: {}", designId, fileUrl);
+
+            // Aktualizovat URL v entitě Design
+            design.setImageUrl(fileUrl);
+
+            // Uložit změnu URL přímo přes repository (jednodušší než volat updateDesign service)
+            designRepository.save(design);
+            log.info("Image URL updated in database for Design ID {}", designId);
+
+            // Vrátit úspěšnou odpověď s URL nového obrázku
+            return ResponseEntity.ok(Map.of(
+                    "message", "Obrázek úspěšně nahrán.",
+                    "imageUrl", fileUrl,
+                    "designId", designId
+            ));
+
+        } catch (EntityNotFoundException e) {
+            log.warn("Cannot upload image. Design not found: ID={}", designId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IOException | IllegalArgumentException e) {
+            log.error("Failed to store image file for Design ID {}: {}", designId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Nahrání obrázku selhalo: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error uploading image for Design ID {}: {}", designId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
+        }
+    }
+    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteDesign(@PathVariable Long id, RedirectAttributes redirectAttributes) {
