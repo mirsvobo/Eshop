@@ -1,159 +1,190 @@
 package org.example.eshop.service;
 
-import org.springframework.beans.factory.annotation.Value; // <-- SPRÁVNÝ IMPORT
+import com.google.cloud.storage.*;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils; // Přidat import
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.UUID;
-
+// Odstranili jsme importy pro java.nio.file.* kromě Paths a InvalidPathException
 
 @Slf4j
 @Service
 public class FileStorageService {
 
-    @Value("${eshop.upload.dir:${user.dir}/uploads}")
-    private String uploadDir;
+    // --- PŘIDÁNO/UPRAVENO ---
+    @Value("${gcs.bucket.name}") // Nová konfigurace v application.properties
+    private String bucketName;
 
-    @Value("${eshop.upload.url.base:/uploads}")
-    private String baseUrlPath;
+    @Autowired // Injektujte GCS Storage klienta (nakonfigurujte jako Bean)
+    private Storage storage;
+    // --- KONEC PŘIDÁNÍ/ÚPRAV ---
 
-    public String storeFile(MultipartFile file, String subDirectory) throws IOException {
+    /**
+     * Uloží soubor do Google Cloud Storage.
+     *
+     * @param file         Soubor k nahrání.
+     * @param subDirectory Podadresář v GCS bucketu (např. "products", "avatars").
+     * @return Veřejnou URL k nahranému souboru v GCS.
+     * @throws IOException Pokud dojde k chybě při nahrávání.
+     * @throws IllegalArgumentException Pokud jsou vstupní parametry neplatné.
+     */
+    public String storeFile(MultipartFile file, String subDirectory) throws IOException, IllegalArgumentException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Cannot store empty file.");
         }
-        if (!StringUtils.hasText(subDirectory)) { // Použijeme StringUtils.hasText pro robustnější kontrolu
-            throw new IllegalArgumentException("Subdirectory cannot be empty.");
+        // Jednoduchá sanitizace podadresáře (zabraňuje ../)
+        if (!StringUtils.hasText(subDirectory) || subDirectory.contains("..")) {
+            log.warn("Invalid subdirectory provided: '{}'. Using root.", subDirectory);
+            subDirectory = ""; // Use root if invalid or empty
+        } else {
+            subDirectory = Paths.get(subDirectory).normalize().toString(); // Normalize path
+            // Ensure it doesn't escape intended directory (basic check)
+            if (subDirectory.startsWith("..") || Paths.get(subDirectory).isAbsolute()) {
+                log.error("Potential path traversal attempt in subdirectory: '{}'. Denying operation.", subDirectory);
+                throw new IllegalArgumentException("Invalid subDirectory structure.");
+            }
         }
-        // Získání a sanitizace původního názvu souboru
+
+
         String originalFilename = file.getOriginalFilename();
         if (!StringUtils.hasText(originalFilename)) {
             throw new IllegalArgumentException("File name cannot be empty.");
         }
 
-        // --- OPRAVA: Získání pouze názvu souboru a základní sanitizace ---
+        // Sanitizace názvu souboru
         String sanitizedFilenameBase;
         try {
-            // Toto je robustní způsob, jak získat pouze název souboru bez cesty
             sanitizedFilenameBase = Paths.get(originalFilename).getFileName().toString();
-            // Další sanitizace: odstranění potenciálně problematických znaků kromě tečky, písmen, čísel, podtržítka, pomlčky
             sanitizedFilenameBase = sanitizedFilenameBase.replaceAll("[^a-zA-Z0-9._-]", "_");
         } catch (InvalidPathException e) {
-            log.error("Invalid original filename received: {}", originalFilename, e);
-            // Pokud je název souboru zcela neplatný, použijeme náhradní
+            log.error("Invalid original filename: {}", originalFilename, e);
             sanitizedFilenameBase = "uploaded_file";
         }
-        // --- KONEC OPRAVY ---
 
-
-        // Vytvoření cílového adresáře (včetně podadresáře), pokud neexistuje
-        Path targetLocation;
-        try {
-            // Přidána kontrola subDirectory proti path traversal
-            Path normalizedSubDir = Paths.get(subDirectory).normalize();
-            if (normalizedSubDir.startsWith("..") || normalizedSubDir.isAbsolute()) {
-                throw new IllegalArgumentException("Invalid subDirectory: " + subDirectory);
-            }if (uploadDir == null) {
-                log.error("!!! Kritická chyba: uploadDir je null! Zkontroluj konfiguraci 'eshop.upload.dir'.");
-                throw new IOException("Konfigurace adresáře pro ukládání chybí.");
-            }
-            log.debug("Používám uploadDir: [{}]", uploadDir); // Logování hodnoty
-
-            targetLocation = Paths.get(uploadDir).resolve(normalizedSubDir).normalize();
-            log.debug("Target upload directory: {}", targetLocation);
-            Files.createDirectories(targetLocation);
-        } catch (IOException ex) {
-            log.error("Could not create the directory where the uploaded files will be stored: {}", uploadDir + "/" + subDirectory, ex);
-            throw new IOException("Could not create storage directory.", ex);
-        } catch (InvalidPathException e) {
-            log.error("Invalid path specified for subdirectory: {}", subDirectory, e);
-            throw new IOException("Invalid storage subdirectory.", e);
-        }
-
-
-        // Vytvoření unikátního názvu souboru (zachování přípony)
+        // Vytvoření unikátního názvu souboru
         String fileExtension = "";
         int lastDot = sanitizedFilenameBase.lastIndexOf(".");
-        if (lastDot > 0 && lastDot < sanitizedFilenameBase.length() - 1) { // Ensure dot is not first or last char
+        if (lastDot > 0 && lastDot < sanitizedFilenameBase.length() - 1) {
             fileExtension = sanitizedFilenameBase.substring(lastDot);
-            sanitizedFilenameBase = sanitizedFilenameBase.substring(0, lastDot); // Base name without extension
+            sanitizedFilenameBase = sanitizedFilenameBase.substring(0, lastDot);
         }
-        // Omezení délky názvu (bez přípony) a odstranění problematických znaků
         sanitizedFilenameBase = sanitizedFilenameBase.length() > 50 ? sanitizedFilenameBase.substring(0, 50) : sanitizedFilenameBase;
-        sanitizedFilenameBase = sanitizedFilenameBase.replaceAll("[^a-zA-Z0-9_-]", "_"); // Povolit podtržítka a pomlčky
+        sanitizedFilenameBase = sanitizedFilenameBase.replaceAll("[^a-zA-Z0-9_-]", "_");
 
         String uniqueFilename = UUID.randomUUID().toString() + "_" + sanitizedFilenameBase + fileExtension;
-        Path destinationFile = targetLocation.resolve(uniqueFilename).normalize();
 
-        // --- OPRAVA: Důsledná kontrola Path Traversal ---
-        // Znovu ověříme, zda výsledná cesta stále začíná naším cílovým adresářem
-        if (!destinationFile.startsWith(targetLocation)) {
-            log.error("Path traversal attempt detected! Tried to save to: {}. Original filename: {}", destinationFile, originalFilename);
-            throw new FileSystemException("Path traversal attempt detected. Cannot store file outside target directory: " + originalFilename);
-        }
-        // --- KONEC OPRAVY ---
+        // Sestavení cesty k objektu (blob) v GCS
+        String blobPath = (!subDirectory.isEmpty() ? subDirectory + "/" : "") + uniqueFilename;
+        blobPath = blobPath.replace("\\", "/"); // Zajistit lomítka
 
+        BlobId blobId = BlobId.of(bucketName, blobPath);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType(file.getContentType()) // Nastavení content type
+                // Můžete přidat další metadata, např. cache control
+                // .setCacheControl("public, max-age=31536000")
+                .build();
 
-        // Uložení souboru
+        log.debug("Attempting to upload to GCS: gs://{}/{}", bucketName, blobPath);
+
         try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Successfully stored file: {} in directory: {}", uniqueFilename, targetLocation);
-        } catch (IOException ex) {
-            log.error("Could not store file {}: {}", uniqueFilename, ex.getMessage(), ex);
-            // V případě chyby smazat částečně nahraný soubor? Záleží na logice.
-            // Files.deleteIfExists(destinationFile);
-            throw new IOException("Failed to store file " + uniqueFilename, ex);
+            // Nahrání souboru do GCS
+            storage.create(blobInfo, inputStream);
+            log.info("Successfully stored file in GCS: gs://{}/{}", bucketName, blobPath);
+        } catch (StorageException e) {
+            log.error("Failed to store file in GCS (gs://{}/{}): {}", bucketName, blobPath, e.getMessage(), e);
+            throw new IOException("Failed to store file in GCS.", e);
         }
 
-        // Vrácení relativní URL cesty (bez změny)
-        String relativeUrl = Paths.get(baseUrlPath).resolve(subDirectory).resolve(uniqueFilename)
-                .normalize().toString().replace("\\", "/"); // Zajistí lomítka pro URL
-        log.debug("Generated relative URL for stored file: {}", relativeUrl);
-        return relativeUrl;
+        // Vrácení veřejné URL (ujistěte se, že bucket má povolen veřejný přístup!)
+        // Formát se může lišit dle regionu GCS, toto je nejběžnější.
+        String publicUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, blobPath);
+        log.debug("Generated public URL for stored file: {}", publicUrl);
+        return publicUrl;
     }
 
-    // src/main/java/org/example/eshop/service/FileStorageService.java
+    // --- Metoda deleteFile - kompletně přepsaná ---
+    /**
+     * Smaže soubor z Google Cloud Storage na základě jeho veřejné URL.
+     *
+     * @param fileUrl Veřejná URL souboru v GCS (např. https://storage.googleapis.com/bucket/...).
+     */
     public void deleteFile(String fileUrl) {
-        if (fileUrl == null || fileUrl.isBlank() || !fileUrl.startsWith(baseUrlPath)) {
-            log.warn("Invalid or non-managed file URL provided for deletion: {}", fileUrl);
+        if (!StringUtils.hasText(fileUrl)) {
+            log.warn("Invalid (null or blank) file URL provided for deletion.");
             return;
         }
+
+        // Pokusíme se extrahovat název bucketu a cestu k souboru z URL
+        final String gcsHost = "storage.googleapis.com";
+        String expectedPrefix = "https://" + gcsHost + "/";
+
+        if (!fileUrl.startsWith(expectedPrefix)) {
+            // Handle alternative common format storage.cloud.google.com
+            final String altGcsHost = "storage.cloud.google.com";
+            expectedPrefix = "https://" + altGcsHost + "/";
+            if (!fileUrl.startsWith(expectedPrefix)) {
+                log.warn("File URL '{}' does not match expected GCS public URL format ({} or {}). Skipping deletion.", fileUrl, gcsHost, altGcsHost);
+                return;
+            }
+        }
+
+
         try {
-            // Odstranění baseUrlPath a převedení na systémovou cestu
-            String relativePath = fileUrl.substring(baseUrlPath.length());
-            // Zajistíme, že relativePath nezačíná lomítkem, pokud baseUrlPath ano
-            if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-                relativePath = relativePath.substring(1);
-            }
-            Path filePath = Paths.get(uploadDir).resolve(relativePath).normalize(); // Sestavení absolutní cesty
-
-            log.debug("Attempting to delete file at path: {}", filePath);
-
-            // Bezpečnostní kontrola, abychom nemazali mimo uploadDir
-            Path normalizedUploadDir = Paths.get(uploadDir).normalize();
-            if (!filePath.startsWith(normalizedUploadDir)) {
-                log.error("Path traversal attempt detected! Tried to delete file outside upload directory: {}", filePath);
-                return; // Nevyhazujeme výjimku, jen logujeme a končíme
+            // Extrahujeme část cesty za názvem hosta a bucketu
+            // Příklad: https://storage.googleapis.com/your-bucket/subdir/file.jpg -> your-bucket/subdir/file.jpg
+            String pathPart = fileUrl.substring(expectedPrefix.length());
+            int firstSlash = pathPart.indexOf('/');
+            if (firstSlash <= 0) {
+                log.error("Could not parse bucket name and blob path from URL: {}", fileUrl);
+                return;
             }
 
-            boolean deleted = Files.deleteIfExists(filePath); // Použijeme deleteIfExists
+            String parsedBucketName = pathPart.substring(0, firstSlash);
+            String blobName = pathPart.substring(firstSlash + 1);
+
+            // URL decode the blob name to handle special characters like spaces (%20)
+            blobName = URLDecoder.decode(blobName, StandardCharsets.UTF_8);
+
+            // Ověření, zda extrahovaný bucket odpovídá nakonfigurovanému (bezpečnostní kontrola)
+            if (!parsedBucketName.equals(bucketName)) {
+                log.error("Attempted to delete file from a different bucket ('{}') than configured ('{}'). URL: {}", parsedBucketName, bucketName, fileUrl);
+                return;
+            }
+
+            BlobId blobId = BlobId.of(bucketName, blobName);
+            log.debug("Attempting to delete GCS blob: {}", blobId);
+
+            boolean deleted = storage.delete(blobId);
 
             if (deleted) {
-                log.info("Successfully deleted file: {}", filePath);
+                log.info("Successfully deleted GCS blob: {}", blobId);
             } else {
-                log.warn("File not found for deletion or already deleted: {}", filePath);
+                // Soubor nemusí existovat, což není nutně chyba
+                log.warn("GCS blob not found for deletion or already deleted: {}", blobId);
             }
-        } catch (IOException e) {
-            log.error("Could not delete file corresponding to URL {}: {}", fileUrl, e.getMessage());
-            // Nevyhazujeme výjimku, chyba při mazání souboru by neměla shodit aplikaci
-        } catch (InvalidPathException e) {
-            log.error("Invalid path derived from file URL for deletion: {}", fileUrl, e);
-        } catch(Exception e){ // Catch any other unexpected exceptions
-            log.error("Unexpected error during file deletion for URL {}: {}", fileUrl, e.getMessage(), e);
+        } catch (StorageException e) {
+            log.error("StorageException during GCS file deletion for URL {}: {} (Code: {})", fileUrl, e.getMessage(), e.getCode());
+            // Zde můžete přidat specifické ošetření pro různé GCS chyby, např. 404 (NotFound) není kritická
+            if (e.getCode() == 404) {
+                log.warn("Blob for URL {} not found in GCS (Error 404).", fileUrl);
+            } else {
+                // Jiné chyby mohou být vážnější
+                log.error("Unhandled StorageException during deletion of {}: {}", fileUrl, e.getMessage(), e);
+                // Zvažte, zda zde nevyhodit výjimku, pokud je chyba kritická
+            }
+        } catch (Exception e) {
+            log.error("Unexpected error during GCS file deletion for URL {}: {}", fileUrl, e.getMessage(), e);
         }
     }
 }
