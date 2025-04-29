@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="cs" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,32 @@
         .footer a { color: #6A8D3E; text-decoration: none; }
         .button { display: inline-block; background-color: #6A8D3E; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; }
         a.button { color: #ffffff !important; }
+        /* === Nový styl pro sekci s recenzí === */
+        .review-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eeeeee;
+            text-align: center;
+        }
+        .review-section p {
+            margin-bottom: 15px;
+        }
+        .review-button {
+            display: inline-block;
+            background-color: #4285F4; /* Google modrá */
+            color: #ffffff !important; /* Explicitně bílá */
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        /* Zajištění, aby odkaz v tlačítku měl bílou barvu */
+        a.review-button, a.review-button:link, a.review-button:visited {
+            color: #ffffff !important;
+            text-decoration: none;
+        }
+        /* === Konec stylu pro recenzi === */
     </style>
 </head>
 <body>
@@ -55,9 +81,7 @@
         </p>
         <p th:case="'CANCELLED'"> Vaše objednávka byla zrušena. Pokud máte dotazy, kontaktujte nás.
         </p>
-        <p th:case="*">
-            O dalším průběhu Vás budeme brzy informovat.
-        </p>
+        <p th:case="*"> O dalším průběhu Vás budeme brzy informovat. </p>
     </div>
 
     <p>
@@ -65,6 +89,16 @@
         <a th:href="${trackingUrl}" class="button">Sledovat objednávku</a>
     </p>
 
+    <div th:if="${newState.code?.toUpperCase() == 'DELIVERED'}" class="review-section">
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <h2>Byli jste spokojeni?</h2>
+        <p>
+            Vaše zpětná vazba je pro nás velmi důležitá a pomáhá nám zlepšovat naše služby.<br/>
+            Budeme rádi, když nám zanecháte hodnocení na Google. Zabere to jen chvilku.
+        </p>
+        <a href="https://g.page/r/CclukMw6zlf4EBM/review" target="_blank" class="review-button">Napsat recenzi na Google</a>
+        <p style="font-size: 0.9em; color: #777; margin-top: 15px;">Děkujeme Vám!</p>
+    </div>
     <p>Pokud máte jakékoli dotazy, neváhejte nás kontaktovat.</p>
 
     <p>S pozdravem,<br/>Tým <span th:text="${shopName}">[Název obchodu]</span></p>

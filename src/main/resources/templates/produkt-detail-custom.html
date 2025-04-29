@@ -237,19 +237,19 @@
             <div th:if="${availableDesigns != null and !availableDesigns.isEmpty()}" class="mb-4">
                 <h4>Dostupné designy</h4>
                 <img th:each="design : ${availableDesigns}"
-                     th:src="@{${design.imageUrl} ?: '/images/placeholder.png'}"
+                     th:src="${design.imageUrl} ?: '/images/placeholder.png'"
                      th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
             </div>
             <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                 <h4>Dostupné lazury</h4>
                 <img th:each="glaze : ${availableGlazes}"
-                     th:src="@{${glaze.imageUrl} ?: '/images/placeholder.png'}"
+                     th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
                      th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
             </div>
             <div th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}" class="mb-4">
                 <h4>Barvy střešní krytiny</h4>
                 <img th:each="roofColor : ${availableRoofColors}"
-                     th:src="@{${roofColor.imageUrl} ?: '/images/placeholder.png'}"
+                     th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
                      th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
             </div>
             <div th:if="${(availableDesigns == null or availableDesigns.isEmpty()) and (availableGlazes == null or availableGlazes.isEmpty()) and (availableRoofColors == null or availableRoofColors.isEmpty())}" class="text-muted">
@@ -258,7 +258,7 @@
         </section>
 
         <section class="advantages-section-custom">
-            <h3>Proč dřevník od Koláře?</h3>
+            <h3>Proč dřevník od nás?</h3>
             <div class="row justify-content-center">
                 <div class="col-md-8">
                     <ul>

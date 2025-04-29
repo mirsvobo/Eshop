@@ -20,7 +20,7 @@
 
         <div class="row">
             <div class="col-md-6 product-images-column">
-                <img th:src="@{${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered().get(0).url}}"
+                <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered().get(0).url}"
                      th:alt="${product.getImagesOrdered().isEmpty() ? product.name : (product.getImagesOrdered().get(0).altText ?: product.name)}"
                      class="main-product-image img-fluid" id="mainProductImage">
 
@@ -29,7 +29,7 @@
                          th:src="@{${img.url}}"
                          th:alt="${img.altText ?: 'Náhled ' + (iterStat.index + 1)}"
                          th:classappend="${iterStat.index == 0} ? 'active'"
-                         th:onclick="'changeMainImage(\'' + @{${img.url}} + '\', this)'"
+                         th:onclick="'changeMainImage(\'' + ${img.url} + '\', this)'"
                          class="img-thumbnail">
                 </div>
             </div>
@@ -157,19 +157,19 @@
                     <div th:if="${!product.availableDesigns.isEmpty()}" class="mb-4">
                         <h4>Možné designy</h4>
                         <img th:each="design : ${product.availableDesigns}"
-                             th:src="@{${design.imageUrl} ?: '/images/placeholder.png'}"
+                             th:src="${design.imageUrl} ?: '/images/placeholder.png'"
                              th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
                     </div>
                     <div th:if="${!product.availableGlazes.isEmpty()}" class="mb-4">
                         <h4>Dostupné lazury</h4>
                         <img th:each="glaze : ${product.availableGlazes}"
-                             th:src="@{${glaze.imageUrl} ?: '/images/placeholder.png'}"
+                             th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
                              th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
                     </div>
                     <div th:if="${!product.availableRoofColors.isEmpty()}" class="mb-4">
                         <h4>Dostupné barvy střech</h4>
                         <img th:each="roofColor : ${product.availableRoofColors}"
-                             th:src="@{${roofColor.imageUrl} ?: '/images/placeholder.png'}"
+                             th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
                              th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
                     </div>
                 </div>
