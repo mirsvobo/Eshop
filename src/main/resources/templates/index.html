@@ -10,6 +10,7 @@
     <th:block layout:fragment="css">
         <link rel="stylesheet" type="text/css" th:href="@{/css/custom.css}"/>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+        <link rel="preload" fetchpriority="high" as="image" th:href="@{/images/hero-banner.webp}" type="image/webp">
     </th:block>
 </head>
 <body>
@@ -654,9 +655,9 @@
 </section>
 
 <th:block layout:fragment="javascript">
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
-    <script th:src="@{/js/homepage.js}"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script defer src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
+    <script defer th:src="@{/js/homepage.js}"></script>
 </th:block>
 
 </body>

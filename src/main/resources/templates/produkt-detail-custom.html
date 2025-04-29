@@ -275,8 +275,8 @@
     </div> </section>
 
 <th:block layout:fragment="javascript">
-    <script th:src="@{/js/product-configurator.js}"></script>
-    <script th:inline="javascript">
+    <script defer th:src="@{/js/product-configurator.js}"></script>
+    <script defer th:inline="javascript">
         /*<![CDATA[*/
         // Předání dat z modelu do JavaScriptu
         const initData = {
@@ -310,8 +310,8 @@
         /*]]>*/
     </script>
     <th:block th:if="${jsonLdDataString != null}">
-        <script type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}"></script>
-        <script th:inline="javascript">
+        <script defer type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}"></script>
+        <script defer th:inline="javascript">
             /*<![CDATA[*/
             try {
                 const schemaDataElement = document.getElementById('schema-org-data');

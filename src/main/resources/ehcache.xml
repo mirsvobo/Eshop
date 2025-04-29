@@ -39,4 +39,8 @@
     <cache alias="allGlazes" uses-template="defaultEntityCache"/>
     <cache alias="allRoofColors" uses-template="defaultEntityCache"/>
     <cache alias="allActiveAddons" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.Product.availableTaxRates" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.TaxRate.products" uses-template="defaultEntityCache"/>
+    <cache alias="org.example.eshop.model.Product.images" uses-template="defaultEntityCache"/>
+
 </config>
