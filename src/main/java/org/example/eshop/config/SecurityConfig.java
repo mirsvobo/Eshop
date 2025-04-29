@@ -137,6 +137,7 @@ public class SecurityConfig {
                 "img-src 'self' data: " + // Ponecháno 'data:'
                 "https://*.google-analytics.com " +
                 "https://*.googletagmanager.com " +
+                "https://storage.googleapis.com " +
                 "https://*.google.com " +
                 "https://*.googleadservices.com " +
                 "https://stats.g.doubleclick.net " +
