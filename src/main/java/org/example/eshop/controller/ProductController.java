@@ -12,6 +12,11 @@ import org.example.eshop.service.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -43,39 +48,68 @@ public class ProductController {
 
     @GetMapping("/produkty")
     @Transactional(readOnly = true)
-    public String listProducts(Model model, org.springframework.data.domain.Pageable pageable) { // Explicitní Pageable
-        logger.info(">>> [ProductController] Vstupuji do listProducts. Pageable: {}", pageable);
+// Použijeme PageableDefault pro základní nastavení, řazení přepíšeme níže
+    public String listProducts(Model model, @PageableDefault(size = 12) Pageable pageable) {
+        logger.info(">>> [ProductController] Vstupuji do listProducts (STANDARD SORTED). Pageable: {}", pageable);
         String currentCurrency = currencyService.getSelectedCurrency();
-        model.addAttribute("currentCurrency", currentCurrency);
+        model.addAttribute("currentGlobalCurrency", currentCurrency); // Pro layout
 
         try {
-            org.springframework.data.domain.Page<Product> productPage = productService.getActiveProducts(pageable);
-            logger.info("[ProductController] ProductService.getActiveProducts vrátil stránku: TotalElements={}, TotalPages={}, Number={}, Size={}",
+            // 1. Určení pole pro řazení podle aktuální měny
+            String priceField = EURO_CURRENCY.equals(currentCurrency) ? "basePriceEUR" : "basePriceCZK";
+            Sort priceSort = Sort.by(Sort.Direction.ASC, priceField);
+
+            // 2. Vytvoření Pageable s naším řazením podle ceny
+            // POZNÁMKA: Pokud byste chtěli umožnit uživateli řadit i jinak (např. podle názvu) přes URL parametry,
+            // logika pro kombinaci řazení by byla složitější. Prozatím nastavíme řazení jen podle ceny.
+            Pageable sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    priceSort // Použijeme naše vynucené řazení podle ceny
+            );
+
+            logger.debug("Požaduji aktivní standardní produkty seřazené podle {} ASC. Finální Pageable: {}", priceField, sortedPageable);
+
+            // 3. Zavolání NOVÉ service metody pro načtení standardních seřazených produktů
+            // Předpokládá se, že tato metoda v ProductService volá novou metodu
+            // findByActiveTrueAndCustomisableFalse(sortedPageable) v ProductRepository
+            // NÁZEV METODY SI PŘIZPŮSOBTE PODLE SVÉ IMPLEMENTACE V ProductService!
+            Page<Product> productPage = productService.getActiveStandardProducts(sortedPageable);
+
+            logger.info("[ProductController] ProductService.getActiveStandardProducts vrátil stránku: TotalElements={}, TotalPages={}, Number={}, Size={}",
                     productPage.getTotalElements(), productPage.getTotalPages(), productPage.getNumber(), productPage.getSize());
 
+            // 4. Výpočet finálních cen pro zobrazení
             Map<Long, Map<String, Object>> productPrices = new HashMap<>();
             for (Product product : productPage.getContent()) {
-                if (!product.isCustomisable()) {
-                    Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
-                    productPrices.put(product.getId(), priceInfo);
-                } else {
-                    // Zde můžeme načíst výchozí cenu i pro custom produkty pro zobrazení "Cena od..."
-                    // Ale vyžadovalo by to výpočet s min. rozměry pro každý produkt na stránce
-                    // Prozatím necháme ceny jen pro standardní produkty
+                // Již NENÍ potřeba kontrolovat product.isCustomisable(), protože načítáme jen standardní
+                if (product != null && product.getId() != null) { // Kontrola null pro jistotu
+                    try {
+                        Map<String, Object> priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
+                        productPrices.put(product.getId(), priceInfo);
+                    } catch (Exception priceEx) {
+                        logger.error("Chyba při výpočtu ceny pro produkt ID {} (standard): {}", product.getId(), priceEx.getMessage());
+                        productPrices.put(product.getId(), Collections.emptyMap()); // Přidat prázdnou mapu při chybě
+                    }
                 }
             }
 
+            // 5. Přidání dat do modelu
             model.addAttribute("productPage", productPage);
             model.addAttribute("productPrices", productPrices);
+            // Přidáme i informaci o aktuálním řazení pro případné použití v šabloně (např. pro odkazy v hlavičce tabulky)
+            model.addAttribute("currentSort", sortedPageable.getSort().toString());
 
         } catch (Exception e) {
+            // Zpracování obecné chyby zůstává stejné
             logger.error("!!! [ProductController] Chyba v listProducts: {} !!!", e.getMessage(), e);
             model.addAttribute("errorMessage", "Nepodařilo se načíst produkty.");
-            model.addAttribute("productPage", org.springframework.data.domain.Page.empty(pageable));
+            model.addAttribute("productPage", Page.empty(pageable)); // Použijeme původní pageable pro prázdnou stránku
             model.addAttribute("productPrices", Collections.emptyMap());
+            model.addAttribute("currentSort", Sort.unsorted().toString()); // Default na neřazeno při chybě
         }
-        logger.info(">>> [ProductController] Opouštím listProducts. Obsah modelu před vrácením 'produkty': {}", model.asMap().keySet());
-        return "produkty";
+        logger.info(">>> [ProductController] Opouštím listProducts.");
+        return "produkty"; // Název Thymeleaf šablony
     }
 
     @GetMapping("/produkt/{slug}")

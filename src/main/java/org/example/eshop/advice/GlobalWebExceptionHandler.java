@@ -137,8 +137,7 @@ public class GlobalWebExceptionHandler {
         Object requestUri = req.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
         mav.addObject("path", requestUri != null ? requestUri.toString() : req.getRequestURI());
         mav.addObject("requestedUrl", req.getRequestURL());
-        mav.addObject("timestamp", System.currentTimeMillis());
-        // mav.addObject("exception", ex); // Pouze pro dev
+        mav.addObject("timestamp", java.time.LocalDateTime.now()); // Použij LocalDateTime        // mav.addObject("exception", ex); // Pouze pro dev
         // mav.addObject("trace", ExceptionUtils.getStackTrace(ex)); // Pouze pro dev
         return mav;
     }

@@ -42,5 +42,7 @@
     <cache alias="org.example.eshop.model.Product.availableTaxRates" uses-template="defaultEntityCache"/>
     <cache alias="org.example.eshop.model.TaxRate.products" uses-template="defaultEntityCache"/>
     <cache alias="org.example.eshop.model.Product.images" uses-template="defaultEntityCache"/>
+    <cache alias="activeStandardProductsPage" uses-template="shortLivedCache"/>
+
 
 </config>

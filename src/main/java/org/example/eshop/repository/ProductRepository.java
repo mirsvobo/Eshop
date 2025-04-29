@@ -15,40 +15,35 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+    // --- Stávající metody (beze změny) ---
     Optional<Product> findBySlugIgnoreCase(String slug);
-
     boolean existsBySlugIgnoreCase(String newSlug);
+    boolean existsBySlugIgnoreCaseAndIdNot(String newSlug, Long id);
+    Optional<Object> findBySlugIgnoreCaseAndIdNot(String newSlug, Long id); // Zůstává z původního kódu
 
     @Query("SELECT p FROM Product p WHERE p.active = true AND lower(p.slug) = lower(:slug)")
     @EntityGraph(attributePaths = {
             "images", "availableDesigns", "availableGlazes",
             "availableRoofColors", "availableAddons", "configurator", "discounts",
-            "availableTaxRates" // <-- PŘIDÁNO availableTaxRates
+            "availableTaxRates"
     })
     Optional<Product> findActiveBySlugWithDetails(@Param("slug") String slug);
 
-
-    // findByIdWithDetails - přidáme availableTaxRates
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     @EntityGraph(attributePaths = {
             "images", "availableDesigns", "availableGlazes",
             "availableRoofColors", "availableAddons", "configurator", "discounts",
-            "availableTaxRates" // <-- PŘIDÁNO availableTaxRates
+            "availableTaxRates"
     })
     Optional<Product> findByIdWithDetails(@Param("id") Long id);
 
-    boolean existsBySlugIgnoreCaseAndIdNot(String newSlug, Long id);
-
-    // findByActiveTrue(Pageable) - OPRAVENO: odstraněn "taxRate" z EntityGraph
-    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"})
-    // <-- Odstraněno "taxRate"
+    @EntityGraph(attributePaths = {"images", "discounts", "availableTaxRates"})
     Page<Product> findByActiveTrue(Pageable pageable);
 
-    // findAllByActiveTrue() - OPRAVENO: odstraněn "taxRate" z EntityGraph
-    @EntityGraph(attributePaths = {"images", /*"taxRate",*/ "discounts", "availableTaxRates"})
-    // <-- Odstraněno "taxRate"
+    @EntityGraph(attributePaths = {"images", "discounts", "availableTaxRates"})
     List<Product> findAllByActiveTrue();
 
-    Optional<Object> findBySlugIgnoreCaseAndIdNot(String newSlug, Long id);
-}
+    @EntityGraph(attributePaths = {"images", "discounts", "availableTaxRates"})
+    Page<Product> findByActiveTrueAndCustomisableFalse(Pageable pageable);
 
+}

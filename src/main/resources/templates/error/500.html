@@ -73,5 +73,16 @@
     </div>
 </section>
 
+<script>
+    (function() {
+        var loader = document.getElementById('page-loader');
+        if (loader) {
+            console.log('[Inline Error Script] Hiding page loader for error page.');
+            loader.classList.add('hidden');
+        } else {
+            console.warn('[Inline Error Script] Page loader not found on this error page.');
+        }
+    })();
+</script>
 </body>
 </html>

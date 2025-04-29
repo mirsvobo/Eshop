@@ -1225,5 +1225,22 @@ public class ProductService implements PriceConstants {
         logger.info(">>> [ProductService] Opouštím calculateDetailedCustomPrice. Product ID: {}. Response has error: {}", requestDto.getProductId(), response.getErrorMessage() != null);
         return response;
     }
+    @Transactional(readOnly = true)
+    // PŘIDÁNA ANOTACE @Cacheable
+    @Cacheable(value = "activeStandardProductsPage", key = "#pageable.toString()")
+    public Page<Product> getActiveStandardProducts(Pageable pageable) {
+        logger.info(">>> [ProductService] Vstupuji do getActiveStandardProducts. Pageable: {}", pageable);
+        Page<Product> result = Page.empty(pageable);
+        try {
+            // Volání optimalizované metody z ProductRepository
+            result = productRepository.findByActiveTrueAndCustomisableFalse(pageable);
+            logger.info("[ProductService] getActiveStandardProducts: Načtena stránka s {} aktivními standardními produkty.", result.getTotalElements());
+        } catch (Exception e) {
+            logger.error("!!! [ProductService] Chyba v getActiveStandardProducts: {} !!!", e.getMessage(), e);
+            // Vracíme prázdnou stránku, controller by měl případně zobrazit chybu
+        }
+        logger.info(">>> [ProductService] Opouštím getActiveStandardProducts <<<");
+        return result;
+    }
 
 } // Konec třídy ProductService

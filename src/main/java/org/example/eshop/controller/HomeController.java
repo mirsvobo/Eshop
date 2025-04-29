@@ -1,12 +1,7 @@
-package org.example.eshop.controller;// Vlož nebo nahraď v src/main/java/org/example/eshop/controller/HomeController.java
-// Přidej importy, pokud chybí:
-import jakarta.servlet.http.HttpServletRequest;
+package org.example.eshop.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
-
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.config.PriceConstants;
 import org.example.eshop.model.Product;
 import org.example.eshop.service.CurrencyService;
@@ -19,42 +14,57 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
-public class HomeController {
+public class HomeController implements PriceConstants { // Přidáno PriceConstants
 
     private static final Logger log = LoggerFactory.getLogger(HomeController.class);
 
     private final ProductService productService;
     private final CurrencyService currencyService;
-    private final ObjectMapper objectMapper; // Přidána závislost
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public HomeController(ProductService productService, CurrencyService currencyService, ObjectMapper objectMapper) { // Přidán ObjectMapper
+    public HomeController(ProductService productService, CurrencyService currencyService, ObjectMapper objectMapper) {
         this.productService = productService;
         this.currencyService = currencyService;
-        this.objectMapper = objectMapper; // Inicializace ObjectMapperu
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping("/")
-    public String home(Model model, HttpServletRequest request) { // Přidán HttpServletRequest
-        log.info("Accessing home page");
+    public String home(Model model, HttpServletRequest request) {
+        log.info("Accessing home page - Applying price sorting");
         String currentCurrency = currencyService.getSelectedCurrency();
         model.addAttribute("currentGlobalCurrency", currentCurrency); // Pro layout
 
-        List<String> productJsonLdList = new ArrayList<>(); // Seznam pro JSON-LD stringy
+        List<String> productJsonLdList = new ArrayList<>();
+        Map<Long, Map<String, Object>> featuredProductPrices = new HashMap<>();
+        List<Product> featuredProducts = Collections.emptyList();
 
         try {
-            // Načtení produktů
-            List<Product> featuredProducts = productService.getAllActiveProducts().stream()
-                    .filter(p -> !p.isCustomisable()) // Pouze standardní produkty
+            // 1. Načtení VŠECH aktivních standardních produktů
+            List<Product> allActiveStandardProducts = productService.getAllActiveProducts().stream()
+                    .filter(p -> p != null && !p.isCustomisable()) // Filtrujeme standardní a non-null
+                    .collect(Collectors.toList());
+            log.debug("Found {} active standard products initially.", allActiveStandardProducts.size());
+
+            // 2. Seřazení podle ceny v aktuální měně (vzestupně)
+            allActiveStandardProducts.sort(Comparator.comparing(
+                    p -> EURO_CURRENCY.equals(currentCurrency) ? p.getBasePriceEUR() : p.getBasePriceCZK(),
+                    Comparator.nullsLast(BigDecimal::compareTo) // Produkty bez ceny dáme na konec
+            ));
+            log.debug("Sorted active standard products by {} price.", currentCurrency);
+
+            // 3. Výběr prvních 4 (nebo méně, pokud jich není tolik)
+            featuredProducts = allActiveStandardProducts.stream()
                     .limit(4)
                     .collect(Collectors.toList());
+            log.debug("Selected top {} products for display.", featuredProducts.size());
 
-            model.addAttribute("featuredProducts", featuredProducts);
-
-            // Výpočet cen a generování JSON-LD pro každý produkt
-            Map<Long, Map<String, Object>> featuredProductPrices = new HashMap<>();
+            // 4. Výpočet finálních cen a generování JSON-LD (pouze pro vybrané produkty)
             String baseUrl = request.getScheme() + "://" + request.getServerName() + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort()) + request.getContextPath();
             log.debug("Base URL for JSON-LD image paths: {}", baseUrl);
 
@@ -69,100 +79,90 @@ public class HomeController {
                     priceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
                     featuredProductPrices.put(product.getId(), priceInfo);
                     finalPriceForSchema = (BigDecimal) priceInfo.getOrDefault("discountedPrice", priceInfo.get("originalPrice"));
-                    if(finalPriceForSchema == null) finalPriceForSchema = BigDecimal.ZERO;
+                    if (finalPriceForSchema == null) finalPriceForSchema = BigDecimal.ZERO;
                 } catch (Exception priceEx) {
                     log.error("Error calculating price for featured product ID {}: {}", product.getId(), priceEx.getMessage());
                     featuredProductPrices.put(product.getId(), Collections.emptyMap());
                 }
 
-                // Generování JSON-LD pro tento produkt
+                // Generování JSON-LD (kód beze změny, jen je teď v cyklu pro featuredProducts)
                 try {
                     Map<String, Object> productJsonLd = new LinkedHashMap<>();
                     productJsonLd.put("@context", "https://schema.org");
                     productJsonLd.put("@type", "Product");
                     productJsonLd.put("name", product.getName());
-                    productJsonLd.put("description", StringUtils.hasText(product.getShortDescription()) ? product.getShortDescription() : abbreviate(product.getDescription())); // Použijeme zkrácený popis
-                    productJsonLd.put("sku", "STD-" + product.getId()); // SKU pro standardní produkt
-                    productJsonLd.put("url", baseUrl + "/produkt/" + product.getSlug()); // Absolutní URL
+                    productJsonLd.put("description", StringUtils.hasText(product.getShortDescription()) ? product.getShortDescription() : abbreviate(product.getDescription()));
+                    productJsonLd.put("sku", "STD-" + product.getId());
+                    productJsonLd.put("url", baseUrl + "/produkt/" + product.getSlug());
 
-                    // Obrázek (první z galerie)
                     if (!product.getImagesOrdered().isEmpty()) {
                         String imageUrl = product.getImagesOrdered().get(0).getUrl();
                         if (imageUrl != null && !imageUrl.toLowerCase().startsWith("http")) {
                             imageUrl = baseUrl + (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
                         }
-                        if(imageUrl != null) {
+                        if (imageUrl != null) {
                             productJsonLd.put("image", imageUrl);
                         }
                     }
 
-                    // Brand
                     Map<String, Object> brandMap = Map.of("@type", "Brand", "name", "Dřevníky Kolář");
                     productJsonLd.put("brand", brandMap);
 
-                    // Offer
                     Map<String, Object> offerMap = new LinkedHashMap<>();
                     offerMap.put("@type", "Offer");
-                    offerMap.put("url", baseUrl + "/produkt/" + product.getSlug()); // URL nabídky = URL produktu
+                    offerMap.put("url", baseUrl + "/produkt/" + product.getSlug());
                     offerMap.put("priceCurrency", currentCurrency);
-                    offerMap.put("price", finalPriceForSchema.setScale(PriceConstants.PRICE_SCALE, PriceConstants.ROUNDING_MODE));
-                    offerMap.put("availability", "https://schema.org/InStock"); // Předpokládáme dostupnost
+                    offerMap.put("price", finalPriceForSchema.setScale(PRICE_SCALE, ROUNDING_MODE));
+                    offerMap.put("availability", "https://schema.org/InStock");
                     offerMap.put("itemCondition", "https://schema.org/NewCondition");
 
                     Map<String, Object> priceSpecMap = new LinkedHashMap<>();
                     priceSpecMap.put("@type", "UnitPriceSpecification");
-                    priceSpecMap.put("price", finalPriceForSchema.setScale(PriceConstants.PRICE_SCALE, PriceConstants.ROUNDING_MODE));
+                    priceSpecMap.put("price", finalPriceForSchema.setScale(PRICE_SCALE, ROUNDING_MODE));
                     priceSpecMap.put("priceCurrency", currentCurrency);
                     priceSpecMap.put("valueAddedTaxIncluded", false);
                     offerMap.put("priceSpecification", priceSpecMap);
 
                     productJsonLd.put("offers", offerMap);
 
-                    // Převod na JSON string a přidání do seznamu
                     productJsonLdList.add(objectMapper.writeValueAsString(productJsonLd));
 
                 } catch (Exception jsonEx) {
                     log.error("Error generating JSON-LD for featured product ID {}: {}", product.getId(), jsonEx.getMessage());
-                    // Nepřidáme nic do seznamu, pokud generování selže
                 }
             }
+
+            model.addAttribute("featuredProducts", featuredProducts); // Přidání seřazeného a omezeného seznamu
             model.addAttribute("featuredProductPrices", featuredProductPrices);
-            model.addAttribute("productJsonLdList", productJsonLdList); // Přidání seznamu JSON stringů do modelu
+            model.addAttribute("productJsonLdList", productJsonLdList);
             log.debug("Generated {} JSON-LD strings for featured products.", productJsonLdList.size());
 
         } catch (Exception e) {
-            log.error("Error fetching featured products for homepage: {}", e.getMessage(), e);
+            log.error("Error fetching or sorting featured products for homepage: {}", e.getMessage(), e);
             model.addAttribute("featuredProducts", Collections.emptyList());
             model.addAttribute("featuredProductPrices", Collections.emptyMap());
-            model.addAttribute("productJsonLdList", Collections.emptyList()); // Prázdný seznam při chybě
+            model.addAttribute("productJsonLdList", Collections.emptyList());
         }
-
-        // Log pro kontrolu výpisu do konzole
-        if(!productJsonLdList.isEmpty()){
-            log.debug("--- První JSON-LD pro index.html ---\n{}\n--- Konec JSON-LD ---", productJsonLdList.get(0));
-        }
-
-
         return "index";
     }
+
     @GetMapping("/gdpr")
     public String showGdprPage() {
         log.debug("Zobrazuji stránku GDPR.");
-        return "gdpr"; // Vrátí název šablony gdpr.html
+        return "gdpr";
     }
 
     @GetMapping("/obchodni-podminky")
     public String showVopPage() {
         log.debug("Zobrazuji stránku Všeobecné obchodní podmínky.");
-        return "obchodni-podminky"; // Vrátí název šablony obchodni-podminky.html
+        return "obchodni-podminky";
     }
 
-    // Přidej tuto pomocnou metodu do HomeController, pokud tam ještě není
     private String abbreviate(String text) {
         if (text == null) {
             return "";
         }
-        int maxLength = 160; // Běžná délka pro meta description
+        int maxLength = 160;
         if (text.length() <= maxLength) {
             return text;
         }
