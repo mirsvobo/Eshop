@@ -10,6 +10,8 @@ import org.example.eshop.admin.service.RoofColorService;
 import org.example.eshop.dto.ImageDto;
 import org.example.eshop.dto.ImageOrderUpdateRequest;
 import org.example.eshop.model.*;
+import org.example.eshop.repository.ImageRepository;
+import org.example.eshop.service.FileStorageService;
 import org.example.eshop.service.ProductService;
 import org.example.eshop.service.TaxRateService;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -56,6 +59,12 @@ public class AdminProductController {
     private GlazeService glazeService;
     @Autowired
     private RoofColorService roofColorService;
+
+    @Autowired
+    private ImageRepository imageRepository; // Pro získání URL před smazáním
+
+    @Autowired // Přidat závislost, pokud chybí
+    private FileStorageService fileStorageService;
 
 
     @ModelAttribute("currentUri")
@@ -596,10 +605,13 @@ public class AdminProductController {
     }
 
 
-    // *** OPRAVENÁ METODA UPLOADIMAGE ***
+    // V AdminProductController.java
+
+    // ... (ostatní @Autowired) ...
+
+    // *** OPRAVENÁ METODA UPLOADIMAGE - volá novou metodu service ***
     @PostMapping("/{productId}/images/upload")
-    @ResponseBody // Důležité pro REST odpověď
-    // *** ZMĚNA ZDE: Návratový typ je nyní ResponseEntity<ImageDto> ***
+    @ResponseBody
     public ResponseEntity<ImageDto> uploadImage(@PathVariable Long productId,
                                                 @RequestParam("imageFile") MultipartFile imageFile,
                                                 @RequestParam(required = false) String altText,
@@ -607,18 +619,22 @@ public class AdminProductController {
                                                 @RequestParam(required = false) Integer displayOrder) {
         log.info("Attempting to upload image for product ID: {}", productId);
         if (imageFile.isEmpty()) {
-            // Vracíme chybu 400 Bad Request s JSON tělem
             return ResponseEntity.badRequest().body(createErrorDto("Vyberte prosím soubor k nahrání."));
         }
         try {
-            Image savedImage = productService.addImageToProduct(productId, imageFile, altText, titleText, displayOrder);
-            log.info("Image successfully uploaded for product {}, image ID: {}", productId, savedImage.getId());
-            // Vracíme ImageDto s daty uloženého obrázku a statusem 200 OK
+            // 1. Uložit soubor do GCS
+            String gcsFileUrl = fileStorageService.storeFile(imageFile, "products");
+            log.info("Image stored in GCS for product {}, GCS URL: {}", productId, gcsFileUrl);
+
+            // 2. Zavolat NOVOU service metodu pro uložení DB záznamu s GCS URL
+            Image savedImage = productService.addImageToProductWithUrl(productId, gcsFileUrl, altText, titleText, displayOrder);
+
+            log.info("Image entity successfully saved for product {}, image ID: {}", productId, savedImage.getId());
             ImageDto imageDto = new ImageDto(savedImage);
             return ResponseEntity.ok(imageDto);
         } catch (IOException | IllegalArgumentException | EntityNotFoundException e) {
-            log.error("Failed to store image file for product {}: {}", productId, e.getMessage(), e);
-            // Vracíme JSON s chybou a statusem 500 Internal Server Error
+            log.error("Failed to store image file or save entity for product {}: {}", productId, e.getMessage(), e);
+            // TODO: Zvážit smazání souboru z GCS, pokud se nepodařilo uložit DB záznam?
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorDto("Nahrání obrázku selhalo: " + e.getMessage()));
         } catch (Exception e) {
@@ -627,38 +643,50 @@ public class AdminProductController {
                     .body(createErrorDto("Neočekávaná chyba při nahrávání obrázku."));
         }
     }
-    // *** KONEC OPRAVENÉ METODY UPLOADIMAGE ***
 
-    // Pomocná metoda pro vytvoření chybového DTO (místo Map)
-    private ImageDto createErrorDto(String message) {
-        ImageDto errorDto = new ImageDto();
-        // Můžeme přidat pole pro chybu do ImageDto nebo vytvořit specifické ErrorDto
-        // Pro jednoduchost zde nevracíme nic specifického, spoléháme na HTTP status
-        log.warn("Returning error DTO (though currently empty) with message: {}", message); // Logování pro debug
-        return errorDto; // Vracíme prázdné DTO, JS by měl kontrolovat status
-        // Alternativně: Přidat pole `private String errorMessage;` do ImageDto a nastavit ho zde.
-    }
-    // Příklad úpravy deleteImage
+    // *** OPRAVENÁ METODA DELETEIMAGE - volá upravenou metodu service ***
     @PostMapping("/images/{imageId}/delete")
-    @ResponseBody // Důležité pro AJAX odpověď
-    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) { // Odebrán RedirectAttributes
+    @ResponseBody
+    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
         log.warn("Attempting to delete image with ID: {}", imageId);
+        String fileUrlToDelete = null;
         try {
-            // Získání ID produktu není nutné pro samotnou odpověď AJAXu,
-            // ale může být užitečné pro logování nebo jiné operace.
-            productService.deleteImage(imageId); // Zavolá service metodu pro smazání
-            log.info("Image ID {} deleted successfully via AJAX.", imageId);
-            return ResponseEntity.ok().build(); // Nebo noContent()
+            // 1. Najít obrázek pro získání URL (stejné jako předtím)
+            Image image = imageRepository.findById(imageId)
+                    .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
+            fileUrlToDelete = image.getUrl();
+
+            // 2. Smazat POUZE DB záznam pomocí upravené service metody
+            productService.deleteImage(imageId); // Voláme původní název metody, která teď maže jen DB
+            log.info("Image entity ID {} deleted from database via ProductService.", imageId);
+
+            // 3. Smazat soubor z GCS (stejné jako předtím)
+            if (StringUtils.hasText(fileUrlToDelete)) {
+                log.debug("Attempting to delete GCS file: {}", fileUrlToDelete);
+                fileStorageService.deleteFile(fileUrlToDelete);
+            } else {
+                log.warn("Image ID {} deleted from DB, but no file URL was stored to delete from GCS.", imageId);
+            }
+
+            log.info("Image ID {} deleted successfully via AJAX (DB record and GCS file).", imageId);
+            return ResponseEntity.ok().build();
+
         } catch (EntityNotFoundException e) {
             log.warn("Cannot delete image ID {}. Not found.", imageId, e);
-            // Můžeš vrátit i text v body(), pokud chceš zobrazit detailnější chybu v JS
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             log.error("Error deleting image ID {}: {}", imageId, e.getMessage(), e);
-            // Můžeš vrátit i text v body()
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        // Přesměrování zde není potřeba
+    }
+
+    // ... (ostatní metody controlleru) ...
+
+    // Pomocná metoda pro vytvoření chybového DTO (zůstává stejná)
+    private ImageDto createErrorDto(String message) {
+        ImageDto errorDto = new ImageDto();
+        log.warn("Returning error DTO (though currently empty) with message: {}", message);
+        return errorDto;
     }
 
     @PostMapping("/images/update-order")

@@ -160,7 +160,9 @@ public class AdminGlazeController {
         }
     }
 
-    // --- Nová metoda pro AJAX upload ---
+    // V AdminGlazeController.java
+
+    // --- Změna v metodě pro AJAX upload ---
     @PostMapping("/{glazeId}/upload-image")
     @ResponseBody
     public ResponseEntity<?> uploadGlazeImage(@PathVariable Long glazeId,
@@ -177,26 +179,33 @@ public class AdminGlazeController {
             Glaze glaze = glazeRepository.findById(glazeId)
                     .orElseThrow(() -> new EntityNotFoundException("Lazura s ID " + glazeId + " nenalezena."));
 
-            if (glaze.getImageUrl() != null && !glaze.getImageUrl().isEmpty()) {
+            // --- ZAČÁTEK ZMĚNY: Mazání starého souboru z GCS ---
+            String oldFileUrl = glaze.getImageUrl();
+            if (oldFileUrl != null && !oldFileUrl.isEmpty()) {
                 try {
-                    log.debug("Attempting to delete old image for Glaze ID {}: {}", glazeId, glaze.getImageUrl());
-                    fileStorageService.deleteFile(glaze.getImageUrl());
+                    log.debug("Attempting to delete old image file from GCS for Glaze ID {}: {}", glazeId, oldFileUrl);
+                    fileStorageService.deleteFile(oldFileUrl); // Použije novou implementaci pro GCS
                 } catch (Exception e) {
-                    log.warn("Could not delete old image file {} for Glaze ID {}: {}", glaze.getImageUrl(), glazeId, e.getMessage());
+                    log.warn("Could not delete old GCS file {} for Glaze ID {}: {}", oldFileUrl, glazeId, e.getMessage());
                 }
             }
+            // --- KONEC ZMĚNY ---
 
-            String fileUrl = fileStorageService.storeFile(imageFile, "glazes"); // Podadresář "glazes"
-            log.info("New image stored for Glaze ID {}. URL: {}", glazeId, fileUrl);
+            // Uložit nový soubor do GCS a získat URL
+            String newFileUrl = fileStorageService.storeFile(imageFile, "glazes"); // storeFile nyní ukládá do GCS
+            log.info("New image stored in GCS for Glaze ID {}. URL: {}", glazeId, newFileUrl);
 
-            glaze.setImageUrl(fileUrl);
+            // Aktualizovat URL v entitě Glaze
+            glaze.setImageUrl(newFileUrl); // Uložíme GCS URL
+
             glazeRepository.save(glaze);
-            log.info("Image URL updated in database for Glaze ID {}", glazeId);
+            log.info("GCS Image URL updated in database for Glaze ID {}", glazeId);
 
+            // Vrátit úspěšnou odpověď s GCS URL
             return ResponseEntity.ok(Map.of(
                     "message", "Obrázek úspěšně nahrán.",
-                    "imageUrl", fileUrl,
-                    "glazeId", glazeId // Vrátíme ID pro případnou JS kontrolu
+                    "imageUrl", newFileUrl, // Vracíme GCS URL
+                    "glazeId", glazeId
             ));
 
         } catch (EntityNotFoundException e) {
@@ -212,7 +221,6 @@ public class AdminGlazeController {
                     .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
         }
     }
-    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteGlaze(@PathVariable Long id, RedirectAttributes redirectAttributes) {

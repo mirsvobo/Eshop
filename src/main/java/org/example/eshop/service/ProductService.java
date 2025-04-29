@@ -841,51 +841,107 @@ public class ProductService implements PriceConstants {
     }
 
 
-    // src/main/java/org/example/eshop/service/ProductService.java
+    // --- NOVÁ METODA pro přidání obrázku s URL ---
+    /**
+     * Přidá záznam o obrázku k produktu s již existující URL (např. z GCS).
+     * Neřeší fyzické nahrání souboru.
+     *
+     * @param productId    ID produktu.
+     * @param fileUrl      URL obrázku (např. GCS URL).
+     * @param altText      Alternativní text.
+     * @param titleText    Titulní text.
+     * @param displayOrder Pořadí zobrazení (null pro automatické).
+     * @return Uložená entita Image.
+     * @throws EntityNotFoundException Pokud produkt neexistuje.
+     * @throws IllegalArgumentException Pokud je URL neplatná.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
+            @CacheEvict(value = "productDetails", key = "#productId"),
+            @CacheEvict(value = "productBySlug", allEntries = true) // Invalidujeme slug cache pro jistotu
+    })
+    @Transactional
+    public Image addImageToProductWithUrl(Long productId, String fileUrl, String altText, String titleText, Integer displayOrder) {
+        logger.info(">>> [ProductService] Associating image URL '{}' with product ID: {}", fileUrl, productId);
+        if (!StringUtils.hasText(fileUrl)) {
+            throw new IllegalArgumentException("Image URL cannot be empty.");
+        }
+
+        Product product = productRepository.findByIdWithDetails(productId) // Načteme i obrázky pro výpočet pořadí
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + productId + " when adding image URL."));
+
+        Image newImage = new Image();
+        newImage.setUrl(fileUrl); // Nastavíme GCS URL
+        newImage.setAltText(altText);
+        newImage.setTitleText(titleText);
+        newImage.setProduct(product);
+
+        // Výpočet displayOrder
+        if (displayOrder == null) {
+            int maxOrder = product.getImages().stream()
+                    .mapToInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : -1)
+                    .max()
+                    .orElse(-1);
+            newImage.setDisplayOrder(maxOrder + 1);
+            logger.debug("Calculated next displayOrder for new image URL: {}", newImage.getDisplayOrder());
+        } else {
+            newImage.setDisplayOrder(displayOrder);
+        }
+
+        // Uložení entity Image
+        Image savedImage = imageRepository.save(newImage);
+
+        // Není třeba volat productRepository.save(product), pokud je kaskádování nastaveno správně,
+        // ale pro jistotu aktualizace cache to může být někdy užitečné (můžete odkomentovat, pokud by byly problémy).
+        // product.getImages().add(savedImage); // Hibernate by měl zvládnout automaticky
+        // productRepository.save(product);
+
+        logger.info(">>> [ProductService] Image entity successfully saved (ID: {}) with GCS URL for product ID: {}", savedImage.getId(), productId);
+        return savedImage;
+    }
+
+
+    // --- UPRAVENÁ METODA deleteImage ---
+    /**
+     * Smaže POUZE záznam o obrázku z databáze.
+     * Fyzické smazání souboru z úložiště musí být provedeno zvlášť (např. v controlleru).
+     *
+     * @param imageId ID obrázku ke smazání z DB.
+     * @throws EntityNotFoundException Pokud obrázek s daným ID neexistuje.
+     */
     @Caching(evict = {
             @CacheEvict(value = {"activeProductsPage", "activeProductsList", "allProductsList", "productsPage"}, allEntries = true),
             @CacheEvict(value = "productDetails", allEntries = true), // Jednodušší invalidovat vše zde
             @CacheEvict(value = "productBySlug", allEntries = true)
     })
-    @Transactional // Důležité pro správu transakcí
-    public void deleteImage(Long imageId) {
-        logger.warn(">>> [ProductService] Attempting to DELETE image ID: {}", imageId);
+    @Transactional
+    public void deleteImage(Long imageId) { // Ponecháme původní název metody
+        logger.warn(">>> [ProductService] Deleting ONLY DB record for image ID: {}", imageId);
         try {
             // 1. Najít obrázek NEBO vyhodit výjimku
-            Image image = imageRepository.findById(imageId)
-                    .orElseThrow(() -> new EntityNotFoundException("Image not found: " + imageId));
-
-            String fileUrl = image.getUrl(); // Získat URL PŘED smazáním entity
-            Long productId = image.getProduct() != null ? image.getProduct().getId() : null; // Získat ID produktu pro logování
-
-            logger.debug("Image found: ID={}, URL={}, ProductID={}", imageId, fileUrl, productId);
-
-            // 2. Smazat entitu Image z databáze
-            // Explicitní odstranění z kolekce produktu PŘED smazáním entity může pomoci s Hibernate session,
-            // i když Cascade a orphanRemoval by to měly řešit. Zkusme to bez explicitního remove z kolekce nejprve.
-            imageRepository.delete(image);
-            imageRepository.flush(); // Zajistí provedení delete SQL ihned v rámci transakce
-
-            logger.info("[ProductService] Image entity ID {} deleted from database (associated with product ID {}).", imageId, productId);
-
-            // 3. Smazat fyzický soubor
-            if (StringUtils.hasText(fileUrl)) {
-                logger.debug("Attempting to delete physical file via FileStorageService: {}", fileUrl);
-                fileStorageService.deleteFile(fileUrl); // Tato metoda už loguje úspěch/chybu
-            } else {
-                logger.warn("Cannot delete physical file for image ID {}: URL is missing or blank in the database.", imageId);
+            // Nepotřebujeme zde nutně načítat produkt, pokud je orphanRemoval=true na @OneToMany v Product
+            // Pokud by mazání selhávalo kvůli vazbám, možná bude potřeba načíst produkt a odstranit obrázek z kolekce manuálně PŘED delete.
+            if (!imageRepository.existsById(imageId)) {
+                throw new EntityNotFoundException("Image record not found: " + imageId);
             }
 
+            // 2. Smazat entitu Image z databáze
+            imageRepository.deleteById(imageId);
+            imageRepository.flush(); // Zajistí provedení delete SQL ihned
+
+            logger.info("[ProductService] Image entity record ID {} deleted from database.", imageId);
+
+            // 3. Fyzické mazání souboru se zde již NEPROVÁDÍ
+            // SMAZÁNO: fileStorageService.deleteFile(fileUrl);
+
         } catch (EntityNotFoundException e) {
-            logger.error("!!! [ProductService] Image ID {} not found for deletion.", imageId);
-            // Zde můžeme zvážit, zda výjimku propagovat dál, nebo jen zalogovat
-            throw e; // Propagujeme, aby Controller mohl reagovat
+            logger.error("!!! [ProductService] Image record ID {} not found for DB deletion.", imageId);
+            throw e;
         } catch (Exception e) {
-            logger.error("!!! [ProductService] Error deleting image ID {}: {} !!!", imageId, e.getMessage(), e);
-            // Zabalíme do RuntimeException, aby se transakce rollbackovala
-            throw new RuntimeException("Failed to delete image " + imageId, e);
+            logger.error("!!! [ProductService] Error deleting image DB record for ID {}: {} !!!", imageId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete image DB record " + imageId, e);
         }
-        logger.info(">>> [ProductService] Image deletion process finished for ID: {}", imageId);
+        logger.info(">>> [ProductService] DB record deletion process finished for image ID: {}", imageId);
     }
 
     // --- NOVĚ PŘIDANÁ METODA deleteProduct ---

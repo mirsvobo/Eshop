@@ -164,7 +164,9 @@ public class AdminRoofColorController {
         }
     }
 
-    // --- Nová metoda pro AJAX upload ---
+    // V AdminRoofColorController.java
+
+    // --- Změna v metodě pro AJAX upload ---
     @PostMapping("/{roofColorId}/upload-image")
     @ResponseBody
     public ResponseEntity<?> uploadRoofColorImage(@PathVariable Long roofColorId,
@@ -181,26 +183,33 @@ public class AdminRoofColorController {
             RoofColor roofColor = roofColorRepository.findById(roofColorId)
                     .orElseThrow(() -> new EntityNotFoundException("Barva střechy s ID " + roofColorId + " nenalezena."));
 
-            if (roofColor.getImageUrl() != null && !roofColor.getImageUrl().isEmpty()) {
+            // --- ZAČÁTEK ZMĚNY: Mazání starého souboru z GCS ---
+            String oldFileUrl = roofColor.getImageUrl();
+            if (oldFileUrl != null && !oldFileUrl.isEmpty()) {
                 try {
-                    log.debug("Attempting to delete old image for RoofColor ID {}: {}", roofColorId, roofColor.getImageUrl());
-                    fileStorageService.deleteFile(roofColor.getImageUrl());
+                    log.debug("Attempting to delete old image file from GCS for RoofColor ID {}: {}", roofColorId, oldFileUrl);
+                    fileStorageService.deleteFile(oldFileUrl); // Použije novou implementaci pro GCS
                 } catch (Exception e) {
-                    log.warn("Could not delete old image file {} for RoofColor ID {}: {}", roofColor.getImageUrl(), roofColorId, e.getMessage());
+                    log.warn("Could not delete old GCS file {} for RoofColor ID {}: {}", oldFileUrl, roofColorId, e.getMessage());
                 }
             }
+            // --- KONEC ZMĚNY ---
 
-            String fileUrl = fileStorageService.storeFile(imageFile, "roof-colors"); // Podadresář "roof-colors"
-            log.info("New image stored for RoofColor ID {}. URL: {}", roofColorId, fileUrl);
+            // Uložit nový soubor do GCS a získat URL
+            String newFileUrl = fileStorageService.storeFile(imageFile, "roof-colors"); // storeFile nyní ukládá do GCS
+            log.info("New image stored in GCS for RoofColor ID {}. URL: {}", roofColorId, newFileUrl);
 
-            roofColor.setImageUrl(fileUrl);
+            // Aktualizovat URL v entitě RoofColor
+            roofColor.setImageUrl(newFileUrl); // Uložíme GCS URL
+
             roofColorRepository.save(roofColor);
-            log.info("Image URL updated in database for RoofColor ID {}", roofColorId);
+            log.info("GCS Image URL updated in database for RoofColor ID {}", roofColorId);
 
+            // Vrátit úspěšnou odpověď s GCS URL
             return ResponseEntity.ok(Map.of(
                     "message", "Obrázek úspěšně nahrán.",
-                    "imageUrl", fileUrl,
-                    "roofColorId", roofColorId // Vrátíme ID pro případnou JS kontrolu
+                    "imageUrl", newFileUrl, // Vracíme GCS URL
+                    "roofColorId", roofColorId
             ));
 
         } catch (EntityNotFoundException e) {
@@ -216,7 +225,6 @@ public class AdminRoofColorController {
                     .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
         }
     }
-    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteRoofColor(@PathVariable Long id, RedirectAttributes redirectAttributes) {

@@ -165,7 +165,9 @@ public class AdminDesignController {
         }
     }
 
-    // --- Nová metoda pro AJAX upload ---
+    // V AdminDesignController.java
+
+    // --- Změna v metodě pro AJAX upload ---
     @PostMapping("/{designId}/upload-image")
     @ResponseBody
     public ResponseEntity<?> uploadDesignImage(@PathVariable Long designId,
@@ -183,33 +185,34 @@ public class AdminDesignController {
             Design design = designRepository.findById(designId)
                     .orElseThrow(() -> new EntityNotFoundException("Design s ID " + designId + " nenalezen."));
 
-            // Pokud existuje starý obrázek, pokusíme se ho smazat
-            if (design.getImageUrl() != null && !design.getImageUrl().isEmpty()) {
+            // --- ZAČÁTEK ZMĚNY: Mazání starého souboru z GCS ---
+            String oldFileUrl = design.getImageUrl();
+            if (oldFileUrl != null && !oldFileUrl.isEmpty()) {
                 try {
-                    log.debug("Attempting to delete old image for Design ID {}: {}", designId, design.getImageUrl());
-                    fileStorageService.deleteFile(design.getImageUrl());
+                    log.debug("Attempting to delete old image file from GCS for Design ID {}: {}", designId, oldFileUrl);
+                    fileStorageService.deleteFile(oldFileUrl); // Použije novou implementaci pro GCS
                 } catch (Exception e) {
-                    log.warn("Could not delete old image file {} for Design ID {}: {}", design.getImageUrl(), designId, e.getMessage());
-                    // Nepřerušujeme proces, i když se starý soubor nepodaří smazat
+                    // Logujeme, ale neblokujeme nahrání nového, pokud mazání selže
+                    log.warn("Could not delete old GCS file {} for Design ID {}: {}", oldFileUrl, designId, e.getMessage());
                 }
             }
+            // --- KONEC ZMĚNY ---
 
-            // Uložit nový soubor a získat URL
-            // Použijeme podadresář 'designs'
-            String fileUrl = fileStorageService.storeFile(imageFile, "designs");
-            log.info("New image stored for Design ID {}. URL: {}", designId, fileUrl);
+            // Uložit nový soubor do GCS a získat URL
+            String newFileUrl = fileStorageService.storeFile(imageFile, "designs"); // storeFile nyní ukládá do GCS
+            log.info("New image stored in GCS for Design ID {}. URL: {}", designId, newFileUrl);
 
             // Aktualizovat URL v entitě Design
-            design.setImageUrl(fileUrl);
+            design.setImageUrl(newFileUrl); // Uložíme GCS URL
 
-            // Uložit změnu URL přímo přes repository (jednodušší než volat updateDesign service)
+            // Uložit změnu URL přímo přes repository
             designRepository.save(design);
-            log.info("Image URL updated in database for Design ID {}", designId);
+            log.info("GCS Image URL updated in database for Design ID {}", designId);
 
-            // Vrátit úspěšnou odpověď s URL nového obrázku
+            // Vrátit úspěšnou odpověď s GCS URL
             return ResponseEntity.ok(Map.of(
                     "message", "Obrázek úspěšně nahrán.",
-                    "imageUrl", fileUrl,
+                    "imageUrl", newFileUrl, // Vracíme GCS URL
                     "designId", designId
             ));
 
@@ -226,7 +229,6 @@ public class AdminDesignController {
                     .body(Map.of("error", "Neočekávaná chyba při nahrávání obrázku."));
         }
     }
-    // --- Konec nové metody ---
 
     @PostMapping("/{id}/delete")
     public String deleteDesign(@PathVariable Long id, RedirectAttributes redirectAttributes) {
