@@ -55,7 +55,7 @@ public class EmailService {
     @Value("${eshop.name:Dřevníky Kolář}")
     private String shopName;
 
-    @Value("${eshop.url:http://localhost:8080}")
+    @Value("${eshop.url:https://www.drevniknamiru.cz}")
     private String shopUrl;
 
     @Value("${eshop.replyToEmail:info@drevniky-kolar.cz}")

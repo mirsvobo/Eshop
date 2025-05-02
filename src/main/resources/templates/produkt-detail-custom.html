@@ -236,24 +236,28 @@
             <h3>Galerie inspirace a materiálů</h3>
             <div th:if="${availableDesigns != null and !availableDesigns.isEmpty()}" class="mb-4">
                 <h4>Dostupné designy</h4>
-                <img th:each="design : ${availableDesigns}"
-                     th:src="${design.imageUrl} ?: '/images/placeholder.png'"
-                     th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail">
+                <div th:each="design : ${availableDesigns}" class="d-inline-block text-center me-2 mb-2">
+                    <img th:src="${design.imageUrl} ?: '/images/placeholder.png'"
+                         th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${design.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Designu</p> </div>
             </div>
+
             <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                 <h4>Dostupné lazury</h4>
-                <img th:each="glaze : ${availableGlazes}"
-                     th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
-                     th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail">
+                <div th:each="glaze : ${availableGlazes}" class="d-inline-block text-center me-2 mb-2">
+                    <img th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
+                         th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${glaze.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Lazury</p>
+                </div>
             </div>
+
             <div th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}" class="mb-4">
                 <h4>Barvy střešní krytiny</h4>
-                <img th:each="roofColor : ${availableRoofColors}"
-                     th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
-                     th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail">
-            </div>
-            <div th:if="${(availableDesigns == null or availableDesigns.isEmpty()) and (availableGlazes == null or availableGlazes.isEmpty()) and (availableRoofColors == null or availableRoofColors.isEmpty())}" class="text-muted">
-                Žádné obrázky variant k dispozici.
+                <div th:each="roofColor : ${availableRoofColors}" class="d-inline-block text-center me-2 mb-2">
+                    <img th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
+                         th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${roofColor.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Barvy</p>
+                </div>
             </div>
         </section>
 

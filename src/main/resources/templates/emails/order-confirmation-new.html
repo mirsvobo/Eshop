@@ -5,34 +5,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Potvrzení objednávky</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 25px; border: 1px solid #dddddd; border-radius: 5px; }
-        .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eeeeee; }
-        .header img { max-width: 180px; height: auto; } /* Adjust logo size */
-        h1 { color: #6A8D3E; font-size: 24px; margin-bottom: 15px; }
-        h2 { color: #444444; font-size: 18px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eeeeee; padding-bottom: 5px;}
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #dddddd; text-align: left; padding: 10px; font-size: 14px; }
-        th { background-color: #f8f8f8; font-weight: bold; }
-        .text-right { text-align: right; }
-        .variant-info { font-size: 0.9em; color: #666666; }
-        .totals-table td { border: none; padding: 4px 0; }
-        .totals-table .label { text-align: right; padding-right: 15px; color: #555555;}
-        .totals-table .value { font-weight: bold; text-align: right;}
-        .grand-total .value { font-size: 1.2em; color: #6A8D3E; }
-        .address-box { background-color: #f9f9f9; padding: 15px; border: 1px solid #eeeeee; margin-bottom: 20px; font-size: 14px; }
-        .address-box h3 { font-size: 16px; margin-top: 0; margin-bottom: 8px; color: #555555; }
-        .footer { margin-top: 25px; text-align: center; font-size: 12px; color: #888888; }
-        .footer a { color: #6A8D3E; text-decoration: none; }
-        .button { display: inline-block; background-color: #6A8D3E; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 10px; }
-        a.button { color: #ffffff !important; } /* Ensure button link text is white */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 25px;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .header img {
+            max-width: 180px;
+            height: auto;
+        }
+
+        /* Adjust logo size */
+        h1 {
+            color: #6A8D3E;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            color: #444444;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eeeeee;
+            padding-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .variant-info {
+            font-size: 0.9em;
+            color: #666666;
+        }
+
+        .totals-table td {
+            border: none;
+            padding: 4px 0;
+        }
+
+        .totals-table .label {
+            text-align: right;
+            padding-right: 15px;
+            color: #555555;
+        }
+
+        .totals-table .value {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .grand-total .value {
+            font-size: 1.2em;
+            color: #6A8D3E;
+        }
+
+        .address-box {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #eeeeee;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .address-box h3 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 8px;
+            color: #555555;
+        }
+
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 12px;
+            color: #888888;
+        }
+
+        .footer a {
+            color: #6A8D3E;
+            text-decoration: none;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #6A8D3E;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        a.button {
+            color: #ffffff !important;
+        }
+
+        /* Ensure button link text is white */
     </style>
 </head>
 <body>
 <div class="email-container">
     <div class="header">
-        <img th:src="${shopUrl + '/images/logo.webp'}" th:alt="${shopName}" alt="Logo obchodu"/>
-    </div>
+        <img th:src="@{/images/logo.webp}" th:alt="${shopName}" alt="Logo obchodu"/></div>
 
     <h1>Potvrzení objednávky č. <span th:text="${order.orderCode}">[Kód]</span></h1>
 
@@ -65,7 +180,8 @@
             <td>
                 <strong th:text="${item.productName}">Název produktu</strong>
                 <div class="variant-info" th:utext="${#strings.replace(item.variantInfo,'|', '<br/> - ')} ?: ''"></div>
-                <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="variant-info">
+                <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}"
+                     class="variant-info">
                     <strong>Doplňky:</strong>
                     <ul style="padding-left: 15px; margin: 5px 0 0 0; list-style-type: none;">
                         <li th:each="addonItem : ${item.selectedAddons}"
@@ -74,8 +190,10 @@
                 </div>
             </td>
             <td class="text-right" th:text="${item.count}">1</td>
-            <td class="text-right" th:text="${#numbers.formatDecimal(item.unitPriceWithTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
-            <td class="text-right" th:text="${#numbers.formatDecimal(item.totalPriceWithTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="text-right"
+                th:text="${#numbers.formatDecimal(item.unitPriceWithTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="text-right"
+                th:text="${#numbers.formatDecimal(item.totalPriceWithTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         </tbody>
     </table>
@@ -83,23 +201,28 @@
     <table class="totals-table" style="width: 100%; max-width: 350px; margin-left: auto; margin-right: 0;">
         <tr>
             <td class="label">Mezisoučet (bez DPH):</td>
-            <td class="value" th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="value"
+                th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
             <td class="label" style="color: green;">Sleva (<span th:text="${order.appliedCouponCode}">Kód</span>):</td>
-            <td class="value" style="color: green;" th:text="'- ' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="value" style="color: green;"
+                th:text="'- ' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr>
             <td class="label">Doprava (bez DPH):</td>
-            <td class="value" th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="value"
+                th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr>
             <td class="label">Celkem DPH:</td>
-            <td class="value" th:text="${#numbers.formatDecimal(order.totalTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="value"
+                th:text="${#numbers.formatDecimal(order.totalTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr class="grand-total" style="border-top: 1px solid #ccc; padding-top: 5px;">
             <td class="label">Celkem k úhradě:</td>
-            <td class="value" th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="value"
+                th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
     </table>
 
@@ -125,8 +248,11 @@
             <td style="width: 50%; vertical-align: top; padding-right: 10px; border:none;">
                 <div class="address-box">
                     <h3>Fakturační adresa</h3>
-                    <span th:if="${order.invoiceCompanyName}" th:text="${order.invoiceCompanyName}"></span><br th:if="${order.invoiceCompanyName}"/>
-                    <span th:if="${order.invoiceFirstName}" th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></span><br th:if="${order.invoiceFirstName}"/>
+                    <span th:if="${order.invoiceCompanyName}" th:text="${order.invoiceCompanyName}"></span><br
+                        th:if="${order.invoiceCompanyName}"/>
+                    <span th:if="${order.invoiceFirstName}"
+                          th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></span><br
+                        th:if="${order.invoiceFirstName}"/>
                     <span th:text="${order.invoiceStreet}"></span><br/>
                     <span th:text="${order.invoiceZipCode} + ' ' + ${order.invoiceCity}"></span><br/>
                     <span th:text="${order.invoiceCountry}"></span><br/>
@@ -137,13 +263,15 @@
             <td style="width: 50%; vertical-align: top; padding-left: 10px; border:none;">
                 <div class="address-box">
                     <h3>Dodací adresa</h3>
-                    <span th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName}"></span><br th:if="${order.deliveryCompanyName}"/>
+                    <span th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName}"></span><br
+                        th:if="${order.deliveryCompanyName}"/>
                     <span th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName}"></span><br/>
                     <span th:text="${order.deliveryStreet}"></span><br/>
                     <span th:text="${order.deliveryZipCode + ' ' + order.deliveryCity}"></span><br/>
                     <span th:text="${order.deliveryCountry}"></span><br/>
                     <span th:if="${order.deliveryPhone}">Tel.: <span th:text="${order.deliveryPhone}"></span></span>
-                    <br/><em th:if="${order.isAddressesMatchInOrder()}" style="font-size: 0.9em; color: #666;">(Stejná jako fakturační)</em>
+                    <br/><em th:if="${order.isAddressesMatchInOrder()}" style="font-size: 0.9em; color: #666;">(Stejná
+                    jako fakturační)</em>
                 </div>
             </td>
         </tr>

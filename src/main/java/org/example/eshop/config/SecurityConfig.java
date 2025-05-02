@@ -57,7 +57,8 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/zapomenute-heslo"),
                                 new AntPathRequestMatcher("/resetovat-heslo"),
                                 new AntPathRequestMatcher("/gdpr"),
-                                new AntPathRequestMatcher("/obchodni-podminky")
+                                new AntPathRequestMatcher("/obchodni-podminky"),
+                                new AntPathRequestMatcher("/dekujeme")
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()

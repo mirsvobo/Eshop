@@ -20,7 +20,7 @@
 <body>
 <div class="email-container">
     <div class="header">
-        <img th:src="${shopUrl + '/images/logo.webp'}" th:alt="${shopName}" alt="Logo obchodu"/>
+        <img th:src="@{/images/logo.webp}" th:alt="${shopName}" alt="Logo obchodu"/>
     </div>
 
     <h1>Informace k Vaší objednávce č. <span th:text="${orderCode}">[Kód]</span></h1>

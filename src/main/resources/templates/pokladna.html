@@ -75,9 +75,19 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
-                        <input type="tel" class="form-control" th:errorclass="is-invalid" id="phone" th:field="*{phone}" required>
-                        <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback"><span th:errors="*{phone}">Chyba telefonu</span></div>
+                        <label for="phonePrefix" class="form-label">Telefon <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select class="form-select" id="phonePrefix" name="phonePrefix" style="max-width: 100px;" aria-label="Předvolba">
+                                <option value="+420" th:selected="*{phone == null or #strings.startsWith(phone, '+420')}">+420 (CZ)</option>
+                                <option value="+421" th:selected="*{phone != null and #strings.startsWith(phone, '+421')}">+421 (SK)</option>
+                            </select>
+                            <input type="tel" class="form-control" th:errorclass="is-invalid" id="phoneNumberPart"
+                                   placeholder="Zadejte číslo bez předvolby" required
+                                   th:value="*{phone != null ? #strings.substringAfter(phone, #strings.startsWith(phone, '+420') ? '+420' : (#strings.startsWith(phone, '+421') ? '+421' : '')) : ''}"
+                                   pattern="[0-9\s]{9,15}"> </div>
+                        <input type="hidden" id="phone" th:field="*{phone}"> <div th:if="${#fields.hasErrors('phone')}" class="invalid-feedback d-block">
+                        <span th:errors="*{phone}">Chyba telefonu</span>
+                    </div>
                     </div>
                     <hr>
                     <h5>Fakturační adresa</h5>
@@ -178,9 +188,18 @@
                             <div th:if="${#fields.hasErrors('deliveryCountry')}" class="invalid-feedback"><span th:errors="*{deliveryCountry}">Chyba země</span></div>
                         </div>
                         <div class="mb-3">
-                            <label for="deliveryPhone" class="form-label">Telefon (pro dopravce)</label>
-                            <input type="tel" class="form-control address-trigger" id="deliveryPhone" th:field="*{deliveryPhone}">
-                            <div th:if="${#fields.hasErrors('deliveryPhone')}" class="invalid-feedback"><span th:errors="*{deliveryPhone}">Chyba telefonu</span></div>
+                            <label for="deliveryPhonePrefix" class="form-label">Telefon (pokud je odlišný od fakturačního kontaktu) <span class="text-danger">*</span></label> <div class="input-group">
+                            <select class="form-select" id="deliveryPhonePrefix" name="deliveryPhonePrefix" style="max-width: 100px;" aria-label="Předvolba dodací">
+                                <option value="+420" th:selected="*{deliveryPhone == null or #strings.startsWith(deliveryPhone, '+420')}">+420 (CZ)</option>
+                                <option value="+421" th:selected="*{deliveryPhone != null and #strings.startsWith(deliveryPhone, '+421')}">+421 (SK)</option>
+                            </select>
+                            <input type="tel" class="form-control address-trigger" th:errorclass="is-invalid" id="deliveryPhoneNumberPart"
+                                   placeholder="Zadejte číslo bez předvolby"
+                                   th:value="*{deliveryPhone != null ? #strings.substringAfter(deliveryPhone, #strings.startsWith(deliveryPhone, '+420') ? '+420' : (#strings.startsWith(deliveryPhone, '+421') ? '+421' : '')) : ''}"
+                                   pattern="[0-9\s]{9,15}"> </div>
+                            <input type="hidden" id="deliveryPhone" th:field="*{deliveryPhone}"> <div th:if="${#fields.hasErrors('deliveryPhone')}" class="invalid-feedback d-block">
+                            <span th:errors="*{deliveryPhone}">Chyba dodacího telefonu</span>
+                        </div>
                         </div>
                     </div>
                     <hr>

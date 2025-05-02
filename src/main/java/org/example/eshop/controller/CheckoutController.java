@@ -28,6 +28,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.ValidationUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
@@ -336,7 +337,7 @@ public class CheckoutController implements PriceConstants {
             log.info("Session cart cleared for {}", userIdentifierForLog);
             redirectAttributes.addFlashAttribute("orderSuccess", "Vaše objednávka č. " + createdOrder.getOrderCode() + " byla úspěšně přijata. Děkujeme!");
 
-            return isGuest ? "redirect:/dekujeme?orderCode=" + createdOrder.getOrderCode() : "redirect:/muj-ucet/objednavky";
+            return "redirect:/pokladna/dekujeme?orderCode=" + createdOrder.getOrderCode();
 
         } catch (ValidationException | CustomerService.EmailRegisteredException e) {
             log.warn("Validation or processing error during checkout for {}: {}", userIdentifierForLog, e.getMessage());
@@ -820,6 +821,26 @@ public class CheckoutController implements PriceConstants {
 
         public ShippingCalculationException(String message, Throwable cause) {
             super(message, cause);
+        }
+    }
+    @GetMapping("/dekujeme") // Nebo jiná cesta, např. /objednavka/potvrzeni
+    public String showOrderConfirmationPage(@RequestParam String orderCode, Model model, RedirectAttributes redirectAttributes) {
+        log.info("Displaying order confirmation page for order code: {}", orderCode);
+        try {
+            Order order = orderService.findOrderByCode(orderCode) // Použijte metodu pro nalezení podle kódu
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Objednávka s kódem '" + orderCode + "' nenalezena."));
+
+            model.addAttribute("order", order);
+            return "objednavka-potvrzeni"; // Název nové šablony
+
+        } catch (ResponseStatusException e) {
+            log.warn("Order confirmation page requested for non-existent order code: {}", orderCode);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/"; // Přesměrování na domovskou stránku při chybě
+        } catch (Exception e) {
+            log.error("Error loading order confirmation page for code {}: {}", orderCode, e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazování potvrzení objednávky nastala chyba.");
+            return "redirect:/";
         }
     }
 

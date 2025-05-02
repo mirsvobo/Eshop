@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Objednávka přijata</title>
+    <meta name="robots" content="noindex, nofollow"/>
+    <style>
+        /* Přidáme styly pro tabulku položek */
+        .order-items-table th, .order-items-table td {
+            vertical-align: middle;
+            font-size: 0.9em;
+        }
+        .order-items-table .item-image {
+            max-width: 60px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+        .item-variant-details {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<section layout:fragment="content">
+    <div class="container mt-5 mb-5 text-center">
+        <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
+        <h1>Děkujeme za Vaši objednávku!</h1>
+        <p class="lead">Vaše objednávka č. <strong th:text="${order?.orderCode}">[Číslo objednávky]</strong> byla úspěšně přijata ke zpracování.</p>
+        <hr class="my-4">
+
+        <div th:if="${order != null}" class="order-details text-start col-md-10 mx-auto mb-4">
+
+            <h5 class="mb-3">Přehled objednaných položek</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered order-items-table">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 10%;">Náhled</th>
+                        <th scope="col" style="width: 40%;">Produkt</th>
+                        <th scope="col" class="text-center" style="width: 10%;">Ks</th>
+                        <th scope="col" class="text-end" style="width: 20%;">Cena/ks (bez DPH)</th>
+                        <th scope="col" class="text-end" style="width: 20%;">Celkem (bez DPH)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${order.orderItems}">
+                        <td>
+                            <img th:if="${item.product?.getImagesOrdered() != null and !item.product.getImagesOrdered().isEmpty()}"
+                                 th:src="${item.product.getImagesOrdered()[0].url}"
+                                 th:alt="${item.productName}" class="img-fluid rounded item-image">
+                            <img th:unless="${item.product?.getImagesOrdered() != null and !item.product.getImagesOrdered().isEmpty()}"
+                                 th:src="@{/images/placeholder.png}"
+                                 th:alt="${item.productName}" class="img-fluid rounded item-image">
+                        </td>
+                        <td>
+                            <strong th:text="${item.productName}">Název produktu</strong>
+                            <div class="item-variant-details" th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''"></div>
+                            <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="item-variant-details mt-1">
+                                <small>+ <span th:each="addonItem, iter : ${item.selectedAddons}" th:text="${addonItem.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
+                            </div>
+                        </td>
+                        <td class="text-center" th:text="${item.count}">1</td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(item.unitPriceWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+                        <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(item.totalPriceWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5>Souhrn objednávky</h5>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Mezisoučet (bez DPH):</span>
+                    <span th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between text-success">
+                    <span>Sleva (<span th:text="${order.appliedCouponCode}">Kód</span>):</span>
+                    <span th:text="'-' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Doprava (bez DPH):</span>
+                    <span th:text="${#numbers.formatDecimal(order.shippingCostWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Celkem DPH:</span>
+                    <span th:text="${#numbers.formatDecimal(order.totalTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li th:if="${order.originalTotalPrice != null and order.totalPrice != null and order.originalTotalPrice.compareTo(order.totalPrice) != 0}"
+                    class="list-group-item d-flex justify-content-between text-muted small">
+                    <span>Odstranění haléřů:</span>
+                    <span th:text="'-' + ${#numbers.formatDecimal(order.originalTotalPrice.subtract(order.totalPrice), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between fw-bold fs-5 border-top pt-2">
+                    <span>Celkem k úhradě:</span>
+                    <span th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'WHITESPACE', 0, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+                <li th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between text-danger fw-bold">
+                    <span>Požadovaná záloha:</span>
+                    <span th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></span>
+                </li>
+            </ul>
+
+            <div class="row mt-4">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <h6>Fakturační adresa:</h6>
+                    <address class="mb-0 small">
+                        <th:block th:if="${order.invoiceCompanyName}" th:text="${order.invoiceCompanyName}"></th:block><br th:if="${order.invoiceCompanyName}"/>
+                        <th:block th:if="${!#strings.isEmpty(order.invoiceFirstName)}" th:text="${order.invoiceFirstName + ' ' + order.invoiceLastName}"></th:block><br/>
+                        <th:block th:text="${order.invoiceStreet}"></th:block><br/>
+                        <th:block th:text="${order.invoiceZipCode + ' ' + order.invoiceCity}"></th:block><br/>
+                        <th:block th:text="${order.invoiceCountry}"></th:block><br/>
+                        <th:block th:if="${order.invoiceTaxId}">IČO: <th:block th:text="${order.invoiceTaxId}"></th:block><br/></th:block>
+                        <th:block th:if="${order.invoiceVatId}">DIČ: <th:block th:text="${order.invoiceVatId}"></th:block></th:block>
+                    </address>
+                </div>
+                <div class="col-md-6">
+                    <h6>Dodací adresa:</h6>
+                    <address class="mb-0 small">
+                        <th:block th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName}"></th:block><br th:if="${order.deliveryCompanyName}"/>
+                        <th:block th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName}"></th:block><br/>
+                        <th:block th:text="${order.deliveryStreet}"></th:block><br/>
+                        <th:block th:text="${order.deliveryZipCode + ' ' + order.deliveryCity}"></th:block><br/>
+                        <th:block th:text="${order.deliveryCountry}"></th:block><br/>
+                        <th:block th:if="${order.deliveryPhone}">Tel.: <th:block th:text="${order.deliveryPhone}"></th:block></th:block>
+                    </address>
+                    <em th:if="${order.isAddressesMatchInOrder()}" class="text-muted d-block mt-1 small">(Stejná jako fakturační)</em>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-4">O dalším průběhu vyřizování Vás budeme informovat emailem.</p>
+        <p th:if="${#authorization.expression('isAuthenticated()')}">
+            Stav své objednávky můžete sledovat ve <a th:href="@{/muj-ucet/objednavky}">svém účtu</a>.
+        </p>
+
+        <div class="mt-4">
+            <a th:href="@{/}" class="btn btn-primary"><i class="bi bi-house-door"></i> Zpět na úvod</a>
+            <a th:if="${#authorization.expression('isAuthenticated()')}" th:href="@{/muj-ucet/objednavky}" class="btn btn-outline-secondary"><i class="bi bi-list-ul"></i> Moje objednávky</a>
+        </div>
+    </div>
+</section>
+</body>
+</html>

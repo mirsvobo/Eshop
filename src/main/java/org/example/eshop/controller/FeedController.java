@@ -1,7 +1,9 @@
 package org.example.eshop.controller;
 
 import org.example.eshop.service.FeedGenerationService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -31,27 +33,29 @@ public class FeedController {
                 .body(xmlContent.getBytes(StandardCharsets.UTF_8));
     }
 
-    @GetMapping(value = "/google_feed.xml", produces = MediaType.APPLICATION_XML_VALUE)
-    @ResponseBody
+    @GetMapping(value = "/google_feed.xml")
     public ResponseEntity<byte[]> getGoogleMerchantFeed() {
         // Předpokládáme generování pro CZK jako výchozí
         String xmlContent = feedGenerationService.generateGoogleMerchantFeed("CZK");
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_XML)
-                .body(xmlContent.getBytes(StandardCharsets.UTF_8));
+        return getResponseEntity(xmlContent);
     }
 
-    // Můžete přidat variantu pro EUR feed, např. /google_feed_eur.xml
-
-    @GetMapping(value = "/heureka_feed.xml", produces = MediaType.APPLICATION_XML_VALUE)
-    @ResponseBody
+    @GetMapping(value = "/heureka_feed.xml") // Odebráno produces = MediaType.APPLICATION_XML_VALUE
+    // @ResponseBody // Odebráno
     public ResponseEntity<byte[]> getHeurekaFeed() {
         // Předpokládáme generování pro CZK jako výchozí
         String xmlContent = feedGenerationService.generateHeurekaFeed("CZK");
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_XML)
-                .body(xmlContent.getBytes(StandardCharsets.UTF_8));
+        return getResponseEntity(xmlContent);
     }
-    // Můžete přidat variantu pro EUR feed, např. /heureka_feed_eur.xml
 
+    @NotNull
+    private ResponseEntity<byte[]> getResponseEntity(String xmlContent) {
+        byte[] body = xmlContent.getBytes(StandardCharsets.UTF_8);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_XML); // <-- Explicitní nastavení Content-Type
+        headers.setContentLength(body.length);
+
+        return new ResponseEntity<>(body, headers, org.springframework.http.HttpStatus.OK);
+    }
 }

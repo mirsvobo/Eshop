@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.eshop.model.Customer;
+import org.example.eshop.validation.ValidPhoneNumber;
 import org.springframework.util.StringUtils;
 
 @Getter
@@ -23,7 +24,9 @@ public class CheckoutFormDataDto {
     private String lastName; // Hlavní kontaktní příjmení
     @NotBlank(message = "Telefonní číslo je povinné.", groups = {GuestValidation.class, DefaultValidationGroup.class})
     @Size(max = 30, message = "Telefonní číslo je příliš dlouhé.")
-    @Pattern(regexp = "^(|[+]?[0-9\\s()-]{9,20})$", message = "Neplatný formát telefonního čísla.")
+    @NotBlank(message = "Telefonní číslo je povinné.", groups = {GuestValidation.class, DefaultValidationGroup.class})
+    @Size(max = 30, message = "Telefonní číslo je příliš dlouhé.")
+    @ValidPhoneNumber(message = "Neplatný formát telefonního čísla (uveďte i předvolbu +420/+421).", groups = {GuestValidation.class, DefaultValidationGroup.class}) // <-- POUŽITÍ NOVÉ ANOTACE
     private String phone;
     // --- Fakturační adresa ---
     @Size(max = 255, message = "Název firmy je příliš dlouhý.")
@@ -70,11 +73,9 @@ public class CheckoutFormDataDto {
     @NotBlank(message = "Země (dodací) je povinná.", groups = DeliveryAddressValidation.class)
     @Size(max = 100, message = "Země (dodací) je příliš dlouhá.")
     private String deliveryCountry;
-    @NotBlank(message = "Telefonní číslo (dodací) je povinné.", groups = DeliveryAddressValidation.class)
     @Size(max = 30, message = "Telefonní číslo (dodací) je příliš dlouhé.")
-    @Pattern(regexp = "^(|[+]?[0-9\\s()-]{9,20})$", message = "Neplatný formát telefonního čísla.")
+    @ValidPhoneNumber(message = "Neplatný formát dodacího telefonního čísla (uveďte i předvolbu +420/+421).", groups = DeliveryAddressValidation.class) // <-- POUŽITÍ NOVÉ ANOTACE
     private String deliveryPhone;
-    // --- Ostatní (zůstává stejné) ---
     @NotBlank(message = "Musíte vybrat způsob platby.", groups = DefaultValidationGroup.class)
     private String paymentMethod;
     @Size(max = 1000, message = "Poznámka je příliš dlouhá (max 1000 znaků).")
