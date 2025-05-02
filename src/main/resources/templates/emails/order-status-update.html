@@ -46,7 +46,8 @@
 <body>
 <div class="email-container">
     <div class="header">
-        <img th:href="@{/src/logo.webp}" th:alt="${shopName}" alt="Logo obchodu"/>    </div>
+        <img th:src="${logoUrl}" th:alt="${shopName}" alt="Logo obchodu"/>
+    </div>
 
     <h1>Aktualizace stavu objednávky č. <span th:text="${order.orderCode}">[Kód]</span></h1>
 

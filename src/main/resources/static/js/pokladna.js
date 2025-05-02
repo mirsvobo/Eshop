@@ -1,1 +1,458 @@
-function formatCurrency(a,b,c=2){if(a===null||typeof a==="undefined"||isNaN(a))return"---";const d=parseFloat(a.toFixed(c));return d.toLocaleString("cs-CZ",{minimumFractionDigits:c,maximumFractionDigits:c})+" "+b}function safeParseFloat(a){if(a===null||typeof a==="undefined")return null;const b=String(a).replace(",",".").replace(/[^\d.-]/g,""),c=parseFloat(b);return isNaN(c)?null:c}document.addEventListener("DOMContentLoaded",function(){const a=document.getElementById("checkout-form");if(!a){console.error("JS Error: Checkout form #checkout-form not found! Script cannot initialize.");return}const b=a.dataset;console.log("JS: Checkout script starting (v23 - Phone Prefix)...");const c=b.isUserLoggedIn==="true",d=b.csrfToken||null,e=b.csrfHeaderName||null,f=b.calculateShippingUrl||"/pokladna/calculate-shipping",g=b.currencySymbol||"Kč";let h=b.initialShippingValid==="true";const i=b.initialCartEmpty==="true",j=safeParseFloat(b.initialSubtotal||"0"),k=safeParseFloat(b.initialCouponDiscount||"0"),l=safeParseFloat(b.initialTotalItemVat||"0");console.log("JS: Initial values from data - isUserLoggedIn:",c,"shippingCalculatedSuccessfully:",h,"cartIsEmpty:",i);console.log("JS: Initial prices from data - Subtotal:",j,"CouponDiscount:",k,"ItemVAT:",l);console.log("JS: Config - csrfToken:",d?"***":null,"csrfHeader:",e,"shippingUrl:",f,"symbol:",g);const m=document.getElementById("phonePrefix"),n=document.getElementById("phoneNumberPart"),o=document.getElementById("phone"),p=document.getElementById("deliveryPhonePrefix"),q=document.getElementById("deliveryPhoneNumberPart"),r=document.getElementById("deliveryPhone");function s(){console.log("JS: updateSubmitButtonState called. Current shippingCalculatedSuccessfully:",h);const a=document.getElementById("submit-order-button"),b=document.getElementById("recalculate-shipping-notice-area"),c=i;if(!a||!b){console.error("JS Error in updateSubmitButtonState: elements #submit-order-button or #recalculate-shipping-notice-area not found!");return}const d=c||!h;a.disabled=d;console.log("JS: updateSubmitButtonState - Button disabled:",d);if(!c&&!h){const a=document.querySelector("#summary-total-price .recalculate-shipping-notice span"),d=a?a.textContent.replace(/[()]/g,""):"Pro odeslání objednávky je nutné nejprve spočítat dopravu.";b.textContent=d;b.classList.remove("d-none");console.log("JS: updateSubmitButtonState - Recalculate notice shown:",d)}else{b.classList.add("d-none");console.log("JS: updateSubmitButtonState - Recalculate notice hidden.")}}function t(a){console.log("JS: updateSummary called with AJAX data:",a);const b=document.getElementById("summary-original-total-price"),c=document.getElementById("summary-rounding-row"),d=document.getElementById("summary-rounding-difference"),e=document.getElementById("summary-total-price"),i=document.getElementById("shipping-cost-display"),m=document.getElementById("shipping-cost-value"),n=document.getElementById("shipping-cost-error"),o=document.getElementById("summary-original-shipping-cost"),p=document.getElementById("summary-shipping-tax"),q=document.getElementById("summary-shipping-discount-row"),r=document.getElementById("summary-shipping-discount-value"),v=document.getElementById("vat-breakdown-shipping"),w=document.getElementById("summary-total-vat"),x=document.getElementById("hiddenShippingCostNoTax"),y=document.getElementById("hiddenShippingTax"),z=document.getElementById("shipping-error-alert"),A=document.getElementById("shipping-error-text");if(i)i.classList.remove("error","calculating");if(n)n.textContent="";if(z)z.classList.add("d-none");h=!1;if(a&&a.errorMessage){console.error("JS Error: Shipping calculation API returned error:",a.errorMessage);const i=a.errorMessage||"Neznámá chyba výpočtu dopravy.";if(i&&n){i.classList.add("error");n.textContent=i}if(o)o.innerHTML=`<span class="text-danger recalculate-shipping-notice">${i}</span>`;if(b)b.textContent="---";if(c)c.classList.add("d-none");if(e)e.innerHTML=`<span class="text-warning fw-normal recalculate-shipping-notice">(Nutno přepočítat dopravu)</span>`;if(w)w.textContent=formatCurrency(l,g);if(x)x.value="";if(y)y.value="";if(v)v.style.display="none";if(q)q.style.display="none";if(A)A.textContent=i;if(z)z.classList.remove("d-none")}else if(a&&typeof a.shippingCostNoTax!=="undefined"&&a.shippingCostNoTax!==null&&a.totalPrice!==null){console.log("JS Info: Processing successful shipping calculation data.");h=!0;const i=safeParseFloat(a.shippingCostNoTax),l=safeParseFloat(a.shippingTax),C=safeParseFloat(a.totalPrice),D=Math.floor(C),E=safeParseFloat(a.originalShippingCostNoTax),F=safeParseFloat(a.shippingDiscountAmount),G=safeParseFloat(a.totalVatWithShipping),H=j-k,I=C,J=I-D;console.log(`JS Debug: calculatedOriginalTotal=${I}, roundedTotalToDisplay=${D}, calculatedRoundingDifference=${J}`);if(i&&m&&n){m.textContent=formatCurrency(i,a.currencySymbol)+" (bez DPH)";n.textContent=""}if(o){o.textContent=formatCurrency(E,a.currencySymbol);console.log("JS Debug: Updated #summary-original-shipping-cost to:",o.textContent)}else console.warn("JS Warn: #summary-original-shipping-cost not found.");if(q&&r){if(F!==null&&F>0);else;}else console.warn("JS Warn: Shipping discount elements not found.");if(v&&p){if(l!==null&&l>0){p.textContent=formatCurrency(l,a.currencySymbol);v.style.display="block";console.log("JS Debug: Updated and showing #summary-shipping-tax:",p.textContent)}else{v.style.display="none";console.log("JS Debug: Hiding shipping tax breakdown.")}}else console.warn("JS Warn: Shipping tax breakdown elements not found.");if(w){w.textContent=formatCurrency(G,a.currencySymbol);console.log("JS Debug: Updated #summary-total-vat to:",w.textContent)}else console.warn("JS Warn: #summary-total-vat not found.");if(b){b.textContent=formatCurrency(I,a.currencySymbol,2);console.log("JS Debug: Updated #summary-original-total-price to:",b.textContent)}else console.warn("JS Warn: #summary-original-total-price not found.");if(c&&d){if(J!==null&&Math.abs(J.toFixed(2))>0.00){d.textContent="- "+formatCurrency(J,a.currencySymbol,2);c.classList.remove("d-none");console.log("JS Debug: Showing rounding difference:",J)}else{d.textContent="";c.classList.add("d-none");console.log("JS Debug: Hiding rounding difference (Difference <= 0.00 after rounding):",J)}}else console.warn("JS Warn: Rounding display elements (#summary-rounding-row / #summary-rounding-difference) not found.");if(e){e.innerHTML="";const b=document.createElement("span");b.textContent=formatCurrency(D,a.currencySymbol,0);e.appendChild(b);e.classList.remove("text-warning","fw-normal","recalculate-shipping-notice");e.classList.add("fw-bold");console.log("JS Debug: Displaying final rounded total:",D)}else console.warn("JS Warn: #summary-total-price not found.");if(x){x.value=i!==null?i.toFixed(2):""}else console.warn("JS Warn: #hiddenShippingCostNoTax not found.");if(y){y.value=l!==null?l.toFixed(2):""}else console.warn("JS Warn: #hiddenShippingTax not found.");console.log("JS Info: Summary updated successfully from AJAX.")}else{console.error("JS Error: Invalid or incomplete numeric data received from shipping calculation API:",a);if(o)o.innerHTML=`<span class="text-danger recalculate-shipping-notice">(Chyba dat)</span>`;if(b)b.textContent="---";if(c)c.classList.add("d-none");if(v)v.style.display="none";if(w)w.textContent="---";if(e)e.innerHTML=`<span class="text-warning fw-normal recalculate-shipping-notice">(Chyba dat)</span>`}s()}function u(){console.log("JS: resetShippingDisplay called due to address change.");const a=document.getElementById("summary-total-price"),b=document.getElementById("shipping-cost-display"),c=document.getElementById("shipping-cost-value"),d=document.getElementById("shipping-cost-error"),e=document.getElementById("summary-original-shipping-cost"),f=document.getElementById("summary-shipping-tax"),i=document.getElementById("summary-shipping-discount-row"),j=document.getElementById("vat-breakdown-shipping"),k=document.getElementById("summary-total-vat"),m=document.getElementById("summary-original-total-price"),n=document.getElementById("summary-rounding-row"),o=document.getElementById("hiddenShippingCostNoTax"),p=document.getElementById("hiddenShippingTax");h=!1;if(b)b.classList.remove("error","calculating");if(c)c.textContent="";if(d)d.innerHTML=`<span class="text-warning recalculate-shipping-notice">(Nutno přepočítat)</span>`;if(e)e.innerHTML=`<span class="text-warning recalculate-shipping-notice">(Nutno přepočítat)</span>`;if(f)f.textContent="---";if(i)i.style.display="none";if(j)j.style.display="none";if(k)k.textContent=formatCurrency(l,g);if(m)m.textContent="---";if(n)n.classList.add("d-none");if(a)a.innerHTML=`<span class="text-warning fw-normal recalculate-shipping-notice">(Nutno přepočítat dopravu)</span>`;if(o)o.value="";if(p)p.value="";s()}function v(a,b){console.log("JS: toggleDeliveryFields called. Checkbox checked:",a?.checked);if(a&&b){b.classList.toggle("hidden",a.checked);u()}else console.warn("JS Warn: toggleDeliveryFields - checkbox or deliveryDiv not found.")}function w(a,b,c){if(a&&b&&c){const d=a.value,e=b.value.replace(/\s/g,""),f=d+e;c.value=f;console.log(`JS: Updated hidden input #${c.id} to: ${f}`);const g=c.nextElementSibling;if(g&&g.classList.contains("invalid-feedback"))g.textContent="";b.classList.remove("is-invalid")}else console.warn("JS Warn: Missing elements for updating combined phone.")}console.log("JS: Attaching DOMContentLoaded listeners...");const x=document.getElementById("calculate-shipping-btn"),y=document.querySelectorAll(".address-trigger"),z=document.getElementById("useInvoiceAddressAsDelivery"),A=document.querySelector(".delivery-address-fields");if(x){console.log("JS: Button #calculate-shipping-btn found. Attaching listener...");x.addEventListener("click",function(a){console.log("JS: Button #calculate-shipping-btn CLICKED!");a.preventDefault();console.log("JS: Default event prevented.");const b=this,c=b.querySelector(".spinner-border"),i=Array.from(b.childNodes).find(a=>a.nodeType===Node.TEXT_NODE&&a.textContent.trim().length>0),j=i?i.textContent.trim():"Spočítat dopravu dle adresy";console.log("JS: Disabling button and showing spinner.");b.disabled=!0;if(c)c.style.display="inline-block";if(i)i.textContent=" Počítám...";const k=document.getElementById("shipping-cost-display");if(k)k.classList.add("calculating");const l=document.getElementById("submit-order-button");if(l)l.disabled=!0;const m=document.getElementById("shipping-error-alert");if(m)m.classList.add("d-none");console.log("JS: Collecting address data...");const n={street:"",city:"",zipCode:"",country:""},o=z?z.checked:!0,p=o?"invoiceStreet":"deliveryStreet",q=o?"invoiceCity":"deliveryCity",r=o?"invoiceZipCode":"deliveryZipCode",v=o?"invoiceCountry":"deliveryCountry";n.street=document.getElementById(p)?.value||"";n.city=document.getElementById(q)?.value||"";n.zipCode=document.getElementById(r)?.value||"";n.country=document.getElementById(v)?.value||"";console.log(`JS: Collected address data (using invoice: ${o}):`,n);console.log("JS: Performing frontend address validation...");if(!n.street||!n.city||!n.zipCode||!n.country){const o=`Pro výpočet dopravy vyplňte kompletní ${o ? 'fakturační' : 'dodací'} adresu (Ulice, Město, PSČ, Země).`;console.warn("JS: Frontend address validation failed:",o);const p=document.getElementById("shipping-error-text");if(p)p.textContent=o;if(m)m.classList.remove("d-none");b.disabled=!1;if(c)c.style.display="none";if(i)i.textContent=j;if(k)k.classList.remove("calculating");s();console.log("JS: Exiting click handler due to validation error.");return}console.log("JS: Frontend validation passed.");const w={"Content-Type":"application/json",Accept:"application/json"};if(d&&e)w[e]=d;console.log("JS: Initiating fetch request to:",f," Headers:",w);fetch(f,{method:"POST",headers:w,body:JSON.stringify(n)}).then(a=>{console.log("JS Fetch: Received response status:",a.status);if(!a.ok)return a.json().then(a=>{throw a}).catch(()=>{throw new Error(`Chyba serveru (${a.status})`)});return a.json()}).then(a=>{console.log("JS Fetch: Received successful data:",a);t(a)}).catch(a=>{console.error("JS Fetch: Error during fetch:",a);t({errorMessage:a?.errorMessage||a?.message||"Chyba komunikace se serverem."})}).finally(()=>{console.log("JS Fetch: Finished. Resetting button state.");b.disabled=!1;if(c)c.style.display="none";if(i)i.textContent=j;if(k)k.classList.remove("calculating")});console.log("JS: Fetch request initiated.")});console.log("JS: Click listener attached successfully to #calculate-shipping-btn.")}else console.error("JS Error: Button #calculate-shipping-btn not found! Listener not attached.");if(y.length>0){console.log("JS: Attaching 'change' listeners to address trigger elements.");y.forEach(a=>{a.addEventListener("change",u)});console.log("JS: Change listeners attached to address triggers.")}else console.warn("JS Warning: No address trigger elements found.");if(z&&A){console.log("JS: Initializing delivery fields visibility based on checkbox state.");v(z,A);z.addEventListener("change",()=>v(z,A));console.log("JS: Change listener attached to delivery toggle checkbox.")}else console.warn("JS Warn: Checkbox/Div for delivery address toggle not found.");if(m&&n&&o){m.addEventListener("change",()=>w(m,n,o));n.addEventListener("input",()=>w(m,n,o));w(m,n,o);console.log("JS: Listeners and initial update for main phone attached.")}else console.warn("JS Warn: Elements for main phone listener not found.");if(p&&q&&r){p.addEventListener("change",()=>w(p,q,r));q.addEventListener("input",()=>w(p,q,r));w(p,q,r);console.log("JS: Listeners and initial update for delivery phone attached.")}else console.warn("JS Warn: Elements for delivery phone listener not found.");console.log("JS: Setting initial button state.");s();if(!h&&!i){console.log("JS Info: Initial shipping is invalid and cart not empty -> calling resetShippingDisplay().");u()}else console.log("JS Info: Initial shipping is valid or cart is empty. No initial reset needed.");console.log("JS: Checkout page initialization complete (v23 - Phone Prefix).")});
+function formatCurrency(value, symbol, decimalPlaces = 2) {
+    if (value === null || typeof value === 'undefined' || isNaN(value)) {
+        return '---';
+    }
+    const roundedValue = parseFloat(value.toFixed(decimalPlaces));
+    // Používáme české locale pro formátování, nahradíme pevnou mezeru za normální pro konzistenci
+    return roundedValue.toLocaleString('cs-CZ', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces }).replace(/\s/g, ' ') + ' ' + symbol;
+}
+
+function safeParseFloat(value) {
+    if (value === null || typeof value === 'undefined') return null;
+    // Odstraníme vše kromě číslic, tečky a mínusu, čárku nahradíme tečkou
+    const cleanedValue = String(value).replace(',', '.').replace(/[^\d.-]/g, '');
+    const parsed = parseFloat(cleanedValue);
+    const result = isNaN(parsed) ? null : parsed;
+    // console.log(`safeParseFloat: Input='${value}', Cleaned='${cleanedValue}', Parsed=${parsed}, Result=${result}`); // Debug log
+    return result;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutForm = document.getElementById('checkout-form');
+    if (!checkoutForm) {
+        console.error("JS Error: Checkout form #checkout-form not found! Script cannot initialize.");
+        return;
+    }
+    const dataset = checkoutForm.dataset;
+    console.log("JS: Checkout script starting (v25 - Full with Fix)..."); // Aktualizovaná verze
+
+    // Načtení dat z datasetu formuláře
+    const isUserLoggedIn = dataset.isUserLoggedIn === 'true';
+    const csrfToken = dataset.csrfToken || null;
+    const csrfHeaderName = dataset.csrfHeaderName || null;
+    const calculateShippingUrl = dataset.calculateShippingUrl || '/pokladna/calculate-shipping';
+    const currencySymbol = dataset.currencySymbol || 'Kč';
+    let shippingCalculatedSuccessfully = dataset.initialShippingValid === 'true';
+    const initialCartIsEmptyState = dataset.initialCartEmpty === 'true';
+    const initialSubtotal = safeParseFloat(dataset.initialSubtotal || '0');
+    const initialCouponDiscount = safeParseFloat(dataset.initialCouponDiscount || '0');
+    const initialTotalItemVat = safeParseFloat(dataset.initialTotalItemVat || '0');
+
+    // Logování načtených hodnot
+    console.log("JS: Initial values - isUserLoggedIn:", isUserLoggedIn, "shippingOK:", shippingCalculatedSuccessfully, "cartEmpty:", initialCartIsEmptyState);
+    console.log("JS: Initial prices - Subtotal:", initialSubtotal, "CouponDiscount:", initialCouponDiscount, "ItemVAT:", initialTotalItemVat);
+    console.log("JS: Config - csrfHeader:", csrfHeaderName, "shippingUrl:", calculateShippingUrl, "symbol:", currencySymbol);
+
+    // Selektory pro UI elementy
+    const phonePrefixSelect = document.getElementById('phonePrefix');
+    const phoneNumberInput = document.getElementById('phoneNumberPart');
+    const hiddenPhoneInput = document.getElementById('phone');
+    const deliveryPhonePrefixSelect = document.getElementById('deliveryPhonePrefix');
+    const deliveryPhoneNumberInput = document.getElementById('deliveryPhoneNumberPart');
+    const hiddenDeliveryPhoneInput = document.getElementById('deliveryPhone');
+    const calculateShippingBtn = document.getElementById('calculate-shipping-btn');
+    const addressTriggers = document.querySelectorAll('.address-trigger'); // Přidejte třídu 'address-trigger' relevantním polím adresy v HTML
+    const useInvoiceCheckbox = document.getElementById('useInvoiceAddressAsDelivery');
+    const deliveryFieldsDiv = document.querySelector('.delivery-address-fields');
+    const submitButton = document.getElementById('submit-order-button');
+    const noticeArea = document.getElementById('recalculate-shipping-notice-area');
+    const costDisplay = document.getElementById('shipping-cost-display');
+    const costValueSpan = document.getElementById('shipping-cost-value');
+    const costErrorSpan = document.getElementById('shipping-cost-error');
+    const summaryOriginalShippingCostEl = document.getElementById('summary-original-shipping-cost');
+    const summaryShippingTaxEl = document.getElementById('summary-shipping-tax');
+    const summaryShippingDiscountRowEl = document.getElementById('summary-shipping-discount-row');
+    const summaryShippingDiscountValueEl = document.getElementById('summary-shipping-discount-value');
+    const vatBreakdownShippingDiv = document.getElementById('vat-breakdown-shipping');
+    const summaryTotalVatEl = document.getElementById('summary-total-vat');
+    const summaryOriginalTotalPriceEl = document.getElementById('summary-original-total-price');
+    const summaryRoundingRowEl = document.getElementById('summary-rounding-row');
+    const summaryRoundingDifferenceEl = document.getElementById('summary-rounding-difference');
+    const summaryTotalPriceEl = document.getElementById('summary-total-price');
+    const hiddenCostNoTaxEl = document.getElementById('hiddenShippingCostNoTax');
+    const hiddenTaxEl = document.getElementById('hiddenShippingTax');
+    const errorAlertEl = document.getElementById('shipping-error-alert');
+    const errorAlertTextEl = document.getElementById('shipping-error-text');
+
+    // --- FUNKCE ---
+
+    // Aktualizuje stav odesílacího tlačítka a upozornění na nutnost přepočtu
+    function updateSubmitButtonState() {
+        console.log("JS: updateSubmitButtonState. Shipping OK:", shippingCalculatedSuccessfully);
+        if (!submitButton || !noticeArea) {
+            console.error("JS Error: updateSubmitButtonState - missing required elements (#submit-order-button or #recalculate-shipping-notice-area)!");
+            return;
+        }
+        const cartIsEmpty = initialCartIsEmptyState;
+        const isDisabled = cartIsEmpty || !shippingCalculatedSuccessfully;
+        submitButton.disabled = isDisabled;
+        console.log("JS: updateSubmitButtonState - Button disabled:", isDisabled);
+
+        if (!cartIsEmpty && !shippingCalculatedSuccessfully) {
+            const noticeText = 'Pro odeslání objednávky je nutné nejprve spočítat dopravu.';
+            noticeArea.textContent = noticeText;
+            noticeArea.classList.remove('d-none');
+            console.log("JS: updateSubmitButtonState - Recalculate notice shown:", noticeText);
+        } else {
+            noticeArea.classList.add('d-none');
+            console.log("JS: updateSubmitButtonState - Recalculate notice hidden.");
+        }
+    }
+
+    // Aktualizuje zobrazení souhrnu na základě dat z AJAX odpovědi
+    function updateSummary(data) {
+        console.log("JS: updateSummary with AJAX data:", data);
+
+        // Reset UI prvků
+        if (costDisplay) costDisplay.classList.remove('error', 'calculating');
+        if (costErrorSpan) costErrorSpan.textContent = '';
+        if (errorAlertEl) errorAlertEl.classList.add('d-none');
+        shippingCalculatedSuccessfully = false; // Defaultně false, přepíše se při úspěchu
+
+        if (data && data.errorMessage) {
+            console.error("JS Error: Shipping API error:", data.errorMessage);
+            const errorText = data.errorMessage || 'Neznámá chyba výpočtu dopravy.';
+            // Zobrazit chybu v sekci dopravy
+            if (costDisplay && costErrorSpan) { costDisplay.classList.add('error'); costErrorSpan.textContent = errorText; }
+            // Zobrazit chybu v souhrnu
+            if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.innerHTML = `<span class="text-danger recalculate-shipping-notice">${errorText}</span>`;
+            if (summaryOriginalTotalPriceEl) summaryOriginalTotalPriceEl.textContent = '---';
+            if (summaryRoundingRowEl) summaryRoundingRowEl.classList.add('d-none');
+            if (summaryTotalPriceEl) { summaryTotalPriceEl.innerHTML = `<span class="text-warning fw-normal recalculate-shipping-notice">(Nutno přepočítat dopravu)</span>`; }
+            if (summaryTotalVatEl) summaryTotalVatEl.textContent = formatCurrency(initialTotalItemVat, currencySymbol); // Vrátit DPH jen ze zboží
+            if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = '';
+            if (hiddenTaxEl) hiddenTaxEl.value = '';
+            if (vatBreakdownShippingDiv) vatBreakdownShippingDiv.style.display = 'none';
+            if (summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none';
+            // Zobrazit hlavní alert
+            if (errorAlertTextEl) errorAlertTextEl.textContent = errorText;
+            if (errorAlertEl) errorAlertEl.classList.remove('d-none');
+
+        } else if (data && typeof data.shippingCostNoTax !== 'undefined' && data.shippingCostNoTax !== null && data.totalPrice !== null) {
+            console.log("JS Info: Processing successful shipping data.");
+            shippingCalculatedSuccessfully = true;
+
+            // Bezpečné parsování hodnot z odpovědi
+            const costNoTax = safeParseFloat(data.shippingCostNoTax); // Finální cena dopravy bez DPH
+            const tax = safeParseFloat(data.shippingTax);             // Finální DPH z dopravy
+            const preciseTotalFromApi = safeParseFloat(data.totalPrice); // Přesná celková cena PŘED finálním zaokrouhlením
+            const roundedTotalToDisplay = Math.floor(preciseTotalFromApi); // Finální zaokrouhlená cena pro zobrazení
+            const originalCostNoTax = safeParseFloat(data.originalShippingCostNoTax); // Původní cena dopravy bez DPH
+            const shippingDiscount = safeParseFloat(data.shippingDiscountAmount);     // Výše slevy na dopravu
+            const totalVatWithShipping = safeParseFloat(data.totalVatWithShipping);  // Celkové DPH (zboží + finální doprava)
+            const calculatedOriginalTotal = preciseTotalFromApi; // Původní PŘESNÁ cena
+            const calculatedRoundingDifference = calculatedOriginalTotal - roundedTotalToDisplay; // Rozdíl zaokrouhlení
+
+            console.log(`JS Debug: Prices - costNoTax=${costNoTax}, tax=${tax}, preciseTotal=${preciseTotalFromApi}, roundedTotal=${roundedTotalToDisplay}, origCost=${originalCostNoTax}, shipDiscount=${shippingDiscount}, totalVAT=${totalVatWithShipping}, origTotalCalc=${calculatedOriginalTotal}, roundingDiff=${calculatedRoundingDifference}`);
+
+            // Aktualizace zobrazení ceny dopravy
+            if (costDisplay && costValueSpan && costErrorSpan) {
+                costValueSpan.textContent = formatCurrency(costNoTax, currencySymbol) + ' (bez DPH)';
+                costErrorSpan.textContent = '';
+            } else { console.warn("JS Warn: #shipping-cost-display elements not found."); }
+
+            // Aktualizace souhrnu
+            if (summaryOriginalShippingCostEl) {
+                summaryOriginalShippingCostEl.textContent = formatCurrency(originalCostNoTax, currencySymbol);
+            } else { console.warn("JS Warn: #summary-original-shipping-cost not found."); }
+
+            if (summaryShippingDiscountRowEl && summaryShippingDiscountValueEl) {
+                if (shippingDiscount !== null && shippingDiscount > 0) {
+                    summaryShippingDiscountValueEl.textContent = '- ' + formatCurrency(shippingDiscount, currencySymbol);
+                    summaryShippingDiscountRowEl.style.display = 'flex'; // Použít flex pro zachování layoutu
+                } else {
+                    summaryShippingDiscountRowEl.style.display = 'none';
+                }
+            } else { console.warn("JS Warn: Shipping discount elements not found."); }
+
+            if (vatBreakdownShippingDiv && summaryShippingTaxEl) {
+                if (tax !== null && tax > 0) {
+                    summaryShippingTaxEl.textContent = formatCurrency(tax, currencySymbol);
+                    vatBreakdownShippingDiv.style.display = 'block'; // Zobrazit DPH z dopravy
+                } else {
+                    vatBreakdownShippingDiv.style.display = 'none'; // Skrýt DPH z dopravy
+                }
+            } else { console.warn("JS Warn: Shipping tax breakdown elements not found."); }
+
+            if (summaryTotalVatEl) {
+                summaryTotalVatEl.textContent = formatCurrency(totalVatWithShipping, currencySymbol);
+            } else { console.warn("JS Warn: #summary-total-vat not found."); }
+
+            if (summaryOriginalTotalPriceEl) {
+                // Zobrazíme původní PŘESNOU cenu
+                summaryOriginalTotalPriceEl.textContent = formatCurrency(calculatedOriginalTotal, currencySymbol, 2);
+            } else { console.warn("JS Warn: #summary-original-total-price not found."); }
+
+            if (summaryRoundingRowEl && summaryRoundingDifferenceEl) {
+                // Zobrazíme zaokrouhlení, pokud je rozdíl větší než malá tolerance
+                if (calculatedRoundingDifference !== null && Math.abs(calculatedRoundingDifference.toFixed(2)) > 0.001) {
+                    summaryRoundingDifferenceEl.textContent = '- ' + formatCurrency(calculatedRoundingDifference, currencySymbol, 2);
+                    summaryRoundingRowEl.classList.remove('d-none');
+                } else {
+                    summaryRoundingDifferenceEl.textContent = '';
+                    summaryRoundingRowEl.classList.add('d-none');
+                }
+            } else { console.warn("JS Warn: Rounding display elements not found."); }
+
+            if (summaryTotalPriceEl) {
+                // Zobrazíme finální ZAOKROUHLENOU cenu
+                summaryTotalPriceEl.innerHTML = ''; // Vyčistit předchozí obsah
+                const priceSpan = document.createElement('span');
+                priceSpan.textContent = formatCurrency(roundedTotalToDisplay, currencySymbol, 0); // 0 des. míst
+                summaryTotalPriceEl.appendChild(priceSpan);
+                // Odstranit varovné třídy a přidat tučné písmo
+                summaryTotalPriceEl.classList.remove('text-warning', 'fw-normal', 'recalculate-shipping-notice');
+                summaryTotalPriceEl.classList.add('fw-bold');
+            } else { console.warn("JS Warn: #summary-total-price not found."); }
+
+            // Aktualizace skrytých polí pro odeslání formuláře
+            if (hiddenCostNoTaxEl) { hiddenCostNoTaxEl.value = costNoTax !== null ? costNoTax.toFixed(2) : ''; } else { console.warn("JS Warn: #hiddenShippingCostNoTax not found."); }
+            if (hiddenTaxEl) { hiddenTaxEl.value = tax !== null ? tax.toFixed(2) : ''; } else { console.warn("JS Warn: #hiddenShippingTax not found."); }
+
+            console.log("JS Info: Summary updated successfully from AJAX.");
+
+        } else {
+            // Neúplná nebo nevalidní data z API
+            console.error("JS Error: Invalid/incomplete data received from shipping API:", data);
+            if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.innerHTML = `<span class="text-danger recalculate-shipping-notice">(Chyba dat)</span>`;
+            if (summaryOriginalTotalPriceEl) summaryOriginalTotalPriceEl.textContent = '---';
+            if (summaryRoundingRowEl) summaryRoundingRowEl.classList.add('d-none');
+            if (vatBreakdownShippingDiv) vatBreakdownShippingDiv.style.display = 'none';
+            if (summaryTotalVatEl) summaryTotalVatEl.textContent = '---';
+            if (summaryTotalPriceEl) summaryTotalPriceEl.innerHTML = `<span class="text-warning fw-normal recalculate-shipping-notice">(Chyba dat)</span>`;
+        }
+        updateSubmitButtonState(); // Aktualizovat stav odesílacího tlačítka
+    }
+
+    // Resetuje zobrazení dopravy a celkové ceny (např. po změně adresy)
+    function resetShippingDisplay() {
+        console.log("JS: resetShippingDisplay called.");
+
+        shippingCalculatedSuccessfully = false; // Označit, že doprava není spočítaná
+
+        // Reset zobrazení ceny dopravy
+        if (costDisplay) costDisplay.classList.remove('error', 'calculating');
+        if (costValueSpan) costValueSpan.textContent = '';
+        if (costErrorSpan) costErrorSpan.innerHTML = `<span class="text-warning recalculate-shipping-notice">(Nutno přepočítat)</span>`;
+
+        // Reset souhrnu
+        if (summaryOriginalShippingCostEl) summaryOriginalShippingCostEl.innerHTML = `<span class="text-warning recalculate-shipping-notice">(Nutno přepočítat)</span>`;
+        if (summaryShippingTaxEl) summaryShippingTaxEl.textContent = '---';
+        if (summaryShippingDiscountRowEl) summaryShippingDiscountRowEl.style.display = 'none'; // Skrýt slevu na dopravu
+        if (vatBreakdownShippingDiv) vatBreakdownShippingDiv.style.display = 'none'; // Skrýt DPH z dopravy
+        // Vrátit DPH jen ze zboží
+        if (summaryTotalVatEl) summaryTotalVatEl.textContent = formatCurrency(initialTotalItemVat, currencySymbol);
+        if (summaryOriginalTotalPriceEl) summaryOriginalTotalPriceEl.textContent = '---'; // Reset původní ceny
+        if (summaryRoundingRowEl) summaryRoundingRowEl.classList.add('d-none'); // Skrýt zaokrouhlení
+        if (summaryTotalPriceEl) {
+            summaryTotalPriceEl.innerHTML = `<span class="text-warning fw-normal recalculate-shipping-notice">(Nutno přepočítat dopravu)</span>`; // Zobrazit varování
+        }
+        // Vymazat skrytá pole
+        if (hiddenCostNoTaxEl) hiddenCostNoTaxEl.value = '';
+        if (hiddenTaxEl) hiddenTaxEl.value = '';
+
+        updateSubmitButtonState(); // Aktualizovat stav odesílacího tlačítka
+    }
+
+    // Přepíná zobrazení polí pro dodací adresu
+    function toggleDeliveryFields(checkbox, deliveryDiv) {
+        console.log("JS: toggleDeliveryFields. Checked:", checkbox?.checked);
+        if (checkbox && deliveryDiv) {
+            deliveryDiv.classList.toggle('hidden', checkbox.checked); // Třída 'hidden' by měla mít styl display: none !important;
+            resetShippingDisplay(); // Resetovat dopravu při každé změně
+        } else { console.warn("JS Warn: toggleDeliveryFields - elements (#useInvoiceAddressAsDelivery or .delivery-address-fields) not found."); }
+    }
+
+    // Spojí předvolbu a číslo, aktualizuje skryté pole a provede základní frontend validaci délky
+    function updateCombinedPhone(prefixSelect, numberInput, hiddenInput, isInitialCall = false) {
+        if (!prefixSelect || !numberInput || !hiddenInput) {
+            console.warn("JS Warn: Missing elements for updating combined phone.");
+            return;
+        }
+
+        const prefix = prefixSelect.value;
+        const numberPartRaw = numberInput.value;
+        const numberPartClean = numberPartRaw.replace(/\D/g, ''); // Odstraní vše kromě číslic
+        const errorDisplay = numberInput.nextElementSibling; // Předpokládáme, že invalid-feedback je hned za inputem
+
+        // Aktualizujeme skryté pole, jen když je co uložit nebo když to není první volání
+        if (numberPartClean.length > 0 || !isInitialCall) {
+            const combined = prefix + numberPartClean;
+            hiddenInput.value = combined;
+            console.log(`JS: Updated hidden input #${hiddenInput.id} to: ${combined}`);
+        } else if (isInitialCall && hiddenInput.value.startsWith(prefix)) {
+            console.log(`JS: Initial call and number part is empty. Keeping hidden input #${hiddenInput.id} value from DTO: ${hiddenInput.value}`);
+        } else if (isInitialCall) {
+            // Pokud je to první volání, číslo je prázdné a prefix neodpovídá, nastavíme jen prefix
+            hiddenInput.value = prefix;
+            console.log(`JS: Initial call, number empty, prefix mismatch. Setting hidden input #${hiddenInput.id} to prefix: ${prefix}`);
+        }
+
+
+        // Reset chybového stavu POUZE pokud to není první volání
+        if (!isInitialCall) {
+            numberInput.classList.remove('is-invalid');
+            if (errorDisplay && errorDisplay.classList.contains('invalid-feedback')) {
+                errorDisplay.textContent = ''; // Vymažeme text chyby
+            }
+        }
+
+        // Frontend Kontrola Délky - jen pokud uživatel něco zadal (ne při startu, ne pro prázdný input)
+        if (!isInitialCall && numberPartRaw.trim().length > 0) {
+            let minLength = 9;
+            let maxLength = 9; // Pro CZ/SK
+
+            if (numberPartClean.length > 0 && (numberPartClean.length < minLength || numberPartClean.length > maxLength)) {
+                numberInput.classList.add('is-invalid');
+                if (errorDisplay && errorDisplay.classList.contains('invalid-feedback')) {
+                    errorDisplay.textContent = `Zadejte prosím platné ${minLength}místné číslo.`; // Nastavíme text chyby
+                }
+            }
+        }
+    }
+
+    // --- EVENT LISTENERY ---
+
+    // Listener pro tlačítko výpočtu dopravy
+    if (calculateShippingBtn) {
+        calculateShippingBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            console.log("JS: Calculate Shipping Button clicked.");
+
+            const useInvoice = useInvoiceCheckbox ? useInvoiceCheckbox.checked : true;
+            const addressData = {};
+
+            if (useInvoice) {
+                addressData.street = document.getElementById('invoiceStreet')?.value || '';
+                addressData.city = document.getElementById('invoiceCity')?.value || '';
+                addressData.zipCode = document.getElementById('invoiceZipCode')?.value || '';
+                addressData.country = document.getElementById('invoiceCountry')?.value || '';
+            } else {
+                addressData.street = document.getElementById('deliveryStreet')?.value || '';
+                addressData.city = document.getElementById('deliveryCity')?.value || '';
+                addressData.zipCode = document.getElementById('deliveryZipCode')?.value || '';
+                addressData.country = document.getElementById('deliveryCountry')?.value || '';
+            }
+
+            if (!addressData.street || !addressData.city || !addressData.zipCode || !addressData.country) {
+                console.warn("JS: Address data incomplete for shipping calculation.");
+                updateSummary({ errorMessage: 'Prosím, vyplňte kompletní ' + (useInvoice ? 'fakturační' : 'dodací') + ' adresu.' });
+                updateSubmitButtonState();
+                return;
+            }
+
+            console.log("JS: Sending shipping calculation request with address:", addressData);
+
+            const btnSpinner = calculateShippingBtn.querySelector('.spinner-border');
+            calculateShippingBtn.disabled = true;
+            if (btnSpinner) btnSpinner.classList.remove('d-none');
+            if (costDisplay) costDisplay.classList.add('calculating');
+            if (costErrorSpan) costErrorSpan.textContent = '(Počítám...)';
+
+
+            fetch(calculateShippingUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(csrfHeaderName && csrfToken && { [csrfHeaderName]: csrfToken })
+                },
+                body: JSON.stringify(addressData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.errorMessage || `Chyba serveru: ${response.status}`);
+                        }).catch(() => {
+                            throw new Error(`Chyba serveru: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateSummary(data);
+                })
+                .catch(error => {
+                    console.error('JS Error: Shipping calculation failed:', error);
+                    updateSummary({ errorMessage: error.message || 'Chyba výpočtu dopravy.' });
+                })
+                .finally(() => {
+                    calculateShippingBtn.disabled = false;
+                    if (btnSpinner) btnSpinner.classList.add('d-none');
+                    if (costDisplay) costDisplay.classList.remove('calculating');
+                    console.log("JS: Shipping calculation AJAX finished.");
+                });
+        });
+        console.log("JS: Event listener for shipping calculation button attached.");
+    } else {
+        console.warn("JS Warn: Calculate shipping button #calculate-shipping-btn not found!");
+    }
+
+    // Listener pro změnu adresy (na všech relevantních polích)
+    if (addressTriggers.length > 0) {
+        addressTriggers.forEach(trigger => {
+            trigger.addEventListener('input', resetShippingDisplay);
+            trigger.addEventListener('change', resetShippingDisplay); // Pro selecty atd.
+        });
+        console.log("JS: Event listeners attached to address trigger elements.");
+    } else {
+        console.warn("JS Warn: No address trigger elements found. Add class 'address-trigger' to address inputs.");
+    }
+
+    // Listener pro checkbox dodací adresy
+    if (useInvoiceCheckbox) {
+        useInvoiceCheckbox.addEventListener('change', function() {
+            toggleDeliveryFields(this, deliveryFieldsDiv);
+        });
+        // Zavoláme pro inicializaci správného zobrazení
+        toggleDeliveryFields(useInvoiceCheckbox, deliveryFieldsDiv);
+        console.log("JS: Event listener for delivery address toggle attached.");
+    } else {
+        console.warn("JS Warn: 'Use invoice address' checkbox #useInvoiceAddressAsDelivery not found.");
+    }
+
+    // Listenery pro telefony
+    if (phonePrefixSelect && phoneNumberInput && hiddenPhoneInput) {
+        phonePrefixSelect.addEventListener('change', () => updateCombinedPhone(phonePrefixSelect, phoneNumberInput, hiddenPhoneInput, false));
+        phoneNumberInput.addEventListener('input', () => updateCombinedPhone(phonePrefixSelect, phoneNumberInput, hiddenPhoneInput, false));
+        // Prvotní nastavení
+        updateCombinedPhone(phonePrefixSelect, phoneNumberInput, hiddenPhoneInput, true);
+        console.log("JS: Listeners and initial setup for main phone attached.");
+    } else { console.warn("JS Warn: Elements for main phone listener missing."); }
+
+    if (deliveryPhonePrefixSelect && deliveryPhoneNumberInput && hiddenDeliveryPhoneInput) {
+        deliveryPhonePrefixSelect.addEventListener('change', () => updateCombinedPhone(deliveryPhonePrefixSelect, deliveryPhoneNumberInput, hiddenDeliveryPhoneInput, false));
+        deliveryPhoneNumberInput.addEventListener('input', () => updateCombinedPhone(deliveryPhonePrefixSelect, deliveryPhoneNumberInput, hiddenDeliveryPhoneInput, false));
+        // Prvotní nastavení
+        updateCombinedPhone(deliveryPhonePrefixSelect, deliveryPhoneNumberInput, hiddenDeliveryPhoneInput, true);
+        console.log("JS: Listeners and initial setup for delivery phone attached.");
+    } else { console.warn("JS Warn: Elements for delivery phone listener missing."); }
+
+    // --- SCROLL & FOCUS K CHYBĚ ---
+    const validationErrorAlert = document.getElementById('form-validation-errors-summary');
+    const formHasErrors = document.body.querySelector('.is-invalid') !== null;
+    if (validationErrorAlert && formHasErrors) {
+        const firstInvalidField = document.querySelector('#checkout-form .is-invalid');
+        if (firstInvalidField) {
+            console.log("JS: Validation errors detected, scrolling to:", firstInvalidField);
+            firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                if (typeof firstInvalidField.focus === 'function') {
+                    firstInvalidField.focus({ preventScroll: true });
+                    console.log("JS: Focused first invalid field.");
+                } else { console.log("JS: First invalid element not focusable."); }
+            }, 300);
+        } else { console.log("JS: General validation error, but no .is-invalid field found."); }
+    } else { console.log("JS: No validation errors on load."); }
+
+    // --- INICIALIZACE ---
+    console.log("JS: Setting initial button state.");
+    updateSubmitButtonState(); // Nastavit počáteční stav tlačítka
+    // Resetovat zobrazení dopravy, pokud nebyla platná při načtení stránky a košík není prázdný
+    if (!shippingCalculatedSuccessfully && !initialCartIsEmptyState) {
+        console.log("JS Info: Initial shipping invalid & cart not empty -> resetting display.");
+        resetShippingDisplay();
+    } else { console.log("JS Info: Initial shipping OK or cart empty."); }
+
+    console.log("JS: Checkout page initialization complete (v25 - Full with Fix).");
+});

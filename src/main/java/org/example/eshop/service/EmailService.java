@@ -10,8 +10,8 @@ import org.example.eshop.repository.EmailTemplateConfigRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException; // Import pro zachytávání chyb odesílání
+import org.springframework.beans.factory.annotation.Value; // <-- Ujistěte se, že tento import existuje
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -60,6 +60,11 @@ public class EmailService {
 
     @Value("${eshop.replyToEmail:info@drevniky-kolar.cz}")
     private String replyToEmail;
+
+    // --- ZAČÁTEK ZMĚN ---
+    @Value("${gcs.bucket.name}") // Načtení názvu bucketu z application.properties
+    private String bucketName;
+    // --- KONEC ZMĚN ---
 
     // @Value("${eshop.admin.bccEmail:}") private String adminBccEmail;
 
@@ -198,13 +203,13 @@ public class EmailService {
             Context context = new Context(locale != null ? locale : defaultLocale);
             context.setVariable("orderCode", orderCode);
             context.setVariable("externalNote", externalNote);
-            context.setVariable("shopName", shopName);
-            context.setVariable("shopUrl", shopUrl);
+            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
+            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
+            // --- KONEC ZMĚN ---
             String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + orderCode;
             context.setVariable("trackingUrl", trackingUrl);
 
             log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
-            // Zde nepředáváme Order objekt, jen potřebné proměnné
             String htmlBody = templateEngine.process(templateName, context);
             log.debug("Successfully processed template '{}' for external note, order {}", templateName, orderCode);
 
@@ -250,8 +255,10 @@ public class EmailService {
             context.setVariable("customerEmail", customerEmail);
             context.setVariable("customerName", customerName != null ? customerName : customerEmail);
             context.setVariable("messageContent", messageContent);
-            context.setVariable("shopName", shopName);
-            // Předpokládáme, že admin link je /admin/orders/{id}, ale máme jen kód. Posíláme na seznam s filtrem.
+            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
+            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
+            // --- KONEC ZMĚN ---
+
             String adminOrderListUrl = UriComponentsBuilder.fromHttpUrl(shopUrl)
                     .path("/admin/orders")
                     .queryParam("customerEmail", customerEmail) // Lepší než ID, které nemáme
@@ -267,7 +274,6 @@ public class EmailService {
 
         } catch (TemplateProcessingException tpe) {
             log.error("!!! ERROR processing template '{}' for admin notification (Order {}): ", templateName, orderCode, tpe);
-            // Zde by se mohla poslat jednoduchá textová notifikace adminovi jako fallback
         } catch (MessagingException | MailException me) {
             log.error("!!! ERROR sending admin notification email to {} for order {}: ", adminEmail, orderCode, me);
         } catch (Exception e) {
@@ -311,8 +317,9 @@ public class EmailService {
 
             Context context = new Context(defaultLocale);
             context.setVariable("resetUrl", resetUrl);
-            context.setVariable("shopName", shopName);
-            context.setVariable("shopUrl", shopUrl);
+            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
+            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
+            // --- KONEC ZMĚN ---
 
             log.debug("Context prepared for template '{}', email {}", templateName, recipientEmail);
             String htmlBody = templateEngine.process(templateName, context);
@@ -338,7 +345,7 @@ public class EmailService {
      * @param order Nově vytvořená objednávka.
      * @param adminEmail Email administrátora.
      */
-    @Async // Opět přidáno @Async, pokud má být asynchronní
+    @Async
     public void sendNewOrderAdminNotification(Order order, String adminEmail) {
         String orderCode = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "N/A";
         log.debug("Attempting to send new order admin notification email for order {}.", orderCode);
@@ -357,8 +364,9 @@ public class EmailService {
         try {
             Context context = new Context(defaultLocale);
             context.setVariable("order", order);
-            context.setVariable("shopName", shopName);
-            context.setVariable("shopUrl", shopUrl);
+            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
+            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
+            // --- KONEC ZMĚN ---
 
             log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
             String htmlBody = templateEngine.process(templateName, context);
@@ -380,8 +388,23 @@ public class EmailService {
     // --- Privátní Pomocné Metody ---
 
     /**
+     * Nastaví základní proměnné eshopu (shopName, shopUrl, logoUrl) do kontextu.
+     * @param context Thymeleaf context.
+     */
+    private void setEshopVariables(Context context) {
+        context.setVariable("shopName", shopName);
+        context.setVariable("shopUrl", shopUrl);
+
+        // Konstrukce URL loga z GCS
+        String gcsLogoPath = "images/logo.webp"; // Cesta k logu ve vašem bucketu
+        String logoUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, gcsLogoPath);
+        context.setVariable("logoUrl", logoUrl);
+        log.trace("Common eshop variables set. Logo URL: {}", logoUrl);
+    }
+
+    /**
      * Nastaví základní proměnné eshopu do kontextu a odešle email.
-     * Nyní zahrnuje robustnější logování a zachytávání chyb.
+     * Volá setEshopVariables a pak pokračuje s odesláním.
      * @param order Objednávka (pro získání kódu a URL). Může být null pro některé emaily.
      * @param to Příjemce.
      * @param subject Předmět.
@@ -395,13 +418,16 @@ public class EmailService {
             throws TemplateProcessingException, MessagingException, MailException, UnsupportedEncodingException {
 
         String orderCode = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "N/A";
-        log.debug("Setting common eshop variables for template: '{}', order: {}", templateName, orderCode);
-        context.setVariable("shopName", shopName);
-        context.setVariable("shopUrl", shopUrl);
+        log.debug("Setting variables and preparing to send email for template: '{}', order: {}", templateName, orderCode);
+
+        // Nastavení základních proměnných (včetně logoUrl)
+        setEshopVariables(context);
+
+        // Nastavení specifických proměnných pro objednávku (pokud existuje)
         if (order != null && order.getOrderCode() != null) {
             String trackingUrl = UriComponentsBuilder.fromHttpUrl(shopUrl)
                     .path("/muj-ucet/objednavky/")
-                    .path(order.getOrderCode()) // Kód objednávky je již string
+                    .path(order.getOrderCode())
                     .build().toUriString();
             context.setVariable("trackingUrl", trackingUrl);
             log.debug("Tracking URL set to: {}", trackingUrl);
@@ -417,20 +443,17 @@ public class EmailService {
             log.debug("Successfully processed Thymeleaf template: '{}' for order {}", templateName, orderCode);
         } catch (TemplateProcessingException tpe) {
             log.error("!!! ERROR processing template '{}' for order {}: ", templateName, orderCode, tpe);
-            // Propagate the specific exception
-            throw tpe;
+            throw tpe; // Propagate exception
         } catch (Exception e) {
             log.error("!!! Unexpected error during template processing for template '{}', order {}: ", templateName, orderCode, e);
-            // Wrap in a runtime exception or rethrow if appropriate
             throw new RuntimeException("Unexpected template processing error", e);
         }
 
-        // Odeslání emailu (zůstává v samostatné metodě kvůli přehlednosti)
-        // Chyby z sendHtmlEmail (MessagingException, MailException) se propagují sem
+        // Odeslání emailu
         sendHtmlEmail(to, subject, htmlBody);
         log.info("Email sending initiated successfully via sendHtmlEmail for template '{}', recipient {}, order {}", templateName, to, orderCode);
-
     }
+
 
     /**
      * Interní metoda pro odeslání HTML emailu s nastavením Reply-To.

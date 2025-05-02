@@ -147,7 +147,9 @@
 <body>
 <div class="email-container">
     <div class="header">
-        <img th:src="@{/images/logo.webp}" th:alt="${shopName}" alt="Logo obchodu"/></div>
+        <div class="header">
+            <img th:src="${logoUrl}" th:alt="${shopName}" alt="Logo obchodu"/>
+        </div>
 
     <h1>Potvrzení objednávky č. <span th:text="${order.orderCode}">[Kód]</span></h1>
 

@@ -73,13 +73,27 @@
 </section>
 
 <script>
+  // Self-executing function to hide loader immediately on error pages
   (function() {
-    var loader = document.getElementById('page-loader');
-    if (loader) {
-      console.log('[Inline Error Script] Hiding page loader for error page.');
-      loader.classList.add('hidden');
-    } else {
-      console.warn('[Inline Error Script] Page loader not found on this error page.');
+    try {
+      var loader = document.getElementById('page-loader');
+      // Zkontrolujeme, zda loader existuje A ZÁROVEŇ ještě není skrytý třídou 'hidden'
+      if (loader && !loader.classList.contains('hidden')) {
+        console.log('[Inline Error Script - Force Hide] Hiding page loader found on error page.');
+        // Okamžité skrytí pomocí stylů pro jistotu, kdyby CSS nebylo načteno
+        loader.style.opacity = '0';
+        loader.style.visibility = 'hidden';
+        // Přidání třídy pro konzistenci a případné CSS přechody
+        loader.classList.add('hidden');
+      } else if (loader && loader.classList.contains('hidden')) {
+        console.log('[Inline Error Script] Loader already hidden on error page.');
+      } else {
+        // Toto by nemělo nastat, pokud layout funguje, ale pro jistotu logujeme
+        console.warn('[Inline Error Script] Page loader element #page-loader not found on this error page.');
+      }
+    } catch (e) {
+      // Zachycení případných chyb v samotném inline skriptu
+      console.error('[Inline Error Script] Error trying to hide loader:', e);
     }
   })();
 </script>

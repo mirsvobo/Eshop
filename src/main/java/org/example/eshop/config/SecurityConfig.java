@@ -58,7 +58,10 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/resetovat-heslo"),
                                 new AntPathRequestMatcher("/gdpr"),
                                 new AntPathRequestMatcher("/obchodni-podminky"),
-                                new AntPathRequestMatcher("/dekujeme")
+                                new AntPathRequestMatcher("/pokladna/dekujeme"),
+                                new AntPathRequestMatcher("/403"),
+                                new AntPathRequestMatcher("/404"),
+                                new AntPathRequestMatcher("/500")
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()
@@ -72,7 +75,6 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/prihlaseni")
                         .permitAll()
-                        .defaultSuccessUrl("/", true)
                 )
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/odhlaseni"))

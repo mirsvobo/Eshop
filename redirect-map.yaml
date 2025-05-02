@@ -1,6 +1,0 @@
-name: drevnik-redirect-url-map
-defaultUrlRedirect:
-  httpsRedirect: True
-  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT # Kód 301
-  stripQuery: False
-  hostRedirect: drevniknamiru.cz # Přesměruje na tuto doménu s HTTPS
