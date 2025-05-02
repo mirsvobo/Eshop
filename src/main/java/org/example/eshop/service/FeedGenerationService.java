@@ -32,7 +32,7 @@ public class FeedGenerationService implements PriceConstants {
     @Autowired
     private TaxRateService taxRateService;
 
-    @Value("${eshop.url:https://www.drevniky-kolar.cz}")
+    @Value("${eshop.url:https://www.drevniknamiru.cz}")
     private String baseUrl;
 
     private static final BigDecimal DEFAULT_HEUREKA_VAT_RATE = new BigDecimal("0.21");
