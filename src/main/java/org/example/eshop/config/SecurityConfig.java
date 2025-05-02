@@ -38,7 +38,11 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/js/**"),
                                 new AntPathRequestMatcher("/images/**"),
                                 new AntPathRequestMatcher("/webjars/**"),
-                                new AntPathRequestMatcher("/uploads/**")
+                                new AntPathRequestMatcher("/uploads/**"),
+                                new AntPathRequestMatcher("/robots.txt"),
+                                new AntPathRequestMatcher("/sitemap.xml"),
+                                new AntPathRequestMatcher("/google_feed.xml"),
+                                new AntPathRequestMatcher("/heureka_feed.xml")
                         ).permitAll()
                         .requestMatchers(
                                 new AntPathRequestMatcher("/"),
