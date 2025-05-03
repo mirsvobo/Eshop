@@ -349,11 +349,10 @@
             </div>
         </section>
 
-    </div>
-</section>
+    </div> </section> <th:block layout:fragment="javascript" th:with="td=${trackingData != null ? trackingData : new java.util.HashMap()}">
 
-<th:block layout:fragment="javascript">
     <script defer th:src="@{/js/product-configurator.js}"></script>
+
     <script defer th:inline="javascript">
         /*<![CDATA[*/
         // Předání dat z modelu do JavaScriptu
@@ -364,118 +363,139 @@
             csrfToken: /*[[${_csrf?.token}]]*/ null,
             csrfHeaderName: /*[[${_csrf?.headerName}]]*/ null,
             productId: /*[[${product.id}]]*/ null,
-            // Použijeme DTO místo plné entity konfigurátoru - odstraněn fallback 'null'
-            configuratorData: /*[[${configuratorDto}]]*/
-        }; // <-- Konec objektu initData
+            configuratorData: /*[[${configuratorDto}]]*/ null // Může být null, pokud dojde k chybě
+        };
+
         // Inicializace konfigurátoru po načtení DOM
         document.addEventListener('DOMContentLoaded', function () {
-            // Ošetření, pokud by configuratorData bylo přesto null nebo undefined
             if (typeof initializeConfigurator === 'function' && initData.configuratorData) {
                 initializeConfigurator(initData);
             } else if (!initData.configuratorData) {
                 console.error("Chyba: Data konfigurátoru (initData.configuratorData) nejsou dostupná pro inicializaci.");
-                // Zde můžete zobrazit chybovou hlášku uživateli nebo provést jinou akci
+                // Zobrazit chybu uživateli
+                const errorDisplay = document.getElementById('customPriceErrorDisplay');
+                if (errorDisplay) {
+                    errorDisplay.textContent = 'Nastala chyba při načítání konfigurace produktu. Zkuste obnovit stránku.';
+                    errorDisplay.style.display = 'block';
+                }
+                // Deaktivovat tlačítko přidání do košíku
+                const submitButton = document.querySelector('#custom-product-form button[type="submit"]');
+                if(submitButton) submitButton.disabled = true;
             } else {
-                console.error("Chyba: Funkce initializeConfigurator není definována.");
+                console.error("Chyba: Funkce initializeConfigurator není definována (product-configurator.js se nenačetl?).");
             }
-        });
 
-        // Inicializace tooltipů (pro ikonu informací o DPH)
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
+            // Inicializace tooltipů (pro ikonu informací o DPH)
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
         });
         /*]]>*/
     </script>
-    <th:block layout:fragment="javascript" th:with="
-    td=${trackingData != null ? trackingData : new java.util.HashMap()}
-">
-        <script th:inline="javascript">
-            /*<![CDATA[*/
-            const addToCartFormCustom = document.getElementById('custom-product-form');
-            const quantityInputCustom = document.getElementById('quantity');
-            // Proměnná pro uložení aktuální ceny bez DPH (bude aktualizována z configurator.js)
-            let currentCustomPriceNoVat = /*[[${td.priceForTrackingNoVat}]]*/ 0.0;
 
-            // Globální funkce, kterou VOLÁ product-configurator.js při změně ceny
-            function updateTrackingPrices(newPriceNoVat, newPriceWithVat) {
-                if (productDataForTracking) {
-                    console.log('Updating tracked prices (global):', newPriceNoVat, newPriceWithVat);
-                    productDataForTracking.priceNoVat = newPriceNoVat;
-                    productDataForTracking.priceWithVat = newPriceWithVat; // Může se hodit
-                    // Aktualizujeme globální proměnnou pro add_to_cart
-                    currentCustomPriceNoVat = newPriceNoVat;
-                } else {
-                    console.warn("productDataForTracking not defined when updateTrackingPrices was called.");
-                }
-            }
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // --- Tracking view_item (stejné jako ve standardní šabloně) ---
+        const productDataForTracking = {
+            id: /*[[${td.productId}]]*/ null,
+            name: /*[[${td.productName}]]*/ null,
+            priceNoVat: /*[[${td.priceForTrackingNoVat}]]*/ 0.0, // Počáteční cena
+            priceWithVat: /*[[${td.priceForTrackingWithVat}]]*/ 0.0, // Počáteční cena s DPH
+            currency: /*[[${td.currency}]]*/ 'CZK',
+            category: /*[[${td.categoryName}]]*/ 'Dřevníky',
+            brand: /*[[${td.brandName}]]*/ 'Dřevníky Kolář',
+            variantId: /*[[${td.variantId}]]*/ null // Mělo by být unikátní pro custom? Zatím základní.
+        };
 
-
-            if (addToCartFormCustom && quantityInputCustom) {
-                addToCartFormCustom.addEventListener('submit', function (event) {
-                    // PŘÍPRAVA DAT PŘED ODESLÁNÍM FORMULÁŘE (VOLÁNO Z product-configurator.js)
-                    // Ujistěte se, že tato funkce je volána před pokračováním submitu
-                    if (typeof prepareFormDataBeforeSubmit === 'function') {
-                        prepareFormDataBeforeSubmit();
-                        console.log("Prepared hidden addon fields before tracking.");
-                    } else {
-                        console.warn("prepareFormDataBeforeSubmit function not found before tracking.");
-                    }
-
-                    const quantity = parseInt(quantityInputCustom.value) || 1;
-                    const priceNoVat = currentCustomPriceNoVat; // <-- Použijeme AKTUÁLNÍ cenu
-                    const currency = /*[[${td.currency}]]*/ 'CZK';
-                    // IDEÁLNĚ: Vygenerovat unikátní variantId na základě konfigurace
-                    // Pro zjednodušení ponecháme základní ID, ale zvažte detailnější ID
-                    const variantId = /*[[${td.variantId}]]*/ null;
-                    const productName = /*[[${td.productName}]]*/ null;
-                    const categoryName = /*[[${td.categoryName}]]*/ 'Dřevníky';
-                    const brandName = /*[[${td.brandName}]]*/ 'Dřevníky Kolář';
-
-                    if (!variantId) {
-                        console.warn("trackAddToCart: variantId not found in tracking data. Skipping.");
-                        return;
-                    }
-                    if (priceNoVat <= 0) {
-                        console.warn("trackAddToCart: Price is zero or invalid. Check configuration/calculation. Price:", priceNoVat);
-                        // Můžete se rozhodnout, zda i tak trackovat, nebo přeskočit
-                        // return;
-                    }
-
-                    const itemDataForTracking = {
-                        variantId: variantId, // Zvažte unikátnější ID pro konfiguraci
-                        name: productName,
-                        price: priceNoVat, // AKTUÁLNÍ cena bez DPH
-                        currency: currency,
-                        quantity: quantity,
-                        category: categoryName,
-                        brand: brandName
-                    };
-
-                    console.log("Custom Add to Cart submit. Tracking data:", itemDataForTracking);
-
-                    if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
-                        TrackingService.trackAddToCart(itemDataForTracking);
-                    } else {
-                        console.error("TrackingService or trackAddToCart not available.");
-                    }
-                    // Nepotřebujeme zde `event.preventDefault()`, formulář se má odeslat
-                });
-                console.log("Event listener for trackAddToCart attached to form:", addToCartFormCustom.id);
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Ready: Attempting to track view_item for custom product:", productDataForTracking.variantId);
+            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
+                TrackingService.trackViewItem(productDataForTracking);
             } else {
-                if (!addToCartFormCustom) console.error("Custom Add to Cart form not found for tracking.");
-                if (!quantityInputCustom) console.error("Quantity input not found for tracking add to cart.");
+                console.error("TrackingService or trackViewItem function not available when trying to track view_item.");
             }
-            /*]]>*/
-        </script>
-        <script th:if="${product.customisable}" defer th:src="@{/js/product-configurator.js}"></script>
-    </th:block>
-    <th:block th:if="${jsonLdDataString != null}">
-        <script defer type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}"></script>
-        <script defer th:inline="javascript">
-            /*<![CDATA[*/
+        });
+
+        // --- Globální funkce pro aktualizaci cen pro tracking (volaná z configurator.js) ---
+        let currentCustomPriceNoVat = /*[[${td.priceForTrackingNoVat}]]*/ 0.0; // Proměnná pro aktuální cenu
+        function updateTrackingPrices(newPriceNoVat, newPriceWithVat) {
+            if (productDataForTracking) {
+                console.log('Updating tracked prices (global for custom):', newPriceNoVat, newPriceWithVat);
+                // Aktualizujeme data pro případné budoucí použití, ale view_item už byl odeslán
+                productDataForTracking.priceNoVat = newPriceNoVat;
+                productDataForTracking.priceWithVat = newPriceWithVat;
+                // Klíčové: Aktualizujeme cenu pro add_to_cart event
+                currentCustomPriceNoVat = newPriceNoVat;
+            } else {
+                console.warn("productDataForTracking not defined when updateTrackingPrices was called.");
+            }
+        }
+
+        // --- Tracking add_to_cart ---
+        const addToCartFormCustom = document.getElementById('custom-product-form');
+        const quantityInputCustom = document.getElementById('quantity');
+
+        if (addToCartFormCustom && quantityInputCustom) {
+            addToCartFormCustom.addEventListener('submit', function (event) {
+                // Synchronizace skrytých polí (volá funkci z configurator.js)
+                if (typeof prepareFormDataBeforeSubmit === 'function') {
+                    prepareFormDataBeforeSubmit();
+                    console.log("Prepared hidden addon fields before tracking add_to_cart.");
+                } else {
+                    console.warn("prepareFormDataBeforeSubmit function not found before tracking add_to_cart.");
+                }
+
+                const quantity = parseInt(quantityInputCustom.value) || 1;
+                const priceNoVat = currentCustomPriceNoVat; // <-- Použijeme AKTUÁLNÍ cenu bez DPH
+                const currency = /*[[${td.currency}]]*/ 'CZK';
+                const variantId = /*[[${td.variantId}]]*/ null; // Zvažte generování unikátního ID pro variantu
+                const productName = /*[[${td.productName}]]*/ null;
+                const categoryName = /*[[${td.categoryName}]]*/ 'Dřevníky';
+                const brandName = /*[[${td.brandName}]]*/ 'Dřevníky Kolář';
+
+                if (!variantId) {
+                    console.warn("trackAddToCart (custom): variantId not found in tracking data. Skipping.");
+                    return;
+                }
+                if (priceNoVat <= 0) {
+                    console.warn("trackAddToCart (custom): Price is zero or invalid. Check configuration/calculation. Price:", priceNoVat);
+                    // Zvažte, zda přesto trackovat
+                }
+
+                const itemDataForTracking = {
+                    variantId: variantId, // Zvažte unikátnější ID
+                    name: productName,
+                    price: priceNoVat,
+                    currency: currency,
+                    quantity: quantity,
+                    category: categoryName,
+                    brand: brandName
+                    // Zde můžete přidat i další detaily konfigurace jako 'variant' string
+                };
+
+                console.log("Custom Add to Cart submit. Tracking data:", itemDataForTracking);
+
+                if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
+                    TrackingService.trackAddToCart(itemDataForTracking);
+                } else {
+                    console.error("TrackingService or trackAddToCart not available.");
+                }
+            });
+            console.log("Event listener for trackAddToCart attached to custom form:", addToCartFormCustom.id);
+        } else {
+            if (!addToCartFormCustom) console.error("Custom Add to Cart form not found for tracking.");
+            if (!quantityInputCustom) console.error("Quantity input not found for tracking add to cart.");
+        }
+        /*]]>*/
+    </script>
+
+    <script defer th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => { // Zajistíme, že se spustí až po načtení DOM
             try {
-                const schemaDataElement = document.getElementById('schema-org-data');
+                // JSON-LD skript je nyní v <head>, hledáme ho tam
+                const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
                 if (schemaDataElement && schemaDataElement.textContent) {
                     const jsonData = JSON.parse(schemaDataElement.textContent);
                     console.log("--- Schema.org Product Data (JSON-LD) ---");
@@ -486,15 +506,15 @@
                 }
             } catch (e) {
                 console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
-                const schemaDataElement = document.getElementById('schema-org-data');
+                const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
                 if (schemaDataElement) {
                     console.error("Původní JSON-LD string:", schemaDataElement.textContent);
                 }
             }
-            /*]]>*/
-        </script>
-    </th:block>
-</th:block>
+        });
+        /*]]>*/
+    </script>
 
+</th:block>
 </body>
 </html>

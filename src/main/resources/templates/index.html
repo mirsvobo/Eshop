@@ -71,81 +71,136 @@
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/1.webp" aria-label="Dřevník Kompakt">
-                                <img src="/images/realizace/1.webp" alt="Dokončená realizace Dřevníku Kompakt naplněný dřívím."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/1.webp}" aria-label="Dřevník Kompakt">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/1-small.webp}">
+                                    <img th:src="@{/images/realizace/1.webp}"
+                                         src="/images/realizace/1.webp" alt="Dokončená realizace Dřevníku Kompakt naplněný dřívím."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/2.webp" aria-label="Dřevník Kompakt">
-                                <img src="/images/realizace/2.webp" alt="Dokončená realizace Dřevníku Kompakt umístěný na zahradě."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/2.webp}" aria-label="Dřevník Kompakt">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/2-small.webp}">
+                                    <img th:src="@{/images/realizace/2.webp}"
+                                         src="/images/realizace/2.webp"
+                                         alt="Dokončená realizace Dřevníku Kompakt umístěný na zahradě."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/3.webp" aria-label="Dřevník na míru">
-                                <img src="/images/realizace/3.webp" alt="Realizace na míru upraveného dřevníku velikosti XXL."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/3.webp}" aria-label="Dřevník na míru">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/3-small.webp}">
+                                    <img th:src="@{/images/realizace/3.webp}"
+                                         src="/images/realizace/3.webp"
+                                         alt="Realizace na míru upraveného dřevníku velikosti XXL."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/4.webp" aria-label="Zahradní domek">
-                                <img src="/images/realizace/4.webp" alt="Dřevník na míru se zahradním domkem, věšáky a poličkami."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/4.webp}" aria-label="Zahradní domek">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/4-small.webp}">
+                                    <img th:src="@{/images/realizace/4.webp}"
+                                         src="/images/realizace/4.webp"
+                                         alt="Dřevník na míru se zahradním domkem, věšáky a poličkami."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/5.webp" aria-label="Dřevník Kompakt">
-                                <img src="/images/realizace/5.webp" alt="Kompletovaný dřevník naplněný dřívím."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/5.webp}" aria-label="Dřevník Kompakt">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/5-small.webp}">
+                                    <img th:src="@{/images/realizace/5.webp}"
+                                         src="/images/realizace/5.webp"
+                                         alt="Kompletovaný dřevník naplněný dřívím."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/6.webp" aria-label="Dřevník XXL">
-                                <img src="/images/realizace/6.webp" alt="Dřevník XXL naplněný dřívím."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/6.webp}" aria-label="Dřevník XXL">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/6-small.webp}">
+                                    <img th:src="@{/images/realizace/6.webp}"
+                                         src="/images/realizace/6.webp"
+                                         alt="Dřevník XXL naplněný dřívím."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800">
+                                </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/7.webp" aria-label="Dřevník XXL">
-                                <img src="/images/realizace/7.webp" alt="Dřevník XXL naplněný dřívím."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/7.webp}" aria-label="Dřevník XXL">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/7-small.webp}">
+                                    <img th:src="@{/images/realizace/7.webp}"
+                                         src="/images/realizace/7.webp"
+                                         alt="Dřevník XXL naplněný dřívím."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800"> </picture>
                             </a>
                         </div>
                     </div>
 
                     <div class="swiper-slide">
                         <div class="ratio ratio-1x1">
-                            <a href="/images/realizace/8.webp" aria-label="Dřevník na míru">
-                                <img src="/images/realizace/8.webp" alt="Kombinace více dřevníku v jeden velký zásobník na míru."
-                                     style="object-fit: cover; width: 100%; height: 100%;" loading="lazy">
+                            <a th:href="@{/images/realizace/8.webp}" aria-label="Dřevník na míru">
+                                <picture>
+                                    <source media="(max-width: 767px)" th:srcset="@{/images/realizace/8-small.webp}">
+                                    <img th:src="@{/images/realizace/8.webp}"
+                                         src="/images/realizace/8.webp"
+                                         alt="Kombinace více dřevníku v jeden velký zásobník na míru."
+                                         style="object-fit: cover; width: 100%; height: 100%;"
+                                         loading="lazy"
+                                         width="800" height="800"> </picture>
                             </a>
                         </div>
                     </div>
 
-                </div> <div class="swiper-button-next"></div>
+                </div>
+                <div class="swiper-button-next"></div>
                 <div class="swiper-button-prev"></div>
                 <div class="swiper-pagination"></div>
-
-            </div> </div> </section>
+            </div>
+        </div>
+    </section>
 
     <section class="cta-section"
              style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6;">
