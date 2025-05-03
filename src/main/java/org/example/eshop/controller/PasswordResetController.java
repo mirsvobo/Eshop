@@ -128,7 +128,7 @@ public class PasswordResetController {
             redirectAttributes.addFlashAttribute("successMessage", "Vaše heslo bylo úspěšně změněno. Nyní se můžete přihlásit."); // Změněno na successMessage pro konzistenci
             return "redirect:/prihlaseni";
         } catch (Exception e) {
-            log.error("Error resetting password for token {}: {}", dto.getToken(), e.getMessage());
+            log.error("Error resetting password for token {}:", dto.getToken(), e);
             model.addAttribute("errorMessage", "Změna hesla selhala. Zkuste to prosím znovu.");
             // Token je v DTO, není třeba ho znovu přidávat
             return "resetovat-heslo";

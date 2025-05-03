@@ -183,8 +183,41 @@ public class CheckoutController implements PriceConstants {
         model.addAttribute("shippingError", initialShippingError);
 
         // Příprava souhrnu (již používá proměnné z modelu a předané argumenty)
-        // *** ZMĚNA: Použití this. ***
         this.prepareCheckoutSummaryModel(model, customer, checkoutForm, currentCurrency, initialShippingCostNoTax, initialShippingError);
+
+        // === ZAČÁTEK PŘIDÁNÍ PRO TRACKING ===
+        try {
+            List<Map<String, Object>> itemsForTracking = sessionCart.getItemsList().stream()
+                    .map(item -> {
+                        Map<String, Object> map = new HashMap<>();
+                        // Použijeme cartItemId jako stabilní identifikátor varianty v rámci košíku
+                        map.put("variantId", item.getCartItemId());
+                        map.put("name", item.getProductName());
+                        // Cena BEZ DPH - OPRAVA ZDE
+                        BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(currentCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK();
+                        map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO).toPlainString());
+                        map.put("quantity", item.getQuantity());
+                        // Doplnit kategorii a značku, pokud jsou dostupné
+                        // map.put("category", "Dřevníky"); // Příklad
+                        map.put("brand", "Dřevníky Kolář"); // Příklad
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+            model.addAttribute("cartItemsForTracking", itemsForTracking);
+
+            // Celková hodnota košíku BEZ DPH a po slevě
+            BigDecimal cartTotalValueNoVat = sessionCart.calculateTotalPriceWithoutTaxAfterDiscount(currentCurrency);
+            model.addAttribute("cartTotalValueNoVatForTracking", cartTotalValueNoVat);
+
+            log.debug("Prepared data for begin_checkout tracking: {} items, totalValueNoVat={}", itemsForTracking.size(), cartTotalValueNoVat);
+        } catch (Exception e) {
+            log.error("Error preparing data for begin_checkout tracking: {}", e.getMessage(), e);
+            // Nepřidáme data, tracking se nespustí nebo se spustí s prázdnými daty
+            model.addAttribute("cartItemsForTracking", Collections.emptyList());
+            model.addAttribute("cartTotalValueNoVatForTracking", BigDecimal.ZERO);
+        }
+        // === KONEC PŘIDÁNÍ PRO TRACKING ===
+
 
         log.info("Checkout page model prepared for {}. Currency: {}", userIdentifier, currentCurrency);
         return "pokladna";
@@ -210,7 +243,6 @@ public class CheckoutController implements PriceConstants {
                 ? (checkoutForm.getEmail() != null ? checkoutForm.getEmail() : "GUEST")
                 : principal.getName();
         String orderCurrency = currencyService.getSelectedCurrency();
-        // --- OPRAVA: Správná deklarace applyReverseCharge ZDE ---
         boolean applyReverseCharge = checkoutForm.isApplyReverseCharge(); // Získáme hodnotu z DTO
         log.info("Processing checkout submission for {}: {} in currency: {}. Apply RC: {}", (isGuest ? "guest" : "user"), userIdentifierForLog, orderCurrency, applyReverseCharge);
 
@@ -318,12 +350,9 @@ public class CheckoutController implements PriceConstants {
 
             // Krok 8: Vytvoření objednávky
             log.info("Attempting to create order with request: {}, Apply RC Flag: {}", orderRequest, applyReverseCharge);
-            // --- OPRAVA: Předání applyReverseCharge a pouze JEDNA deklarace createdOrder ---
             Order createdOrder = orderService.createOrder(orderRequest, applyReverseCharge);
-            // --- KONEC OPRAVY ---
 
             // Ověření ceny (zůstává)
-            // Poznámka: recalculateRoundedTotalForComparison by měla být pomocná metoda pro konzistentní výpočet
             BigDecimal roundedTotalToCompare = recalculateRoundedTotalForComparison(orderCurrency, finalShippingCostNoTax, finalShippingTax);
             if (createdOrder.getTotalPrice().compareTo(roundedTotalToCompare) != 0) {
                 log.warn("Mismatch between calculated rounded price ({}) and saved order price ({}) for order {}",
@@ -336,6 +365,13 @@ public class CheckoutController implements PriceConstants {
             sessionCart.clearCart();
             log.info("Session cart cleared for {}", userIdentifierForLog);
             redirectAttributes.addFlashAttribute("orderSuccess", "Vaše objednávka č. " + createdOrder.getOrderCode() + " byla úspěšně přijata. Děkujeme!");
+
+            // === ZAČÁTEK PŘIDÁNÍ PRO TRACKING ===
+            // Předáme celou objednávku a příznak, že se má měřit
+            redirectAttributes.addFlashAttribute("order", createdOrder);
+            redirectAttributes.addFlashAttribute("orderJustCompleted", true);
+            log.debug("Added flash attributes 'order' and 'orderJustCompleted' for purchase tracking on confirmation page.");
+            // === KONEC PŘIDÁNÍ PRO TRACKING ===
 
             return "redirect:/pokladna/dekujeme?orderCode=" + createdOrder.getOrderCode();
 
@@ -831,6 +867,18 @@ public class CheckoutController implements PriceConstants {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Objednávka s kódem '" + orderCode + "' nenalezena."));
 
             model.addAttribute("order", order);
+
+            // === ZAČÁTEK PŘIDÁNÍ PRO TRACKING ===
+            // Zkontrolujeme, zda přišel flash atribut (uživatel právě dokončil objednávku)
+            if (model.containsAttribute("orderJustCompleted")) {
+                // Pokud ano, přidáme tento příznak do modelu, aby ho šablona mohla použít
+                model.addAttribute("orderJustCompleted", true);
+                log.debug("Flag 'orderJustCompleted' found and added to model for order {}.", orderCode);
+            } else {
+                log.debug("Flag 'orderJustCompleted' NOT found for order {}. Purchase tracking script will not be rendered.", orderCode);
+            }
+            // === KONEC PŘIDÁNÍ PRO TRACKING ===
+
             return "objednavka-potvrzeni"; // Název nové šablony
 
         } catch (ResponseStatusException e) {
@@ -842,6 +890,4 @@ public class CheckoutController implements PriceConstants {
             redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazování potvrzení objednávky nastala chyba.");
             return "redirect:/";
         }
-    }
-
-} // Konec třídy CheckoutController
+    }}

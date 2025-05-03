@@ -1,68 +1,37 @@
 // Soubor: src/main/resources/static/js/cookie-config.js
-console.log("DEBUG: cookie-config.js script loaded."); // <-- PŘIDÁNO
+console.log("DEBUG: cookie-config.js script loaded.");
 
 /**
  * Základní konfigurace pro CookieConsent v3
- * Dokumentace: https://cookieconsent.orestbida.com/reference/configuration-reference.html
  */
 CookieConsent.run({
-    // --- Základní nastavení ---
     guiOptions: {
-        consentModal: {
-            layout: "box",              // Může být box, bar, cloud
-            position: "bottom right",   // Pozice boxu/baru
-            equalWeightButtons: true,
-            flipButtons: false
-        },
-        preferencesModal: {
-            layout: "box",
-            position: "right",
-            equalWeightButtons: true,
-            flipButtons: false
-        }
+        consentModal: { layout: "box", position: "bottom right", equalWeightButtons: true, flipButtons: false },
+        preferencesModal: { layout: "box", position: "right", equalWeightButtons: true, flipButtons: false }
     },
-
-    // --- Kategorie Cookies ---
     categories: {
-        necessary: {
-            readOnly: true,          // Nezbytné cookies nelze odmítnout
-            enabled: true            // Jsou vždy povolené
-        },
+        necessary: { readOnly: true, enabled: true },
         analytics: {
-            enabled: false,          // Defaultně zakázané
-            autoClear: {
-                cookies: [           // Cookies, které se smažou, pokud uživatel souhlas odvolá
-                    { name: /^_ga/ }, // Všechny Google Analytics cookies (_ga, _gid, _gat_...)
-                    { name: '_ga' }
-                ]
-            }
+            enabled: false, // Defaultně zakázané
+            autoClear: { cookies: [ { name: /^_ga/ }, { name: '_ga' } ] }
         },
         marketing: {
-            enabled: false,
-            autoClear: {
-                cookies: [
-                    // Zde přijdou cookies pro Google Ads, Facebook Pixel, Sklik atd.
-                    // Příklad:
-                    { name: '_gcl_au' }, // Google Ads conversion linker
-                    { name: '_fbp' }     // Facebook Pixel
-                ]
-            }
-            // Můžeme přidat i 'scripts: true' pro blokování skriptů, viz níže
+            enabled: false, // Defaultně zakázané
+            autoClear: { cookies: [ { name: '_gcl_au' }, { name: '_fbp' } ] }
+            // Zde můžeme později přidat services pro manuální ovládání skriptů,
+            // ale spoléháme teď na data-cookiecategory atributy
         }
     },
-
-    // --- Jazyková nastavení (Čeština) ---
     language: {
         default: "cs",
         translations: {
             cs: {
                 consentModal: {
                     title: "Používáme cookies 🍪",
-                    description: "Tyto webové stránky používají nezbytné cookies k zajištění správného fungování a sledovací/marketingové cookies k pochopení toho, jak s nimi komunikujete. Tyto budou nastaveny až po vašem souhlasu. <a href='/zasady-cookies' target='_blank' class='cc__link'>Více informací</a>", // ODKAZ NA ZÁSADY
+                    description: "Tyto webové stránky používají nezbytné cookies k zajištění správného fungování a sledovací/marketingové cookies k pochopení toho, jak s nimi komunikujete. Tyto budou nastaveny až po vašem souhlasu. <a href='/gdpr' target='_blank' class='cc__link'>Více informací</a>", // ODKAZ NA ZÁSADY
                     acceptAllBtn: "Přijmout vše",
                     acceptNecessaryBtn: "Odmítnout vše",
                     showPreferencesBtn: "Spravovat předvolby",
-                    //footer: "<a href=\"#link\">Privacy Policy</a>\n<a href=\"#link\">Terms and conditions</a>"
                 },
                 preferencesModal: {
                     title: "Nastavení souhlasu s cookies",
@@ -85,27 +54,48 @@ CookieConsent.run({
                             title: "Analytické cookies",
                             description: "Tyto cookies nám pomáhají pochopit, jak návštěvníci používají náš web, abychom jej mohli vylepšovat. Sbírají anonymizovaná data.",
                             linkedCategory: "analytics",
-                            // Zde můžeme později přidat konkrétní služby (např. Google Analytics)
-                            // services: [ { label: 'Google Analytics', description: '...' } ]
                         },
                         {
                             title: "Marketingové cookies",
                             description: "Tyto cookies se používají ke sledování návštěvníků napříč webovými stránkami. Záměrem je zobrazovat reklamy, které jsou relevantní a poutavé pro jednotlivé uživatele.",
                             linkedCategory: "marketing"
-                            // Zde můžeme později přidat konkrétní služby (Google Ads, Sklik, Heureka, FB Pixel...)
                         },
                         {
                             title: "Více informací",
-                            description: "Pro více informací o tom, jak používáme cookies, si prosím přečtěte naše <a href='/zasady-cookies' target='_blank' class='cc__link'>Zásady používání cookies</a>." // ODKAZ NA ZÁSADY
+                            description: "Pro více informací o tom, jak používáme cookies, si prosím přečtěte naše <a href='/gdpr' target='_blank' class='cc__link'>Zásady používání cookies</a>." // ODKAZ NA ZÁSADY
                         }
                     ]
                 }
             }
         }
+    }, // Konec objektu language
+
+    // --- Callback funkce pro inicializaci našeho trackingu ---
+    onFirstConsent: function({categories}){
+        console.log("CookieConsent onFirstConsent triggered. Accepted categories:", categories);
+        if (typeof initializeTrackingAfterConsent === 'function') {
+            initializeTrackingAfterConsent();
+        } else {
+            console.warn("Function initializeTrackingAfterConsent not found during onFirstConsent.");
+            // Případně zkusit zavolat přímo TrackingService, pokud je to bezpečné
+            // if(typeof TrackingService?.initBaseScripts === 'function') TrackingService.initBaseScripts();
+        }
     },
-
-    // --- Pokročilá konfigurace (propojení s GTM atd. - přidáme později) ---
-    // services: { ... } // Zde definujeme konkrétní služby (GA, Ads, ...) a jak je knihovna má ovládat
+    onConsent: function({categories}){
+        console.log("CookieConsent onConsent triggered. Accepted categories:", categories);
+        if (typeof initializeTrackingAfterConsent === 'function') {
+            initializeTrackingAfterConsent();
+        } else {
+            console.warn("Function initializeTrackingAfterConsent not found during onConsent.");
+        }
+    },
+    onChange: function({categories}){
+        console.log("CookieConsent onChange triggered. Accepted categories:", categories);
+        if (typeof initializeTrackingAfterConsent === 'function') {
+            initializeTrackingAfterConsent(); // Znovu inicializujeme/zkontrolujeme trackery
+            console.log("Consent changed, base tracking scripts state re-evaluated.");
+        } else {
+            console.warn("Function initializeTrackingAfterConsent not found during onChange.");
+        }
+    }
 });
-
-// Tento kód se spustí a zobrazí cookie lištu, pokud souhlas ještě nebyl udělen.

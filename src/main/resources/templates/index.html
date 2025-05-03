@@ -185,14 +185,14 @@
                     <div class="card h-100 shadow-sm">
                         <a th:if="${product.slug}" th:href="@{'/produkt/' + ${product.slug}}">
                             <div class="ratio ratio-1x1 product-image-wrapper">
-                                <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.png' : product.getImagesOrdered()[0].url}"
+                                <img th:src="${product.getImagesOrdered().isEmpty() ? '/images/placeholder.webp' : product.getImagesOrdered()[0].url}"
                                      th:alt="${product.name}"
                                      class="card-img-top" loading="lazy"/>
                             </div>
                         </a>
                         <a th:unless="${product.slug}" href="#">
                             <div class="ratio ratio-1x1 product-image-wrapper">
-                                <img src="/images/placeholder.png" th:alt="${product.name}"
+                                <img src="/images/placeholder.webp" th:alt="${product.name}"
                                      class="card-img-top" loading="lazy"/>
                             </div>
                         </a>
@@ -589,7 +589,10 @@
             "name": "Dřevníky Kolář",
             "description": "Výroba a prodej kvalitních dřevníků standardních rozměrů i na míru. Tradice, zkušenosti a individuální přístup.",
             "url": "https://www.drevniknamiru.cz/",
-            "logo": "https://www.drevniknamiru/images/logo.webp",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.drevniknamiru.cz/images/logo.webp"
+            },
             "address": {
                 "@type": "PostalAddress",
                 "streetAddress": "Družstevní 304",
@@ -636,11 +639,11 @@
             <div class="row">
                 <div class="col-md-6 col-lg-3 contact-block"><i class="bi bi-telephone-outbound-fill"></i> <h5>Telefonní
                     kontakt</h5>
-                    <p><a href="tel:+420773961824">+420 773 961 824</a></p>
+                    <p><a href="tel:+420773961824" class="track-contact-click">+420 773 961 824</a></p>
                     <p class="small text-muted">(Po - Pá: 8:00 - 16:00)</p></div>
                 <div class="col-md-6 col-lg-3 contact-block"><i class="bi bi-envelope-paper-heart-fill"></i> <h5>
                     Kontaktní email</h5>
-                    <p><a href="mailto:info@drevniky-kolar.cz">info@drevniky-kolar.cz</a></p></div>
+                    <p><a href="mailto:info@drevniky-kolar.cz" class="track-contact-click">info@drevniky-kolar.cz</a></p></div>
                 <div class="col-md-6 col-lg-3 contact-block"><i class="bi bi-bank2"></i> <h5>Bankovní spojení</h5>
                     <p>Fio banka a.s.</p>
                     <p>2601817728 / 2010</p></div>

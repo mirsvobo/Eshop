@@ -58,7 +58,7 @@
                             <strong th:text="${item.productName}">Název produktu</strong>
                             <div class="item-variant-details" th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''"></div>
                             <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="item-variant-details mt-1">
-                                <small>+ <span th:each="addonItem, iter : ${item.selectedAddons}" th:text="${addonItem.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
+                                <small>+ <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
                             </div>
                         </td>
                         <td class="text-center" th:text="${item.count}">1</td>
@@ -141,5 +141,62 @@
         </div>
     </div>
 </section>
+
+<th:block layout:fragment="javascript" th:if="${order != null and orderJustCompleted}">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // Data pro měření konverze - sestaveno z objektu 'order' předaného z controlleru
+        const orderDataForTracking = {
+            transaction_id: /*[[${order.orderCode}]]*/ null,
+            value: /*[[${order.totalPrice}]]*/ 0.0, // Celkem s DPH (zaokrouhlená hodnota)
+            currency: /*[[${order.currency}]]*/ 'CZK',
+            tax: /*[[${order.totalTax}]]*/ 0.0, // Celkem DPH (zboží + doprava)
+            shipping: /*[[${order.shippingCostWithoutTax?.add(order.shippingTax)}]]*/ 0.0, // Doprava s DPH
+
+            // Hodnoty bez DPH pro Google Ads a Sklik
+            value_no_vat: /*[[${order.subTotalWithoutTax?.subtract(order.couponDiscountAmount)}]]*/ 0.0, // Mezisoučet položek po slevě bez DPH
+            shipping_no_vat: /*[[${order.shippingCostWithoutTax}]]*/ 0.0, // Doprava bez DPH
+
+            // Položky pro GA4 a Google Ads (ceny BEZ DPH)
+            items: [
+                /*[[# th:each="item : ${order.orderItems}"]]*/
+                {
+                    item_id: /*[[${item.sku ?: ('VAR-' + item.id)}]]*/ null, // Použij SKU nebo ID položky
+                    item_name: /*[[${item.productName}]]*/ null,
+                    price: /*[[${item.unitPriceWithoutTax}]]*/ 0.0, // Jednotková cena BEZ DPH
+                    quantity: /*[[${item.count}]]*/ 1,
+                    // Volitelně doplnit:
+                    // item_category: 'Dřevníky',
+                    // item_brand: 'Dřevníky Kolář'
+                },
+                /*[[/]]*/
+            ],
+
+            // Položky pro Heureku (ceny S DPH)
+            heureka_items: [
+                /*[[# th:each="item : ${order.orderItems}"]]*/
+                {
+                    itemId: /*[[${item.sku ?: ('VAR-' + item.id)}]]*/ null, // ID pro Heureku
+                    name: /*[[${item.productName + (#strings.isEmpty(item.variantInfo) ? '' : ' (' + #strings.replace(item.variantInfo,'|',', ') + ')') }]]*/ null, // Název vč. varianty
+                    priceVat: /*[[${item.unitPriceWithTax}]]*/ 0.0, // Jednotková cena S DPH
+                    quantity: /*[[${item.count}]]*/ 1
+                },
+                /*[[/]]*/
+            ],
+            heureka_total_vat: /*[[${order.totalPrice}]]*/ 0.0 // Celkem S DPH pro Heureku
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Ready (Confirmation Page): Attempting to track purchase.");
+            console.log("Order data for purchase tracking:", orderDataForTracking);
+            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackPurchase === 'function') {
+                TrackingService.trackPurchase(orderDataForTracking);
+            } else {
+                console.error("TrackingService or trackPurchase function not available.");
+            }
+        });
+        /*]]>*/
+    </script>
+</th:block>
 </body>
 </html>

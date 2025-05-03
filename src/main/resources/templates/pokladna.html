@@ -393,6 +393,30 @@
 
 <th:block layout:fragment="javascript">
     <script defer th:src="@{/js/pokladna.js}"></script>
+    <th:block layout:fragment="javascript">
+        <script defer th:src="@{/js/pokladna.js}"></script> <script th:inline="javascript">
+        /*<![CDATA[*/
+        const cartDataForTracking = {
+            // Předpokládáme, že data jsou předána z backendu do modelu
+            items: /*[[${cartItemsForTracking}]]*/ [], // Seznam objektů položek
+            value_no_vat: /*[[${cartTotalValueNoVatForTracking}]]*/ 0.0, // Celková cena košíku BEZ DPH
+            currency: /*[[${currency}]]*/ 'CZK'
+            // Zde můžete přidat i email (hashovaný) pro Sklik, pokud je dostupný
+            // hashedEmail: /*[[${hashedEmail}]]*/ null
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Ready: Attempting to track begin_checkout.");
+            console.log("Cart data for tracking:", cartDataForTracking);
+            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackBeginCheckout === 'function') {
+                TrackingService.trackBeginCheckout(cartDataForTracking);
+            } else {
+                console.error("TrackingService or trackBeginCheckout not available.");
+            }
+        });
+        /*]]>*/
+    </script>
+    </th:block>
 </th:block>
 
 </body>

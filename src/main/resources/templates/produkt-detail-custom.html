@@ -37,12 +37,15 @@
         <form th:action="@{/kosik/pridat}" method="post" id="custom-product-form" class="needs-validation" novalidate
               th:object="${cartItemDto}">
 
-            <input type="hidden" name="isCustom" value="true" />
-            <input type="hidden" name="productId" th:value="${product.id}" />
+            <input type="hidden" name="isCustom" value="true"/>
+            <input type="hidden" name="productId" th:value="${product.id}"/>
             <div id="hidden-selected-addons" style="display: none;"></div>
-            <input type="hidden" id="lengthInput" name="customDimensions[length]" th:value="${product.configurator?.defaultLength ?: product.configurator?.minLength}">
-            <input type="hidden" id="widthInput" name="customDimensions[width]" th:value="${product.configurator?.defaultWidth ?: product.configurator?.minWidth}">
-            <input type="hidden" id="heightInput" name="customDimensions[height]" th:value="${product.configurator?.defaultHeight ?: product.configurator?.minHeight}">
+            <input type="hidden" id="lengthInput" name="customDimensions[length]"
+                   th:value="${product.configurator?.defaultLength ?: product.configurator?.minLength}">
+            <input type="hidden" id="widthInput" name="customDimensions[width]"
+                   th:value="${product.configurator?.defaultWidth ?: product.configurator?.minWidth}">
+            <input type="hidden" id="heightInput" name="customDimensions[height]"
+                   th:value="${product.configurator?.defaultHeight ?: product.configurator?.minHeight}">
 
             <div class="row">
                 <div class="col-lg-7 mb-4 mb-lg-0 configurator-column">
@@ -54,11 +57,14 @@
                         <div class="mb-3">
                             <label for="length" class="form-label dimension-slider-label">
                                 <span>Délka:</span>
-                                <span class="dimension-value"><span id="lengthValue" th:text="${product.configurator.defaultLength ?: product.configurator.minLength}">0</span> cm</span>
+                                <span class="dimension-value"><span id="lengthValue"
+                                                                    th:text="${product.configurator.defaultLength ?: product.configurator.minLength}">0</span> cm</span>
                             </label>
                             <input type="range" class="form-range dimension-slider config-input" id="length"
                                    th:min="${product.configurator.minLength}" th:max="${product.configurator.maxLength}"
-                                   th:step="${product.configurator.stepLength}" th:value="${product.configurator.defaultLength ?: product.configurator.minLength}" required>
+                                   th:step="${product.configurator.stepLength}"
+                                   th:value="${product.configurator.defaultLength ?: product.configurator.minLength}"
+                                   required>
                             <div class="d-flex justify-content-between text-muted small">
                                 <span th:text="${product.configurator.minLength} + ' cm'">Min</span>
                                 <span th:text="${product.configurator.maxLength} + ' cm'">Max</span>
@@ -67,11 +73,14 @@
                         <div class="mb-3">
                             <label for="width" class="form-label dimension-slider-label">
                                 <span>Šířka (Hloubka):</span>
-                                <span class="dimension-value"><span id="widthValue" th:text="${product.configurator.defaultWidth ?: product.configurator.minWidth}">0</span> cm</span>
+                                <span class="dimension-value"><span id="widthValue"
+                                                                    th:text="${product.configurator.defaultWidth ?: product.configurator.minWidth}">0</span> cm</span>
                             </label>
                             <input type="range" class="form-range dimension-slider config-input" id="width"
                                    th:min="${product.configurator.minWidth}" th:max="${product.configurator.maxWidth}"
-                                   th:step="${product.configurator.stepWidth}" th:value="${product.configurator.defaultWidth ?: product.configurator.minWidth}" required>
+                                   th:step="${product.configurator.stepWidth}"
+                                   th:value="${product.configurator.defaultWidth ?: product.configurator.minWidth}"
+                                   required>
                             <div class="d-flex justify-content-between text-muted small">
                                 <span th:text="${product.configurator.minWidth} + ' cm'">Min</span>
                                 <span th:text="${product.configurator.maxWidth} + ' cm'">Max</span>
@@ -80,11 +89,14 @@
                         <div class="mb-3">
                             <label for="height" class="form-label dimension-slider-label">
                                 <span>Výška:</span>
-                                <span class="dimension-value"><span id="heightValue" th:text="${product.configurator.defaultHeight ?: product.configurator.minHeight}">0</span> cm</span>
+                                <span class="dimension-value"><span id="heightValue"
+                                                                    th:text="${product.configurator.defaultHeight ?: product.configurator.minHeight}">0</span> cm</span>
                             </label>
                             <input type="range" class="form-range dimension-slider config-input" id="height"
                                    th:min="${product.configurator.minHeight}" th:max="${product.configurator.maxHeight}"
-                                   th:step="${product.configurator.stepHeight}" th:value="${product.configurator.defaultHeight ?: product.configurator.minHeight}" required>
+                                   th:step="${product.configurator.stepHeight}"
+                                   th:value="${product.configurator.defaultHeight ?: product.configurator.minHeight}"
+                                   required>
                             <div class="d-flex justify-content-between text-muted small">
                                 <span th:text="${product.configurator.minHeight} + ' cm'">Min</span>
                                 <span th:text="${product.configurator.maxHeight} + ' cm'">Max</span>
@@ -95,7 +107,8 @@
                     <div class="configurator-step" th:if="${availableDesigns != null and !availableDesigns.isEmpty()}">
                         <h4>2. Vyberte design <span class="text-danger">*</span></h4>
                         <label for="designSelect" class="form-label">Design:</label>
-                        <select class="form-select config-input" id="designSelect" th:field="*{selectedDesignId}" required>
+                        <select class="form-select config-input" id="designSelect" th:field="*{selectedDesignId}"
+                                required>
                             <option value="" disabled selected>-- Vyberte design --</option>
                             <option th:each="design : ${availableDesigns}"
                                     th:value="${design.id}"
@@ -105,14 +118,18 @@
                                 Název Designu
                             </option>
                         </select>
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedDesignId}')}" th:errors="*{selectedDesignId}"></div>
-                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedDesignId}')}">Prosím, vyberte design.</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedDesignId}')}"
+                             th:errors="*{selectedDesignId}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedDesignId}')}">Prosím,
+                            vyberte design.
+                        </div>
                     </div>
 
                     <div class="configurator-step" th:if="${availableGlazes != null and !availableGlazes.isEmpty()}">
                         <h4>3. Vyberte lazuru <span class="text-danger">*</span></h4>
                         <label for="glazeSelect" class="form-label">Lazura:</label>
-                        <select class="form-select config-input" id="glazeSelect" th:field="*{selectedGlazeId}" required>
+                        <select class="form-select config-input" id="glazeSelect" th:field="*{selectedGlazeId}"
+                                required>
                             <option value="" disabled selected>-- Vyberte lazuru --</option>
                             <option th:each="glaze : ${availableGlazes}"
                                     th:value="${glaze.id}"
@@ -122,14 +139,19 @@
                                 Název Lazury
                             </option>
                         </select>
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedGlazeId}')}" th:errors="*{selectedGlazeId}"></div>
-                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedGlazeId}')}">Prosím, vyberte lazuru.</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedGlazeId}')}"
+                             th:errors="*{selectedGlazeId}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedGlazeId}')}">Prosím,
+                            vyberte lazuru.
+                        </div>
                     </div>
 
-                    <div class="configurator-step" th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}">
+                    <div class="configurator-step"
+                         th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}">
                         <h4>4. Vyberte barvu střechy <span class="text-danger">*</span></h4>
                         <label for="roofColorSelect" class="form-label">Barva střechy:</label>
-                        <select class="form-select config-input" id="roofColorSelect" th:field="*{selectedRoofColorId}" required>
+                        <select class="form-select config-input" id="roofColorSelect" th:field="*{selectedRoofColorId}"
+                                required>
                             <option value="" disabled selected>-- Vyberte barvu střechy --</option>
                             <option th:each="roofColor : ${availableRoofColors}"
                                     th:value="${roofColor.id}"
@@ -139,14 +161,18 @@
                                 Název Barvy
                             </option>
                         </select>
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedRoofColorId}')}" th:errors="*{selectedRoofColorId}"></div>
-                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedRoofColorId}')}">Prosím, vyberte barvu střechy.</div>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{selectedRoofColorId}')}"
+                             th:errors="*{selectedRoofColorId}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedRoofColorId}')}">Prosím,
+                            vyberte barvu střechy.
+                        </div>
                     </div>
 
                     <div class="configurator-step" th:if="${groupedAddons != null and !groupedAddons.isEmpty()}">
                         <h4>5. Vyberte doplňky</h4>
                         <div th:each="categoryEntry : ${groupedAddons}" class="addon-category mb-3">
-                            <label th:for="'addonCategory-' + ${categoryEntry.key}" th:text="${categoryEntry.key}" class="form-label"></label>
+                            <label th:for="'addonCategory-' + ${categoryEntry.key}" th:text="${categoryEntry.key}"
+                                   class="form-label"></label>
                             <select class="form-select addon-select config-input"
                                     th:id="'addonCategory-' + ${categoryEntry.key}"
                                     data-is-addon-category-select="true">
@@ -167,31 +193,53 @@
                         </div>
                     </div>
 
-                    <div class="configurator-step tax-selection" th:if="${availableTaxRates != null and !availableTaxRates.isEmpty()}">
+                    <div class="configurator-step tax-selection"
+                         th:if="${availableTaxRates != null and !availableTaxRates.isEmpty()}">
                         <h4>6. Zvolte režim DPH <span class="text-danger">*</span></h4>
-                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i></label>
+                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon"
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                        title="Více informací o sazbách DPH"></i></label>
                         <div class="form-check" th:each="taxRate, iterStat : ${availableTaxRates}">
-                            <input class="form-check-input tax-rate-radio config-input" type="radio" th:field="*{selectedTaxRateId}" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" required>
+                            <input class="form-check-input tax-rate-radio config-input" type="radio"
+                                   th:field="*{selectedTaxRateId}" th:id="'taxRate' + ${taxRate.id}"
+                                   th:value="${taxRate.id}" required>
                             <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}">
                                 <span th:text="${taxRate.name}">Název sazby</span>
                                 <span th:if="${taxRate.note != null and not #strings.isEmpty(taxRate.note)}"
                                       th:text="' - ' + ${taxRate.note}"
                                       class="text-muted small"> - Poznámka</span>
                             </label>
-                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
-                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
-                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.12}">
+                                Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro
+                                stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy).
+                                <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
+                            <div class="tax-info-details" th:if="${taxRate.rate != null and taxRate.rate == 0.21}">
+                                Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické
+                                osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou
+                                sazbu.
+                            </div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové
+                                povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává
+                                odběratel.
+                            </div>
                         </div>
-                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('*{selectedTaxRateId}')}" th:errors="*{selectedTaxRateId}"></div>
-                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedTaxRateId}')}">Prosím, vyberte režim DPH.</div>
+                        <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('*{selectedTaxRateId}')}"
+                             th:errors="*{selectedTaxRateId}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{selectedTaxRateId}')}">Prosím,
+                            vyberte režim DPH.
+                        </div>
                     </div>
 
                     <div class="configurator-step">
                         <h4>7. Počet kusů <span class="text-danger">*</span></h4>
                         <label for="quantity" class="form-label">Množství:</label>
-                        <input type="number" id="quantity" th:field="*{quantity}" class="form-control config-input" value="1" min="1" style="max-width: 100px;" required>
-                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{quantity}')}" th:errors="*{quantity}"></div>
-                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{quantity}')}">Prosím, zadejte platné množství (minimálně 1).</div>
+                        <input type="number" id="quantity" th:field="*{quantity}" class="form-control config-input"
+                               value="1" min="1" style="max-width: 100px;" required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('*{quantity}')}"
+                             th:errors="*{quantity}"></div>
+                        <div class="invalid-feedback" th:unless="${#fields.hasErrors('*{quantity}')}">Prosím, zadejte
+                            platné množství (minimálně 1).
+                        </div>
                     </div>
 
                 </div>
@@ -202,27 +250,47 @@
 
                         <div id="price-breakdown" class="mt-3 mb-3 border-top pt-3 small">
                             <h5 class="mb-2">Rozpis ceny (bez DPH):</h5>
-                            <div class="d-flex justify-content-between mb-1"><span>Základní cena (rozměry):</span><span id="breakdown-base-price" class="fw-bold">Načítání...</span></div>
-                            <div class="d-flex justify-content-between mb-1" id="breakdown-design-row" style="display: none;"><span>Příplatek Design:</span><span id="breakdown-design-price" class="fw-bold"></span></div>
-                            <div class="d-flex justify-content-between mb-1" id="breakdown-glaze-row" style="display: none;"><span>Příplatek Lazura:</span><span id="breakdown-glaze-price" class="fw-bold"></span></div>
-                            <div class="d-flex justify-content-between mb-1" id="breakdown-roof-color-row" style="display: none;"><span>Příplatek Střecha:</span><span id="breakdown-roof-color-price" class="fw-bold"></span></div>
-                            <div id="breakdown-addons-container" class="mt-2" style="display: none;"><h6>Doplňky:</h6><div id="breakdown-addons-list"></div></div>
-                            <div id="breakdown-loading" class="text-muted text-center" style="display: none;"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Načítání rozpisu...</span></div><span class="ms-1">Načítání rozpisu...</span></div>
+                            <div class="d-flex justify-content-between mb-1"><span>Základní cena (rozměry):</span><span
+                                    id="breakdown-base-price" class="fw-bold">Načítání...</span></div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-design-row"
+                                 style="display: none;"><span>Příplatek Design:</span><span id="breakdown-design-price"
+                                                                                            class="fw-bold"></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-glaze-row"
+                                 style="display: none;"><span>Příplatek Lazura:</span><span id="breakdown-glaze-price"
+                                                                                            class="fw-bold"></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1" id="breakdown-roof-color-row"
+                                 style="display: none;"><span>Příplatek Střecha:</span><span
+                                    id="breakdown-roof-color-price" class="fw-bold"></span></div>
+                            <div id="breakdown-addons-container" class="mt-2" style="display: none;"><h6>Doplňky:</h6>
+                                <div id="breakdown-addons-list"></div>
+                            </div>
+                            <div id="breakdown-loading" class="text-muted text-center" style="display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status"><span
+                                        class="visually-hidden">Načítání rozpisu...</span></div>
+                                <span class="ms-1">Načítání rozpisu...</span></div>
                         </div>
 
                         <div class="price-summary border-top pt-3" id="price-summary-section">
                             <span class="price-label">Celková cena konfigurace:</span>
                             <div class="price-value-container">
-                                <span id="calculatedPrice" class="price-value" th:data-initial-price-czk="${initialCustomPriceCZK}" th:data-initial-price-eur="${initialCustomPriceEUR}" th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
-                                <span class="spinner-border spinner-border-sm price-loading-spinner" role="status" aria-hidden="true" style="display: none;"></span>
+                                <span id="calculatedPrice" class="price-value"
+                                      th:data-initial-price-czk="${initialCustomPriceCZK}"
+                                      th:data-initial-price-eur="${initialCustomPriceEUR}"
+                                      th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                                <span class="spinner-border spinner-border-sm price-loading-spinner" role="status"
+                                      aria-hidden="true" style="display: none;"></span>
                             </div>
                             <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
-                            <p class="small text-muted">Sestavení na místě zdarma. Doprava do 5týdnů od uhrazení zálohy 50 %.</p>
+                            <p class="small text-muted">Sestavení na místě zdarma. Doprava do 5týdnů od uhrazení zálohy
+                                50 %.</p>
                             <div id="customPriceErrorDisplay" class="text-danger mt-2" style="display: none;"></div>
                         </div>
 
                         <div class="mt-3 text-center">
-                            <button type="submit" class="btn btn-success add-to-cart-btn" th:disabled="${availableTaxRates == null or availableTaxRates.isEmpty() or product.configurator == null}">
+                            <button type="submit" class="btn btn-success add-to-cart-btn"
+                                    th:disabled="${availableTaxRates == null or availableTaxRates.isEmpty() or product.configurator == null}">
                                 <i class="bi bi-cart-plus"></i> Přidat do košíku
                             </button>
                         </div>
@@ -237,16 +305,20 @@
                 <h4>Dostupné designy</h4>
                 <div th:each="design : ${availableDesigns}" class="d-inline-block text-center me-2 mb-2">
                     <img th:src="${design.imageUrl} ?: '/images/placeholder.png'"
-                         th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                    <p class="small mb-0" th:text="${design.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Designu</p> </div>
+                         th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail"
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${design.name}" style="max-width: 100px; overflow-wrap: break-word;">
+                        Název Designu</p></div>
             </div>
 
             <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                 <h4>Dostupné lazury</h4>
                 <div th:each="glaze : ${availableGlazes}" class="d-inline-block text-center me-2 mb-2">
                     <img th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
-                         th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                    <p class="small mb-0" th:text="${glaze.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Lazury</p>
+                         th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail"
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${glaze.name}" style="max-width: 100px; overflow-wrap: break-word;">
+                        Název Lazury</p>
                 </div>
             </div>
 
@@ -254,8 +326,10 @@
                 <h4>Barvy střešní krytiny</h4>
                 <div th:each="roofColor : ${availableRoofColors}" class="d-inline-block text-center me-2 mb-2">
                     <img th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
-                         th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                    <p class="small mb-0" th:text="${roofColor.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Barvy</p>
+                         th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail"
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                    <p class="small mb-0" th:text="${roofColor.name}"
+                       style="max-width: 100px; overflow-wrap: break-word;">Název Barvy</p>
                 </div>
             </div>
         </section>
@@ -275,7 +349,8 @@
             </div>
         </section>
 
-    </div> </section>
+    </div>
+</section>
 
 <th:block layout:fragment="javascript">
     <script defer th:src="@{/js/product-configurator.js}"></script>
@@ -293,7 +368,7 @@
             configuratorData: /*[[${configuratorDto}]]*/
         }; // <-- Konec objektu initData
         // Inicializace konfigurátoru po načtení DOM
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Ošetření, pokud by configuratorData bylo přesto null nebo undefined
             if (typeof initializeConfigurator === 'function' && initData.configuratorData) {
                 initializeConfigurator(initData);
@@ -312,6 +387,89 @@
         });
         /*]]>*/
     </script>
+    <th:block layout:fragment="javascript" th:with="
+    td=${trackingData != null ? trackingData : new java.util.HashMap()}
+">
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            const addToCartFormCustom = document.getElementById('custom-product-form');
+            const quantityInputCustom = document.getElementById('quantity');
+            // Proměnná pro uložení aktuální ceny bez DPH (bude aktualizována z configurator.js)
+            let currentCustomPriceNoVat = /*[[${td.priceForTrackingNoVat}]]*/ 0.0;
+
+            // Globální funkce, kterou VOLÁ product-configurator.js při změně ceny
+            function updateTrackingPrices(newPriceNoVat, newPriceWithVat) {
+                if (productDataForTracking) {
+                    console.log('Updating tracked prices (global):', newPriceNoVat, newPriceWithVat);
+                    productDataForTracking.priceNoVat = newPriceNoVat;
+                    productDataForTracking.priceWithVat = newPriceWithVat; // Může se hodit
+                    // Aktualizujeme globální proměnnou pro add_to_cart
+                    currentCustomPriceNoVat = newPriceNoVat;
+                } else {
+                    console.warn("productDataForTracking not defined when updateTrackingPrices was called.");
+                }
+            }
+
+
+            if (addToCartFormCustom && quantityInputCustom) {
+                addToCartFormCustom.addEventListener('submit', function (event) {
+                    // PŘÍPRAVA DAT PŘED ODESLÁNÍM FORMULÁŘE (VOLÁNO Z product-configurator.js)
+                    // Ujistěte se, že tato funkce je volána před pokračováním submitu
+                    if (typeof prepareFormDataBeforeSubmit === 'function') {
+                        prepareFormDataBeforeSubmit();
+                        console.log("Prepared hidden addon fields before tracking.");
+                    } else {
+                        console.warn("prepareFormDataBeforeSubmit function not found before tracking.");
+                    }
+
+                    const quantity = parseInt(quantityInputCustom.value) || 1;
+                    const priceNoVat = currentCustomPriceNoVat; // <-- Použijeme AKTUÁLNÍ cenu
+                    const currency = /*[[${td.currency}]]*/ 'CZK';
+                    // IDEÁLNĚ: Vygenerovat unikátní variantId na základě konfigurace
+                    // Pro zjednodušení ponecháme základní ID, ale zvažte detailnější ID
+                    const variantId = /*[[${td.variantId}]]*/ null;
+                    const productName = /*[[${td.productName}]]*/ null;
+                    const categoryName = /*[[${td.categoryName}]]*/ 'Dřevníky';
+                    const brandName = /*[[${td.brandName}]]*/ 'Dřevníky Kolář';
+
+                    if (!variantId) {
+                        console.warn("trackAddToCart: variantId not found in tracking data. Skipping.");
+                        return;
+                    }
+                    if (priceNoVat <= 0) {
+                        console.warn("trackAddToCart: Price is zero or invalid. Check configuration/calculation. Price:", priceNoVat);
+                        // Můžete se rozhodnout, zda i tak trackovat, nebo přeskočit
+                        // return;
+                    }
+
+                    const itemDataForTracking = {
+                        variantId: variantId, // Zvažte unikátnější ID pro konfiguraci
+                        name: productName,
+                        price: priceNoVat, // AKTUÁLNÍ cena bez DPH
+                        currency: currency,
+                        quantity: quantity,
+                        category: categoryName,
+                        brand: brandName
+                    };
+
+                    console.log("Custom Add to Cart submit. Tracking data:", itemDataForTracking);
+
+                    if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
+                        TrackingService.trackAddToCart(itemDataForTracking);
+                    } else {
+                        console.error("TrackingService or trackAddToCart not available.");
+                    }
+                    // Nepotřebujeme zde `event.preventDefault()`, formulář se má odeslat
+                });
+                console.log("Event listener for trackAddToCart attached to form:", addToCartFormCustom.id);
+            } else {
+                if (!addToCartFormCustom) console.error("Custom Add to Cart form not found for tracking.");
+                if (!quantityInputCustom) console.error("Quantity input not found for tracking add to cart.");
+            }
+            /*]]>*/
+        </script>
+        <script th:if="${product.customisable}" defer th:src="@{/js/product-configurator.js}"></script>
+    </th:block>
     <th:block th:if="${jsonLdDataString != null}">
         <script defer type="application/ld+json" th:id="'schema-org-data'" th:utext="${jsonLdDataString}"></script>
         <script defer th:inline="javascript">

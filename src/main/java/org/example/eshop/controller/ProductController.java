@@ -136,6 +136,79 @@ public class ProductController {
             cartItemDto.setProductId(product.getId());
             cartItemDto.setCustom(product.isCustomisable());
 
+            Map<String, Object> trackingData = new HashMap<>();
+            trackingData.put("productId", product.getId());
+            trackingData.put("productName", product.getName());
+            trackingData.put("currency", currentCurrency);
+            trackingData.put("brandName", "Dřevníky Kolář");
+            // ID varianty/SKU - pro standardní produkt použijeme slug, pro custom prefix + ID
+            trackingData.put("variantId", product.isCustomisable() ? "CUSTOM-" + product.getId() : "STD-" + product.getSlug());
+            // Kategorie - zatím natvrdo, můžeš doplnit z modelu produktu, pokud máš
+            trackingData.put("categoryName", "Dřevníky");
+
+            BigDecimal priceForTrackingNoVat = BigDecimal.ZERO;
+            BigDecimal priceForTrackingWithVat = BigDecimal.ZERO;
+            Map<String, Object> priceInfoForPage = null; // Pro zobrazení na stránce
+
+            if (product.isCustomisable() && product.getConfigurator() != null) {
+                // --- Custom Produkt - výpočet VÝCHOZÍ ceny pro tracking ---
+                ProductConfigurator config = product.getConfigurator();
+                Map<String, BigDecimal> initialDimensions = new HashMap<>();
+                initialDimensions.put("length", Optional.ofNullable(config.getDefaultLength()).orElse(config.getMinLength()));
+                initialDimensions.put("width", Optional.ofNullable(config.getDefaultWidth()).orElse(config.getMinWidth()));
+                initialDimensions.put("height", Optional.ofNullable(config.getDefaultHeight()).orElse(config.getMinHeight()));
+
+                try {
+                    // Získáme základní cenu bez DPH (jen rozměry)
+                    priceForTrackingNoVat = productService.calculateDynamicProductPrice(product, initialDimensions, currentCurrency);
+
+                    // Pro cenu s DPH musíme připočítat DPH - potřebujeme sazbu
+                    // Zde předpokládáme základní sazbu (21%), uprav pokud má být jiná výchozí!
+                    // V reálu by bylo lepší mít výchozí TaxRate nastavenou v konfiguraci.
+                    BigDecimal defaultVatRate = new BigDecimal("0.21"); // FALLBACK
+                    Set<TaxRate> rates = product.getAvailableTaxRates();
+                    if (rates != null && !rates.isEmpty()) {
+                        // Vezmeme první dostupnou nebo specifickou výchozí, pokud máš
+                        defaultVatRate = rates.iterator().next().getRate();
+                    }
+                    priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(defaultVatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+
+                    // Ceny pro zobrazení na stránce (mohou být předány jinak z JS)
+                    model.addAttribute("initialCustomPriceCZK", product.isCustomisable() ? productService.calculateDynamicProductPrice(product, initialDimensions, "CZK") : null);
+                    model.addAttribute("initialCustomPriceEUR", product.isCustomisable() ? productService.calculateDynamicProductPrice(product, initialDimensions, "EUR") : null);
+
+                } catch (Exception e) {
+                    logger.error("[ProductController] Chyba výpočtu výchozí ceny pro custom produkt ID {}: {}", product.getId(), e.getMessage());
+                    // Ceny zůstanou 0
+                }
+
+            } else if (!product.isCustomisable()) {
+                // --- Standardní produkt - výpočet ceny pro tracking ---
+                priceInfoForPage = productService.calculateFinalProductPrice(product, currentCurrency);
+                model.addAttribute("priceInfo", priceInfoForPage); // Pro zobrazení na stránce
+
+                // Cena bez DPH pro tracking (bereme zlevněnou, pokud je, jinak původní)
+                priceForTrackingNoVat = (BigDecimal) priceInfoForPage.getOrDefault("discountedPrice", priceInfoForPage.get("originalPrice"));
+                priceForTrackingNoVat = Optional.ofNullable(priceForTrackingNoVat).orElse(BigDecimal.ZERO);
+
+                // Cena s DPH pro tracking (musíme dopočítat)
+                if (priceForTrackingNoVat.compareTo(BigDecimal.ZERO) > 0) {
+                    Set<TaxRate> rates = product.getAvailableTaxRates();
+                    if (rates != null && !rates.isEmpty()) {
+                        // Předpokládáme jednu sazbu pro standardní produkt, nebo vezmeme první
+                        BigDecimal vatRate = rates.iterator().next().getRate();
+                        priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(vatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+                    } else {
+                        logger.warn("Missing tax rate for standard product ID {}, cannot calculate price with VAT for tracking.", product.getId());
+                    }
+                }
+            }
+
+            trackingData.put("priceForTrackingNoVat", priceForTrackingNoVat);
+            trackingData.put("priceForTrackingWithVat", priceForTrackingWithVat);
+            model.addAttribute("trackingData", trackingData); // Předáme data do modelu
+            logger.debug("Prepared tracking data for view_item: {}", trackingData);
+
             // Výpočet počáteční/minimální ceny pro JSON-LD a zobrazení
             BigDecimal initialCustomPriceCZK = null;
             BigDecimal initialCustomPriceEUR = null;
