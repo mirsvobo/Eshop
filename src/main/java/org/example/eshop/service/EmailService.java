@@ -56,7 +56,7 @@ public class EmailService {
     private String shopName;
 
     @Value("${eshop.url:https://www.drevniknamiru.cz}")
-    private String shopUrl;
+    private String shopUrl; // Tento baseUrl se použije pro ostatní emaily
 
     @Value("${eshop.replyToEmail:info@drevniky-kolar.cz}")
     private String replyToEmail;
@@ -71,17 +71,23 @@ public class EmailService {
     /**
      * Odešle potvrzovací email o nové objednávce zákazníkovi.
      * Používá šablonu 'emails/order-confirmation-new.html'.
+     * --- UPRAVENO: Přijímá isGuest a baseUrl ---
      * @param order Objekt objednávky.
+     * @param isGuest Příznak, zda je zákazník host.
+     * @param baseUrl Základní URL aplikace (předáno z OrderService).
      */
     @Async
-    public void sendOrderConfirmationEmail(Order order) {
+    // --- ZMĚNA: Přidány parametry isGuest a baseUrl ---
+    public void sendOrderConfirmationEmail(Order order, boolean isGuest, String baseUrl) {
         String orderCode = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "N/A";
-        log.debug("Attempting to send order confirmation email for order {}.", orderCode);
-        if (order == null || order.getCustomer() == null || !StringUtils.hasText(order.getCustomer().getEmail())) {
-            log.error("Cannot send confirmation email for order {}. Order or customer email is invalid.", orderCode);
+        // --- ZMĚNA: Přidáno logování nových parametrů ---
+        log.debug("Attempting to send order confirmation email for order {} (isGuest: {}, baseUrl: {}).", orderCode, isGuest, baseUrl);
+
+        if (order == null || order.getCustomer() == null || !StringUtils.hasText(order.getCustomer().getEmail()) || !StringUtils.hasText(baseUrl)) {
+            log.error("Cannot send confirmation email for order {}. Order, customer email, or baseUrl is invalid.", orderCode);
             return;
         }
-        if (!isMailConfigured()) { // Upravená kontrola - vrací true, pokud JE nakonfigurován
+        if (!isMailConfigured()) {
             log.warn("Mail sending skipped for order confirmation {}: Mail is not configured.", orderCode);
             return;
         }
@@ -94,11 +100,17 @@ public class EmailService {
             Context context = new Context(defaultLocale);
             context.setVariable("order", order);
             String currencySymbol = "EUR".equals(order.getCurrency()) ? "€" : "Kč";
-            context.setVariable("currentGlobalCurrency", order.getCurrency());
-            context.setVariable("currencySymbol", currencySymbol);
+            context.setVariable("currentGlobalCurrency", order.getCurrency()); // Není nutné, ale může zůstat
+            context.setVariable("currencySymbol", currencySymbol); // Není nutné, ale může zůstat
 
-            log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
-            // Volání metody, která nastaví ostatní proměnné a odešle email
+            // --- ZMĚNA: Přidání isGuest a baseUrl do kontextu ---
+            context.setVariable("isGuest", isGuest);
+            context.setVariable("baseUrl", baseUrl); // Přidáme baseUrl získaný z OrderService
+            // --------------------------------------------------
+
+            log.debug("Context prepared for template '{}', order {}, isGuest: {}", templateName, orderCode, isGuest);
+            // Volání metody, která nastaví OSTATNÍ (společné) proměnné a odešle email
+            // Nepotřebujeme jí předávat isGuest a baseUrl, ty už jsou v contextu
             setEshopVariablesAndSend(order, to, subject, templateName, context);
 
             // Log o úspěchu se přesunul do setEshopVariablesAndSend
@@ -108,7 +120,6 @@ public class EmailService {
         } catch (MessagingException | MailException me) {
             // Logováno uvnitř setEshopVariablesAndSend nebo sendHtmlEmail
         } catch (Exception e) {
-            // Zachycení jakékoliv jiné neočekávané chyby
             log.error("Unexpected error during sendOrderConfirmationEmail preparation for order {}: {}", orderCode, e.getMessage(), e);
         }
     }
@@ -156,12 +167,11 @@ public class EmailService {
             Context context = new Context(defaultLocale);
             context.setVariable("order", order);
             context.setVariable("newState", newState);
-            String currencySymbol = "EUR".equals(order.getCurrency()) ? "€" : "Kč";
-            context.setVariable("currentGlobalCurrency", order.getCurrency());
-            context.setVariable("currencySymbol", currencySymbol);
+            // Můžeme zde přidat i baseUrl, pokud ho šablona potřebuje (použijeme @Value shopUrl)
+            // context.setVariable("baseUrl", this.shopUrl);
 
             log.debug("Context prepared for template '{}', order {}, new state {}", templateName, orderCode, stateCode);
-            // Volání metody, která nastaví ostatní proměnné a odešle email
+            // Volání metody, která nastaví SPOLEČNÉ proměnné (shopName, logoUrl, trackingUrl) a odešle email
             setEshopVariablesAndSend(order, to, subject, templateName, context);
 
             // Log o úspěchu se přesunul do setEshopVariablesAndSend
@@ -175,14 +185,10 @@ public class EmailService {
         }
     }
 
-    /**
-     * Odešle email s externí poznámkou zákazníkovi.
-     * Používá šablonu 'emails/new-external-message.html'.
-     * @param customerEmail Email zákazníka.
-     * @param orderCode Kód objednávky.
-     * @param externalNote Text poznámky.
-     * @param locale Locale pro email.
-     */
+    // --- Ostatní metody pro odesílání emailů (sendOrderExternalNoteEmail, sendAdminNotificationEmail, sendPasswordResetEmail, sendNewOrderAdminNotification) ---
+    // Tyto metody mohou zůstat beze změny, pokud nepotřebují specificky 'isGuest' a používají 'this.shopUrl' pro generování odkazů.
+    // Metoda setEshopVariablesAndSend se o nastavení shopName, logoUrl, trackingUrl (pokud je order != null) postará.
+
     @Async
     public void sendOrderExternalNoteEmail(String customerEmail, String orderCode, String externalNote, Locale locale) {
         log.debug("Attempting to send external note email for order {}", orderCode);
@@ -203,37 +209,22 @@ public class EmailService {
             Context context = new Context(locale != null ? locale : defaultLocale);
             context.setVariable("orderCode", orderCode);
             context.setVariable("externalNote", externalNote);
-            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
-            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
-            // --- KONEC ZMĚN ---
-            String trackingUrl = shopUrl + "/muj-ucet/objednavky/" + orderCode;
-            context.setVariable("trackingUrl", trackingUrl);
 
-            log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
-            String htmlBody = templateEngine.process(templateName, context);
-            log.debug("Successfully processed template '{}' for external note, order {}", templateName, orderCode);
+            // Volání metody, která nastaví SPOLEČNÉ proměnné a odešle email
+            // 'order' je null, takže trackingUrl se nastaví na shopUrl
+            setEshopVariablesAndSend(null, to, subject, templateName, context);
 
-            sendHtmlEmail(to, subject, htmlBody);
-            log.info("External note email sent successfully to {} for order {}", to, orderCode);
+            // Log o úspěchu se přesunul do setEshopVariablesAndSend
 
         } catch (TemplateProcessingException tpe) {
-            log.error("!!! ERROR processing template '{}' for external note email (Order {}): ", templateName, orderCode, tpe);
+            // Logováno uvnitř setEshopVariablesAndSend
         } catch (MessagingException | MailException me) {
-            log.error("!!! ERROR sending external note email to {} for order {}: ", to, orderCode, me);
+            // Logováno uvnitř setEshopVariablesAndSend nebo sendHtmlEmail
         } catch (Exception e) {
             log.error("!!! Unexpected error sending external note email to {} for order {}: ", to, orderCode, e);
         }
     }
 
-    /**
-     * Odešle notifikační email administrátorovi o nové zprávě od zákazníka.
-     * Používá šablonu 'emails/new-customer-message-admin-notification.html'.
-     * @param adminEmail Email administrátora.
-     * @param orderCode Kód objednávky.
-     * @param customerEmail Email zákazníka.
-     * @param customerName Jméno zákazníka.
-     * @param messageContent Obsah zprávy.
-     */
     @Async
     public void sendAdminNotificationEmail(String adminEmail, String orderCode, String customerEmail, String customerName, String messageContent) {
         log.debug("Attempting to send admin notification email for order {}", orderCode);
@@ -247,7 +238,7 @@ public class EmailService {
         }
 
         String subject = shopName + " - Nová zpráva od zákazníka k objednávce č. " + orderCode;
-        String templateName = "emails/new-customer-message-admin-notification"; // Zkontroluj, zda tento soubor existuje
+        String templateName = "emails/new-customer-message-admin-notification";
 
         try {
             Context context = new Context(defaultLocale);
@@ -255,38 +246,29 @@ public class EmailService {
             context.setVariable("customerEmail", customerEmail);
             context.setVariable("customerName", customerName != null ? customerName : customerEmail);
             context.setVariable("messageContent", messageContent);
-            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
-            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
-            // --- KONEC ZMĚN ---
 
-            String adminOrderListUrl = UriComponentsBuilder.fromHttpUrl(shopUrl)
+            String adminOrderListUrl = UriComponentsBuilder.fromHttpUrl(this.shopUrl) // Použijeme this.shopUrl
                     .path("/admin/orders")
-                    .queryParam("customerEmail", customerEmail) // Lepší než ID, které nemáme
+                    .queryParam("customerEmail", customerEmail)
                     .build().toUriString();
-            context.setVariable("adminOrderDetailUrl", adminOrderListUrl); // Přejmenováno pro jasnost
+            context.setVariable("adminOrderDetailUrl", adminOrderListUrl);
 
-            log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
-            String htmlBody = templateEngine.process(templateName, context);
-            log.debug("Successfully processed template '{}' for admin notification, order {}", templateName, orderCode);
+            // Volání metody, která nastaví SPOLEČNÉ proměnné (shopName, logoUrl) a odešle email
+            // 'order' je null, trackingUrl nebude relevantní
+            setEshopVariablesAndSend(null, adminEmail, subject, templateName, context);
 
-            sendHtmlEmail(adminEmail, subject, htmlBody);
-            log.info("Admin notification email sent successfully to {} for order {}", adminEmail, orderCode);
+            // Log o úspěchu se přesunul do setEshopVariablesAndSend
 
         } catch (TemplateProcessingException tpe) {
-            log.error("!!! ERROR processing template '{}' for admin notification (Order {}): ", templateName, orderCode, tpe);
+            // Logováno uvnitř setEshopVariablesAndSend
         } catch (MessagingException | MailException me) {
-            log.error("!!! ERROR sending admin notification email to {} for order {}: ", adminEmail, orderCode, me);
+            // Logováno uvnitř setEshopVariablesAndSend nebo sendHtmlEmail
         } catch (Exception e) {
             log.error("!!! Unexpected error sending admin notification email to {} for order {}: ", adminEmail, orderCode, e);
         }
     }
 
-    /**
-     * Odešle email s odkazem pro resetování hesla zákazníkovi.
-     * Používá šablonu 'emails/password-reset-email.html'.
-     * @param customer Zákazník.
-     * @param token Unikátní token pro reset.
-     */
+
     @Async
     public void sendPasswordResetEmail(Customer customer, String token) {
         String customerEmail = (customer != null && customer.getEmail() != null) ? customer.getEmail() : "N/A";
@@ -307,7 +289,7 @@ public class EmailService {
 
         try {
             String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
-            String resetUrl = UriComponentsBuilder.fromHttpUrl(shopUrl)
+            String resetUrl = UriComponentsBuilder.fromHttpUrl(this.shopUrl) // Použijeme this.shopUrl
                     .path("/resetovat-heslo")
                     .queryParam("token", encodedToken)
                     .build()
@@ -317,21 +299,17 @@ public class EmailService {
 
             Context context = new Context(defaultLocale);
             context.setVariable("resetUrl", resetUrl);
-            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
-            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
-            // --- KONEC ZMĚN ---
 
-            log.debug("Context prepared for template '{}', email {}", templateName, recipientEmail);
-            String htmlBody = templateEngine.process(templateName, context);
-            log.debug("Successfully processed template '{}' for password reset, email {}", templateName, recipientEmail);
+            // Volání metody, která nastaví SPOLEČNÉ proměnné (shopName, logoUrl) a odešle email
+            // 'order' je null, trackingUrl nebude relevantní
+            setEshopVariablesAndSend(null, recipientEmail, subject, templateName, context);
 
-            sendHtmlEmail(recipientEmail, subject, htmlBody);
-            log.info("Password reset email sent successfully to {} (Token: ...{})", recipientEmail, token.substring(Math.max(0, token.length() - 6)));
+            // Log o úspěchu se přesunul do setEshopVariablesAndSend
 
         } catch (TemplateProcessingException tpe) {
-            log.error("!!! ERROR processing template '{}' for password reset email to {}: ", templateName, recipientEmail, tpe);
+            // Logováno uvnitř setEshopVariablesAndSend
         } catch (MessagingException | MailException me) {
-            log.error("!!! ERROR sending password reset email to {}: ", recipientEmail, me);
+            // Logováno uvnitř setEshopVariablesAndSend nebo sendHtmlEmail
         } catch (UnsupportedEncodingException uee) {
             log.error("!!! ERROR encoding password reset token for email to {}: ", recipientEmail, uee);
         } catch (Exception e) {
@@ -339,12 +317,6 @@ public class EmailService {
         }
     }
 
-    /**
-     * Odešle email administrátorovi o nové objednávce.
-     * Používá šablonu 'emails/order-confirmation-admin.html'.
-     * @param order Nově vytvořená objednávka.
-     * @param adminEmail Email administrátora.
-     */
     @Async
     public void sendNewOrderAdminNotification(Order order, String adminEmail) {
         String orderCode = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "N/A";
@@ -363,22 +335,17 @@ public class EmailService {
 
         try {
             Context context = new Context(defaultLocale);
-            context.setVariable("order", order);
-            // --- ZAČÁTEK ZMĚN: Přidání logoUrl a shopUrl ---
-            setEshopVariables(context); // Nastaví shopName, shopUrl, logoUrl
-            // --- KONEC ZMĚN ---
+            context.setVariable("order", order); // Předáme celou objednávku šabloně
 
-            log.debug("Context prepared for template '{}', order {}", templateName, orderCode);
-            String htmlBody = templateEngine.process(templateName, context);
-            log.debug("Successfully processed template '{}' for admin notification, order {}", templateName, orderCode);
+            // Volání metody, která nastaví SPOLEČNÉ proměnné (shopName, logoUrl, trackingUrl) a odešle email
+            setEshopVariablesAndSend(order, adminEmail, subject, templateName, context);
 
-            sendHtmlEmail(adminEmail, subject, htmlBody);
-            log.info("New order admin notification email sent successfully to {} for order {}", adminEmail, orderCode);
+            // Log o úspěchu se přesunul do setEshopVariablesAndSend
 
         } catch (TemplateProcessingException tpe) {
-            log.error("!!! ERROR processing template '{}' for new order admin notification (Order {}): ", templateName, orderCode, tpe);
+            // Logováno uvnitř setEshopVariablesAndSend
         } catch (MessagingException | MailException me) {
-            log.error("!!! ERROR sending new order admin notification email to {} for order {}: ", adminEmail, orderCode, me);
+            // Logováno uvnitř setEshopVariablesAndSend nebo sendHtmlEmail
         } catch (Exception e) {
             log.error("!!! Unexpected error sending new order admin notification to {} for order {}: ", adminEmail, orderCode, e);
         }
@@ -393,7 +360,7 @@ public class EmailService {
      */
     private void setEshopVariables(Context context) {
         context.setVariable("shopName", shopName);
-        context.setVariable("shopUrl", shopUrl);
+        context.setVariable("shopUrl", this.shopUrl); // Použijeme hodnotu z @Value
 
         // Konstrukce URL loga z GCS
         String gcsLogoPath = "images/logo.webp"; // Cesta k logu ve vašem bucketu
@@ -403,37 +370,39 @@ public class EmailService {
     }
 
     /**
-     * Nastaví základní proměnné eshopu do kontextu a odešle email.
-     * Volá setEshopVariables a pak pokračuje s odesláním.
-     * @param order Objednávka (pro získání kódu a URL). Může být null pro některé emaily.
+     * Nastaví základní proměnné eshopu (shopName, shopUrl, logoUrl) a trackingUrl (pokud je objednávka)
+     * do kontextu a poté odešle email.
+     * @param order Objednávka (pro získání kódu a URL pro tracking). Může být null.
      * @param to Příjemce.
      * @param subject Předmět.
      * @param templateName Název Thymeleaf šablony.
-     * @param context Thymeleaf context.
+     * @param context Thymeleaf context (již může obsahovat specifické proměnné).
      * @throws TemplateProcessingException Pokud selže zpracování šablony.
      * @throws MessagingException Pokud selže sestavení MimeMessage.
      * @throws MailException Pokud selže odeslání přes JavaMailSender.
+     * @throws UnsupportedEncodingException Pokud selže kódování adresy (z sendHtmlEmail).
      */
     private void setEshopVariablesAndSend(Order order, String to, String subject, String templateName, Context context)
             throws TemplateProcessingException, MessagingException, MailException, UnsupportedEncodingException {
 
         String orderCode = (order != null && order.getOrderCode() != null) ? order.getOrderCode() : "N/A";
-        log.debug("Setting variables and preparing to send email for template: '{}', order: {}", templateName, orderCode);
+        log.debug("Setting common variables and preparing to send email for template: '{}', order: {}", templateName, orderCode);
 
         // Nastavení základních proměnných (včetně logoUrl)
         setEshopVariables(context);
 
-        // Nastavení specifických proměnných pro objednávku (pokud existuje)
+        // Nastavení trackingUrl POUZE pokud máme objednávku a kód
         if (order != null && order.getOrderCode() != null) {
-            String trackingUrl = UriComponentsBuilder.fromHttpUrl(shopUrl)
+            String trackingUrl = UriComponentsBuilder.fromHttpUrl(this.shopUrl) // Použijeme this.shopUrl
                     .path("/muj-ucet/objednavky/")
-                    .path(order.getOrderCode())
+                    .path(order.getOrderCode()) // Přidáme kód objednávky
                     .build().toUriString();
             context.setVariable("trackingUrl", trackingUrl);
             log.debug("Tracking URL set to: {}", trackingUrl);
         } else {
-            context.setVariable("trackingUrl", shopUrl); // Fallback
-            log.debug("Tracking URL set to shopUrl (no specific order code)");
+            // Pokud nemáme objednávku, trackingUrl nemá smysl nebo ukazuje na obecnou stránku
+            context.setVariable("trackingUrl", this.shopUrl + "/muj-ucet/objednavky"); // Odkaz na seznam objednávek
+            log.debug("Tracking URL set to general orders page (no specific order code)");
         }
 
         String htmlBody;
@@ -451,6 +420,7 @@ public class EmailService {
 
         // Odeslání emailu
         sendHtmlEmail(to, subject, htmlBody);
+        // Přesunuté logování úspěchu sem
         log.info("Email sending initiated successfully via sendHtmlEmail for template '{}', recipient {}, order {}", templateName, to, orderCode);
     }
 

@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +39,8 @@ public class OrderService implements PriceConstants {
     private static final String PAYMENT_STATUS_DEPOSIT_PAID = "DEPOSIT_PAID";
     private static final String PAYMENT_STATUS_PAID = "PAID"; // Používáme 'static final' pro konstanty
     private static final String PAYMENT_STATUS_PENDING = "PENDING";
-    // Konstanty pro měny již máme z PriceConstants interface (EURO_CURRENCY, DEFAULT_CURRENCY)
+    @Value("${app.base-url:https://www.drevniknamiru.cz}") // Načte hodnotu z application.properties, s výchozí hodnotou
+    private String baseUrl;
 
     // Repositories
     @Autowired
@@ -362,11 +364,16 @@ public class OrderService implements PriceConstants {
                 }
             }
             // 10. Sending Confirmation Email
-            log.debug("[Order Creation - Step 10] Sending confirmation email for order {}...", savedOrder.getOrderCode());
+            log.debug("[Order Creation - Step 10] Preparing to send confirmation email for order {}...", savedOrder.getOrderCode());
             try {
-                emailService.sendOrderConfirmationEmail(savedOrder);
+                // Získání příznaku isGuest a baseUrl
+                boolean isGuest = savedOrder.getCustomer() != null && savedOrder.getCustomer().isGuest();
+                // Volání upravené metody v EmailService s this.baseUrl (pole třídy OrderService)
+                emailService.sendOrderConfirmationEmail(savedOrder, isGuest, this.baseUrl);
+                // Logování úspěšného odeslání požadavku je nyní uvnitř EmailService
             } catch (Exception e) {
-                log.error("Non-critical error sending confirmation email for order {}: {}. Order creation continues.",
+                // Logování chyby zůstává pro případ selhání ještě před odesláním
+                log.error("Non-critical error preparing or requesting confirmation email for order {}: {}. Order creation continues.",
                         savedOrder.getOrderCode(), e.getMessage(), e);
             }
             try {

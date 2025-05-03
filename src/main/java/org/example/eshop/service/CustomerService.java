@@ -323,23 +323,28 @@ public class CustomerService {
         }
         log.trace("Validation successful for {}", object.getClass().getSimpleName());
     }
-
-
-    // --- NOVÉ METODY PRO RESET HESLA ---
-
+    /**
+     * Vytvoří token pro reset/nastavení hesla a odešle email uživateli.
+     * Nyní umožňuje proces i pro hosty (pro nastavení prvního hesla).
+     *
+     * @param userEmail Email zákazníka.
+     * @return Vygenerovaný token (pro logování/debug).
+     * @throws EntityNotFoundException Pokud zákazník s daným emailem neexistuje.
+     */
     @Transactional
     public String createPasswordResetTokenForUser(String userEmail) {
         Customer customer = customerRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Zákazník s emailem " + userEmail + " nenalezen."));
 
-        if (customer.isGuest()) {
-            throw new IllegalArgumentException("Reset hesla není možný pro účet hosta.");
-        }
+        // Kontrola pro hosta byla ODSTRANĚNA - nyní povolujeme i pro hosty
+        // Logování pro přehlednost
+        log.info("Vytvářím token pro reset/nastavení hesla pro uživatele (hosta nebo registrovaného): {}", userEmail);
 
-        // Smazat starý token, pokud existuje
+
+        // Smazat starý token, pokud existuje pro tohoto zákazníka
         passwordResetTokenRepository.findByCustomerEmailIgnoreCase(userEmail)
                 .ifPresent(token -> {
-                    log.debug("Deleting existing password reset token for user {}", userEmail);
+                    log.debug("Mažu existující token pro reset hesla pro uživatele {}", userEmail);
                     passwordResetTokenRepository.delete(token);
                 });
 
@@ -347,23 +352,28 @@ public class CustomerService {
         String token = UUID.randomUUID().toString();
         PasswordResetToken myToken = new PasswordResetToken(token, customer);
         passwordResetTokenRepository.save(myToken);
-        log.info("Created new password reset token for user {}", userEmail);
+        log.info("Vytvořen nový token pro reset/nastavení hesla pro uživatele {}", userEmail);
 
         // Odeslání emailu (předpokládá metodu v EmailService)
         try {
-            // Tuto metodu budeš muset vytvořit v EmailService
-            emailService.sendPasswordResetEmail(customer, token);
-            log.info("Password reset email sent to {}", userEmail);
+            // Tuto metodu je nutné mít implementovanou v EmailService
+            emailService.sendPasswordResetEmail(customer, token); // Posíláme email s odkazem na nastavení hesla
+            log.info("Email pro reset/nastavení hesla odeslán na {}", userEmail);
         } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", userEmail, e.getMessage());
+            log.error("Nepodařilo se odeslat email pro reset/nastavení hesla na {}: {}", userEmail, e.getMessage());
             // Zde je důležité NEVYHAZOVAT výjimku, aby se uživateli zobrazila úspěšná hláška
-            // Problém s odesláním emailu by neměl bránit v zobrazení potvrzení uživateli
-            // Můžeš ale přidat např. interní notifikaci adminovi
+            // na stránce zapomenutého hesla. Problém s emailem by neměl blokovat UI.
         }
 
         return token; // Vrací token pro případné logování nebo debug
     }
 
+    /**
+     * Validuje poskytnutý token pro reset hesla.
+     *
+     * @param token Token k validaci.
+     * @return Optional obsahující platný token, nebo prázdný Optional, pokud je token neplatný/expirovaný.
+     */
     @Transactional(readOnly = true)
     public Optional<PasswordResetToken> validatePasswordResetToken(String token) {
         if (!StringUtils.hasText(token)) {
@@ -371,44 +381,70 @@ public class CustomerService {
         }
         Optional<PasswordResetToken> tokenOpt = passwordResetTokenRepository.findByToken(token);
         if (tokenOpt.isEmpty()) {
-            log.warn("Password reset token not found: {}", token);
+            log.warn("Token pro reset hesla nenalezen: {}", token);
             return Optional.empty();
         }
         if (tokenOpt.get().isExpired()) {
-            log.warn("Password reset token has expired: {}", token);
-            // Zde můžeme expirovaný token rovnou smazat
-            // passwordResetTokenRepository.delete(tokenOpt.get()); // Odkomentuj, pokud chceš mazat hned
+            log.warn("Token pro reset hesla expiroval: {}", token);
+            // Zde můžeme expirovaný token rovnou smazat, pokud chceme
+            // passwordResetTokenRepository.delete(tokenOpt.get());
             return Optional.empty();
         }
-        log.debug("Password reset token is valid: {}", token);
+        log.debug("Token pro reset hesla je platný: {}", token);
         return tokenOpt;
     }
 
+    /**
+     * Změní (nebo nastaví poprvé) heslo uživatele na základě platného tokenu.
+     * Pokud se jedná o hosta, převede jeho účet na registrovaného uživatele.
+     *
+     * @param token       Platný PasswordResetToken.
+     * @param newPassword Nové heslo (plain text).
+     * @throws IllegalArgumentException Pokud je token neplatný, heslo nesplňuje požadavky.
+     * @throws EntityNotFoundException  Pokud zákazník asociovaný s tokenem není nalezen.
+     */
     @Transactional
     public void changeUserPassword(PasswordResetToken token, String newPassword) {
         if (token == null || token.getCustomer() == null) {
             throw new IllegalArgumentException("Neplatný nebo chybějící token pro změnu hesla.");
         }
-        // Znovu načteme zákazníka, abychom měli jistotu aktuálních dat
+        // Znovu načteme zákazníka, abychom měli jistotu aktuálních dat a předešli detached entity
         Customer customer = customerRepository.findById(token.getCustomer().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Zákazník asociovaný s tokenem nenalezen."));
+                .orElseThrow(() -> new EntityNotFoundException("Zákazník asociovaný s tokenem nenalezen (ID: " + token.getCustomer().getId() + ")."));
 
-        if (customer.isGuest()){
-            throw new IllegalArgumentException("Nelze měnit heslo pro hosta.");
+        // Kontrola pro hosta byla ODSTRANĚNA - nyní povolujeme i pro hosty
+
+        // Validace nového hesla (např. minimální délka dle DTO nebo jiných pravidel)
+        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) { // Předpoklad min délky 6
+            throw new IllegalArgumentException("Nové heslo nesplňuje požadavky na délku nebo je prázdné.");
         }
 
-        // Zde můžeš přidat další validace hesla, pokud je potřeba (např. sílu hesla)
-        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) { // Min délka 6 dle DTO
-            throw new IllegalArgumentException("Nové heslo nesplňuje požadavky na délku.");
+        // ---- ZDE JE KLÍČOVÁ ZMĚNA pro hosty ----
+        // Pokud jde o hosta, změníme jeho status na běžného uživatele
+        if (customer.isGuest()) {
+            log.info("Konvertuji účet hosta {} na registrovaného uživatele během prvního nastavení hesla.", customer.getEmail());
+            customer.setGuest(false);
+            // Nastavíme standardní roli pro registrované uživatele
+            customer.setRoles(Set.of("ROLE_USER"));
+            // Můžeme zde případně i nastavit 'enabled = true', pokud by host mohl být neaktivní
+            customer.setEnabled(true);
         }
+        // -----------------------------------------
 
+        // Nastavíme nové, zahashované heslo
         customer.setPassword(passwordEncoder.encode(newPassword));
+
+        // Uložíme změny v zákazníkovi
         customerRepository.save(customer);
-        passwordResetTokenRepository.delete(token); // Smazat token po úspěšném použití
-        log.info("Password successfully changed for user: {} using reset token", customer.getEmail());
+
+        // Smažeme použitý token
+        passwordResetTokenRepository.delete(token);
+
+        log.info("Heslo úspěšně nastaveno/změněno pro uživatele: {} pomocí reset tokenu", customer.getEmail());
     }
 
-    // Metoda pro pravidelné čištění expirovaných tokenů (např. jednou denně)
+
+    // Metoda pro pravidelné čištění expirovaných tokenů (beze změny)
     @Scheduled(cron = "0 0 3 * * ?") // Každý den ve 3:00 ráno
     @Transactional
     public void purgeExpiredTokens() {
@@ -421,8 +457,6 @@ public class CustomerService {
             log.error("Error during purging expired password reset tokens: {}", e.getMessage(), e);
         }
     }
-
-    // --- KONEC NOVÝCH METOD PRO RESET HESLA ---
 
 
     // --- Ostatní pomocné metody (BEZE ZMĚNY) ---

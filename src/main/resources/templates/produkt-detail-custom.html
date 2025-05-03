@@ -214,11 +214,10 @@
                             <span class="price-label">Celková cena konfigurace:</span>
                             <div class="price-value-container">
                                 <span id="calculatedPrice" class="price-value" th:data-initial-price-czk="${initialCustomPriceCZK}" th:data-initial-price-eur="${initialCustomPriceEUR}" th:text="${#numbers.formatDecimal(currentGlobalCurrency == 'EUR' ? initialCustomPriceEUR : initialCustomPriceCZK, 1, 'COMMA', 2, 'POINT')}">0.00</span>
-                                <span th:text="${currentGlobalCurrency == 'EUR' ? ' €' : ' Kč'}"></span>
                                 <span class="spinner-border spinner-border-sm price-loading-spinner" role="status" aria-hidden="true" style="display: none;"></span>
                             </div>
                             <p class="price-note">Cena bez DPH. Konečná cena včetně DPH bude vypočtena v košíku.</p>
-                            <p class="small text-muted">Cena je orientační. Přesná cena bude potvrzena po odeslání poptávky/objednávky.</p>
+                            <p class="small text-muted">Sestavení na místě zdarma. Doprava do 5týdnů od uhrazení zálohy 50 %.</p>
                             <div id="customPriceErrorDisplay" class="text-danger mt-2" style="display: none;"></div>
                         </div>
 

@@ -3,11 +3,8 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/main}">
 <head>
-    <title>Zapomenuté heslo</title>
+    <title>Nastavení / Obnovení hesla</title>
     <meta name="robots" content="noindex, nofollow" />
-    <style>
-        /* Můžeš přidat specifické styly, pokud je potřeba */
-    </style>
 </head>
 <body>
 
@@ -15,8 +12,8 @@
     <div class="container mt-5 mb-5">
         <div class="row justify-content-center">
             <div class="col-md-6 col-lg-5">
-                <h1 class="mb-4 text-center">Obnovení hesla</h1>
-                <p class="text-center text-muted mb-4">Zadejte svou emailovou adresu a my vám zašleme odkaz pro nastavení nového hesla.</p>
+                <h1 class="mb-4 text-center">Nastavení / Obnovení hesla</h1>
+                <p class="text-center text-muted mb-4">Zadejte svou emailovou adresu. Zašleme vám odkaz pro nastavení nebo obnovení vašeho hesla.</p>
 
                 <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
                     <span th:text="${successMessage}">Instrukce odeslány.</span>
@@ -35,7 +32,7 @@
                             <span th:errors="*{email}">Chyba emailu</span>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Odeslat žádost</button>
+                    <button type="submit" class="btn btn-primary w-100">Odeslat odkaz pro nastavení/obnovu</button>
 
                     <div class="mt-4 text-center">
                         <a th:href="@{/prihlaseni}">Zpět na přihlášení</a>

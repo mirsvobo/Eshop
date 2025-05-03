@@ -5,24 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nová objednávka!</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 25px; border: 1px solid #dddddd; border-radius: 5px; }
-        .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eeeeee; }
-        h1 { color: #dc3545; font-size: 24px; margin-bottom: 15px; } /* Red for admin alert */
-        h2 { color: #444444; font-size: 18px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eeeeee; padding-bottom: 5px;}
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; font-size: 13px; }
-        th { background-color: #f8f8f8; font-weight: bold; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 0; background-color: #f8f9fa; /* Světlejší pozadí */ }
+        .email-container { max-width: 700px; /* Širší kontejner */ margin: 20px auto; background-color: #ffffff; padding: 30px; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e9ecef; }
+        h1 { color: #B22222; /* Tmavší červená */ font-size: 26px; margin-bottom: 10px; }
+        h2 { color: #495057; font-size: 18px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #6A8D3E; /* Zelené podtržení */ padding-bottom: 8px; }
+        ul { list-style: none; padding-left: 0; margin-bottom: 20px; }
+        ul li { margin-bottom: 8px; font-size: 14px; }
+        ul li strong { display: inline-block; width: 150px; color: #495057; } /* Zarovnání popisků */
+        .customer-details p { margin: 6px 0; font-size: 14px; line-height: 1.5; }
+        .customer-details strong { color: #495057; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        th, td { border: 1px solid #e9ecef; text-align: left; padding: 10px; font-size: 13px; vertical-align: top; /* Lepší zarovnání u vícerádkových položek */ }
+        th { background-color: #f8f9fa; font-weight: 600; /* Mírně tučnější */ color: #495057; }
         .text-right { text-align: right; }
-        .variant-info { font-size: 0.85em; color: #666666; }
-        .totals-table td { border: none; padding: 3px 0; font-size: 13px; }
-        .totals-table .label { text-align: right; padding-right: 10px; color: #555555;}
-        .totals-table .value { font-weight: bold; text-align: right;}
-        .grand-total .value { font-size: 1.1em; color: #dc3545; }
-        .customer-details p { margin: 4px 0; }
-        .admin-link { display: inline-block; background-color: #0d6efd; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 20px auto; text-align: center; }
+        .variant-info { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
+        .variant-info ul { margin-top: 3px !important; padding-left: 10px !important; }
+        .totals-table td { border: none; padding: 5px 0; font-size: 14px; }
+        .totals-table .label { text-align: right; padding-right: 15px; color: #495057; }
+        .totals-table .value { font-weight: 600; text-align: right; }
+        .grand-total .value { font-size: 1.25em; color: #B22222; } /* Tmavší červená */
+        .admin-link-container { text-align: center; margin-top: 30px; margin-bottom: 20px; }
+        .admin-link { display: inline-block; background-color: #0d6efd; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 15px; }
         a.admin-link { color: #ffffff !important; }
-        .footer { margin-top: 25px; text-align: center; font-size: 12px; color: #888888; }
+        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef; padding-top: 20px; }
+        .note-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 4px; margin-top: 20px; white-space: pre-wrap; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -31,15 +38,22 @@
         <h1>Nová objednávka č. <span th:text="${order.orderCode}">[Kód]</span>!</h1>
     </div>
 
-    <p>V systému byla přijata nová objednávka.</p>
+    <p style="text-align: center; font-size: 15px; margin-bottom: 25px;">V systému byla přijata nová objednávka ke zpracování.</p>
 
     <h2>Detaily objednávky</h2>
     <ul>
         <li><strong>Číslo objednávky:</strong> <span th:text="${order.orderCode}">[Kód]</span></li>
-        <li><strong>Datum:</strong> <span th:text="${#temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm')}">[Datum]</span></li>
+        <li><strong>Datum vytvoření:</strong> <span th:text="${#temporals.format(order.orderDate, 'dd.MM.yyyy HH:mm:ss')}">[Datum]</span></li>
         <li><strong>Měna:</strong> <span th:text="${order.currency}">[Měna]</span></li>
-        <li><strong>Stav platby:</strong> <span th:text="${order.paymentStatus}">[Stav]</span></li>
-        <li><strong>Platební metoda:</strong> <span th:text="${order.paymentMethod}">[Metoda]</span></li>
+        <li><strong>Stav objednávky:</strong> <span th:text="${order.stateOfOrder?.name ?: 'Neznámý'}">[Stav]</span></li>
+        <li><strong>Stav platby:</strong> <span th:text="${order.paymentStatus ?: 'Neznámý'}">[Stav]</span></li>
+        <li><strong>Platební metoda:</strong>
+            <span th:switch="${order.paymentMethod?.toUpperCase()}">
+                <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+                <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+                <th:block th:case="*" th:text="${order.paymentMethod ?: 'Neznámá'}"></th:block>
+            </span>
+        </li>
     </ul>
 
     <h2>Zákazník</h2>
@@ -47,50 +61,61 @@
         <p><strong>Jméno:</strong> <span th:text="${order.customer?.firstName + ' ' + order.customer?.lastName}">[Jméno]</span></p>
         <p><strong>Email:</strong> <a th:href="'mailto:' + ${order.customer?.email}" th:text="${order.customer?.email}">[Email]</a></p>
         <p><strong>Telefon:</strong> <span th:text="${order.customer?.phone ?: '-'}">[Telefon]</span></p>
+        <hr style="border: none; border-top: 1px solid #e9ecef; margin: 15px 0;">
         <p><strong>Firma:</strong> <span th:text="${order.invoiceCompanyName ?: '-'}">[Firma]</span></p>
-        <p><strong>IČO:</strong> <span th:text="${order.invoiceTaxId ?: '-'}">[IČO]</span> | <strong>DIČ:</strong> <span th:text="${order.invoiceVatId ?: '-'}">[DIČ]</span></p>
+        <p><strong>IČO:</strong> <span th:text="${order.invoiceTaxId ?: '-'}">[IČO]</span></p>
+        <p><strong>DIČ:</strong> <span th:text="${order.invoiceVatId ?: '-'}">[DIČ]</span></p>
         <p><strong>Fakturační adresa:</strong> <span th:text="${order.invoiceStreet + ', ' + order.invoiceZipCode + ' ' + order.invoiceCity + ', ' + order.invoiceCountry}">[Adresa]</span></p>
-        <p><strong>Dodací adresa:</strong> <span th:if="${order.isAddressesMatchInOrder()}">Stejná jako fakturační</span>
-            <span th:unless="${order.isAddressesMatchInOrder()}" th:text="${order.deliveryStreet + ', ' + order.deliveryZipCode + ' ' + order.deliveryCity + ', ' + order.deliveryCountry}">[Adresa]</span></p>
+        <p><strong>Dodací adresa:</strong> <span th:if="${order.isAddressesMatchInOrder()}"><i>(Stejná jako fakturační)</i></span>
+            <span th:unless="${order.isAddressesMatchInOrder()}">
+                <span th:if="${order.deliveryCompanyName}" th:text="${order.deliveryCompanyName + ','}"></span>
+                <span th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName + ', '}"></span>
+                <span th:text="${order.deliveryStreet + ', ' + order.deliveryZipCode + ' ' + order.deliveryCity + ', ' + order.deliveryCountry}">[Adresa]</span>
+                <span th:if="${order.deliveryPhone}" th:text="${' (Tel: ' + order.deliveryPhone + ')'}"></span>
+            </span>
+        </p>
     </div>
 
-    <h2>Položky</h2>
+    <h2>Položky objednávky</h2>
     <table>
         <thead>
         <tr>
-            <th>Produkt</th>
-            <th class="text-right">Ks</th>
-            <th class="text-right">Celkem (bez DPH)</th>
+            <th style="width: 60%;">Produkt / Varianta</th>
+            <th class="text-right" style="width: 10%;">Ks</th>
+            <th class="text-right" style="width: 15%;">Cena/ks (bez DPH)</th>
+            <th class="text-right" style="width: 15%;">Celkem (bez DPH)</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="item : ${order.orderItems}">
             <td>
                 <strong th:text="${item.productName}">Název produktu</strong>
-                <div class="variant-info" th:utext="${#strings.replace(item.variantInfo,'|', '<br/> - ')} ?: ''"></div>
-                <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="variant-info">
-                    <strong>Doplňky:</strong>
-                    <ul style="padding-left: 15px; margin: 5px 0 0 0; list-style-type: none;">
+                <span th:if="${item.isCustomConfigured()}" style="font-weight: bold; color: #0d6efd;">(Na míru)</span>
+                <div class="variant-info" th:utext="${#strings.replace(item.variantInfo,'|', '<br/>')} ?: ''"></div>
+                <div th:if="${item.selectedAddons != null and !#lists.isEmpty(item.selectedAddons)}" class="variant-info" style="margin-top: 8px;">
+                    <strong>+ Doplňky:</strong>
+                    <ul style="margin: 3px 0 0 0; padding-left: 10px; list-style-type: disc;">
                         <li th:each="addonItem : ${item.selectedAddons}"
-                            th:text="'- ' + ${addonItem.addonName}"></li>
+                            th:text="${addonItem.addonName + ' (' + #numbers.formatDecimal(addonItem.addonPriceWithoutTax, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + order.currency + ')'}"></li>
                     </ul>
                 </div>
             </td>
             <td class="text-right" th:text="${item.count}">1</td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(item.unitPriceWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
             <td class="text-right" th:text="${#numbers.formatDecimal(item.totalPriceWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         </tbody>
     </table>
 
-    <h2>Souhrn cen</h2>
-    <table class="totals-table" style="width: 100%; max-width: 350px; margin-left: auto; margin-right: 0;">
+    <h2>Finanční souhrn</h2>
+    <table class="totals-table" style="width: 100%; max-width: 400px; margin-left: auto; margin-right: 0;">
         <tr>
-            <td class="label">Mezisoučet (bez DPH):</td>
+            <td class="label">Mezisoučet položek (bez DPH):</td>
             <td class="value" th:text="${#numbers.formatDecimal(order.subTotalWithoutTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr th:if="${order.couponDiscountAmount != null and order.couponDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
-            <td class="label">Sleva (<span th:text="${order.appliedCouponCode}">Kód</span>):</td>
-            <td class="value" th:text="'- ' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="label" style="color: green;">Sleva (<span th:text="${order.appliedCouponCode}">Kód</span>):</td>
+            <td class="value" style="color: green;" th:text="'- ' + ${#numbers.formatDecimal(order.couponDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr>
             <td class="label">Doprava (bez DPH):</td>
@@ -100,35 +125,32 @@
             <td class="label">Celkem DPH:</td>
             <td class="value" th:text="${#numbers.formatDecimal(order.totalTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
-        <tr class="grand-total" style="border-top: 1px solid #ccc; padding-top: 5px;">
-            <td class="label">Celkem s DPH:</td>
+        <tr th:if="${order.originalTotalPrice != null and order.totalPrice != null and order.originalTotalPrice.compareTo(order.totalPrice) != 0}"
+            style="font-size:0.9em; color: #6c757d;">
+            <td class="label">Zaokrouhlení:</td>
+            <td class="value" th:text="'-' + ${#numbers.formatDecimal(order.originalTotalPrice.subtract(order.totalPrice), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+        </tr>
+        <tr class="grand-total" style="border-top: 1px solid #dee2e6; padding-top: 8px;">
+            <td class="label">Celkem k úhradě:</td>
             <td class="value" th:text="${#numbers.formatDecimal(order.totalPrice, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
         <tr th:if="${order.depositAmount != null and order.depositAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
-            <td class="label">Požadovaná záloha:</td>
-            <td class="value" th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
+            <td class="label" style="color: #dc3545;">Požadovaná záloha:</td>
+            <td class="value" style="color: #dc3545;" th:text="${#numbers.formatDecimal(order.depositAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${order.currency}"></td>
         </tr>
     </table>
-    <h2>Platební údaje</h2>
-    <p>
-        <strong>Způsob platby:</strong>
-        <span th:switch="${order.paymentMethod?.toUpperCase()}">
-        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
-        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
-        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block> </span>
-    </p>
 
     <div th:if="${order.note != null and not #strings.isEmpty(order.note)}">
         <h2>Poznámka zákazníka</h2>
-        <p style="white-space: pre-wrap; background-color: #f0f0f0; padding: 10px; border-radius: 4px;" th:text="${order.note}"></p>
+        <div class="note-box" th:text="${order.note}"></div>
     </div>
 
-    <div style="text-align: center;">
+    <div class="admin-link-container">
         <a th:href="${shopUrl + '/admin/orders/' + order.id}" class="admin-link">Zobrazit objednávku v administraci</a>
     </div>
 
     <div class="footer">
-        Automatické upozornění z e-shopu <span th:text="${shopName}"></span>.
+        Toto je automatické upozornění z e-shopu <span th:text="${shopName}"></span>.
     </div>
 </div>
 </body>
