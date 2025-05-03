@@ -158,16 +158,16 @@
                         <h4>Dostupné designy</h4>
                         <div th:each="design : ${availableDesigns}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${design.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${design.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Designu</p> </div>
+                                 th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${design.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Designu</p> </div>
                     </div>
 
                     <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                         <h4>Dostupné lazury</h4>
                         <div th:each="glaze : ${availableGlazes}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${glaze.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Lazury</p>
+                                 th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${glaze.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Lazury</p>
                         </div>
                     </div>
 
@@ -175,8 +175,8 @@
                         <h4>Barvy střešní krytiny</h4>
                         <div th:each="roofColor : ${availableRoofColors}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${roofColor.name}" style="max-width: 100px; overflow-wrap: break-word;">Název Barvy</p>
+                                 th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${roofColor.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Barvy</p>
                         </div>
                     </div>
                 </div> </div> </div> <div class="row">

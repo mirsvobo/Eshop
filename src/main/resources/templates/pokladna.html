@@ -40,7 +40,6 @@
             Prosím, zkontrolujte a opravte chyby ve formuláři zvýrazněné červeně.
         </div>
 
-
         <form th:action="@{/pokladna/odeslat}" th:object="${checkoutForm}" method="post" id="checkout-form" novalidate
               th:data-is-user-logged-in="${customer != null}"
               th:data-csrf-token="${_csrf?.token}"
@@ -91,7 +90,8 @@
                         <label for="phonePrefix" class="form-label">Telefon <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <select class="form-select" id="phonePrefix" name="phonePrefix" style="max-width: 100px;" aria-label="Předvolba"
-                                    th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'"> <option value="+420" th:selected="*{phone == null or #strings.startsWith(phone, '+420')}">+420</option>
+                                    th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'">
+                                <option value="+420" th:selected="*{phone == null or #strings.startsWith(phone, '+420')}">+420</option>
                                 <option value="+421" th:selected="*{phone != null and #strings.startsWith(phone, '+421')}">+421</option>
                             </select>
                             <input type="tel" class="form-control" id="phoneNumberPart"
@@ -114,7 +114,6 @@
                         <input type="text" class="form-control" th:classappend="${#fields.hasErrors('invoiceCompanyName')} ? 'is-invalid'" id="invoiceCompanyName" th:field="*{invoiceCompanyName}">
                         <div th:if="${#fields.hasErrors('invoiceCompanyName')}" class="invalid-feedback d-block"><span th:errors="*{invoiceCompanyName}">Chyba názvu firmy</span></div>
                     </div>
-
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="invoiceTaxId" class="form-label">IČO</label>
@@ -133,7 +132,6 @@
                         <input type="text" class="form-control address-trigger" th:classappend="${#fields.hasErrors('invoiceStreet')} ? 'is-invalid'" id="invoiceStreet" th:field="*{invoiceStreet}" required>
                         <div th:if="${#fields.hasErrors('invoiceStreet')}" class="invalid-feedback d-block"><span th:errors="*{invoiceStreet}">Chyba ulice</span></div>
                     </div>
-
                     <div class="row">
                         <div class="col-md-8 mb-3">
                             <label for="invoiceCity" class="form-label">Město <span class="text-danger">*</span></label>
@@ -146,7 +144,6 @@
                             <div th:if="${#fields.hasErrors('invoiceZipCode')}" class="invalid-feedback d-block"><span th:errors="*{invoiceZipCode}">Chyba PSČ</span></div>
                         </div>
                     </div>
-
                     <div class="mb-3">
                         <label for="invoiceCountry" class="form-label">Země <span class="text-danger">*</span></label>
                         <input type="text" class="form-control address-trigger" th:classappend="${#fields.hasErrors('invoiceCountry')} ? 'is-invalid'" id="invoiceCountry" th:field="*{invoiceCountry}" required>
@@ -159,9 +156,10 @@
                         <label class="form-check-label" for="applyReverseCharge">
                             Uplatnit přenesenou daňovou povinnost (pro plátce DPH dle § 92a)
                         </label>
-                        <div class="form-text">Zaškrtněte pouze v případě, že jste plátce DPH...</div>
+                        <div class="form-text">Zaškrtněte pouze v případě, že jste plátce DPH a objednáváte stavební práce.</div>
                         <div th:if="${#fields.hasErrors('applyReverseCharge')}" class="invalid-feedback d-block"><span th:errors="*{applyReverseCharge}">Chyba</span></div>
                     </div>
+
 
                     <hr>
                     <div class="form-check mb-3">
@@ -241,20 +239,20 @@
                         <div class="input-group">
                             <span class="input-group-text" style="min-width: 150px;">Doprava Kolář</span>
                             <span class="form-control text-end" id="shipping-cost-display">
-                                <span id="shipping-cost-value">
-                                    <span th:if="${originalShippingCostNoTax != null}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol} + ' (bez DPH)'"></span>
-                                </span>
-                                <span id="shipping-cost-error" class="text-warning recalculate-shipping-notice">
-                                    <span th:if="${shippingError != null}" th:text="${shippingError}"></span>
-                                </span>
-                                <span class="spinner-border spinner-border-sm text-primary ms-2 align-middle d-none" role="status" aria-hidden="true"></span>
-                            </span>
+                                 <span id="shipping-cost-value">
+                                     <span th:if="${originalShippingCostNoTax != null}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol} + ' (bez DPH)'"></span>
+                                 </span>
+                                 <span id="shipping-cost-error" class="text-warning recalculate-shipping-notice">
+                                     <span th:if="${shippingError != null}" th:text="${shippingError}"></span>
+                                 </span>
+                                 <span class="spinner-border spinner-border-sm text-primary ms-2 align-middle d-none" role="status" aria-hidden="true"></span>
+                             </span>
                             <button class="btn btn-outline-secondary" type="button" id="calculate-shipping-btn">
                                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                 Spočítat dopravu dle adresy
                             </button>
                         </div>
-                        <div class="form-text">Cena dopravy se vypočítá na základě vaší dodací adresy.</div>
+                        <div class="form-text">Cena dopravy se vypočítá na základě vaší dodací adresy. Po změně adresy je nutné cenu přepočítat.</div>
                     </div>
 
                     <div class="mb-4">
@@ -273,136 +271,139 @@
                         <textarea class="form-control" id="customerNote" th:field="*{customerNote}" rows="3" th:classappend="${#fields.hasErrors('customerNote')} ? 'is-invalid'"></textarea>
                         <div th:if="${#fields.hasErrors('customerNote')}" class="invalid-feedback d-block"><span th:errors="*{customerNote}">Chyba poznámky</span></div>
                     </div>
-                </div> <div class="col-lg-5">
-                <div class="card shadow-sm sticky-top order-summary-card" style="top: 76px;">
-                    <div class="card-header bg-light">
-                        <h4 class="my-1 fw-medium">Souhrn objednávky</h4>
-                    </div>
-                    <div class="card-body p-4 summary-card-body">
-                        <h6 class="mb-3 text-muted">Položky v košíku</h6>
-                        <ul class="list-group list-group-flush mb-4" th:if="${cart != null and cart.hasItems()}">
-                            <li th:each="item : ${cart.itemsList}" class="list-group-item d-flex justify-content-between align-items-start px-0">
-                                <div class="me-2">
-                                    <div class="fw-medium" th:text="${item.quantity} + 'x ' + ${item.productName}"></div>
-                                    <small class="text-muted d-block item-description-details"
-                                           th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''"></small>
-                                    <div th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}" class="text-muted d-block mt-1 item-description-details">
-                                        <small>+ <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
-                                    </div>
-                                </div>
-                                <span class="text-nowrap" th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                            </li>
-                        </ul>
-                        <p th:unless="${cart != null and cart.hasItems()}">Košík je prázdný.</p>
+                </div>
 
-                        <h6 class="mb-3 text-muted">Cenový souhrn</h6>
-                        <ul class="list-group list-group-flush mb-4">
-                            <li class="list-group-item d-flex justify-content-between px-0">
-                                <span class="summary-label">Položky celkem (bez DPH)</span>
-                                <span class="summary-value" id="summary-subtotal"
-                                      th:text="${#numbers.formatDecimal(subtotal, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
+                <div class="col-lg-5">
+                    <div class="card shadow-sm sticky-top order-summary-card" style="top: 76px;">
+                        <div class="card-header bg-light">
+                            <h4 class="my-1 fw-medium">Souhrn objednávky</h4>
+                        </div>
+                        <div class="card-body p-4 summary-card-body">
+                            <h6 class="mb-3 text-muted">Položky v košíku</h6>
+                            <ul class="list-group list-group-flush mb-4" th:if="${cart != null and cart.hasItems()}">
+                                <li th:each="item : ${cart.itemsList}" class="list-group-item d-flex justify-content-between align-items-start px-0">
+                                    <div class="me-2">
+                                        <div class="fw-medium" th:text="${item.quantity} + 'x ' + ${item.productName}"></div>
+                                        <small class="text-muted d-block item-description-details"
+                                               th:utext="${#strings.replace(item.variantInfo,'|','<br/>')} ?: ''"></small>
+                                        <div th:if="${item.selectedAddons != null and not #lists.isEmpty(item.selectedAddons)}" class="text-muted d-block mt-1 item-description-details">
+                                            <small>+ <span th:each="addon, iter : ${item.selectedAddons}" th:text="${addon.addonName} + (${!iter.last} ? ', ' : '')"></span></small>
+                                        </div>
+                                    </div>
+                                    <span class="text-nowrap" th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                </li>
+                            </ul>
+                            <p th:unless="${cart != null and cart.hasItems()}">Košík je prázdný.</p>
+
+                            <h6 class="mb-3 text-muted">Cenový souhrn</h6>
+                            <ul class="list-group list-group-flush mb-4">
+                                <li class="list-group-item d-flex justify-content-between px-0">
+                                    <span class="summary-label">Položky celkem (bez DPH)</span>
+                                    <span class="summary-value" id="summary-subtotal"
+                                          th:text="${#numbers.formatDecimal(subtotal, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}">
                                      </span>
-                            </li>
-                            <li id="summary-coupon-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
-                                <span class="summary-label">Sleva (<span th:text="${validatedCoupon?.code ?: cart?.appliedCouponCode}">Kód</span>)</span>
-                                <span class="summary-value" id="summary-coupon-discount" th:text="'-' + ${#numbers.formatDecimal(couponDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                            </li>
-                            <li id="summary-subtotal-after-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 pt-2 mt-1 border-top">
-                                <span class="summary-label">Mezisoučet po slevě (bez DPH)</span>
-                                <span class="summary-value" id="summary-total-without-tax-after-discount" th:text="${#numbers.formatDecimal(totalPriceWithoutTaxAfterDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between px-0">
-                                <span class="summary-label">Doprava (bez DPH)</span>
-                                <span class="summary-value" id="summary-original-shipping-cost">
+                                </li>
+                                <li id="summary-coupon-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
+                                    <span class="summary-label">Sleva (<span th:text="${validatedCoupon?.code ?: cart?.appliedCouponCode}">Kód</span>)</span>
+                                    <span class="summary-value" id="summary-coupon-discount" th:text="'-' + ${#numbers.formatDecimal(couponDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                </li>
+                                <li id="summary-subtotal-after-discount-row" th:if="${couponDiscount != null and couponDiscount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 pt-2 mt-1 border-top">
+                                    <span class="summary-label">Mezisoučet po slevě (bez DPH)</span>
+                                    <span class="summary-value" id="summary-total-without-tax-after-discount" th:text="${#numbers.formatDecimal(totalPriceWithoutTaxAfterDiscount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between px-0">
+                                    <span class="summary-label">Doprava (bez DPH)</span>
+                                    <span class="summary-value" id="summary-original-shipping-cost">
                                          <span th:if="${originalShippingCostNoTax != null}" th:text="${#numbers.formatDecimal(originalShippingCostNoTax, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                          <span th:unless="${originalShippingCostNoTax != null}" class="text-warning recalculate-shipping-notice">
                                              <span th:text="${shippingError != null ? shippingError : '(Nutno spočítat)'}"></span>
                                          </span>
                                      </span>
-                            </li>
-                            <li id="summary-shipping-discount-row" th:if="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
-                                <span class="summary-label">Sleva na dopravu</span>
-                                <span class="summary-value" id="summary-shipping-discount-value" th:text="'-' + ${#numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                            </li>
+                                </li>
+                                <li id="summary-shipping-discount-row" th:if="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}" class="list-group-item d-flex justify-content-between px-0 text-success">
+                                    <span class="summary-label">Sleva na dopravu</span>
+                                    <span class="summary-value" id="summary-shipping-discount-value" th:text="'-' + ${#numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                </li>
 
-                            <li class="list-group-item px-0 pt-2 mt-1 border-top">
-                                <div class="d-flex justify-content-between">
-                                    <span class="summary-label">Celkem DPH</span>
-                                    <span class="summary-value" id="summary-total-vat"
-                                          th:text="${#numbers.formatDecimal(totalVatWithShipping, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                                </div>
-                                <div id="vat-breakdown-items" class="ps-2" th:if="${vatBreakdown != null and not vatBreakdown.isEmpty()}">
-                                    <small class="text-muted vat-breakdown-item d-flex justify-content-between" th:each="entry : ${vatBreakdown}">
-                                        <span th:text="'z toho DPH ' + ${#numbers.formatDecimal(entry.key.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '% (zboží)'"></span>
-                                        <span class="summary-value" th:text="${#numbers.formatDecimal(entry.value, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
-                                    </small>
-                                </div>
-                                <div id="vat-breakdown-shipping" class="ps-2" th:style="${shippingTax != null and shippingTax.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '' : 'display: block;'}"> <small class="text-muted vat-breakdown-item d-flex justify-content-between">
-                                    <span>z toho DPH <th:block th:if="${shippingTaxRate != null}" th:text="${#numbers.formatDecimal(shippingTaxRate.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '%'"/> (doprava)</span>
-                                    <span class="summary-value" id="summary-shipping-tax" th:text="${shippingTax != null ? #numbers.formatDecimal(shippingTax, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : '---'}"></span>
-                                </small>
-                                </div>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top">
-                                <span class="summary-label">Mezisoučet celkem (s DPH)</span>
-                                <span class="summary-value" id="summary-original-total-price"
-                                      th:text="${originalTotalPrice != null ? #numbers.formatDecimal(originalTotalPrice, 1, 'WHITESPACE', 2, 'COMMA') : '---'} + ' ' + ${currencySymbol}">
+                                <li class="list-group-item px-0 pt-2 mt-1 border-top">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="summary-label">Celkem DPH</span>
+                                        <span class="summary-value" id="summary-total-vat"
+                                              th:text="${#numbers.formatDecimal(totalVatWithShipping, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                    </div>
+                                    <div id="vat-breakdown-items" class="ps-2" th:if="${vatBreakdown != null and not vatBreakdown.isEmpty()}">
+                                        <small class="text-muted vat-breakdown-item d-flex justify-content-between" th:each="entry : ${vatBreakdown}">
+                                            <span th:text="'z toho DPH ' + ${#numbers.formatDecimal(entry.key.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '% (zboží)'"></span>
+                                            <span class="summary-value" th:text="${#numbers.formatDecimal(entry.value, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                        </small>
+                                    </div>
+                                    <div id="vat-breakdown-shipping" class="ps-2" th:style="${shippingTax != null and shippingTax.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? '' : 'display: none;'}">
+                                        <small class="text-muted vat-breakdown-item d-flex justify-content-between">
+                                            <span>z toho DPH <th:block th:if="${shippingTaxRate != null}" th:text="${#numbers.formatDecimal(shippingTaxRate.multiply(100), 1, 'DEFAULT', 0, 'POINT')} + '%'"/> (doprava)</span>
+                                            <span class="summary-value" id="summary-shipping-tax" th:text="${shippingTax != null ? #numbers.formatDecimal(shippingTax, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : '---'}"></span>
+                                        </small>
+                                    </div>
+                                </li>
+
+
+                                <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top">
+                                    <span class="summary-label">Mezisoučet celkem (s DPH)</span>
+                                    <span class="summary-value" id="summary-original-total-price"
+                                          th:text="${originalTotalPrice != null ? #numbers.formatDecimal(originalTotalPrice, 1, 'WHITESPACE', 2, 'COMMA') : '---'} + ' ' + ${currencySymbol}">
                                      </span>
-                            </li>
+                                </li>
 
-                            <li id="summary-rounding-row"
-                                th:classappend="${roundingDifference == null or roundingDifference.abs().compareTo(T(java.math.BigDecimal).valueOf(0.001)) <= 0 ? 'd-none' : ''}"
-                                class="list-group-item d-flex justify-content-between px-0 text-muted">
-                                <span class="summary-label">Odstranění haléřů/centů</span>
-                                <span class="summary-value" id="summary-rounding-difference"
-                                      th:text="${roundingDifference != null ? '-' + #numbers.formatDecimal(roundingDifference, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : ''}">
-                                         </span>
-                            </li>
+                                <li id="summary-rounding-row"
+                                    th:classappend="${roundingDifference == null or roundingDifference.abs().compareTo(T(java.math.BigDecimal).valueOf(0.001)) <= 0 ? 'd-none' : ''}"
+                                    class="list-group-item d-flex justify-content-between px-0 text-muted">
+                                    <span class="summary-label">Odstranění haléřů/centů</span>
+                                    <span class="summary-value" id="summary-rounding-difference"
+                                          th:text="${roundingDifference != null ? #numbers.formatDecimal(roundingDifference, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol : ''}">
+                                    </span>
+                                </li>
 
-                            <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top summary-total">
-                                <span class="summary-label">Celkem k úhradě</span>
-                                <strong class="summary-value" id="summary-total-price">
+                                <li class="list-group-item d-flex justify-content-between px-0 pt-3 mt-2 border-top summary-total">
+                                    <span class="summary-label">Celkem k úhradě</span>
+                                    <strong class="summary-value" id="summary-total-price">
                                           <span th:if="${totalPrice != null}"
                                                 th:text="${#numbers.formatDecimal(totalPrice, 1, 'WHITESPACE', 0, 'COMMA')} + ' ' + ${currencySymbol}">
                                           </span>
-                                    <span th:unless="${totalPrice != null}" class="text-warning fw-normal recalculate-shipping-notice">
-                                                   <span th:text="${shippingError != null ? shippingError : '(Nutno přepočítat dopravu)'}"></span>
-                                              </span>
-                                </strong>
-                            </li>
-                        </ul>
+                                        <span th:unless="${totalPrice != null}" class="text-warning fw-normal recalculate-shipping-notice">
+                                              <span th:text="${shippingError != null ? shippingError : '(Nutno přepočítat dopravu)'}"></span>
+                                          </span>
+                                    </strong>
+                                </li>
+                            </ul>
 
-                        <div class="form-check mt-4 mb-3">
-                            <input type="checkbox" class="form-check-input" id="agreeTerms" th:field="*{agreeTerms}" required th:classappend="${#fields.hasErrors('agreeTerms')} ? 'is-invalid'">
-                            <label class="form-check-label" for="agreeTerms">
-                                Souhlasím s <a href="/obchodni-podminky" target="_blank">obchodními podmínkami</a> a <a href="/gdpr" target="_blank">zpracováním osobních údajů</a> <span class="text-danger">*</span>
-                            </label>
-                            <div th:if="${#fields.hasErrors('agreeTerms')}" class="invalid-feedback d-block"><span th:errors="*{agreeTerms}">Musíte souhlasit s podmínkami</span></div>
+                            <div class="form-check mt-4 mb-3">
+                                <input type="checkbox" class="form-check-input" id="agreeTerms" th:field="*{agreeTerms}" required th:classappend="${#fields.hasErrors('agreeTerms')} ? 'is-invalid'">
+                                <label class="form-check-label" for="agreeTerms">
+                                    Souhlasím s <a href="/obchodni-podminky" target="_blank">obchodními podmínkami</a> a <a href="/gdpr" target="_blank">zpracováním osobních údajů</a> <span class="text-danger">*</span>
+                                </label>
+                                <div th:if="${#fields.hasErrors('agreeTerms')}" class="invalid-feedback d-block"><span th:errors="*{agreeTerms}">Musíte souhlasit s podmínkami</span></div>
+                            </div>
+
+                            <div id="recalculate-shipping-notice-area" class="alert alert-warning text-center small p-2 d-none" role="alert">
+                                Došlo ke změně adresy, prosím <a href="#" id="recalculate-link" class="alert-link">přepočítejte cenu dopravy</a>.
+                            </div>
+
+                            <button id="submit-order-button" class="w-100 btn btn-success btn-lg" type="submit"
+                                    th:disabled="${(totalPrice == null) or (cart == null or not cart.hasItems())}">
+                                Odeslat objednávku
+                            </button>
                         </div>
-
-                        <div id="recalculate-shipping-notice-area" class="alert alert-warning text-center small p-2 d-none" role="alert">
-                        </div>
-
-                        <button id="submit-order-button" class="w-100 btn btn-success btn-lg" type="submit"
-                                th:disabled="${(totalPrice == null) or (cart == null or not cart.hasItems())}">
-                            Odeslat objednávku
-                        </button>
                     </div>
-                </div>
-            </div> </div> </form> </div> </section>
+                </div> </div> </form> </div> </section> <th:block layout:fragment="javascript">
 
-<th:block layout:fragment="javascript">
     <script defer th:src="@{/js/pokladna.js}"></script>
-    <th:block layout:fragment="javascript">
-        <script defer th:src="@{/js/pokladna.js}"></script> <script th:inline="javascript">
+
+    <script th:inline="javascript">
         /*<![CDATA[*/
         const cartDataForTracking = {
-            // Předpokládáme, že data jsou předána z backendu do modelu
-            items: /*[[${cartItemsForTracking}]]*/ [], // Seznam objektů položek
-            value_no_vat: /*[[${cartTotalValueNoVatForTracking}]]*/ 0.0, // Celková cena košíku BEZ DPH
+            items: /*[[${cartItemsForTracking}]]*/ [],
+            value_no_vat: /*[[${cartTotalValueNoVatForTracking}]]*/ 0.0,
             currency: /*[[${currency}]]*/ 'CZK'
-            // Zde můžete přidat i email (hashovaný) pro Sklik, pokud je dostupný
-            // hashedEmail: /*[[${hashedEmail}]]*/ null
+            // hashedEmail: /*[[${hashedEmail}]]*/ null // Pokud je k dispozici
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -416,8 +417,7 @@
         });
         /*]]>*/
     </script>
-    </th:block>
-</th:block>
 
+</th:block>
 </body>
 </html>
