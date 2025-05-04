@@ -232,9 +232,13 @@
                         </div>
                     </div>
 
-                    <div th:if="${order.note !=null and not #strings.isEmpty(order.note)}" class="detail-section mt-4">
-                        <h4>Vaše poznámka k objednávce</h4>
-                        <p class="fst-italic bg-light p-3 rounded" th:text="${order.note}"></p>
+                    <div class="detail-section mt-4"> <h4>Poznámka zákazníka</h4>
+                        <div th:if="${order.note != null and not #strings.isEmpty(order.note)}">
+                            <p class="fst-italic bg-light p-3 rounded" th:text="${order.note}"></p>
+                        </div>
+                        <div th:unless="${order.note != null and not #strings.isEmpty(order.note)}">
+                            <p class="text-muted fst-italic">(Zákazník nezadal žádnou poznámku)</p>
+                        </div>
                     </div>
                     <div class="row mt-4">
                         <div class="col-lg-7 mb-4 mb-lg-0">

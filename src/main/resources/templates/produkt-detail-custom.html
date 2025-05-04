@@ -4,7 +4,7 @@
       layout:decorate="~{layout/main}">
 
 <head>
-    <title th:text="${product.name} + ' | Dřevníky Kolář'">Konfigurátor produktu</title>
+    <title th:text="${product.name}">Konfigurátor produktu</title>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
     <th:block th:if="${jsonLdDataString != null}">

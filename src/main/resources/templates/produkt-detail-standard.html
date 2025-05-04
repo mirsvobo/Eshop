@@ -4,7 +4,7 @@
       layout:decorate="~{layout/main}">
 
 <head>
-    <title th:text="${product.name} + ' | Dřevníky Kolář'">Detail produktu</title>
+    <title th:text="${product.name}">Detail produktu</title>
     <th:block th:if="${jsonLdDataString != null}">
         <script type="application/ld+json" th:utext="${jsonLdDataString}"></script>
     </th:block>
