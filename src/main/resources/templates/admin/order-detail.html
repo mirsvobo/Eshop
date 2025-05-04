@@ -63,7 +63,9 @@
             color: #198754; /* Zelená pro zákazníka */
         }
         .chat-form textarea { resize: vertical; }
-        /* ----------------------------- */
+        /* Styl pro poznámku zákazníka */
+        .note-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 1rem; border-radius: 0.25rem; white-space: pre-wrap; }
+
     </style>
 </head>
 <body>
@@ -77,9 +79,19 @@
     </div>
 
     <div th:if="${order != null}">
-        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">...</div>
-        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">...</div>
-        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">...</div>
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${warningMessage}" class="alert alert-warning alert-dismissible fade show" role="alert">
+            <span th:text="${warningMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
 
         <div class="row mb-4">
             <div class="col-md-7">
@@ -119,10 +131,10 @@
                 <p>
                     <strong>Způsob platby:</strong>
                     <span th:switch="${order.paymentMethod?.toUpperCase()}">
-        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
-        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
-        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block>
-    </span>
+                        <th:block th:case="'CASH_ON_DELIVERY'">Dobírka</th:block>
+                        <th:block th:case="'BANK_TRANSFER'">Platba převodem</th:block>
+                        <th:block th:case="*" th:text="${order.paymentMethod}">Neznámá</th:block>
+                    </span>
                 </p>
 
                 <p><strong>Režim DPH:</strong>
@@ -188,11 +200,6 @@
                                 <input type="hidden" name="invoiceType" value="proforma" />
                                 <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
                             </form>
-                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
-                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfProformaInvoiceId}" />
-                                <input type="hidden" name="invoiceType" value="proforma" />
-                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
-                            </form>
                         </div>
                     </div>
                     <div th:if="${order.sfTaxDocumentId != null}" class="invoice-line">
@@ -204,11 +211,6 @@
                                 <input type="hidden" name="sfInvoiceId" th:value="${order.sfTaxDocumentId}" />
                                 <input type="hidden" name="invoiceType" value="tax_document" />
                                 <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
-                            </form>
-                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
-                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfTaxDocumentId}" />
-                                <input type="hidden" name="invoiceType" value="tax_document" />
-                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
                             </form>
                         </div>
                     </div>
@@ -222,20 +224,21 @@
                                 <input type="hidden" name="invoiceType" value="final_invoice" />
                                 <button type="submit" class="btn btn-outline-secondary btn-sm" title="Odeslat emailem přes SF"><i class="bi bi-envelope-arrow-up"></i></button>
                             </form>
-                            <form th:action="@{/admin/orders/{id}/mark-invoice-sent(id=${order.id})}" method="post" class="d-inline">
-                                <input type="hidden" name="sfInvoiceId" th:value="${order.sfFinalInvoiceId}" />
-                                <input type="hidden" name="invoiceType" value="final_invoice" />
-                                <button type="submit" class="btn btn-outline-secondary btn-sm" title="Označit jako odeslanou v SF"><i class="bi bi-check2-square"></i></button>
-                            </form>
                         </div>
                     </div>
                     <div th:if="${order.sfProformaInvoiceId == null and order.sfTaxDocumentId == null and order.sfFinalInvoiceId == null}">
                         <span class="text-muted">Žádné faktury</span>
                     </div>
                 </div>
-            </div>
+            </div> </div> <div class="detail-section mt-4">
+        <h4>Poznámka zákazníka</h4>
+        <div th:if="${order.note != null and not #strings.isEmpty(order.note)}">
+            <p class="note-box" th:text="${order.note}"></p>
         </div>
-
+        <div th:unless="${order.note != null and not #strings.isEmpty(order.note)}">
+            <p class="text-muted fst-italic">(Zákazník nezadal žádnou poznámku)</p>
+        </div>
+    </div>
         <div class="row detail-section">
             <div class="col-md-6">
                 <div class="address-box">
