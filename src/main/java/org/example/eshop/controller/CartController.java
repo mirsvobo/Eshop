@@ -58,7 +58,7 @@ public class CartController implements PriceConstants {
     private GlazeRepository glazeRepository;
     @Autowired
     private RoofColorRepository roofColorRepository;
-    
+
     @Autowired
     private CurrencyService currencyService;
     @Autowired
@@ -446,12 +446,17 @@ public class CartController implements PriceConstants {
 
     // Metody updateQuantity, removeItem, applyCoupon, removeCoupon (beze změny)
     @PostMapping("/aktualizovat")
-    public String updateQuantity(@RequestParam String cartItemId, @RequestParam @Min(0) int quantity, RedirectAttributes redirectAttributes) {
+    public String updateQuantity(@RequestParam String cartItemId, @RequestParam @Min(0) Integer quantity, RedirectAttributes redirectAttributes) {
         log.info("--- updateQuantity START --- Cart hash: {}", this.sessionCart.hashCode());
         log.info("Request to update quantity for cart item ID: {} to {}", cartItemId, quantity);
+        if (quantity == null || quantity < 1) { // V HTML je min="1"
+            log.warn("Invalid quantity '{}' for cart item ID: {}. Redirecting with error.", quantity, cartItemId);
+            redirectAttributes.addFlashAttribute("cartError", "Zadejte platné množství (minimálně 1).");
+            return "redirect:/kosik";
+        }
         try {
             this.sessionCart.updateQuantity(cartItemId, quantity);
-            redirectAttributes.addFlashAttribute("cartSuccess", quantity > 0 ? "Množství bylo aktualizováno." : "Položka byla odebrána z košíku.");
+            redirectAttributes.addFlashAttribute("cartSuccess", "Množství bylo aktualizováno.");
             log.info("--- updateQuantity END --- Success. Cart hash: {}", this.sessionCart.hashCode());
         } catch (Exception e) {
             log.error("--- updateQuantity ERROR --- Cart hash: {}", this.sessionCart.hashCode(), e);
@@ -528,6 +533,7 @@ public class CartController implements PriceConstants {
         log.info("--- removeCoupon END --- Success. Cart instance hash: {}", this.sessionCart.hashCode());
         return "redirect:/kosik";
     }
+
     private String getProductSlugForRedirect(Long productId) {
         if (productId == null) return null;
         try {
@@ -538,13 +544,15 @@ public class CartController implements PriceConstants {
             return null; // V případě chyby vrátí null
         }
     }
+
     /**
      * Pomocná metoda pro nastavení atributů pro přesměrování v případě chyby.
      * Zajišťuje, že formulář bude znovu zobrazen s chybovými hláškami a původními daty.
+     *
      * @param redirectAttributes Objekt pro přidání flash atributů.
-     * @param dtoWithError DTO objekt s původními daty z formuláře.
-     * @param bindingResult BindingResult obsahující validační chyby.
-     * @param errorMessage Obecná chybová zpráva k zobrazení.
+     * @param dtoWithError       DTO objekt s původními daty z formuláře.
+     * @param bindingResult      BindingResult obsahující validační chyby.
+     * @param errorMessage       Obecná chybová zpráva k zobrazení.
      */
     private void prepareRedirectWithError(RedirectAttributes redirectAttributes, CartItemDto dtoWithError, BindingResult bindingResult, String errorMessage) {
         redirectAttributes.addFlashAttribute("cartError", errorMessage);
@@ -554,11 +562,13 @@ public class CartController implements PriceConstants {
         redirectAttributes.addFlashAttribute("cartItemDto", dtoWithError);
         log.debug("Prepared redirect attributes with error message and validation results.");
     }
+
     /**
      * Pomocná metoda pro sestavení popisného stringu varianty produktu.
-     * @param item Položka košíku.
-     * @param design Vybraný design.
-     * @param glaze Vybraná lazura.
+     *
+     * @param item      Položka košíku.
+     * @param design    Vybraný design.
+     * @param glaze     Vybraná lazura.
      * @param roofColor Vybraná barva střechy.
      * @return Sestavený string popisující variantu.
      */
@@ -623,6 +633,7 @@ public class CartController implements PriceConstants {
         result = result.replaceFirst("\\|", " | ");
         return result;
     }
+
     @NotNull
     private static CustomPriceRequestDto getCustomPriceRequestDto(CartItemDto cartItemDto, Product product, Map<String, BigDecimal> dimensionsMap) {
         CustomPriceRequestDto priceRequest = new CustomPriceRequestDto();

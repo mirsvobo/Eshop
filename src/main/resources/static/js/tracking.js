@@ -1,1 +1,449 @@
-const TrackingService={_gtagInitialized:!1,_gtagId:'AW-17046857865',_sklikId:100245398,_sklikPurchaseId:100245399,_sklikBeginCheckoutId:100245400,_heurekaApiKey:'337b0666ea50d1f4fcd05d5473cfef9e43ec',_hasNonGoogleConsent:function(e){if("undefined"==typeof CookieConsent)return!1;if(!CookieConsent.validConsent())return!1;const n=CookieConsent.getUserPreferences().acceptedCategories;return!!Array.isArray(n)&&e.every(e=>n.includes(e))},_getSklikConsentValue:function(){return this._hasNonGoogleConsent(['marketing'])?1:0},_runNonGoogleIfConsentGiven:function(e,n,o="callback"){this._hasNonGoogleConsent(e)?n():void 0},initBaseScripts:function(){this._gtagInitialized="function"==typeof gtag;const e="function"==typeof window.rc?.conversionHit,n="function"==typeof heureka},trackViewItem:function(e){const n="trackViewItem";if(!e||!e.variantId||null==e.priceNoVat||!e.currency)return;const o=parseFloat(e.priceNoVat)||0,t=o;this._gtagInitialized?(gtag("event","view_item",{currency:e.currency,value:o.toFixed(2),items:[{item_id:e.variantId,item_name:e.name,item_brand:e.brand,item_category:e.category,price:o.toFixed(2),quantity:1}]}),gtag("event","view_item",{send_to:this._gtagId,value:t.toFixed(2),currency:e.currency,items:[{id:e.variantId,google_business_vertical:"retail"}]})):void 0,this._runNonGoogleIfConsentGiven(["marketing"],()=>{if("function"==typeof window.rc?.conversionHit){const n={id:this._sklikId,value:t.toFixed(2),consent:this._getSklikConsentValue()};window.rc.conversionHit(n)}else console.warn("Sklik (rc.conversionHit) function NOT found during trackViewItem. Skipping Sklik conversion.")},n+" Sklik"),this._runNonGoogleIfConsentGiven(["marketing"],()=>{},"function"!=typeof heureka?console.warn("Heureka SDK not initialized during "+n+" check."):void 0,n+" Heureka Check")},trackAddToCart:function(e){const n="trackAddToCart";if(!e||!e.variantId||null==e.price||!e.currency||!e.quantity)return;const o=parseFloat(e.price)||0,t=parseInt(e.quantity)||1,i=o*t;this._gtagInitialized?(gtag("event","add_to_cart",{currency:e.currency,value:i.toFixed(2),items:[{item_id:e.variantId,item_name:e.name,item_brand:e.brand,item_category:e.category,price:o.toFixed(2),quantity:t}]}),gtag("event","add_to_cart",{send_to:this._gtagId,value:i.toFixed(2),currency:e.currency,items:[{id:e.variantId,quantity:t,price:o.toFixed(2),google_business_vertical:"retail"}]})):void 0},trackBeginCheckout:function(e){const n="trackBeginCheckout";if(!e||!Array.isArray(e.items)||null==e.value_no_vat||!e.currency)return;const o="checkout_visited";try{if(sessionStorage.getItem(o))return}catch(e){console.warn("Could not access sessionStorage for checkout tracking flag:",e)}const t=parseFloat(e.value_no_vat)||0;this._gtagInitialized?(gtag("event","begin_checkout",{currency:e.currency,value:t.toFixed(2),items:e.items.map(e=>({item_id:e.variantId,item_name:e.name,item_brand:e.brand,item_category:e.category,price:(parseFloat(e.price)||0).toFixed(2),quantity:parseInt(e.quantity)||1}))}),gtag("event","begin_checkout",{send_to:this._gtagId,value:t.toFixed(2),currency:e.currency,items:e.items.map(e=>({id:e.variantId,quantity:e.quantity,price:(parseFloat(e.price)||0).toFixed(2),google_business_vertical:"retail"}))})):void 0,this._runNonGoogleIfConsentGiven(["marketing"],()=>{if("function"==typeof window.rc?.conversionHit){const n={id:this._sklikBeginCheckoutId,value:t.toFixed(2),consent:this._getSklikConsentValue()};window.rc.conversionHit(n)}else console.warn("Sklik (rc.conversionHit) function NOT found during trackBeginCheckout. Skipping Sklik conversion.")},n+" Sklik");try{sessionStorage.setItem(o,"true")}catch(e){console.error("Error setting sessionStorage item:",e)}},trackPurchase:function(e){const n="trackPurchase";if(!e||!e.transaction_id||!Array.isArray(e.items)||null==e.value||null==e.value_no_vat||!e.currency)return;const o=parseFloat(e.value)||0,t=parseFloat(e.tax)||0,i=parseFloat(e.shipping)||0,r=parseFloat(e.value_no_vat)||0,a=parseFloat(e.shipping_no_vat)||0,s=r+a;if(this._gtagInitialized){const c=e.items.map(e=>({item_id:e.item_id,item_name:e.item_name,item_brand:e.item_brand,item_category:e.item_category,price:(parseFloat(e.price)||0).toFixed(2),quantity:parseInt(e.quantity)||1}));gtag("event","purchase",{transaction_id:e.transaction_id,value:o.toFixed(2),currency:e.currency,tax:t.toFixed(2),shipping:i.toFixed(2),items:c}),gtag("event","conversion",{send_to:this._gtagId+"/I-9yCKq-n8EaEInRycA_",value:s.toFixed(2),currency:e.currency,transaction_id:e.transaction_id,items:c.map(e=>({id:e.item_id,quantity:e.quantity,price:e.price,google_business_vertical:"retail"}))})}else console.warn("Gtag not initialized during "+n+". Skipping GA/Ads part.");this._runNonGoogleIfConsentGiven(["marketing"],()=>{if("function"==typeof window.rc?.conversionHit){const n={id:this._sklikPurchaseId,value:s.toFixed(2),order_id:e.transaction_id,consent:this._getSklikConsentValue()};window.rc.conversionHit(n)}else console.warn("Sklik (rc.conversionHit) function NOT found during trackPurchase. Skipping purchase conversion.");if("function"==typeof heureka){if(Array.isArray(e.heureka_items))try{heureka("authenticate",this._heurekaApiKey),heureka("set_order_id",e.transaction_id),heureka("set_currency",e.currency),e.heureka_items.forEach(e=>{e&&e.itemId&&e.name&&null!=e.priceVat&&e.quantity>0?heureka("add_product",e.itemId,e.name,(parseFloat(e.priceVat)||0).toFixed(2),e.quantity):console.warn("Skipping invalid Heureka item:",e)});const n=parseFloat(e.heureka_total_vat)||0;heureka("set_total_vat",n.toFixed(2)),heureka("send","Order")}catch(e){console.error("Heureka Order conversion failed during trackPurchase:",e)}else console.warn("Heureka items data missing or not an array, skipping purchase conversion.")}else console.warn("Heureka function NOT found during trackPurchase. Skipping purchase conversion.")},n+" Sklik/Heureka")},trackContactClick:function(e){const n="trackContactClick";this._gtagInitialized?(gtag("event","generate_lead",{value:10,currency:"CZK"}),gtag("event","conversion",{send_to:this._gtagId+"/QfVhCLO-n8EaEInRycA_",value:10,currency:"CZK"})):console.warn("Gtag not initialized during "+n+". Skipping GA/Ads part.")}};document.addEventListener("click",function(e){const n=e.target.closest("a.track-contact-click");if(n){const e=n.getAttribute("href");let o="unknown";e?.startsWith("tel:")?o="phone":e?.startsWith("mailto:")&&(o="email"),"undefined"!=typeof TrackingService&&"function"==typeof TrackingService.trackContactClick?TrackingService.trackContactClick(o):console.warn("TrackingService or trackContactClick not ready for contact click event.")}});
+/**
+ * TrackingService Object v16_GTM_With_Labels
+ * Handles sending e-commerce events via dataLayer for GTM.
+ * Includes specific IDs/labels provided by the user.
+ */
+const TrackingService = {
+    _gtmInitialized: false, // Flag to check if dataLayer is ready
+    _pendingViewItemData: null,
+    _pendingBeginCheckoutData: null,
+    _pendingPurchaseData: null,
+    _trackedEvents: {}, // Object to store keys of already tracked events on this page load
+
+    // --- Configuration (Provided by User) ---
+    _googleAdsId: '17046857865', // Google Ads Conversion ID (same for all)
+    _adsConversionLabelViewItem: '5icqCLa-n8EaEInRycA_',
+    _adsConversionLabelAddToCart: 'KT_JCK2-n8EaEInRycA_',
+    _adsConversionLabelBeginCheckout: 'YVBgCLC-n8EaEInRycA_',
+    _adsConversionLabelPurchase: 'I-9yCKq-n8EaEInRycA_',
+    _adsConversionLabelContact: 'QfVhCLO-n8EaEInRycA_',
+
+    _sklikId: 100245398,          // Sklik - Retargeting ID
+    _sklikPurchaseId: 100245399,    // Sklik - Conversion ID - Purchase
+    _sklikBeginCheckoutId: 100245400, // Sklik - Conversion ID - Begin Checkout
+
+    _heurekaApiKey: '337b0666ea50d1f4fcd05d5473cfef9e43ec', // Heureka Ověřeno zákazníky API Key
+
+    /**
+     * Ensures the dataLayer array exists.
+     * @returns {boolean} True if dataLayer is available.
+     */
+    _ensureDataLayer: function() {
+        window.dataLayer = window.dataLayer || [];
+        this._gtmInitialized = true; // Assume dataLayer exists => GTM can read it
+        return true;
+    },
+
+    /**
+     * Creates a unique key for an event to prevent duplicates during a single page lifecycle.
+     * @param {string} eventName - The name of the event (e.g., 'view_item').
+     * @param {string|null} contextId - A specific identifier (e.g., product ID, transaction ID) or null for generic page events.
+     * @returns {string} The unique event key.
+     */
+    _getEventKey: function(eventName, contextId) {
+        if (!contextId) {
+            // For events like begin_checkout, use pathname as context to avoid multiple sends on the same page
+            return `${eventName}_generic_${window.location.pathname}`;
+        }
+        // For item-specific or transaction-specific events
+        return `${eventName}_${contextId}`;
+    },
+
+    /**
+     * Called after consent changes or DOM load to process any pending tracking data.
+     * Pushes data to dataLayer if it's ready.
+     */
+    initBaseScripts: function() {
+        const logPrefix = "[TrackingService.initBaseScripts]";
+        console.log(`${logPrefix} Initializing...`);
+        this._ensureDataLayer(); // Ensure dataLayer exists
+
+        // Process pending view_item
+        if (this._pendingViewItemData && this._gtmInitialized) {
+            console.log(`${logPrefix} Processing pending view_item data...`);
+            const itemId = this._pendingViewItemData?.ecommerce?.items?.[0]?.item_id;
+            const eventKey = this._getEventKey("view_item", itemId);
+            if (!this._trackedEvents[eventKey]) {
+                this._trackedEvents[eventKey] = true;
+                window.dataLayer.push(this._pendingViewItemData);
+                console.log(`${logPrefix} Pushed pending view_item to dataLayer. Key: '${eventKey}'`);
+            } else { console.warn(`${logPrefix} Pending view_item event (Key: '${eventKey}') already tracked.`); }
+            this._pendingViewItemData = null;
+        }
+
+        // Process pending begin_checkout
+        if (this._pendingBeginCheckoutData && this._gtmInitialized) {
+            console.log(`${logPrefix} Processing pending begin_checkout data...`);
+            const eventKey = this._getEventKey("begin_checkout", null);
+            if (!this._trackedEvents[eventKey]) {
+                this._trackedEvents[eventKey] = true;
+                window.dataLayer.push(this._pendingBeginCheckoutData);
+                console.log(`${logPrefix} Pushed pending begin_checkout to dataLayer. Key: '${eventKey}'`);
+                // Pass data also to Sklik specific dataLayer variable (if needed by GTM tag)
+                window.dataLayer.push({
+                    'event': 'sklik_begin_checkout', // Custom event for Sklik tag trigger
+                    'sklik_conversion_id': this._sklikBeginCheckoutId,
+                    'sklik_order_id': null, // No order ID at this stage
+                    'sklik_value': this._pendingBeginCheckoutData.ecommerce.value // Pass value without VAT
+                });
+                console.log(`${logPrefix} Pushed sklik_begin_checkout event.`);
+                this._pendingBeginCheckoutData = null;
+            } else { console.warn(`${logPrefix} Pending begin_checkout event (Key: '${eventKey}') already tracked.`); }
+            this._pendingBeginCheckoutData = null;
+        }
+
+        // Process pending purchase
+        if (this._pendingPurchaseData && this._gtmInitialized) {
+            console.log(`${logPrefix} Processing pending purchase data...`);
+            const eventKey = this._getEventKey("purchase", this._pendingPurchaseData?.ecommerce?.transaction_id);
+            if (!this._trackedEvents[eventKey]) {
+                this._trackedEvents[eventKey] = true;
+                window.dataLayer.push(this._pendingPurchaseData); // GA4 purchase
+                console.log(`${logPrefix} Pushed pending purchase (GA4) to dataLayer. Key: '${eventKey}'`);
+
+                // Push data for Google Ads Purchase (redundant if using GA4 import, but safe)
+                window.dataLayer.push({
+                    'event': 'google_ads_purchase', // Custom event for Ads tag trigger
+                    'google_ads_id': this._googleAdsId,
+                    'google_ads_label': this._adsConversionLabelPurchase,
+                    'value': this._pendingPurchaseData.ecommerce.value_no_vat, // Value WITHOUT VAT for Ads
+                    'currency': this._pendingPurchaseData.ecommerce.currency,
+                    'transaction_id': this._pendingPurchaseData.ecommerce.transaction_id
+                });
+                console.log(`${logPrefix} Pushed google_ads_purchase event.`);
+
+                // Push data for Sklik Purchase
+                window.dataLayer.push({
+                    'event': 'sklik_purchase', // Custom event for Sklik tag trigger
+                    'sklik_conversion_id': this._sklikPurchaseId,
+                    'sklik_order_id': this._pendingPurchaseData.ecommerce.transaction_id,
+                    'sklik_value': this._pendingPurchaseData.ecommerce.value_no_vat // Value WITHOUT VAT for Sklik
+                });
+                console.log(`${logPrefix} Pushed sklik_purchase event.`);
+
+                // Push data for Heureka Ověřeno
+                window.dataLayer.push({
+                    'event': 'heureka_purchase', // Custom event for Heureka tag trigger
+                    'heureka_api_key': this._heurekaApiKey,
+                    'heureka_email': this._pendingPurchaseData.ecommerce.customer_email, // Pass email
+                    'heureka_order_id': this._pendingPurchaseData.ecommerce.transaction_id,
+                    'heureka_items': this._pendingPurchaseData.ecommerce.heureka_items // Pass Heureka specific items
+                });
+                console.log(`${logPrefix} Pushed heureka_purchase event.`);
+
+                this._pendingPurchaseData = null;
+            } else { console.warn(`${logPrefix} Pending purchase event (Key: '${eventKey}') already tracked.`); }
+            this._pendingPurchaseData = null;
+        }
+        console.log(`${logPrefix} Initialization finished.`);
+    },
+
+    /**
+     * Tracks a product view event. Pushes 'view_item' to dataLayer.
+     */
+    trackViewItem: function(itemData) {
+        const eventName = "view_item";
+        const logPrefix = `[${eventName}]`;
+        console.log(`${logPrefix} Received data:`, JSON.stringify(itemData));
+        if (!itemData || !itemData.variantId || !itemData.name || itemData.priceNoVat == null) {
+            console.warn(`${logPrefix} Missing required item data. Skipping.`); return;
+        }
+        const eventKey = this._getEventKey(eventName, itemData.variantId);
+        if (this._trackedEvents[eventKey]) {
+            console.warn(`${logPrefix} Event already tracked. Key: '${eventKey}'. Skipping.`); return;
+        }
+
+        const price = parseFloat(itemData.priceNoVat) || 0;
+        const currency = itemData.currency || 'CZK';
+
+        const dataLayerPayload = {
+            event: eventName, // Standard GA4 event name
+            ecommerce: {
+                currency: currency,
+                value: price.toFixed(2), // Value of the item viewed (without VAT)
+                items: [{
+                    item_id: itemData.variantId,
+                    item_name: itemData.name,
+                    item_brand: itemData.brand || 'Dřevníky Kolář',
+                    item_category: itemData.category || 'Dřevníky',
+                    price: price.toFixed(2), // Price without VAT
+                    quantity: 1
+                }]
+            },
+            // Optional: Add specific data for Google Ads tag if needed, though value/currency should suffice
+            'google_ads_id': this._googleAdsId,
+            'google_ads_label': this._adsConversionLabelViewItem
+            // 'google_ads_value': price.toFixed(2), // Redundant if value is set in ecommerce
+            // 'google_ads_currency': currency     // Redundant if currency is set in ecommerce
+        };
+
+        if (!this._ensureDataLayer()) {
+            console.warn(`${logPrefix} DataLayer not ready. Storing view_item data.`);
+            this._pendingViewItemData = dataLayerPayload;
+            return;
+        }
+
+        this._trackedEvents[eventKey] = true;
+        console.log(`${logPrefix} Marking event key '${eventKey}' as tracked.`);
+        window.dataLayer.push(dataLayerPayload);
+        console.log(`${logPrefix} Pushed to dataLayer:`, dataLayerPayload);
+        console.log(`${logPrefix} Finished processing.`);
+    },
+
+    /**
+     * Tracks adding an item to the cart. Pushes 'add_to_cart' to dataLayer.
+     */
+    trackAddToCart: function(itemData) {
+        const eventName = "add_to_cart";
+        const logPrefix = `[${eventName}]`;
+        console.log(`${logPrefix} Received data:`, JSON.stringify(itemData));
+        if (!itemData || !itemData.variantId || !itemData.name || itemData.price == null) {
+            console.warn(`${logPrefix} Missing required item data. Skipping.`); return;
+        }
+        const quantity = parseInt(itemData.quantity) || 1;
+        if (quantity <= 0) {
+            console.warn(`${logPrefix} Invalid quantity (${quantity}). Skipping.`); return;
+        }
+
+        const eventKey = this._getEventKey(eventName, itemData.variantId + '_ts' + Date.now());
+
+        const unitPriceNoVat = parseFloat(itemData.price) || 0;
+        const itemValue = (unitPriceNoVat * quantity);
+        const currency = itemData.currency || 'CZK';
+
+        const dataLayerPayload = {
+            event: eventName, // Standard GA4 event name
+            ecommerce: {
+                currency: currency,
+                value: itemValue.toFixed(2), // Total value of items added (without VAT)
+                items: [{
+                    item_id: itemData.variantId,
+                    item_name: itemData.name,
+                    item_brand: itemData.brand || 'Dřevníky Kolář',
+                    item_category: itemData.category || 'Dřevníky',
+                    price: unitPriceNoVat.toFixed(2), // Unit price without VAT
+                    quantity: quantity
+                }]
+            },
+            // Optional: Add specific data for Google Ads tag
+            'google_ads_id': this._googleAdsId,
+            'google_ads_label': this._adsConversionLabelAddToCart
+            // 'google_ads_value': itemValue.toFixed(2), // Redundant
+            // 'google_ads_currency': currency         // Redundant
+        };
+
+        if (!this._ensureDataLayer()) {
+            console.warn(`${logPrefix} DataLayer not ready. Cannot track add_to_cart.`);
+            return;
+        }
+
+        this._trackedEvents[eventKey] = true; // Mark this specific instance
+        console.log(`${logPrefix} Marking event key '${eventKey}' as tracked.`);
+        window.dataLayer.push(dataLayerPayload);
+        console.log(`${logPrefix} Pushed to dataLayer:`, dataLayerPayload);
+        console.log(`${logPrefix} Finished processing.`);
+    },
+
+    /**
+     * Tracks the start of the checkout process. Pushes 'begin_checkout' to dataLayer.
+     */
+    trackBeginCheckout: function(checkoutData) {
+        const eventName = "begin_checkout";
+        const logPrefix = `[${eventName}]`;
+        console.log(`${logPrefix} Received data:`, JSON.stringify(checkoutData));
+        if (!checkoutData || !Array.isArray(checkoutData.items) || checkoutData.items.length === 0 || checkoutData.value_no_vat == null) {
+            console.warn(`${logPrefix} Missing or invalid checkout data. Skipping.`); return;
+        }
+
+        const eventKey = this._getEventKey(eventName, null);
+        if (this._trackedEvents[eventKey]) {
+            console.warn(`${logPrefix} Event already tracked this page load. Key: '${eventKey}'. Skipping.`); return;
+        }
+
+        const visitedFlag = 'checkout_visited';
+        try {
+            if (sessionStorage.getItem(visitedFlag)) {
+                console.log(`${logPrefix} Checkout already tracked in this session (sessionStorage). Skipping.`);
+                return;
+            }
+        } catch (e) { console.warn(`${logPrefix} sessionStorage access error:`, e); }
+
+        const totalValueNoVat = parseFloat(checkoutData.value_no_vat) || 0;
+        const currency = checkoutData.currency || 'CZK';
+        const mappedItems = checkoutData.items.map(item => ({
+            item_id: item.variantId,
+            item_name: item.name,
+            item_brand: item.brand || 'Dřevníky Kolář',
+            item_category: item.category || 'Dřevníky',
+            price: parseFloat(item.price).toFixed(2) || '0.00',
+            quantity: parseInt(item.quantity) || 1
+        }));
+
+        const dataLayerPayload = {
+            event: eventName, // Standard GA4 event name
+            ecommerce: {
+                currency: currency,
+                value: totalValueNoVat.toFixed(2), // Total value of items without VAT
+                items: mappedItems
+                // 'coupon': checkoutData.coupon || undefined
+            },
+            // Optional: Add specific data for Google Ads & Sklik if needed directly
+            'google_ads_id': this._googleAdsId,
+            'google_ads_label': this._adsConversionLabelBeginCheckout,
+            // 'google_ads_value': totalValueNoVat.toFixed(2), // Redundant
+            // 'google_ads_currency': currency,                 // Redundant
+            'sklik_conversion_id': this._sklikBeginCheckoutId // ID for Sklik Begin Checkout
+            // 'sklik_value': totalValueNoVat.toFixed(2)       // Redundant if using ecommerce.value in GTM
+        };
+
+        if (!this._ensureDataLayer()) {
+            console.warn(`${logPrefix} DataLayer not ready. Storing begin_checkout data.`);
+            this._pendingBeginCheckoutData = dataLayerPayload;
+            return;
+        }
+
+        this._trackedEvents[eventKey] = true;
+        try { sessionStorage.setItem(visitedFlag, 'true'); } catch (e) { console.error(`${logPrefix} sessionStorage setItem error:`, e); }
+        console.log(`${logPrefix} Marking event key '${eventKey}' as tracked.`);
+        window.dataLayer.push(dataLayerPayload);
+        console.log(`${logPrefix} Pushed to dataLayer:`, dataLayerPayload);
+        console.log(`${logPrefix} Finished processing.`);
+    },
+
+    /**
+     * Tracks a completed purchase. Pushes 'purchase' to dataLayer and specific events for Ads/Sklik/Heureka.
+     */
+    trackPurchase: function(orderData) {
+        const eventName = "purchase";
+        const logPrefix = `[${eventName}]`;
+        console.log(`${logPrefix} Received data:`, JSON.stringify(orderData));
+        if (!orderData || !orderData.transaction_id || !Array.isArray(orderData.items) || orderData.items.length === 0 || orderData.value == null) {
+            console.warn(`${logPrefix} Missing required order data. Skipping.`); return;
+        }
+
+        const eventKey = this._getEventKey(eventName, orderData.transaction_id);
+        if (this._trackedEvents[eventKey]) {
+            console.warn(`${logPrefix} Event already tracked. Key: '${eventKey}'. Skipping.`); return;
+        }
+
+        const totalValueWithVat = parseFloat(orderData.value) || 0;
+        const taxWithVat = parseFloat(orderData.tax) || 0;
+        const shippingWithVat = parseFloat(orderData.shipping) || 0;
+        const currency = orderData.currency || 'CZK';
+
+        // Items for GA4 (prices WITHOUT VAT)
+        const gaItems = orderData.items.map(item => ({
+            item_id: item.item_id,
+            item_name: item.item_name,
+            item_brand: item.item_brand || 'Dřevníky Kolář',
+            item_category: item.item_category || 'Dřevníky',
+            price: parseFloat(item.price).toFixed(2) || '0.00', // Unit price NO VAT
+            quantity: parseInt(item.quantity) || 1
+        }));
+
+        // Value WITHOUT VAT for Ads and Sklik
+        const itemsValueNoVat = parseFloat(orderData.value_no_vat) || 0;
+        const shippingNoVat = parseFloat(orderData.shipping_no_vat) || 0;
+        const totalValueNoVat = itemsValueNoVat + shippingNoVat;
+
+        // Heureka specific items (prices WITH VAT)
+        const heurekaItems = orderData.heureka_items || [];
+
+        const dataLayerPayload = {
+            // Standard GA4 Purchase Event
+            event: eventName,
+            ecommerce: {
+                transaction_id: orderData.transaction_id,
+                value: totalValueWithVat.toFixed(2), // Total value WITH VAT
+                currency: currency,
+                tax: taxWithVat.toFixed(2),
+                shipping: shippingWithVat.toFixed(2),
+                items: gaItems
+                // 'coupon': orderData.coupon || undefined
+            },
+            // Specific data for other platforms (can be picked up by GTM)
+            'google_ads_id': this._googleAdsId,
+            'google_ads_label': this._adsConversionLabelPurchase,
+            'google_ads_value': totalValueNoVat.toFixed(2), // Value WITHOUT VAT for Ads
+
+            'sklik_conversion_id': this._sklikPurchaseId,
+            'sklik_order_id': orderData.transaction_id,
+            'sklik_value': totalValueNoVat.toFixed(2), // Value WITHOUT VAT for Sklik
+
+            'heureka_api_key': this._heurekaApiKey,
+            'heureka_email': orderData.customer_email, // Customer email is needed
+            'heureka_order_id': orderData.transaction_id,
+            'heureka_items_dl': heurekaItems // Pass Heureka items separately for clarity
+        };
+
+        if (!this._ensureDataLayer()) {
+            console.warn(`${logPrefix} DataLayer not ready. Storing purchase data.`);
+            this._pendingPurchaseData = dataLayerPayload;
+            return;
+        }
+
+        this._trackedEvents[eventKey] = true; // Mark as tracked *before* pushing
+        console.log(`${logPrefix} Marking event key '${eventKey}' as tracked.`);
+        window.dataLayer.push(dataLayerPayload);
+        console.log(`${logPrefix} Pushed to dataLayer:`, dataLayerPayload);
+        console.log(`${logPrefix} Finished processing.`);
+    },
+
+    /**
+     * Tracks a click on a contact link. Pushes 'contact_click' to dataLayer.
+     */
+    trackContactClick: function(contactType) {
+        const eventName = "contact_click";
+        const logPrefix = `[${eventName}]`;
+        console.log(`${logPrefix} Tracking contact click. Type: ${contactType}`);
+
+        const contactValue = 10.00; // Example fixed value for contact conversion
+
+
+        const dataLayerPayload = {
+            event: eventName,
+            event_category: 'Contact',
+            event_label: contactType,
+            // Optional: Add specific data for Google Ads tag
+            'google_ads_id': this._googleAdsId,
+            'google_ads_label': this._adsConversionLabelContact,
+            'google_ads_value': contactValue.toFixed(2),
+            'currency': 'CZK'
+        };
+
+
+        if (!this._ensureDataLayer()) {
+            console.warn(`${logPrefix} DataLayer not ready. Cannot track contact click.`);
+            return;
+        }
+
+        window.dataLayer.push(dataLayerPayload);
+        console.log(`${logPrefix} Pushed to dataLayer:`, dataLayerPayload);
+        console.log(`${logPrefix} Finished processing.`);
+    }
+};
+
+// Event Listener for contact clicks (No changes needed here)
+document.addEventListener("click", function(event) {
+    const contactLink = event.target.closest("a.track-contact-click");
+    if (contactLink) {
+        const href = contactLink.getAttribute("href");
+        let contactType = "unknown";
+        if (href?.startsWith("tel:")) { contactType = "phone"; }
+        else if (href?.startsWith("mailto:")) { contactType = "email"; }
+        console.log(`[Contact Click Listener] Detected click. Type: ${contactType}, Href: ${href}`);
+        if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackContactClick === 'function') {
+            TrackingService.trackContactClick(contactType);
+        } else { console.warn("[Contact Click Listener] TrackingService not ready."); }
+    }
+});
+
+// Initial check on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("[TrackingService Load] DOMContentLoaded. Calling initBaseScripts (first check).");
+    if (typeof TrackingService !== 'undefined') {
+        TrackingService.initBaseScripts();
+    } else {
+        console.error("[TrackingService Load] TrackingService not defined on DOMContentLoaded!");
+    }
+});

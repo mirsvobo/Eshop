@@ -198,10 +198,10 @@
         </div>
     </div>
 
-    </div> </section> <th:block layout:fragment="javascript" th:with="td=${trackingData != null ? trackingData : new java.util.HashMap()}">
+    </div> </section> <th:block layout:fragment="javascript">
 
     <script>
-        // Funkce pro změnu hlavního obrázku
+        // Funkce pro změnu hlavního obrázku (zůstává)
         function changeMainImage(newImageUrl, thumbnailElement) {
             const mainImg = document.getElementById('mainProductImage');
             if (mainImg) mainImg.src = newImageUrl;
@@ -209,100 +209,115 @@
             if (thumbnailElement) thumbnailElement.classList.add('active');
         }
 
-        // Inicializace tooltipů (pro ikonu informací o DPH)
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-    </script>
-
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const productDataForTracking = {
-            id: /*[[${td.productId}]]*/ null,
-            name: /*[[${td.productName}]]*/ null,
-            priceNoVat: /*[[${td.priceForTrackingNoVat}]]*/ 0.0,
-            priceWithVat: /*[[${td.priceForTrackingWithVat}]]*/ 0.0, // Pro Google Ads
-            currency: /*[[${td.currency}]]*/ 'CZK',
-            category: /*[[${td.categoryName}]]*/ 'Dřevníky',
-            brand: /*[[${td.brandName}]]*/ 'Dřevníky Kolář',
-            variantId: /*[[${td.variantId}]]*/ null
-        };
-
+        // Inicializace tooltipů (zůstává)
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM Ready: Attempting to track view_item for product:", productDataForTracking.variantId);
-            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
-                TrackingService.trackViewItem(productDataForTracking);
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    <script> // Nový script tag pro tracking (bez th:inline)
+    /*<![CDATA[*/
+
+    // Načtení a parsování JSON dat pro view_item
+    const viewItemJsonString = /*[[${viewItemDataJson}]]*/ null;
+    let productDataForTracking = null; // Objekt pro data produktu
+    if (viewItemJsonString && viewItemJsonString !== 'null') {
+        try {
+            // Očekáváme JSON ve formátu { event: "view_item", ecommerce: { currency: "...", value: ..., items: [ { item_id: ..., ... } ] } }
+            const fullEventData = JSON.parse(viewItemJsonString);
+            if (fullEventData && fullEventData.ecommerce && Array.isArray(fullEventData.ecommerce.items) && fullEventData.ecommerce.items.length > 0) {
+                // Vezmeme data prvního (a jediného) produktu z pole items
+                productDataForTracking = fullEventData.ecommerce.items[0];
+                // Můžeme přidat měnu a hodnotu přímo do objektu produktu, pokud je potřebujeme jinde
+                productDataForTracking.currency = fullEventData.ecommerce.currency;
+                productDataForTracking.value = fullEventData.ecommerce.value; // Celková hodnota produktu (bez DPH)
+                console.log("[STANDARD] Parsed productDataForTracking from JSON:", productDataForTracking);
             } else {
-                console.error("TrackingService or trackViewItem function not available when trying to track view_item.");
-                // Můžeš zde přidat fallback nebo počkat, např. pomocí setTimeout a opakované kontroly
-                // setTimeout(() => {
-                //     if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
-                //        TrackingService.trackViewItem(productDataForTracking);
-                //     } else { console.error("TrackingService still not ready after delay."); }
-                // }, 500);
+                console.error("[STANDARD] Parsed JSON has incorrect structure:", fullEventData);
+            }
+
+        } catch(e) {
+            console.error("[STANDARD] Error parsing viewItemDataJson:", e, viewItemJsonString);
+        }
+    } else {
+        console.warn("[STANDARD] viewItemDataJson was null or empty from model.");
+    }
+
+    // Odeslání view_item po načtení DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("[STANDARD] DOM Ready: Attempting to track view_item.");
+        // Ověříme, zda se podařilo naparsovat data a zda je TrackingService dostupný
+        if (productDataForTracking && typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
+            // trackViewItem očekává přímo objekt s daty produktu (item_id, item_name, price atd.)
+            TrackingService.trackViewItem(productDataForTracking);
+        } else {
+            if (!productDataForTracking) console.error("[STANDARD] productDataForTracking not available for view_item.");
+            if (typeof TrackingService === 'undefined' || typeof TrackingService.trackViewItem !== 'function') console.error("[STANDARD] TrackingService.trackViewItem not available.");
+        }
+    });
+
+    // Listener pro add_to_cart
+    const addToCartFormStandard = document.getElementById('add-to-cart-form');
+    const quantityInputStandard = document.getElementById('quantity');
+
+    if (addToCartFormStandard && quantityInputStandard) {
+        addToCartFormStandard.addEventListener('submit', function (event) {
+            // Zkontrolujeme, zda máme data z JSONu
+            if (!productDataForTracking) {
+                console.error("[STANDARD] Cannot track add_to_cart: productDataForTracking is not available.");
+                return; // Neodesílat event, pokud nemáme data
+            }
+
+            const quantity = parseInt(quantityInputStandard.value) || 1;
+            // Vytvoříme data pro add_to_cart z naparsovaného productDataForTracking
+            const itemDataForAddToCart = {
+                item_id: productDataForTracking.item_id, // Používáme naparsované ID
+                item_name: productDataForTracking.item_name,
+                price: productDataForTracking.price, // Cena BEZ DPH z naparsovaných dat
+                currency: productDataForTracking.currency,
+                quantity: quantity,
+                item_brand: productDataForTracking.item_brand,
+                item_category: productDataForTracking.item_category
+            };
+
+            console.log("[STANDARD] Add to Cart submit. Tracking data:", itemDataForAddToCart);
+
+            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
+                // Voláme trackAddToCart s daty KONKRÉTNÍ PŘIDANÉ POLOŽKY
+                TrackingService.trackAddToCart(itemDataForAddToCart);
+            } else {
+                console.error("[STANDARD] TrackingService or trackAddToCart not available.");
             }
         });
+        console.log("[STANDARD] Event listener for trackAddToCart attached.");
+    } else {
+        if (!addToCartFormStandard) console.error("[STANDARD] Add to Cart form (#add-to-cart-form) not found.");
+        if (!quantityInputStandard) console.error("[STANDARD] Quantity input (#quantity) not found.");
+    }
 
-        // Tato funkce je pro custom produkt, ale definice zde nevadí
-        function updateTrackingPrices(newPriceNoVat, newPriceWithVat) {
-            if(productDataForTracking) {
-                console.log('Updating tracked prices in productDataForTracking:', newPriceNoVat, newPriceWithVat);
-                productDataForTracking.priceNoVat = newPriceNoVat;
-                productDataForTracking.priceWithVat = newPriceWithVat;
+    // Logování JSON-LD (zůstává)
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
+            if (schemaDataElement && schemaDataElement.textContent) {
+                const jsonData = JSON.parse(schemaDataElement.textContent);
+                console.log("--- Schema.org Product Data (JSON-LD) ---");
+                console.dir(jsonData);
+                console.log("--- Konec Schema.org ---");
             } else {
-                console.warn("productDataForTracking not defined when updateTrackingPrices was called.");
+                console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
             }
+        } catch (e) {
+            console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
+            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
+            if (schemaDataElement) { console.error("Původní JSON-LD string:", schemaDataElement.textContent); }
         }
-        /*]]>*/
+    });
+    /*]]>*/
     </script>
-
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const addToCartForm = document.getElementById(/*[[${product.customisable ? 'custom-product-form' : 'add-to-cart-form'}]]*/ 'add-to-cart-form');
-        const quantityInput = document.getElementById('quantity');
-
-        if (addToCartForm && quantityInput) {
-            addToCartForm.addEventListener('submit', function(event) {
-                const quantity = parseInt(quantityInput.value) || 1;
-                const priceNoVat = parseFloat(/*[[${td.priceForTrackingNoVat}]]*/ 0.0);
-                const currency = /*[[${td.currency}]]*/ 'CZK';
-                const variantId = /*[[${td.variantId}]]*/ null;
-                const productName = /*[[${td.productName}]]*/ null;
-                const categoryName = /*[[${td.categoryName}]]*/ 'Dřevníky';
-                const brandName = /*[[${td.brandName}]]*/ 'Dřevníky Kolář';
-
-                if (!variantId) {
-                    console.warn("trackAddToCart: variantId not found in tracking data. Skipping.");
-                    return;
-                }
-
-                const itemDataForTracking = {
-                    variantId: variantId,
-                    name: productName,
-                    price: priceNoVat,
-                    currency: currency,
-                    quantity: quantity,
-                    category: categoryName,
-                    brand: brandName
-                };
-
-                console.log("Add to Cart form submitted. Attempting to track:", itemDataForTracking);
-
-                if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
-                    TrackingService.trackAddToCart(itemDataForTracking);
-                } else {
-                    console.error("TrackingService or trackAddToCart function not available when trying to track add_to_cart.");
-                }
-            });
-            console.log("Event listener for trackAddToCart attached to form:", addToCartForm.id);
-        } else {
-            if (!addToCartForm) console.error("Add to Cart form not found for tracking.");
-            if (!quantityInput) console.error("Quantity input not found for tracking add to cart.");
-        }
-        /*]]>*/
-    </script>
-
 </th:block>
 </body>
 </html>

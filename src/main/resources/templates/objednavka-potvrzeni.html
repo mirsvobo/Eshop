@@ -45,7 +45,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="item : ${order.orderItems}">
+                    <tr th:if="${order.orderItems != null}" th:each="item : ${order.orderItems}">
                         <td>
                             <img th:if="${item.product?.getImagesOrdered() != null and !item.product.getImagesOrdered().isEmpty()}"
                                  th:src="${item.product.getImagesOrdered()[0].url}"
@@ -142,60 +142,44 @@
     </div>
 </section>
 
-<th:block layout:fragment="javascript" th:if="${order != null and orderJustCompleted}">
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        // Data pro měření konverze - sestaveno z objektu 'order' předaného z controlleru
-        const orderDataForTracking = {
-            transaction_id: /*[[${order.orderCode}]]*/ null,
-            value: /*[[${order.totalPrice}]]*/ 0.0, // Celkem s DPH (zaokrouhlená hodnota)
-            currency: /*[[${order.currency}]]*/ 'CZK',
-            tax: /*[[${order.totalTax}]]*/ 0.0, // Celkem DPH (zboží + doprava)
-            shipping: /*[[${order.shippingCostWithoutTax?.add(order.shippingTax)}]]*/ 0.0, // Doprava s DPH
+<th:block layout:fragment="javascript">
+    <script> // Odebráno th:inline="javascript"
+    /*<![CDATA[*/
+    // Načtení JSON stringu z modelu (bezpečně) a flagu
+    const orderDataJson = /*[[${orderDataJson}]]*/ null;
+    const orderJustCompleted = /*[[${orderJustCompleted ?: false}]]*/ false;
+    let orderDataForTracking = null; // Inicializace proměnné
 
-            // Hodnoty bez DPH pro Google Ads a Sklik
-            value_no_vat: /*[[${order.subTotalWithoutTax?.subtract(order.couponDiscountAmount)}]]*/ 0.0, // Mezisoučet položek po slevě bez DPH
-            shipping_no_vat: /*[[${order.shippingCostWithoutTax}]]*/ 0.0, // Doprava bez DPH
+    // Pokus o parsování JSON stringu
+    if (orderDataJson && orderDataJson !== 'null') {
+        try {
+            orderDataForTracking = JSON.parse(orderDataJson);
+            console.log("Parsed orderDataForTracking from JSON:", orderDataForTracking);
+        } catch (e) {
+            console.error("Error parsing orderDataJson:", e);
+            console.error("Original JSON string:", orderDataJson);
+            // orderDataForTracking zůstane null
+        }
+    } else {
+        console.warn("orderDataJson was null or empty from model.");
+    }
 
-            // Položky pro GA4 a Google Ads (ceny BEZ DPH)
-            items: [
-                /*[[# th:each="item : ${order.orderItems}"]]*/
-                {
-                    item_id: /*[[${item.sku ?: ('VAR-' + item.id)}]]*/ null, // Použij SKU nebo ID položky
-                    item_name: /*[[${item.productName}]]*/ null,
-                    price: /*[[${item.unitPriceWithoutTax}]]*/ 0.0, // Jednotková cena BEZ DPH
-                    quantity: /*[[${item.count}]]*/ 1,
-                    // Volitelně doplnit:
-                    // item_category: 'Dřevníky',
-                    // item_brand: 'Dřevníky Kolář'
-                },
-                /*[[/]]*/
-            ],
-
-            // Položky pro Heureku (ceny S DPH)
-            heureka_items: [
-                /*[[# th:each="item : ${order.orderItems}"]]*/
-                {
-                    itemId: /*[[${item.sku ?: ('VAR-' + item.id)}]]*/ null, // ID pro Heureku
-                    name: /*[[${item.productName + (#strings.isEmpty(item.variantInfo) ? '' : ' (' + #strings.replace(item.variantInfo,'|',', ') + ')') }]]*/ null, // Název vč. varianty
-                    priceVat: /*[[${item.unitPriceWithTax}]]*/ 0.0, // Jednotková cena S DPH
-                    quantity: /*[[${item.count}]]*/ 1
-                },
-                /*[[/]]*/
-            ],
-            heureka_total_vat: /*[[${order.totalPrice}]]*/ 0.0 // Celkem S DPH pro Heureku
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM Ready (Confirmation Page): Attempting to track purchase.");
-            console.log("Order data for purchase tracking:", orderDataForTracking);
-            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackPurchase === 'function') {
-                TrackingService.trackPurchase(orderDataForTracking);
-            } else {
-                console.error("TrackingService or trackPurchase function not available.");
-            }
-        });
-        /*]]>*/
+    // Spuštění trackingu po načtení DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        // Zkontrolujeme, zda parsování proběhlo úspěšně A zda je to první návštěva
+        if (orderJustCompleted && typeof TrackingService !== 'undefined' && orderDataForTracking && orderDataForTracking.transaction_id) {
+            console.log("[PURCHASE CLASSIC JS] DOM Ready & orderJustCompleted=true: Calling trackPurchase with data:", orderDataForTracking);
+            TrackingService.trackPurchase(orderDataForTracking);
+        } else {
+            // Detailnější logování pro ladění
+            if (!orderJustCompleted) console.log("[PURCHASE CLASSIC JS] 'orderJustCompleted' flag not found or false. Purchase tracking skipped.");
+            else if (typeof TrackingService === 'undefined') console.error("[PURCHASE CLASSIC JS] TrackingService not available.");
+            else if (!orderDataForTracking) console.error("[PURCHASE CLASSIC JS] orderDataForTracking is null after parsing.");
+            else if (!orderDataForTracking.transaction_id) console.error("[PURCHASE CLASSIC JS] orderDataForTracking is missing transaction_id.");
+            else console.log("[PURCHASE CLASSIC JS] Unknown reason for not tracking."); // Pro ostatní případy
+        }
+    });
+    /*]]>*/
     </script>
 </th:block>
 </body>

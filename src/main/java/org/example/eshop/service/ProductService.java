@@ -215,38 +215,67 @@ public class ProductService implements PriceConstants {
         return result;
     }
 
-    // --- START: Simplified calculateDynamicProductPrice ---
-
     @Transactional(readOnly = true)
     public Map<String, Object> calculateFinalProductPrice(Product product, String currency) {
+        // *** PŘIDÁNO LOGOVÁNÍ NA ZAČÁTEK ***
+        Long productId = (product != null) ? product.getId() : null;
+        logger.info(">>> [ProductService] Vstupuji do calculateFinalProductPrice. Product ID: {}, Currency: {}", productId, currency);
+        // ---------------------------------
+
         Map<String, Object> priceInfo = new HashMap<>();
+        priceInfo.put("originalPrice", null);
+        priceInfo.put("discountedPrice", null);
+        priceInfo.put("discountApplied", null);
+
         if (product == null || product.isCustomisable()) {
-            priceInfo.put("originalPrice", null);
-            priceInfo.put("discountedPrice", null);
-            priceInfo.put("discountApplied", null);
+            logger.warn("[ProductService] calculateFinalProductPrice: Produkt je null nebo customisable (ID: {}). Vracím prázdné ceny.", productId);
             return priceInfo;
         }
 
+        // Získání základní ceny
         BigDecimal originalPrice = EURO_CURRENCY.equals(currency) ? product.getBasePriceEUR() : product.getBasePriceCZK();
-        originalPrice = (originalPrice != null) ? originalPrice.setScale(PRICE_SCALE, ROUNDING_MODE) : null;
+        // *** PŘIDÁNO LOGOVÁNÍ ZÁKLADNÍ CENY ***
+        logger.debug("[ProductService] calculateFinalProductPrice: Načtena základní cena pro ID {} v {}: {}", productId, currency, originalPrice);
+        // ------------------------------------
 
-        BigDecimal finalPrice = originalPrice;
+        if (originalPrice == null) {
+            logger.warn("[ProductService] calculateFinalProductPrice: Chybí základní cena pro produkt ID {} v měně {}. Vracím null ceny.", productId, currency);
+            return priceInfo; // Vracíme mapu s null cenami, pokud základní cena chybí
+        }
+
+        originalPrice = originalPrice.setScale(PRICE_SCALE, ROUNDING_MODE); // Zaokrouhlíme základní cenu
+        priceInfo.put("originalPrice", originalPrice); // Uložíme zaokrouhlenou původní cenu
+
+        BigDecimal finalPrice = originalPrice; // Výchozí finální cena je původní cena
         Discount appliedDiscount = null;
 
-        if (originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+        // Aplikace slev pouze pokud je původní cena kladná
+        if (originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            // *** PŘIDÁNO LOGOVÁNÍ PŘED VOLÁNÍM DiscountService ***
+            logger.debug("[ProductService] calculateFinalProductPrice: Volám DiscountService pro produkt ID {}", productId);
+            // -------------------------------------------------
+
             BigDecimal priceAfterPercentage = discountService.applyBestPercentageDiscount(originalPrice, product);
             BigDecimal priceAfterFixed = discountService.applyBestFixedDiscount(originalPrice, product, currency);
 
+            // *** PŘIDÁNO LOGOVÁNÍ CEN PO SLEVĚ ***
+            logger.debug("[ProductService] calculateFinalProductPrice: Ceny po slevě pro ID {}: Procentuální={}, Fixní={}", productId, priceAfterPercentage, priceAfterFixed);
+            // --------------------------------------
+
+            // Výběr nejlepší slevy (pokud nějaká byla aplikována a je lepší než původní cena)
             if (priceAfterPercentage != null && priceAfterPercentage.compareTo(originalPrice) < 0 &&
                     (priceAfterFixed == null || priceAfterPercentage.compareTo(priceAfterFixed) <= 0)) {
+                // Procentuální sleva je nejlepší
                 finalPrice = priceAfterPercentage;
                 appliedDiscount = discountService.findActiveDiscountsForProduct(product).stream()
                         .filter(Discount::isPercentage)
                         .filter(d -> d.getValue() != null && d.getValue().compareTo(BigDecimal.ZERO) > 0)
                         .max(Comparator.comparing(Discount::getValue))
                         .orElse(null);
+                logger.debug("[ProductService] calculateFinalProductPrice: Aplikována procentuální sleva pro ID {}. Finální cena: {}, Sleva: {}", productId, finalPrice, appliedDiscount != null ? appliedDiscount.getName() : "N/A");
 
             } else if (priceAfterFixed != null && priceAfterFixed.compareTo(originalPrice) < 0) {
+                // Fixní sleva je nejlepší
                 finalPrice = priceAfterFixed;
                 appliedDiscount = discountService.findActiveDiscountsForProduct(product).stream()
                         .filter(d -> !d.isPercentage())
@@ -256,19 +285,29 @@ public class ProductService implements PriceConstants {
                         })
                         .max(Comparator.comparing(d -> EURO_CURRENCY.equals(currency) ? Optional.ofNullable(d.getValueEUR()).orElse(BigDecimal.ZERO) : Optional.ofNullable(d.getValueCZK()).orElse(BigDecimal.ZERO)))
                         .orElse(null);
+                logger.debug("[ProductService] calculateFinalProductPrice: Aplikována fixní sleva pro ID {}. Finální cena: {}, Sleva: {}", productId, finalPrice, appliedDiscount != null ? appliedDiscount.getName() : "N/A");
+            } else {
+                logger.debug("[ProductService] calculateFinalProductPrice: Žádná platná sleva nebyla lepší než původní cena pro ID {}.", productId);
             }
+        } else {
+            logger.warn("[ProductService] calculateFinalProductPrice: Původní cena pro ID {} je nulová nebo záporná ({}). Slevy nebudou aplikovány.", productId, originalPrice);
         }
 
-        priceInfo.put("originalPrice", originalPrice);
-        priceInfo.put("discountedPrice", (finalPrice != null && originalPrice != null && finalPrice.compareTo(originalPrice) < 0) ? finalPrice : null);
-        priceInfo.put("discountApplied", appliedDiscount);
+        // Uložení finální ceny (po slevě) a aplikované slevy do mapy
+        // Pokud nebyla aplikována žádná sleva lepší než původní cena, finalPrice == originalPrice
+        if (appliedDiscount != null) {
+            priceInfo.put("discountedPrice", finalPrice); // Uložíme cenu po slevě
+            priceInfo.put("discountApplied", appliedDiscount);
+        } else {
+            priceInfo.put("discountedPrice", null); // Nebyla aplikována sleva, discountedPrice je null
+            priceInfo.put("discountApplied", null);
+        }
 
-        logger.debug("Calculated final price for product ID {} in {}: Original={}, Discounted={}, Discount={}",
-                product.getId(), currency, originalPrice, priceInfo.get("discountedPrice"), appliedDiscount != null ? appliedDiscount.getName() : "None");
-
+        // *** PŘIDÁNO LOGOVÁNÍ PŘED NÁVRATEM ***
+        logger.info(">>> [ProductService] Opouštím calculateFinalProductPrice. Product ID: {}, Currency: {}. Vrácená mapa: {}", productId, currency, priceInfo);
+        // ------------------------------------
         return priceInfo;
     }
-    // --- END: Simplified calculateDynamicProductPrice ---
 
     /**
      * Calculates the BASE price for a customizable product based ONLY on its dimensions

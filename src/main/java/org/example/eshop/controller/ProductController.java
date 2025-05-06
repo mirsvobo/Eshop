@@ -1,5 +1,6 @@
 package org.example.eshop.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.eshop.dto.CartItemDto;
@@ -27,10 +28,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.example.eshop.config.PriceConstants.*;
+import static org.example.eshop.service.FeedGenerationService.BRAND_NAME;
 
 @Controller
 public class ProductController {
@@ -136,168 +139,193 @@ public class ProductController {
             cartItemDto.setProductId(product.getId());
             cartItemDto.setCustom(product.isCustomisable());
 
+            // Příprava dat pro tracking (GA4, Sklik, atd.)
             Map<String, Object> trackingData = new HashMap<>();
             trackingData.put("productId", product.getId());
             trackingData.put("productName", product.getName());
             trackingData.put("currency", currentCurrency);
             trackingData.put("brandName", "Dřevníky Kolář");
-            // ID varianty/SKU - pro standardní produkt použijeme slug, pro custom prefix + ID
             trackingData.put("variantId", product.isCustomisable() ? "CUSTOM-" + product.getId() : "STD-" + product.getSlug());
-            // Kategorie - zatím natvrdo, můžeš doplnit z modelu produktu, pokud máš
-            trackingData.put("categoryName", "Dřevníky");
+            trackingData.put("categoryName", "Dřevníky"); // Doplnit z produktu, pokud je kategorie dostupná
 
+            // Inicializace cenových proměnných
             BigDecimal priceForTrackingNoVat = BigDecimal.ZERO;
             BigDecimal priceForTrackingWithVat = BigDecimal.ZERO;
-            Map<String, Object> priceInfoForPage = null; // Pro zobrazení na stránce
+            Map<String, Object> priceInfoForPage = null; // Jen pro standardní produkt
+            BigDecimal finalPriceForSchema = BigDecimal.ZERO; // Cena pro JSON-LD (vždy bez DPH)
+            ProductConfiguratorDto productConfiguratorDto = null; // Pro custom produkt
+
 
             if (product.isCustomisable() && product.getConfigurator() != null) {
-                // --- Custom Produkt - výpočet VÝCHOZÍ ceny pro tracking ---
+                // --- Custom Produkt ---
+                logger.info("[ProductController] Processing Custom Product ID: {}", product.getId());
                 ProductConfigurator config = product.getConfigurator();
+                productConfiguratorDto = new ProductConfiguratorDto();
+
+                // Mapování dat z entity konfigurátoru do DTO
+                productConfiguratorDto.setMinLength(config.getMinLength());
+                productConfiguratorDto.setMaxLength(config.getMaxLength());
+                productConfiguratorDto.setStepLength(config.getStepLength());
+                productConfiguratorDto.setDefaultLength(config.getDefaultLength());
+                productConfiguratorDto.setMinWidth(config.getMinWidth());
+                productConfiguratorDto.setMaxWidth(config.getMaxWidth());
+                productConfiguratorDto.setStepWidth(config.getStepWidth());
+                productConfiguratorDto.setDefaultWidth(config.getDefaultWidth());
+                productConfiguratorDto.setMinHeight(config.getMinHeight());
+                productConfiguratorDto.setMaxHeight(config.getMaxHeight());
+                productConfiguratorDto.setStepHeight(config.getStepHeight());
+                productConfiguratorDto.setDefaultHeight(config.getDefaultHeight());
+                model.addAttribute("configuratorDto", productConfiguratorDto);
+
+                // Výpočet výchozí/minimální ceny
                 Map<String, BigDecimal> initialDimensions = new HashMap<>();
                 initialDimensions.put("length", Optional.ofNullable(config.getDefaultLength()).orElse(config.getMinLength()));
                 initialDimensions.put("width", Optional.ofNullable(config.getDefaultWidth()).orElse(config.getMinWidth()));
                 initialDimensions.put("height", Optional.ofNullable(config.getDefaultHeight()).orElse(config.getMinHeight()));
 
+                logger.debug("[ProductController] Calculating initial price for tracking/schema. Product ID: {}, Initial Dimensions: {}, Currency: {}", product.getId(), initialDimensions, currentCurrency);
+
                 try {
-                    // Získáme základní cenu bez DPH (jen rozměry)
-                    priceForTrackingNoVat = productService.calculateDynamicProductPrice(product, initialDimensions, currentCurrency);
+                    // Výpočet základní ceny bez DPH (jen rozměry) pro tracking A schema
+                    BigDecimal initialBasePrice = productService.calculateDynamicProductPrice(product, initialDimensions, currentCurrency);
+                    // Zde předpokládáme, že pro zobrazení a tracking chceme základní cenu (bez atributů/addonů)
+                    // Pokud byste chtěli zahrnout i výchozí atributy/addony, logika by musela být složitější
+                    priceForTrackingNoVat = Optional.ofNullable(initialBasePrice).orElse(BigDecimal.ZERO);
+                    finalPriceForSchema = priceForTrackingNoVat; // Use the same price for schema
 
-                    // Pro cenu s DPH musíme připočítat DPH - potřebujeme sazbu
-                    // Zde předpokládáme základní sazbu (21%), uprav pokud má být jiná výchozí!
-                    // V reálu by bylo lepší mít výchozí TaxRate nastavenou v konfiguraci.
-                    BigDecimal defaultVatRate = new BigDecimal("0.21"); // FALLBACK
-                    Set<TaxRate> rates = product.getAvailableTaxRates();
-                    if (rates != null && !rates.isEmpty()) {
-                        // Vezmeme první dostupnou nebo specifickou výchozí, pokud máš
-                        defaultVatRate = rates.iterator().next().getRate();
-                    }
-                    priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(defaultVatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+                    logger.debug("[ProductController] Initial price calculated (No VAT): {}", priceForTrackingNoVat);
 
-                    // Ceny pro zobrazení na stránce (mohou být předány jinak z JS)
-                    model.addAttribute("initialCustomPriceCZK", product.isCustomisable() ? productService.calculateDynamicProductPrice(product, initialDimensions, "CZK") : null);
-                    model.addAttribute("initialCustomPriceEUR", product.isCustomisable() ? productService.calculateDynamicProductPrice(product, initialDimensions, "EUR") : null);
-
-                } catch (Exception e) {
-                    logger.error("[ProductController] Chyba výpočtu výchozí ceny pro custom produkt ID {}: {}", product.getId(), e.getMessage());
-                    // Ceny zůstanou 0
-                }
-
-            } else if (!product.isCustomisable()) {
-                // --- Standardní produkt - výpočet ceny pro tracking ---
-                priceInfoForPage = productService.calculateFinalProductPrice(product, currentCurrency);
-                model.addAttribute("priceInfo", priceInfoForPage); // Pro zobrazení na stránce
-
-                // Cena bez DPH pro tracking (bereme zlevněnou, pokud je, jinak původní)
-                priceForTrackingNoVat = (BigDecimal) priceInfoForPage.getOrDefault("discountedPrice", priceInfoForPage.get("originalPrice"));
-                priceForTrackingNoVat = Optional.ofNullable(priceForTrackingNoVat).orElse(BigDecimal.ZERO);
-
-                // Cena s DPH pro tracking (musíme dopočítat)
-                if (priceForTrackingNoVat.compareTo(BigDecimal.ZERO) > 0) {
-                    Set<TaxRate> rates = product.getAvailableTaxRates();
-                    if (rates != null && !rates.isEmpty()) {
-                        // Předpokládáme jednu sazbu pro standardní produkt, nebo vezmeme první
-                        BigDecimal vatRate = rates.iterator().next().getRate();
-                        priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(vatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+                    // Výpočet ceny s DPH pro tracking
+                    if (priceForTrackingNoVat.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal defaultVatRate = new BigDecimal("0.21"); // FALLBACK
+                        Set<TaxRate> rates = product.getAvailableTaxRates();
+                        if (rates != null && !rates.isEmpty()) {
+                            defaultVatRate = rates.iterator().next().getRate(); // Use first available rate
+                        } else {
+                            logger.warn("Missing tax rates for custom product ID {}, using fallback rate {} for tracking price with VAT.", product.getId(), defaultVatRate);
+                        }
+                        priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(defaultVatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+                        logger.debug("[ProductController] Initial price calculated (With VAT): {}", priceForTrackingWithVat);
                     } else {
-                        logger.warn("Missing tax rate for standard product ID {}, cannot calculate price with VAT for tracking.", product.getId());
-                    }
-                }
-            }
-
-            trackingData.put("priceForTrackingNoVat", priceForTrackingNoVat);
-            trackingData.put("priceForTrackingWithVat", priceForTrackingWithVat);
-            model.addAttribute("trackingData", trackingData); // Předáme data do modelu
-            logger.debug("Prepared tracking data for view_item: {}", trackingData);
-
-            // Výpočet počáteční/minimální ceny pro JSON-LD a zobrazení
-            BigDecimal initialCustomPriceCZK = null;
-            BigDecimal initialCustomPriceEUR = null;
-            BigDecimal finalPriceForSchema = null; // Cena pro JSON-LD
-            String initialPriceError = null;
-            Map<String, Object> standardPriceInfo = null;
-            ProductConfiguratorDto productConfiguratorDto = null; // DTO pro JavaScript
-
-            if (product.isCustomisable() && product.getConfigurator() != null) {
-                // --- Custom Produkt ---
-                ProductConfigurator configurator = product.getConfigurator(); // Získáme entitu konfigurátoru
-                productConfiguratorDto = new ProductConfiguratorDto(); // Vytvoříme DTO
-
-                try {
-                    // Mapování dat z entity konfigurátoru do DTO
-                    productConfiguratorDto.setMinLength(configurator.getMinLength());
-                    productConfiguratorDto.setMaxLength(configurator.getMaxLength());
-                    productConfiguratorDto.setStepLength(configurator.getStepLength());
-                    productConfiguratorDto.setDefaultLength(configurator.getDefaultLength());
-                    productConfiguratorDto.setMinWidth(configurator.getMinWidth());
-                    productConfiguratorDto.setMaxWidth(configurator.getMaxWidth());
-                    productConfiguratorDto.setStepWidth(configurator.getStepWidth());
-                    productConfiguratorDto.setDefaultWidth(configurator.getDefaultWidth());
-                    productConfiguratorDto.setMinHeight(configurator.getMinHeight());
-                    productConfiguratorDto.setMaxHeight(configurator.getMaxHeight());
-                    productConfiguratorDto.setStepHeight(configurator.getStepHeight());
-                    productConfiguratorDto.setDefaultHeight(configurator.getDefaultHeight());
-
-                    Map<String, BigDecimal> minDimensions = new HashMap<>();
-                    // Výchozí rozměry bereme z konfigurátoru, pokud nejsou, bereme min
-                    minDimensions.put("length", configurator.getDefaultLength() != null ? configurator.getDefaultLength() : configurator.getMinLength());
-                    minDimensions.put("width", configurator.getDefaultWidth() != null ? configurator.getDefaultWidth() : configurator.getMinWidth());
-                    minDimensions.put("height", configurator.getDefaultHeight() != null ? configurator.getDefaultHeight() : configurator.getMinHeight());
-
-                    if (minDimensions.get("length") == null || minDimensions.get("width") == null || minDimensions.get("height") == null) {
-                        throw new IllegalStateException("Chybí minimální nebo výchozí rozměry v konfigurátoru produktu ID: " + product.getId());
+                        priceForTrackingWithVat = BigDecimal.ZERO;
                     }
 
-                    // Počítáme ceny pro obě měny
-                    initialCustomPriceCZK = productService.calculateDynamicProductPrice(product, minDimensions, "CZK");
-                    initialCustomPriceEUR = productService.calculateDynamicProductPrice(product, minDimensions, "EUR");
+                    // Nastavení výchozích rozměrů do DTO formuláře košíku
+                    cartItemDto.setCustomDimensions(initialDimensions);
 
-                    // Nastavení výchozích rozměrů do DTO pro formulář
-                    cartItemDto.setCustomDimensions(minDimensions);
-                    logger.debug("[ProductController] Výchozí ZÁKLADNÍ cena (bez doplňků/atributů) pro custom produkt ID {}: CZK={}, EUR={}", product.getId(), initialCustomPriceCZK, initialCustomPriceEUR);
-
-                    // Cena pro schema bude cena v aktuální měně
-                    finalPriceForSchema = EURO_CURRENCY.equals(currentCurrency) ? initialCustomPriceEUR : initialCustomPriceCZK;
+                    // Ceny pro zobrazení na stránce (počáteční) - vypočítáme obě měny
+                    model.addAttribute("initialCustomPriceCZK", productService.calculateDynamicProductPrice(product, initialDimensions, "CZK"));
+                    model.addAttribute("initialCustomPriceEUR", productService.calculateDynamicProductPrice(product, initialDimensions, "EUR"));
 
                 } catch (Exception e) {
-                    logger.error("[ProductController] Chyba při výpočtu výchozí základní ceny pro custom produkt ID {}: {}", product.getId(), e.getMessage(), e);
-                    initialPriceError = "Nepodařilo se vypočítat výchozí cenu: " + e.getMessage();
-                    finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
+                    logger.error("[ProductController] Error calculating initial price for custom product ID {}: {}", product.getId(), e.getMessage());
+                    // Ceny zůstanou inicializovány na 0
+                    priceForTrackingNoVat = BigDecimal.ZERO;
+                    priceForTrackingWithVat = BigDecimal.ZERO;
+                    finalPriceForSchema = BigDecimal.ZERO;
+                    model.addAttribute("initialCustomPriceCZK", BigDecimal.ZERO);
+                    model.addAttribute("initialCustomPriceEUR", BigDecimal.ZERO);
+                    model.addAttribute("initialCustomPriceError", "Chyba výpočtu výchozí ceny.");
                 }
-                model.addAttribute("initialCustomPriceCZK", initialCustomPriceCZK);
-                model.addAttribute("initialCustomPriceEUR", initialCustomPriceEUR);
-                model.addAttribute("initialCustomPriceError", initialPriceError);
 
             } else if (!product.isCustomisable()) {
                 // --- Standardní produkt ---
+                logger.info("[ProductController] Processing Standard Product ID: {}", product.getId());
                 try {
-                    standardPriceInfo = productService.calculateFinalProductPrice(product, currentCurrency);
-                    model.addAttribute("priceInfo", standardPriceInfo);
-                    // Cena pro schema je konečná (zlevněná nebo původní)
-                    finalPriceForSchema = (BigDecimal) standardPriceInfo.getOrDefault("discountedPrice", standardPriceInfo.get("originalPrice"));
-                    if (finalPriceForSchema == null) {
-                        finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
-                        logger.warn("Missing price for standard product ID {} in schema calculation.", product.getId());
-                    }
-                } catch (Exception e) {
-                    logger.error("[ProductController] Chyba při výpočtu ceny pro standardní produkt ID {}: {}", product.getId(), e.getMessage());
-                    model.addAttribute("priceInfo", Collections.emptyMap()); // Prázdná mapa při chybě
-                    finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema
-                }
-            } else {
-                finalPriceForSchema = BigDecimal.ZERO; // Fallback pro schema, pokud je custom bez konfigurátoru
-            }
+                    // Získání finální ceny (po slevách)
+                    priceInfoForPage = productService.calculateFinalProductPrice(product, currentCurrency);
+                    model.addAttribute("priceInfo", priceInfoForPage); // Pro zobrazení na stránce
+                    logger.debug("[ProductController] Price Info Map from Service: {}", priceInfoForPage);
 
-            // --- Generování JSON-LD dat ---
+                    // Získání ceny BEZ DPH (zlevněné nebo původní) - BEZPEČNĚJŠÍ PŘEVOD
+                    BigDecimal priceNoVat = BigDecimal.ZERO; // Default na nulu
+                    if (priceInfoForPage != null) {
+                        Object discountedPriceObj = priceInfoForPage.get("discountedPrice");
+                        Object originalPriceObj = priceInfoForPage.get("originalPrice");
+                        Object priceToUseObj = (discountedPriceObj != null) ? discountedPriceObj : originalPriceObj;
+
+                        if (priceToUseObj instanceof BigDecimal bd) {
+                            priceNoVat = bd;
+                        } else if (priceToUseObj instanceof Number num) {
+                            try {
+                                priceNoVat = new BigDecimal(num.toString());
+                                logger.trace("Converted price from Number ({}) to BigDecimal: {}", priceToUseObj.getClass().getSimpleName(), priceNoVat);
+                            } catch (NumberFormatException nfe) {
+                                logger.error("Failed to convert Number {} to BigDecimal for product ID {}", priceToUseObj, product.getId());
+                                priceNoVat = BigDecimal.ZERO;
+                            }
+                        } else if (priceToUseObj != null) {
+                            logger.warn("Price object in map is not a recognized Number type: {}. Class: {}", priceToUseObj, priceToUseObj.getClass().getName());
+                            priceNoVat = BigDecimal.ZERO;
+                        } else {
+                            logger.warn("Both discountedPrice and originalPrice are missing or null in priceInfoForPage for product ID {}.", product.getId());
+                            priceNoVat = BigDecimal.ZERO;
+                        }
+                    } else {
+                        logger.warn("priceInfoForPage map is null for product ID {}.", product.getId());
+                        priceNoVat = BigDecimal.ZERO;
+                    }
+
+                    // Nastavení cen pro tracking a schema - použijeme stejnou hodnotu priceNoVat
+                    priceForTrackingNoVat = priceNoVat.setScale(PRICE_SCALE, ROUNDING_MODE).max(BigDecimal.ZERO);
+                    finalPriceForSchema = priceForTrackingNoVat; // <-- Použijeme stejnou hodnotu
+
+                    // Logování výsledku
+                    if (priceNoVat.compareTo(BigDecimal.ZERO) <= 0) {
+                        logger.warn("Final price (No VAT) calculated as ZERO or less for standard product ID {}. Check priceInfoMap or conversion.", product.getId());
+                        if (finalPriceForSchema.compareTo(BigDecimal.ZERO) <= 0){
+                            logger.warn("Missing or zero price determined for standard product ID {} in schema calculation.", product.getId());
+                        }
+                    } else {
+                        logger.debug("[ProductController] Valid priceNoVat extracted and processed: {}", priceForTrackingNoVat);
+                    }
+
+                    // Výpočet ceny s DPH pro tracking (pouze pokud máme platnou cenu bez DPH)
+                    if (priceForTrackingNoVat.compareTo(BigDecimal.ZERO) > 0) {
+                        Set<TaxRate> rates = product.getAvailableTaxRates();
+                        if (rates != null && !rates.isEmpty()) {
+                            BigDecimal vatRate = rates.iterator().next().getRate(); // Assume one rate or take first
+                            priceForTrackingWithVat = priceForTrackingNoVat.multiply(BigDecimal.ONE.add(vatRate)).setScale(PRICE_SCALE, ROUNDING_MODE);
+                            logger.debug("[ProductController] Calculated priceWithVat for tracking: {}", priceForTrackingWithVat);
+                        } else {
+                            logger.warn("Missing tax rate for standard product ID {}, cannot calculate price with VAT for tracking.", product.getId());
+                            priceForTrackingWithVat = BigDecimal.ZERO; // Fallback
+                        }
+                    } else {
+                        priceForTrackingWithVat = BigDecimal.ZERO; // Pokud je cena bez DPH nula, cena s DPH je taky nula
+                    }
+
+                } catch (Exception e) {
+                    logger.error("[ProductController] Error calculating price for standard product ID {}: {}", product.getId(), e.getMessage(), e);
+                    model.addAttribute("priceInfo", Collections.emptyMap()); // Prázdná mapa při chybě
+                    priceForTrackingNoVat = BigDecimal.ZERO;
+                    priceForTrackingWithVat = BigDecimal.ZERO;
+                    finalPriceForSchema = BigDecimal.ZERO; // Nastavení fallbacku i zde
+                }
+            }
+            // else { // customisable == true but configurator == null -> ceny zůstanou 0 }
+
+            // Naplnění a logování trackingData
+            trackingData.put("priceForTrackingNoVat", priceForTrackingNoVat);
+            trackingData.put("priceForTrackingWithVat", priceForTrackingWithVat);
+            model.addAttribute("trackingData", trackingData);
+            logger.debug("Prepared tracking data for view_item: {}", trackingData); // Log až po naplnění
+
+            String viewItemDataJson = prepareViewItemJson(product, currentCurrency, priceForTrackingNoVat, priceForTrackingWithVat);
+            model.addAttribute("viewItemDataJson", viewItemDataJson);
+            // Generování JSON-LD dat
             try {
                 List<String> imageUrls = Collections.emptyList();
                 if (product.getImages() != null && !product.getImages().isEmpty()) {
-                    String baseUrl = request.getScheme() + "://" + request.getServerName() + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort()) + request.getContextPath();
-                    logger.debug("Base URL pro obrázky JSON-LD: {}", baseUrl);
+                    String baseUrlStr = request.getScheme() + "://" + request.getServerName() + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort()) + request.getContextPath();
+                    logger.debug("Base URL for JSON-LD image paths: {}", baseUrlStr);
                     imageUrls = product.getImagesOrdered().stream()
                             .map(img -> {
                                 String imageUrl = img.getUrl();
                                 if (imageUrl != null && !imageUrl.toLowerCase().startsWith("http")) {
-                                    return baseUrl + (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
+                                    // Zajistíme, aby tam nebylo dvojité lomítko
+                                    String path = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+                                    return baseUrlStr + "/" + path;
                                 }
                                 return imageUrl;
                             })
@@ -326,11 +354,12 @@ public class ProductController {
                 offersMap.put("@type", "Offer");
                 offersMap.put("url", request.getRequestURL().toString());
 
+                // Použijeme finalPriceForSchema, která je už bez DPH a zaokrouhlená
                 Map<String, Object> priceSpecMap = new LinkedHashMap<>();
                 priceSpecMap.put("@type", "UnitPriceSpecification");
                 priceSpecMap.put("price", finalPriceForSchema.setScale(PRICE_SCALE, ROUNDING_MODE));
                 priceSpecMap.put("priceCurrency", currentCurrency);
-                priceSpecMap.put("valueAddedTaxIncluded", false);
+                priceSpecMap.put("valueAddedTaxIncluded", false); // Explicitně false
                 offersMap.put("priceSpecification", priceSpecMap);
 
                 offersMap.put("availability", "https://schema.org/InStock");
@@ -350,19 +379,18 @@ public class ProductController {
 
             } catch (Exception e) {
                 logger.error("!!! Chyba při generování JSON-LD dat: {} !!!", e.getMessage(), e);
-                model.addAttribute("jsonLdDataString", "{}");
+                model.addAttribute("jsonLdDataString", "{}"); // Prázdný JSON objekt při chybě
             }
             // --- Konec generování JSON-LD ---
 
             // --- Zpracování sazeb DPH ---
             Set<TaxRate> availableTaxRates = product.getAvailableTaxRates();
-            logger.debug("DEBUG: Načtené availableTaxRates pro produkt ID {}: {}", product.getId(), availableTaxRates != null ? availableTaxRates.size() : "null");
             if (availableTaxRates != null && !availableTaxRates.isEmpty()) {
                 List<TaxRate> sortedTaxRates = availableTaxRates.stream()
                         .sorted(Comparator.comparing(TaxRate::getName))
                         .collect(Collectors.toList());
-                logger.debug("DEBUG: Přidávám sortedTaxRates do modelu, velikost: {}", sortedTaxRates.size());
                 model.addAttribute("availableTaxRates", sortedTaxRates);
+                logger.debug("DEBUG: Přidány dostupné sazby DPH do modelu: {}", sortedTaxRates.stream().map(TaxRate::getId).toList());
             } else {
                 logger.warn("[ProductController] Produkt ID {} nemá žádné daňové sazby!", product.getId());
                 model.addAttribute("productError", "Produkt nelze objednat, chybí daňové sazby.");
@@ -382,13 +410,13 @@ public class ProductController {
                     roofColors != null ? roofColors.size() : 0);
             // --- Konec načtení atributů ---
 
-            // Rozlišení podle typu produktu
-            if (product.isCustomisable()) {
-                // --- Custom Produkt (další logika) ---
-                logger.info("[ProductController] Zpracovávám detail pro CUSTOM produkt ID {}", product.getId());
-                if (productConfiguratorDto != null) { // Kontrolujeme DTO
-                    model.addAttribute("configuratorDto", productConfiguratorDto); // Přidáme DTO do modelu
+            // Přidání DTO formuláře do modelu pro oba typy produktů
+            model.addAttribute("cartItemDto", cartItemDto);
 
+            // Rozlišení view podle typu produktu
+            if (product.isCustomisable()) {
+                // --- Další logika pro custom produkt ---
+                if (productConfiguratorDto != null) {
                     // --- Zpracování doplňků ---
                     Set<Addon> activeAddons = product.getAvailableAddons() != null ?
                             product.getAvailableAddons().stream().filter(Addon::isActive).collect(Collectors.toSet())
@@ -399,20 +427,16 @@ public class ProductController {
                     model.addAttribute("groupedAddons", groupedAddons);
                     logger.debug("[ProductController] Grouped addons: {}", groupedAddons.keySet());
                     // --- Konec zpracování doplňků ---
-
                 } else {
-                    logger.error("!!! [ProductController] Custom produkt ID {} nemá konfigurátor (DTO je null) !!!", product.getId());
+                    logger.error("!!! [ProductController] Custom produkt ID {} nemá konfigurátor (DTO je null), ale logika pokračovala? !!!", product.getId());
                     model.addAttribute("configuratorError", "Chybí data konfigurátoru.");
                     model.addAttribute("productError", "Produkt nelze nakonfigurovat.");
                 }
-                model.addAttribute("cartItemDto", cartItemDto); // Přidání DTO formuláře do modelu
                 logger.info(">>> [ProductController] Opouštím productDetail (CUSTOM). Vracím 'produkt-detail-custom'. Model keys: {}", model.asMap().keySet());
                 return "produkt-detail-custom";
 
             } else {
-                // --- Standardní produkt (další logika) ---
-                logger.info("[ProductController] Zpracovávám detail pro STANDARD produkt ID {}", product.getId());
-                model.addAttribute("cartItemDto", cartItemDto); // Přidání DTO formuláře do modelu
+                // --- Standardní produkt (další logika není potřeba) ---
                 logger.info(">>> [ProductController] Opouštím productDetail (STANDARD). Vracím 'produkt-detail-standard'. Model keys: {}", model.asMap().keySet());
                 return "produkt-detail-standard";
             }
@@ -422,9 +446,36 @@ public class ProductController {
         } catch (Exception e) {
             logger.error("!!! [ProductController] Neočekávaná chyba v productDetail pro slug {}: {} !!!", slug, e.getMessage(), e);
             model.addAttribute("errorMessage", "Při načítání detailu produktu došlo k neočekávané chybě.");
-            // Můžeme vrátit obecnou chybovou stránku nebo přesměrovat
-            return "error/500"; // Například, pokud máš šablonu pro obecné chyby serveru
-            // return "redirect:/produkty?error=detail_unexpected"; // Nebo přesměrování
+            return "error/500"; // Vrátíme obecnou chybovou stránku
+        }
+    }
+    private String prepareViewItemJson(Product product, String currency, BigDecimal priceNoVat, BigDecimal priceWithVat) {
+        Map<String, Object> viewItemDataMap = new HashMap<>();
+        viewItemDataMap.put("item_name", product.getName());
+        viewItemDataMap.put("price", priceNoVat.setScale(2, RoundingMode.HALF_UP)); // Zaokrouhlení
+        viewItemDataMap.put("currency", currency);
+        viewItemDataMap.put("item_brand", BRAND_NAME);
+        viewItemDataMap.put("item_category", "Dřevníky");
+        // Případně přidat další data dle potřeby
+
+        try {
+            // Struktura pro GA4 view_item (obsahuje pole 'items')
+            Map<String, Object> ecommerceData = new HashMap<>();
+            ecommerceData.put("currency", currency);
+            ecommerceData.put("value", priceNoVat.setScale(2, RoundingMode.HALF_UP)); // Celková hodnota zobrazené položky
+            ecommerceData.put("items", List.of(viewItemDataMap)); // Vložíme mapu produktu jako jedinou položku v poli
+
+            // Celý objekt pro dataLayer
+            Map<String, Object> dataLayerPush = new HashMap<>();
+            dataLayerPush.put("event", "view_item");
+            dataLayerPush.put("ecommerce", ecommerceData);
+
+            String json = objectMapper.writeValueAsString(dataLayerPush);
+            logger.debug("Prepared viewItemDataJson for product ID {}: {}", product.getId(), json);
+            return json;
+        } catch (JsonProcessingException e) {
+            logger.error("!!! Failed to serialize viewItemDataMap to JSON for product ID {}: {}", product.getId(), e.getMessage());
+            return "{\"event\":\"view_item\", \"ecommerce\": null, \"error\": \"Serialization failed\"}"; // Vrátí platný, ale chybový JSON
         }
     }
 

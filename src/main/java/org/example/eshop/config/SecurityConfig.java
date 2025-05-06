@@ -3,17 +3,16 @@ package org.example.eshop.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer; // <-- Přidat import
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-// Odebrán import HeadersConfigurer
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer; // Import je zde v pořádku
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-import org.springframework.security.web.header.writers.StaticHeadersWriter; // <-- Ponechat tento import
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -32,7 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        // ... stávající requestMatchers (beze změny) ...
+                        // Povolení statických zdrojů a veřejných stránek
                         .requestMatchers(
                                 new AntPathRequestMatcher("/css/**"),
                                 new AntPathRequestMatcher("/js/**"),
@@ -70,12 +69,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/pokladna").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/odeslat").permitAll()
                         .requestMatchers(HttpMethod.POST, "/pokladna/calculate-shipping").permitAll()
+                        // Zabezpečené části
                         .requestMatchers(
                                 new AntPathRequestMatcher("/muj-ucet/**")
                         ).authenticated()
                         .requestMatchers(new AntPathRequestMatcher("/admin/**")).hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
+                // Přihlášení a odhlášení
                 .formLogin(form -> form
                         .loginPage("/prihlaseni")
                         .permitAll()
@@ -85,42 +86,35 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/?odhlaseno")
                         .permitAll()
                 )
-                // --- Konfigurace CSRF (beze změny) ---
+                // CSRF konfigurace
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(
                                 new AntPathRequestMatcher("/webhooks/**"),
-                                new AntPathRequestMatcher("/api/**")
+                                new AntPathRequestMatcher("/api/**") // Ignorování API cest obecně
                         )
                 )
-                // --- OPRAVENÁ Konfigurace bezpečnostních hlaviček ---
+                // Konfigurace bezpečnostních hlaviček
                 .headers(headers -> headers
-                        // X-Content-Type-Options: nosniff (obvykle defaultně zapnuto, ale pro jistotu)
                         .contentTypeOptions(Customizer.withDefaults())
-                        // X-Frame-Options: SAMEORIGIN
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
-                        // Referrer-Policy: strict-origin-when-cross-origin
                         .referrerPolicy(policy -> policy.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        // Content-Security-Policy (CSP)
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(getCspDirectives()))
-                        // HTTP Strict Transport Security (HSTS)
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(getCspDirectives())) // Použití metody pro CSP
                         .httpStrictTransportSecurity(hsts -> hsts
                                 .includeSubDomains(true)
-                                .maxAgeInSeconds(TimeUnit.DAYS.toSeconds(365))
+                                .maxAgeInSeconds(TimeUnit.DAYS.toSeconds(365)) // 1 rok
                         )
-                        // X-XSS-Protection
                         .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-                        // Permissions-Policy (náhrada za deprecated permissionsPolicy())
-                        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=()")) // Uprav podle potřeby
+                        .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), microphone=(), camera=()"))
                 )
-                // --- Konec konfigurace bezpečnostních hlaviček ---
-
-                .httpBasic(AbstractHttpConfigurer::disable); // Vypnutí HTTP Basic (zůstává)
+                .httpBasic(AbstractHttpConfigurer::disable); // Vypnutí HTTP Basic
 
         return http.build();
     }
 
-    // V souboru src/main/java/org/example/eshop/config/SecurityConfig.java
-
+    /**
+     * Generuje řetězec s direktivami Content Security Policy.
+     * @return String s CSP direktivami.
+     */
     private String getCspDirectives() {
         return "default-src 'self'; " +
 
@@ -131,50 +125,61 @@ public class SecurityConfig {
                 "https://www.googletagmanager.com " +
                 "https://*.google-analytics.com " +
                 "https://*.googleadservices.com " +
+                "https://googleads.g.doubleclick.net " +
+                "https://www.google.com " +
                 "https://c.imedia.cz " +
                 "https://*.heureka.cz " +
                 "https://*.heureka.sk " +
                 "https://im9.cz " +
-                "'unsafe-inline'; " + // Zvažte nonce/hash místo 'unsafe-inline' pro vyšší bezpečnost
+                "'unsafe-inline'; " + // Zvážit odstranění
 
                 "style-src 'self' 'unsafe-inline' " +
                 "https://cdn.jsdelivr.net " +
-                "https://fonts.googleapis.com; " +
+                "https://fonts.googleapis.com " +
+                "https://www.googletagmanager.com; " +
 
-                "img-src 'self' data: " + // Ponecháno 'data:'
+                "img-src 'self' data: " +
                 "https://*.google-analytics.com " +
                 "https://*.googletagmanager.com " +
-                "https://storage.googleapis.com " +
+                "https://storage.googleapis.com " + // Pro GCS obrázky
                 "https://*.google.com " +
                 "https://*.googleadservices.com " +
                 "https://stats.g.doubleclick.net " +
+                "https://googleads.g.doubleclick.net " +
+                "https://*.google.es " +
+                "https://fonts.gstatic.com " +
                 "https://*.seznam.cz " +
                 "https://*.heureka.cz " +
                 "https://*.heureka.sk " +
-                "https://im9.cz; " + // Zvažte upřesnění https://* pokud možno
+                "https://im9.cz; " +
 
-                // --- OPRAVA ZDE ---
-                "font-src 'self' data: " + // Přidáno 'data:' pro povolení inline fontů
+                "font-src 'self' data: " +
                 "https://cdn.jsdelivr.net " +
                 "https://fonts.gstatic.com; " +
-                // --- KONEC OPRAVY ---
 
+                // ****** UPRAVENO ZDE: Přidána doména googlesyndication.com ******
                 "connect-src 'self' " +
                 "https://*.google-analytics.com " +
                 "https://*.analytics.google.com " +
                 "https://stats.g.doubleclick.net " +
                 "https://*.google.com " +
+                "https://google.com " +
                 "https://*.googleadservices.com " +
+                "https://*.googlesyndication.com " + // <-- PŘIDÁNO TOTO
                 "https://*.seznam.cz " +
                 "https://*.heureka.cz " +
                 "https://*.heureka.sk; " +
+                // ****** KONEC ÚPRAVY ******
 
                 "frame-src 'self' " +
-                "https://*.google.com; " +
+                "https://*.google.com " +
+                "https://td.doubleclick.net " +
+                "https://www.googletagmanager.com; " +
 
                 "object-src 'none'; " +
                 "base-uri 'self'; " +
                 "form-action 'self'; " +
                 "upgrade-insecure-requests; " +
                 "block-all-mixed-content;";
-    }}
+    }
+}

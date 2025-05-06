@@ -42,7 +42,7 @@ public class FeedGenerationService implements PriceConstants {
     private static final String HEUREKA_DELIVERY_PRICE = "0";
     private static final String GOOGLE_PRODUCT_CATEGORY_ID = "5076"; // ID for Sheds, Garages & Carports
     private static final String GOOGLE_PRODUCT_TYPE_TEXT = "Dům a zahrada > Zahradní stavby > Dřevníky";
-    private static final String BRAND_NAME = "Dřevníky Kolář";
+    public static final String BRAND_NAME = "Dřevníky Kolář";
 
     public String generateRobotsTxt() {
         StringBuilder sb = new StringBuilder();
