@@ -162,6 +162,16 @@ public class ProductController {
                 cartItemDto.setCustomDimensions(initialDimensions);
 
                 try {
+                    String configuratorJsonOutput = objectMapper.writeValueAsString(productConfiguratorDto);
+                    model.addAttribute("configuratorDtoJsonString", configuratorJsonOutput); // Správný název pro Thymeleaf
+                    logger.debug("[ProductController] Serialized productConfiguratorDto to JSON for JS: {}", configuratorJsonOutput);
+                } catch (JsonProcessingException e) {
+                    logger.error("[ProductController] Error serializing productConfiguratorDto to JSON for product ID {}: {}", product.getId(), e.getMessage(), e);
+                    model.addAttribute("configuratorDtoJsonString", "{}"); // Fallback na prázdný JSON objekt
+                    model.addAttribute("configuratorError", "Chyba při přípravě dat konfigurátoru pro JS.");
+                }
+
+                try {
                     priceForEvent = productService.calculateDynamicProductPrice(product, initialDimensions, currentCurrency);
                     priceForEvent = Optional.ofNullable(priceForEvent).orElse(BigDecimal.ZERO);
                     model.addAttribute("initialCustomPriceCZK", "CZK".equals(currentCurrency) ? priceForEvent : productService.calculateDynamicProductPrice(product, initialDimensions, "CZK"));

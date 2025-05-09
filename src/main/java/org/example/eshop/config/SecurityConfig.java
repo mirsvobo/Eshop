@@ -113,7 +113,7 @@ public class SecurityConfig {
 
     /**
      * Generuje řetězec s direktivami Content Security Policy.
-     * UPRAVENO: Přidány konkrétní domény pro Google Analytics a CCM do connect-src.
+     * UPRAVENO: Přidána doména pro Heureka Harvester do connect-src.
      * @return String s CSP direktivami.
      */
     private String getCspDirectives() {
@@ -124,9 +124,9 @@ public class SecurityConfig {
                 "https://code.jquery.com " +
                 "https://unpkg.com " +
                 "https://www.googletagmanager.com " +
-                "https://*.google-analytics.com " + // Povolení pro gtag.js a starší analytics.js
-                "https://*.analytics.google.com " +  // Novější endpointy pro GA4
-                "https://region1.analytics.google.com " + // << DŮLEŽITÉ PŘIDAT TOTO
+                "https://*.google-analytics.com " +
+                "https://*.analytics.google.com " +
+                "https://region1.analytics.google.com " +
                 "https://*.googleadservices.com " +
                 "https://googleads.g.doubleclick.net " +
                 "https://www.google.com " +
@@ -134,28 +134,27 @@ public class SecurityConfig {
                 "https://c.seznam.cz " +
                 "https://*.heureka.cz " +
                 "https://*.heureka.sk " +
-                "https://cdn.heureka.group " + // <-- PŘIDÁNO PRO HEUREKA SDK
-
+                "https://cdn.heureka.group " + // Povolení SDK skriptu
                 "https://im9.cz " +
-                "'unsafe-inline'; " + // unsafe-inline pro script-src je obecně nedoporučeno, ale může být potřeba kvůli GTM nebo inline skriptům. Zvažte použití nonce nebo hash, pokud je to možné.
+                "'unsafe-inline'; " + // Zvážit odstranění nebo nahrazení nonce/hash
 
-                "style-src 'self' 'unsafe-inline' " + // 'unsafe-inline' pro styly je často potřeba
+                "style-src 'self' 'unsafe-inline' " +
                 "https://cdn.jsdelivr.net " +
                 "https://fonts.googleapis.com " +
                 "https://www.googletagmanager.com; " +
 
-                "img-src 'self' data: " + // data: pro inline obrázky (např. SVG v CSS)
+                "img-src 'self' data: " +
                 "https://*.google-analytics.com " +
                 "https://*.analytics.google.com " +
                 "https://*.googletagmanager.com " +
-                "https://storage.googleapis.com " + // Pro obrázky z GCS
+                "https://storage.googleapis.com " +
                 "https://*.google.com " +
                 "https://*.google.cz " +
                 "https://*.google.es " +
                 "https://*.googleadservices.com " +
                 "https://stats.g.doubleclick.net " +
                 "https://googleads.g.doubleclick.net " +
-                "https://fonts.gstatic.com " + // Pro Google Fonts
+                "https://fonts.gstatic.com " +
                 "https://*.seznam.cz " +
                 "https://*.heureka.cz " +
                 "https://*.heureka.sk " +
@@ -166,30 +165,31 @@ public class SecurityConfig {
                 "https://fonts.gstatic.com; " +
 
                 "connect-src 'self' " + // Povolení spojení na vlastní doménu
-                "https://region1.analytics.google.com " + // << DŮLEŽITÉ PŘIDAT TOTO
-                "https://*.google-analytics.com " +       // Obecnější pro GA
-                "https://*.analytics.google.com " +       // Obecnější pro GA
-                "https://stats.g.doubleclick.net " +      // Pro Google Ads / GA
-                "https://www.google.com " +             // Pro CCM a jiné Google služby
-                "https://*.google.com " +               // Obecnější pro Google
+                "https://region1.analytics.google.com " +
+                "https://*.google-analytics.com " +
+                "https://*.analytics.google.com " +
+                "https://stats.g.doubleclick.net " +
+                "https://www.google.com " +
+                "https://*.google.com " +
                 "https://google.com " +
                 "https://*.google.cz " +
                 "https://*.google.es " +
                 "https://*.googleadservices.com " +
-                "https://*.googlesyndication.com " +    // Pro Google Ads
-                "https://*.seznam.cz " +                // Pro Sklik
-                "https://*.heureka.cz " +               // Pro Heureku
-                "https://*.heureka.sk; " +              // Pro Heureku
+                "https://*.googlesyndication.com " +
+                "https://*.seznam.cz " +
+                "https://*.heureka.cz " +
+                "https://*.heureka.sk " +
+                "https://harvester.ocm.heureka.group; " + // <-- PŘIDÁNO PRO HEUREKA Odesílání dat
 
-                "frame-src 'self' " + // Odkud lze vkládat iframy
-                "https://*.google.com " +               // Pro reCAPTCHA, Google Consent Mode dialogy
-                "https://td.doubleclick.net " +         // Pro Google Ads
-                "https://www.googletagmanager.com; " + // Pro GTM preview
+                "frame-src 'self' " +
+                "https://*.google.com " +
+                "https://td.doubleclick.net " +
+                "https://www.googletagmanager.com; " +
 
-                "object-src 'none'; " + // Zakázat <object>, <embed>, <applet>
-                "base-uri 'self'; " + // Omezit URL, které mohou být použity v <base> tagu
-                "form-action 'self'; " + // Odkud lze odesílat formuláře
-                "upgrade-insecure-requests; " + // Přesměrovat HTTP na HTTPS
-                "block-all-mixed-content;"; // Blokovat smíšený aktivní obsah
+                "object-src 'none'; " +
+                "base-uri 'self'; " +
+                "form-action 'self'; " +
+                "upgrade-insecure-requests; " +
+                "block-all-mixed-content;";
     }
 }

@@ -68,6 +68,23 @@
                     Krátký popis produktu zde...
                 </div>
 
+                <div class="product-dimensions mb-3" th:if="${product.length != null or product.width != null or product.height != null}">
+                    <h5>Rozměry</h5>
+                    <ul class="list-unstyled text-muted small">
+                        <li th:if="${product.length != null}">
+                            <strong>Šířka:</strong> <span th:text="${#numbers.formatDecimal(product.length, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
+                        </li>
+                        <li th:if="${product.width != null}">
+                            <strong>Hloubka:</strong> <span th:text="${#numbers.formatDecimal(product.width, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
+                        </li>
+                        <li th:if="${product.height != null}">
+                            <strong>Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
+                        </li>
+                        <li th:if="${product.roofOverstep != null}">
+                            <strong>Přesah:</strong> <span th:text="${product.roofOverstep}"></span>
+                        </li>
+                    </ul>
+                </div>
                 <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form"
                       th:attr="data-product-id=${product.id},
                         data-item-id=${product.customisable ? 'CUSTOM-' + product.id : 'STD-' + product.slug},
@@ -188,7 +205,6 @@
                             <p class="small mb-0" th:text="${design.name}"
                                style="max-width: 200px; overflow-wrap: break-word;">Název Designu</p></div>
                     </div>
-
                     <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                         <h4>Dostupné lazury</h4>
                         <div th:each="glaze : ${availableGlazes}" class="d-inline-block text-center me-2 mb-2">
@@ -199,7 +215,6 @@
                                style="max-width: 200px; overflow-wrap: break-word;">Název Lazury</p>
                         </div>
                     </div>
-
                     <div th:if="${availableRoofColors != null and !availableRoofColors.isEmpty()}" class="mb-4">
                         <h4>Barvy střešní krytiny</h4>
                         <div th:each="roofColor : ${availableRoofColors}" class="d-inline-block text-center me-2 mb-2">
@@ -213,6 +228,7 @@
                 </div>
             </div>
         </div>
+
         <div class="row">
             <div class="col-12">
                 <section class="advantages-section">
@@ -234,8 +250,8 @@
             </div>
         </div>
 
-    </div>
-</section>
+    </div> </section>
+
 <th:block layout:fragment="javascript">
     <script id="viewItemDataJson" type="application/json" th:utext="${viewItemDataJson}"></script>
 
