@@ -10,6 +10,7 @@ import org.example.eshop.dto.*;
 import org.example.eshop.dto.CheckoutFormDataDto.DeliveryAddressValidation;
 import org.example.eshop.dto.CheckoutFormDataDto.GuestValidation;
 import org.example.eshop.model.*;
+import org.example.eshop.repository.OrderRepository;
 import org.example.eshop.service.*;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
@@ -63,6 +64,8 @@ public class CheckoutController implements PriceConstants {
     private CurrencyService currencyService;
     @Autowired // <-- Přidat, pokud ještě není
     private ObjectMapper objectMapper;
+    @Autowired
+    private OrderRepository orderRepository;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -80,7 +83,6 @@ public class CheckoutController implements PriceConstants {
         Customer customer = null;
         CheckoutFormDataDto checkoutForm = (CheckoutFormDataDto) model.getAttribute("checkoutForm");
 
-        // Získání nebo inicializace formuláře (beze změny)
         if (checkoutForm == null) {
             checkoutForm = new CheckoutFormDataDto();
             if (userDetails != null) {
@@ -112,7 +114,6 @@ public class CheckoutController implements PriceConstants {
             log.debug("Using checkoutForm DTO from previous request (possibly after error).");
         }
 
-        // Přidání základních objektů do modelu (beze změny)
         model.addAttribute("checkoutForm", checkoutForm);
         model.addAttribute("customer", customer);
         model.addAttribute("cart", sessionCart);
@@ -120,7 +121,6 @@ public class CheckoutController implements PriceConstants {
         model.addAttribute("currency", currentCurrency);
         model.addAttribute("currencySymbol", EURO_CURRENCY.equals(currentCurrency) ? "€" : "Kč");
 
-        // Počáteční výpočet dopravy (beze změny)
         BigDecimal initialShippingCostNoTax = null;
         String initialShippingError = null;
         BigDecimal shippingTaxRate = new BigDecimal("0.21");
@@ -176,52 +176,72 @@ public class CheckoutController implements PriceConstants {
         model.addAttribute("originalShippingCostNoTax", initialShippingCostNoTax);
         model.addAttribute("shippingError", initialShippingError);
 
-        // Příprava souhrnu (beze změny)
         this.prepareCheckoutSummaryModel(model, customer, checkoutForm, currentCurrency, initialShippingCostNoTax, initialShippingError);
 
-        // === PŘÍPRAVA DAT PRO BEGIN_CHECKOUT JAKO JSON ===
+        // === PŘÍPRAVA DAT PRO BEGIN_CHECKOUT ===
         String checkoutDataJson = "null";
         if (sessionCart.hasItems()) {
+            Map<String, Object> ecommerceData = new HashMap<>(); // Přejmenováno z trackingDataMap na ecommerceData pro GA4 konvenci
             try {
-                Map<String, Object> trackingDataMap = new HashMap<>();
-                trackingDataMap.put("currency", currentCurrency);
-                // Hodnota košíku BEZ DPH a PO slevě
-                BigDecimal valueNoVat = sessionCart.calculateTotalPriceWithoutTaxAfterDiscount(currentCurrency);
-                trackingDataMap.put("value", valueNoVat); // Použijeme value pro GA4
-                trackingDataMap.put("value_no_vat", valueNoVat); // Explicitní pro GTM
+                ecommerceData.put("currency", currentCurrency);
+                // Pro begin_checkout se obvykle používá hodnota bez DPH celého košíku
+                // sessionCart.calculateSubtotal() vrací cenu bez DPH a bez slevy z kuponu
+                // Pokud chcete cenu po slevě (pokud je kupon jen na dopravu zdarma, je to OK), použijte calculateTotalPriceWithoutTaxAfterDiscount
+                BigDecimal cartValueNoVat = sessionCart.calculateSubtotal(currentCurrency).setScale(2, RoundingMode.HALF_UP);
+                ecommerceData.put("value", cartValueNoVat); // GA4 'value' pro begin_checkout je obvykle bez DPH
+
                 if (sessionCart.getAppliedCoupon() != null) {
-                    trackingDataMap.put("coupon", sessionCart.getAppliedCouponCode());
+                    ecommerceData.put("coupon", sessionCart.getAppliedCouponCode());
                 }
 
                 List<Map<String, Object>> itemsForTracking = sessionCart.getItemsList().stream()
                         .map(item -> {
                             Map<String, Object> map = new HashMap<>();
-                            BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(currentCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK();
+                            // item_id: Použijeme cartItemId, který je unikátní pro konfiguraci v košíku
                             map.put("item_id", item.getCartItemId());
                             map.put("item_name", item.getProductName());
-                            map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO));
+                            // price: Jednotková cena bez DPH
+                            BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(currentCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK();
+                            map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
                             map.put("quantity", item.getQuantity());
-                            map.put("item_brand", "Dřevníky Kolář");
-                            // map.put("item_category", "Dřevníky"); // Doplň dle potřeby
+
+                            // Brand a Category: Zjednodušené, protože CartItem je nemá přímo.
+                            // Pro přesnější data by bylo nutné je přidat do CartItem nebo zde donačíst Product.
+                            String brand = "Dřevníky Kolář"; // Výchozí
+                            String category = item.isCustom() ? "Dřevníky Na Míru" : "Dřevníky"; // Základní rozlišení
+                            // Příklad, jak by se to dalo řešit, pokud byste chtěli donačítat (může být pomalé):
+                            /*
+                            if (item.getProductId() != null) {
+                                Optional<Product> productOpt = productService.findById(item.getProductId());
+                                if (productOpt.isPresent()) {
+                                    Product p = productOpt.get();
+                                    if (StringUtils.hasText(p.getMaterial())) brand = p.getMaterial(); // Příklad
+                                    if (StringUtils.hasText(p.getModel())) category = p.getModel(); // Příklad
+                                }
+                            }
+                            */
+                            map.put("item_brand", brand);
+                            map.put("item_category", category);
                             return map;
                         })
                         .collect(Collectors.toList());
-                trackingDataMap.put("items", itemsForTracking);
+                ecommerceData.put("items", itemsForTracking);
 
+                Map<String, Object> finalPayload = Map.of("event", "begin_checkout", "ecommerce", ecommerceData);
 
-                checkoutDataJson = objectMapper.writeValueAsString(trackingDataMap);
-                log.debug("Prepared JSON data for begin_checkout tracking: {}", checkoutDataJson);
+                log.debug("[BEGIN_CHECKOUT] Data map BEFORE serialization: {}", finalPayload);
+                checkoutDataJson = objectMapper.writeValueAsString(finalPayload);
+                log.info("[BEGIN_CHECKOUT] Successfully serialized tracking data for checkout page.");
 
             } catch (JsonProcessingException e) {
-                log.error("Error serializing data for begin_checkout tracking: {}", e.getMessage(), e);
+                log.error("!!! Error serializing data for begin_checkout tracking: {} !!! Data map: {}", e.getMessage(), ecommerceData, e);
             } catch (Exception e) {
-                log.error("Unexpected error preparing data for begin_checkout tracking: {}", e.getMessage(), e);
+                log.error("!!! Unexpected error preparing data for begin_checkout tracking: {} !!! Data map: {}", e.getMessage(), ecommerceData, e);
             }
         } else {
             log.warn("Cart is empty, not generating begin_checkout tracking data.");
         }
-        model.addAttribute("checkoutDataJson", checkoutDataJson); // Přidání JSON stringu do modelu
-        // ===================================================
+        model.addAttribute("checkoutDataJson", checkoutDataJson); // Název atributu, který hledá JS
 
         log.info("Checkout page model prepared for {}. Currency: {}", userIdentifier, currentCurrency);
         return "pokladna";
@@ -230,7 +250,7 @@ public class CheckoutController implements PriceConstants {
     @PostMapping("/odeslat")
     @Transactional
     public String processCheckout(
-            @Validated({DefaultValidationGroup.class}) // Validujeme standardní skupinu
+            @Valid
             @ModelAttribute("checkoutForm") CheckoutFormDataDto checkoutForm,
             BindingResult bindingResult,
             @RequestParam(required = false) BigDecimal shippingCostNoTax,
@@ -239,21 +259,18 @@ public class CheckoutController implements PriceConstants {
             @AuthenticationPrincipal UserDetails userDetails,
             RedirectAttributes redirectAttributes) {
 
-        // Získáme principal bezpečně
         Principal principal = (userDetails != null) ? userDetails::getUsername : null;
         boolean isGuest = (principal == null);
-        // Získáme email pro logování (z DTO pro hosta, z principal pro přihlášeného)
         String userIdentifierForLog = isGuest
                 ? (checkoutForm.getEmail() != null ? checkoutForm.getEmail() : "GUEST")
                 : principal.getName();
         String orderCurrency = currencyService.getSelectedCurrency();
-        boolean applyReverseCharge = checkoutForm.isApplyReverseCharge(); // Získáme hodnotu z DTO
+        boolean applyReverseCharge = checkoutForm.isApplyReverseCharge();
         log.info("Processing checkout submission for {}: {} in currency: {}. Apply RC: {}", (isGuest ? "guest" : "user"), userIdentifierForLog, orderCurrency, applyReverseCharge);
 
         Customer customer = null;
-        Validator validator = customerService.getValidator(); // Získáme instanci validátoru
+        Validator validator = customerService.getValidator();
 
-        // --- Krok 1: Základní validace a validace emailu ---
         if (!isGuest) {
             checkoutForm.setEmail(principal.getName());
             log.debug("Set email in DTO from principal for logged-in user: {}", principal.getName());
@@ -266,7 +283,6 @@ public class CheckoutController implements PriceConstants {
             }
         }
 
-        // --- Krok 2: Validace dodací adresy (pokud je odlišná) ---
         if (!checkoutForm.isUseInvoiceAddressAsDelivery()) {
             if (validator != null) {
                 log.debug("Validating delivery address group...");
@@ -277,21 +293,45 @@ public class CheckoutController implements PriceConstants {
             }
         }
 
-        // --- Krok 3: Validace souhlasu s podmínkami ---
         if (!checkoutForm.isAgreeTerms()) {
             bindingResult.rejectValue("agreeTerms", "TermsNotAgreed", "Musíte souhlasit s obchodními podmínkami.");
         }
 
-        // --- Zpracování, pokud nastaly chyby validace ---
         if (bindingResult.hasErrors()) {
             log.warn("Checkout form validation failed for {}: {}", userIdentifierForLog, bindingResult.getAllErrors());
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
-            return "pokladna"; // Vrátíme formulář s chybami
+            // Přidání checkoutDataJson i při chybě, aby se JS mohl pokusit o trackování, pokud je to relevantní
+            // (i když by se mělo ideálně ošetřit, aby se nespouštělo znovu bez interakce)
+            String currentCheckoutDataJson = "null";
+            if (sessionCart.hasItems()) {
+                try {
+                    Map<String, Object> ecommerceDataOnError = new HashMap<>();
+                    ecommerceDataOnError.put("currency", orderCurrency);
+                    ecommerceDataOnError.put("value", sessionCart.calculateSubtotal(orderCurrency).setScale(2, RoundingMode.HALF_UP));
+                    List<Map<String, Object>> itemsOnError = sessionCart.getItemsList().stream().map(item -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("item_id", item.getCartItemId());
+                        map.put("item_name", item.getProductName());
+                        BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(orderCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK();
+                        map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+                        map.put("quantity", item.getQuantity());
+                        map.put("item_brand", "Dřevníky Kolář");
+                        map.put("item_category", item.isCustom() ? "Dřevníky Na Míru" : "Dřevníky");
+                        return map;
+                    }).collect(Collectors.toList());
+                    ecommerceDataOnError.put("items", itemsOnError);
+                    if (sessionCart.getAppliedCoupon() != null) ecommerceDataOnError.put("coupon", sessionCart.getAppliedCouponCode());
+                    Map<String, Object> finalPayloadOnError = Map.of("event", "begin_checkout", "ecommerce", ecommerceDataOnError);
+                    currentCheckoutDataJson = objectMapper.writeValueAsString(finalPayloadOnError);
+                } catch (Exception e) {
+                    log.error("Error re-generating checkoutDataJson on validation error: {}", e.getMessage());
+                }
+            }
+            model.addAttribute("checkoutDataJson", currentCheckoutDataJson);
+            return "pokladna";
         }
 
-        // --- Pokračování, pokud validace prošla ---
         try {
-            // Krok 4: Získání nebo vytvoření Customer entity
             if (isGuest) {
                 log.debug("Getting or creating guest customer.");
                 customer = customerService.getOrCreateGuestFromCheckoutData(checkoutForm);
@@ -310,14 +350,12 @@ public class CheckoutController implements PriceConstants {
                 }
             }
 
-            // Krok 5: Kontrola prázdného košíku
             if (!sessionCart.hasItems()) {
                 log.warn("User/guest {} submitted checkout form with an empty cart.", userIdentifierForLog);
                 redirectAttributes.addFlashAttribute("checkoutError", "Váš košík je prázdný. Objednávku nelze dokončit.");
                 return "redirect:/kosik";
             }
 
-            // Krok 6: Validace kupónu a ceny dopravy
             BigDecimal subtotalForCoupon = sessionCart.calculateSubtotal(orderCurrency);
             Coupon validatedCoupon = validateAndGetCoupon(sessionCart, customer, subtotalForCoupon, orderCurrency);
             boolean freeShippingApplied = (validatedCoupon != null && validatedCoupon.isFreeShipping());
@@ -339,7 +377,6 @@ public class CheckoutController implements PriceConstants {
                 log.info("Overriding shipping cost to ZERO due to free shipping coupon {}.", validatedCoupon.getCode());
             }
 
-            // Krok 7: Vytvoření požadavku na objednávku
             CreateOrderRequest orderRequest = new CreateOrderRequest();
             orderRequest.setCustomerId(customer.getId());
             orderRequest.setUseCustomerAddresses(true);
@@ -352,11 +389,9 @@ public class CheckoutController implements PriceConstants {
             List<CartItemDto> orderItemsDto = sessionCart.getItemsList().stream().map(this::mapCartItemToDto).collect(Collectors.toList());
             orderRequest.setItems(orderItemsDto);
 
-            // Krok 8: Vytvoření objednávky
             log.info("Attempting to create order with request: {}, Apply RC Flag: {}", orderRequest, applyReverseCharge);
             Order createdOrder = orderService.createOrder(orderRequest, applyReverseCharge);
 
-            // Ověření ceny (zůstává)
             BigDecimal roundedTotalToCompare = recalculateRoundedTotalForComparison(orderCurrency, finalShippingCostNoTax, finalShippingTax);
             if (createdOrder.getTotalPrice().compareTo(roundedTotalToCompare) != 0) {
                 log.warn("Mismatch between calculated rounded price ({}) and saved order price ({}) for order {}",
@@ -365,17 +400,14 @@ public class CheckoutController implements PriceConstants {
 
             log.info("Order {} successfully created with currency {} for {}: {}", createdOrder.getOrderCode(), orderCurrency, (isGuest ? "guest" : "user"), userIdentifierForLog);
 
-            // Krok 9: Vyčištění košíku a přesměrování
             sessionCart.clearCart();
             log.info("Session cart cleared for {}", userIdentifierForLog);
             redirectAttributes.addFlashAttribute("orderSuccess", "Vaše objednávka č. " + createdOrder.getOrderCode() + " byla úspěšně přijata. Děkujeme!");
 
-            // === ZAČÁTEK PŘIDÁNÍ PRO TRACKING ===
-            // Předáme celou objednávku a příznak, že se má měřit
-            redirectAttributes.addFlashAttribute("order", createdOrder);
+            // PŘIDÁNÍ PŘÍZNAKU pro sledování nákupu na stránce s poděkováním
             redirectAttributes.addFlashAttribute("orderJustCompleted", true);
-            log.debug("Added flash attributes 'order' and 'orderJustCompleted' for purchase tracking on confirmation page.");
-            // === KONEC PŘIDÁNÍ PRO TRACKING ===
+            // Kód objednávky se předává v URL, není potřeba ho dávat do flash atributů explicitně pro /dekujeme
+            log.debug("Added flash attribute 'orderJustCompleted' for purchase tracking on confirmation page for order {}.", createdOrder.getOrderCode());
 
             return "redirect:/pokladna/dekujeme?orderCode=" + createdOrder.getOrderCode();
 
@@ -385,6 +417,23 @@ public class CheckoutController implements PriceConstants {
                 bindingResult.rejectValue("email", "email.registered", e.getMessage());
             }
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
+            // Přidání checkoutDataJson i při chybě, aby se JS mohl pokusit o trackování, pokud je to relevantní
+            String currentCheckoutDataJsonOnError = "null";
+            if (sessionCart.hasItems()) {
+                try {
+                    Map<String, Object> ecommerceDataOnError = new HashMap<>();
+                    ecommerceDataOnError.put("currency", orderCurrency);
+                    ecommerceDataOnError.put("value", sessionCart.calculateSubtotal(orderCurrency).setScale(2, RoundingMode.HALF_UP));
+                    List<Map<String, Object>> itemsOnError = sessionCart.getItemsList().stream().map(item -> { /* ... stejné mapování jako výše ... */ Map<String, Object> map = new HashMap<>(); map.put("item_id", item.getCartItemId()); map.put("item_name", item.getProductName()); BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(orderCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK(); map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP)); map.put("quantity", item.getQuantity()); map.put("item_brand", "Dřevníky Kolář"); map.put("item_category", item.isCustom() ? "Dřevníky Na Míru" : "Dřevníky"); return map; }).collect(Collectors.toList());
+                    ecommerceDataOnError.put("items", itemsOnError);
+                    if (sessionCart.getAppliedCoupon() != null) ecommerceDataOnError.put("coupon", sessionCart.getAppliedCouponCode());
+                    Map<String, Object> finalPayloadOnError = Map.of("event", "begin_checkout", "ecommerce", ecommerceDataOnError);
+                    currentCheckoutDataJsonOnError = objectMapper.writeValueAsString(finalPayloadOnError);
+                } catch (Exception ex) {
+                    log.error("Error re-generating checkoutDataJson on validation error: {}", ex.getMessage());
+                }
+            }
+            model.addAttribute("checkoutDataJson", currentCheckoutDataJsonOnError);
             return "pokladna";
         } catch (IllegalStateException | EntityNotFoundException e) {
             log.error("Illegal state or entity not found during checkout for {}: {}", userIdentifierForLog, e.getMessage(), e);
@@ -395,6 +444,23 @@ public class CheckoutController implements PriceConstants {
             model.addAttribute("checkoutError", "Při zpracování objednávky nastala neočekávaná chyba.");
             model.addAttribute("checkoutErrorDetail", e.getMessage());
             this.prepareModelForError(model, principal, checkoutForm, orderCurrency, bindingResult);
+            // Přidání checkoutDataJson i při chybě
+            String currentCheckoutDataJsonOnError = "null";
+            if (sessionCart.hasItems()) { // ... stejná logika jako výše pro generování checkoutDataJson ...
+                try {
+                    Map<String, Object> ecommerceDataOnError = new HashMap<>();
+                    ecommerceDataOnError.put("currency", orderCurrency);
+                    ecommerceDataOnError.put("value", sessionCart.calculateSubtotal(orderCurrency).setScale(2, RoundingMode.HALF_UP));
+                    List<Map<String, Object>> itemsOnError = sessionCart.getItemsList().stream().map(item -> { /* ... stejné mapování jako výše ... */ Map<String, Object> map = new HashMap<>(); map.put("item_id", item.getCartItemId()); map.put("item_name", item.getProductName()); BigDecimal unitPriceNoVat = EURO_CURRENCY.equals(orderCurrency) ? item.getUnitPriceEUR() : item.getUnitPriceCZK(); map.put("price", Optional.ofNullable(unitPriceNoVat).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP)); map.put("quantity", item.getQuantity()); map.put("item_brand", "Dřevníky Kolář"); map.put("item_category", item.isCustom() ? "Dřevníky Na Míru" : "Dřevníky"); return map; }).collect(Collectors.toList());
+                    ecommerceDataOnError.put("items", itemsOnError);
+                    if (sessionCart.getAppliedCoupon() != null) ecommerceDataOnError.put("coupon", sessionCart.getAppliedCouponCode());
+                    Map<String, Object> finalPayloadOnError = Map.of("event", "begin_checkout", "ecommerce", ecommerceDataOnError);
+                    currentCheckoutDataJsonOnError = objectMapper.writeValueAsString(finalPayloadOnError);
+                } catch (Exception ex) {
+                    log.error("Error re-generating checkoutDataJson on validation error: {}", ex.getMessage());
+                }
+            }
+            model.addAttribute("checkoutDataJson", currentCheckoutDataJsonOnError);
             return "pokladna";
         }
     }
@@ -864,127 +930,138 @@ public class CheckoutController implements PriceConstants {
         }
     }
     @GetMapping("/dekujeme")
-    @Transactional(readOnly = true) // Přidáno readOnly = true
+    @Transactional(readOnly = true)
     public String showOrderConfirmationPage(@RequestParam String orderCode, Model model, RedirectAttributes redirectAttributes) {
         log.info("Displaying order confirmation page for order code: {}", orderCode);
-        Order order = null; // Initialize order to null
+        Order order;
 
-        // Zkusit získat order z Flash Attributes
-        if (model.containsAttribute("order")) {
+        // Získání orderJustCompleted z flash atributů (pokud existuje)
+        boolean justCompleted = model.containsAttribute("orderJustCompleted") && Boolean.TRUE.equals(model.getAttribute("orderJustCompleted"));
+        model.addAttribute("orderJustCompleted", justCompleted); // Předáme do modelu pro JS
+
+        if (justCompleted && model.containsAttribute("order")) {
+            // Tento blok se již nepoužije, protože 'order' objekt již nepředáváme přes flash atributy.
+            // Nechávám pro úplnost, ale je efektivnější vždy načítat.
             order = (Order) model.getAttribute("order");
-            log.debug("Order {} found in flash attributes.", orderCode);
+            log.debug("Order {} found in flash attributes (although not primary method anymore).", orderCode);
         }
-
-        // Pokud není ve Flash Attributes, zkusit načíst z DB
-        if (order == null) {
-            log.warn("Flash attribute 'order' not found for orderCode {}. Attempting to fetch from DB.", orderCode);
-            try {
-                // Použij metodu, která načte detaily včetně položek (findFullDetailByOrderCode)
-                // Nebo zajisti, že findOrderByCode načítá položky (např. @EntityGraph)
-                order = orderService.findOrderByCode(orderCode)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Objednávka s kódem '" + orderCode + "' nenalezena."));
-                log.info("Order {} fetched from DB for confirmation page view.", orderCode);
-                // Příznak 'orderJustCompleted' zde nebude, takže se měření nespustí (což je správně)
-                model.addAttribute("order", order); // Přidáme do modelu pro zobrazení
-            } catch(ResponseStatusException rse) {
-                log.warn("Order confirmation page requested for non-existent or inaccessible order code: {}", orderCode);
-                redirectAttributes.addFlashAttribute("errorMessage", rse.getReason());
-                return "redirect:/";
-            } catch (Exception e) {
-                log.error("Error fetching order for confirmation page (code {}): {}", orderCode, e.getMessage(), e);
-                redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazování potvrzení objednávky nastala chyba.");
-                return "redirect:/";
-            }
-        }
-
-        // Nyní by 'order' měl obsahovat platná data
-        if (order == null) {
-            log.error("CRITICAL: Order object is STILL null after checks for orderCode {}", orderCode);
-            redirectAttributes.addFlashAttribute("errorMessage", "Nastala kritická chyba při načítání objednávky.");
-            return "redirect:/";
-        }
-
 
         try {
-            // --- Explicitní inicializace kolekce pro jistotu ---
-            if (order.getOrderItems() != null && !Hibernate.isInitialized(order.getOrderItems())) {
-                try {
-                    Hibernate.initialize(order.getOrderItems());
-                    log.debug("Explicitly initialized orderItems for order code: {}", orderCode);
-                } catch (Exception initEx) {
-                    log.error("Error explicitly initializing orderItems for order {}: {}", orderCode, initEx.getMessage());
-                }
-            }
-
-            // --- PŘÍPRAVA DAT PRO TRACKING JAKO MAPA ---
-            Map<String, Object> trackingDataMap = new HashMap<>();
-            trackingDataMap.put("transaction_id", order.getOrderCode());
-            trackingDataMap.put("value", order.getTotalPrice()); // Celková cena s DPH
-            trackingDataMap.put("currency", order.getCurrency());
-            trackingDataMap.put("tax", order.getTotalTax());
-            trackingDataMap.put("shipping", Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO).add(Optional.ofNullable(order.getShippingTax()).orElse(BigDecimal.ZERO)));
-            // Hodnota bez DPH a bez dopravy (subtotal po slevě)
-            trackingDataMap.put("value_no_vat", Optional.ofNullable(order.getSubTotalWithoutTax()).orElse(BigDecimal.ZERO).subtract(Optional.ofNullable(order.getCouponDiscountAmount()).orElse(BigDecimal.ZERO)).max(BigDecimal.ZERO));
-            trackingDataMap.put("shipping_no_vat", Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO));
-            trackingDataMap.put("customer_email", order.getCustomer() != null ? order.getCustomer().getEmail() : null);
-
-            List<Map<String, Object>> gaItems = new ArrayList<>();
-            List<Map<String, Object>> heurekaItems = new ArrayList<>();
-
-            if (order.getOrderItems() != null) {
-                for (OrderItem item : order.getOrderItems()) {
-                    if (item == null) continue;
-                    // GA4 items (cena bez DPH)
-                    Map<String, Object> gaItem = new HashMap<>();
-                    gaItem.put("item_id", StringUtils.hasText(item.getSku()) ? item.getSku() : ("VAR-" + item.getId()));
-                    gaItem.put("item_name", item.getProductName());
-                    gaItem.put("price", Optional.ofNullable(item.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO));
-                    gaItem.put("quantity", item.getCount());
-                    gaItems.add(gaItem);
-
-                    // Heureka items (cena s DPH)
-                    Map<String, Object> heurekaItem = new HashMap<>();
-                    heurekaItem.put("itemId", StringUtils.hasText(item.getSku()) ? item.getSku() : ("VAR-" + item.getId()));
-                    heurekaItem.put("name", item.getProductName() + (StringUtils.hasText(item.getVariantInfo()) ? " (" + item.getVariantInfo().replace("|", ", ") + ")" : ""));
-                    heurekaItem.put("priceVat", Optional.ofNullable(item.getUnitPriceWithTax()).orElse(BigDecimal.ZERO));
-                    heurekaItem.put("quantity", item.getCount());
-                    heurekaItems.add(heurekaItem);
-                }
-            } else {
-                log.warn("Order {} items collection is null, tracking items will be empty.", orderCode);
-            }
-
-            trackingDataMap.put("items", gaItems);
-            trackingDataMap.put("heureka_items", heurekaItems);
-
-            // --- PŘEVOD MAPY NA JSON STRING ---
-            String orderDataJson = "null";
-            try {
-                orderDataJson = objectMapper.writeValueAsString(trackingDataMap);
-                model.addAttribute("orderDataJson", orderDataJson); // Přidáme JSON do modelu
-                log.debug("Serialized orderDataForTracking to JSON for order {}", orderCode);
-            } catch (JsonProcessingException e) {
-                log.error("!!! Failed to serialize orderDataForTracking to JSON for order {}: {}", orderCode, e.getMessage(), e);
-                model.addAttribute("orderDataJson", "null"); // Pass null string to template on error
-            }
-
-            // Příznak pro JS, zda se jedná o první zobrazení po dokončení
-            // Zkontrolujeme, zda přišel flash atribut a podle toho nastavíme model atribut
-            boolean justCompleted = model.containsAttribute("orderJustCompleted");
-            model.addAttribute("orderJustCompleted", justCompleted); // Přidáme boolean hodnotu
-            if (justCompleted) {
-                log.debug("Flag 'orderJustCompleted' found in flash attributes for order {}.", orderCode);
-            } else {
-                log.debug("Flag 'orderJustCompleted' NOT found for order {}. Purchase tracking script will not be rendered.", orderCode);
-            }
-
-            model.addAttribute("order", order); // Objekt objednávky stále přidáváme pro zobrazení v HTML
-
-            return "objednavka-potvrzeni";
-
+            // Vždy načteme objednávku z DB pomocí orderCode z URL pro aktuálnost a načtení všech potřebných detailů.
+            // Použijeme metodu, která zaručí načtení i OrderItems a Productů v nich.
+            // Vaše repozitory metoda 'findFullDetailByOrderCode' by měla být vhodná.
+            order = orderRepository.findFullDetailByOrderCode(orderCode)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Objednávka s kódem '" + orderCode + "' nenalezena."));
+            log.info("Order {} fetched from DB for confirmation page view.", orderCode);
+        } catch (ResponseStatusException rse) {
+            log.warn("Order confirmation page requested for non-existent or inaccessible order code: {}", orderCode);
+            redirectAttributes.addFlashAttribute("errorMessage", rse.getReason());
+            return "redirect:/";
         } catch (Exception e) {
-            log.error("Error preparing order confirmation page for code {}: {}", orderCode, e.getMessage(), e);
+            log.error("Error fetching order for confirmation page (code {}): {}", orderCode, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Při zobrazování potvrzení objednávky nastala chyba.");
             return "redirect:/";
         }
-    }   }
+        model.addAttribute("order", order); // Přidáme načtenou objednávku do modelu
+
+        // --- PŘÍPRAVA DAT PRO PURCHASE TRACKING ---
+        String purchaseDataJson = "null"; // Přejmenováno z orderDataJson na purchaseDataJson
+        if (justCompleted) { // Data pro tracking generujeme jen pokud byla objednávka právě dokončena
+            Map<String, Object> ecommerceData = new HashMap<>(); // Přejmenováno z trackingDataMap
+            try {
+                ecommerceData.put("transaction_id", order.getOrderCode());
+                ecommerceData.put("value", order.getTotalPrice().setScale(2, RoundingMode.HALF_UP)); // Celková cena S DPH
+                ecommerceData.put("currency", order.getCurrency());
+                ecommerceData.put("tax", Optional.ofNullable(order.getTotalTax()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+
+                BigDecimal shippingWithTax = (Optional.ofNullable(order.getShippingCostWithoutTax()).orElse(BigDecimal.ZERO))
+                        .add(Optional.ofNullable(order.getShippingTax()).orElse(BigDecimal.ZERO))
+                        .setScale(2, RoundingMode.HALF_UP);
+                ecommerceData.put("shipping", shippingWithTax);
+
+                // value_no_vat: Celková cena objednávky bez DPH (položky po slevě + doprava bez DPH)
+                // Order entita má totalPriceWithoutTax, které by mělo být (subTotalWithoutTax - couponDiscountAmount) + shippingCostWithoutTax
+                ecommerceData.put("value_no_vat", Optional.ofNullable(order.getTotalPriceWithoutTax()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+
+                if (StringUtils.hasText(order.getAppliedCouponCode())) {
+                    ecommerceData.put("coupon", order.getAppliedCouponCode());
+                }
+                ecommerceData.put("customer_email", order.getCustomer() != null ? order.getCustomer().getEmail() : null);
+
+                List<Map<String, Object>> gaItems = new ArrayList<>();
+                List<Map<String, Object>> heurekaItemsForDL = new ArrayList<>(); // Přejmenováno pro konzistenci s klíčem
+
+                if (order.getOrderItems() != null) {
+                    for (OrderItem item : order.getOrderItems()) {
+                        if (item == null) continue;
+                        Product product = item.getProduct(); // Předpokládá se, že je načtený díky findFullDetailByOrderCode
+
+                        // Item ID
+                        String itemId;
+                        if (product != null && StringUtils.hasText(product.getSlug())) {
+                            itemId = (item.isCustomConfigured() ? "CUSTOM-" : "STD-") + product.getSlug();
+                        } else if (StringUtils.hasText(item.getSku())) {
+                            itemId = item.getSku();
+                        } else {
+                            itemId = "ITEM_ID_" + item.getId(); // Fallback
+                        }
+
+                        // Brand & Category
+                        String brand = "Dřevníky Kolář"; // Výchozí
+                        String category = item.isCustomConfigured() ? "Dřevníky Na Míru" : "Dřevníky";
+                        if (product != null) {
+                            // Zde můžete použít např. product.getMaterial() nebo product.getModel() pokud slouží jako brand/category
+                            // Např. if (StringUtils.hasText(product.getSomeBrandField())) brand = product.getSomeBrandField();
+                            // Např. if (StringUtils.hasText(product.getSomeCategoryField())) category = product.getSomeCategoryField();
+                        }
+
+                        // GA4 item
+                        Map<String, Object> gaItem = new HashMap<>();
+                        gaItem.put("item_id", itemId);
+                        gaItem.put("item_name", item.getProductName());
+                        gaItem.put("price", Optional.ofNullable(item.getUnitPriceWithoutTax()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP)); // Cena bez DPH
+                        gaItem.put("quantity", item.getCount());
+                        gaItem.put("item_brand", brand);
+                        gaItem.put("item_category", category);
+                        gaItems.add(gaItem);
+
+                        // Heureka item
+                        Map<String, Object> heurekaItem = new HashMap<>();
+                        heurekaItem.put("ITEM_ID", itemId); // Pro Heureku také unikátní ID
+                        heurekaItem.put("PRODUCTNAME", item.getProductName() + (StringUtils.hasText(item.getVariantInfo()) ? " (" + item.getVariantInfo().replace("|", ", ") + ")" : ""));
+                        // Heureka může vyžadovat cenu s DPH, OrderItem má unitPriceWithTax
+                        heurekaItem.put("PRICE_VAT", Optional.ofNullable(item.getUnitPriceWithTax()).orElse(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+                        heurekaItem.put("QUANTITY", item.getCount());
+                        heurekaItemsForDL.add(heurekaItem);
+                    }
+                } else {
+                    log.warn("Order {} items collection is null during purchase tracking data preparation.", orderCode);
+                }
+
+                ecommerceData.put("items", gaItems); // Pro GA4
+                ecommerceData.put("heureka_items_dl", heurekaItemsForDL); // Pro Heureku (dle vašeho JS)
+
+                Map<String, Object> finalPayload = Map.of("event", "purchase", "ecommerce", ecommerceData);
+
+                log.debug("[PURCHASE] Data map BEFORE serialization for order {}: {}", orderCode, finalPayload);
+                purchaseDataJson = objectMapper.writeValueAsString(finalPayload);
+                log.info("[PURCHASE] Successfully serialized purchase tracking data for order {}", orderCode);
+
+            } catch (JsonProcessingException e) {
+                log.error("!!! Failed to serialize purchaseDataJson to JSON for order {}: {} !!! Data map: {}", orderCode, e.getMessage(), ecommerceData, e);
+            } catch (Exception e) {
+                log.error("!!! Unexpected error preparing data for purchase tracking for order {}: {} !!! Data map: {}", orderCode, e.getMessage(), ecommerceData, e);
+            }
+        } else {
+            log.info("[PURCHASE] Order {} is not 'just completed'. Purchase data will not be generated.", orderCode);
+        }
+        model.addAttribute("purchaseDataJson", purchaseDataJson); // PŘEJMENOVÁNO
+
+        if (justCompleted) {
+            log.debug("Flag 'orderJustCompleted' found in flash attributes for order {}.", orderCode);
+        } else {
+            log.debug("Flag 'orderJustCompleted' NOT found for order {}. Purchase tracking JS flag will be false.", orderCode);
+        }
+
+        return "objednavka-potvrzeni";
+    } }

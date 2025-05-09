@@ -83,12 +83,12 @@
     </div>
     <div class="row mb-3">
       <div class="col-md-3">
-        <label for="length" class="form-label">Standardní Délka (cm):</label>
+        <label for="length" class="form-label">Standardní Šířka (cm):</label>
         <input type="number" step="0.01" min="0" class="form-control" id="length" th:field="*{length}">
         <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('length')}" th:errors="*{length}"></div>
       </div>
       <div class="col-md-3">
-        <label for="width" class="form-label">Standardní Šířka/Hloubka (cm):</label>
+        <label for="width" class="form-label">Standardní Hloubka (cm):</label>
         <input type="number" step="0.01" min="0" class="form-control" id="width" th:field="*{width}">
         <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('width')}" th:errors="*{width}"></div>
       </div>

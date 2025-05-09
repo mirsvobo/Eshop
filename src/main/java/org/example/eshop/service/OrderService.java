@@ -644,7 +644,7 @@ public class OrderService implements PriceConstants {
 
             // Přidání rozměrů
             if (itemDto.getCustomDimensions() != null && !itemDto.getCustomDimensions().isEmpty()) {
-                variantSb.append("|Rozměry (DxHxV): ") // Používáme '|' jako oddělovač pro snadné nahrazení <br/> v Thymeleaf
+                variantSb.append("|Rozměry (ŠxHxV): ") // Používáme '|' jako oddělovač pro snadné nahrazení <br/> v Thymeleaf
                         .append(itemDto.getCustomDimensions().get("length") != null ? itemDto.getCustomDimensions().get("length").stripTrailingZeros().toPlainString() : "?")
                         .append("x")
                         .append(itemDto.getCustomDimensions().get("width") != null ? itemDto.getCustomDimensions().get("width").stripTrailingZeros().toPlainString() : "?")

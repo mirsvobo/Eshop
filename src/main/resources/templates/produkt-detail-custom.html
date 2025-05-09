@@ -35,7 +35,12 @@
         </div>
 
         <form th:action="@{/kosik/pridat}" method="post" id="custom-product-form" class="needs-validation" novalidate
-              th:object="${cartItemDto}">
+              th:object="${cartItemDto}"
+              th:attr="data-product-id=${product.id},
+               data-item-id='CUSTOM-' + ${product.id},
+               data-product-name=${product.name},
+               data-product-brand=${brandName},
+               data-product-category='Dřevníky Na Míru'">
 
             <input type="hidden" name="isCustom" value="true"/>
             <input type="hidden" name="productId" th:value="${product.id}"/>
@@ -56,7 +61,7 @@
                         <h4>1. Zadejte rozměry (v cm)</h4>
                         <div class="mb-3">
                             <label for="length" class="form-label dimension-slider-label">
-                                <span>Délka:</span>
+                                <span>Šířka</span>
                                 <span class="dimension-value"><span id="lengthValue"
                                                                     th:text="${product.configurator.defaultLength ?: product.configurator.minLength}">0</span> cm</span>
                             </label>
@@ -72,7 +77,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="width" class="form-label dimension-slider-label">
-                                <span>Šířka (Hloubka):</span>
+                                <span>Hloubka</span>
                                 <span class="dimension-value"><span id="widthValue"
                                                                     th:text="${product.configurator.defaultWidth ?: product.configurator.minWidth}">0</span> cm</span>
                             </label>
@@ -352,183 +357,143 @@
     </div>
 </section>
 <th:block layout:fragment="javascript">
+    <script th:src="@{/js/product-configurator.js}"></script>
+    <script id="viewItemDataJson" type="application/json" th:utext="${viewItemDataJson}"></script>
 
-    <script defer th:src="@{/js/product-configurator.js}"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("[CUSTOM] DOMContentLoaded.");
 
-    <script> // Odebráno th:inline="javascript"
-    /*<![CDATA[*/
+            // --- Track View Item ---
+            function trackCustomViewItem() {
+                console.log("[CUSTOM] Funkce trackCustomViewItem spuštěna.");
+                const jsonDataElement = document.getElementById('viewItemDataJson');
+                if (jsonDataElement) {
+                    try {
+                        const eventPayload = JSON.parse(jsonDataElement.textContent);
+                        const viewItemDataForService = eventPayload?.ecommerce?.items?.[0];
 
-    // Načtení a parsování JSON dat pro view_item
-    const viewItemJsonString = /*[[${viewItemDataJson}]]*/ null;
-    let productDataForTracking = null; // Objekt pro data produktu (z view_item)
-    let currentCustomPriceNoVat = 0.0; // Globální proměnná pro aktuální cenu
-    let currentCustomPriceWithVat = 0.0;
-
-    if (viewItemJsonString && viewItemJsonString !== 'null') {
-        try {
-            const fullEventData = JSON.parse(viewItemJsonString);
-            if (fullEventData && fullEventData.ecommerce && Array.isArray(fullEventData.ecommerce.items) && fullEventData.ecommerce.items.length > 0) {
-                productDataForTracking = fullEventData.ecommerce.items[0];
-                productDataForTracking.currency = fullEventData.ecommerce.currency;
-                // Nastavení počáteční ceny pro dynamickou aktualizaci
-                currentCustomPriceNoVat = productDataForTracking.price != null ? parseFloat(productDataForTracking.price) : 0.0;
-                // Můžeme si uložit i počáteční cenu s DPH, pokud byla v JSONu
-                // currentCustomPriceWithVat = productDataForTracking.priceWithVat != null ? parseFloat(productDataForTracking.priceWithVat) : 0.0;
-                console.log("[CUSTOM] Parsed productDataForTracking from JSON:", productDataForTracking);
-                console.log("[CUSTOM] Initial currentCustomPriceNoVat set to:", currentCustomPriceNoVat);
-            } else {
-                console.error("[CUSTOM] Parsed JSON has incorrect structure:", fullEventData);
+                        if (viewItemDataForService && viewItemDataForService.item_id) {
+                            const trackingData = {
+                                item_id: viewItemDataForService.item_id,
+                                item_name: viewItemDataForService.item_name,
+                                price: viewItemDataForService.price, // Počáteční cena bez DPH
+                                currency: eventPayload.ecommerce.currency || 'CZK',
+                                item_brand: viewItemDataForService.item_brand,
+                                item_category: viewItemDataForService.item_category
+                            };
+                            console.log('[CUSTOM] Volám trackViewItem přes executeTrackingWhenReady s daty:', trackingData);
+                            executeTrackingWhenReady(
+                                () => window.trackingService.trackViewItem(trackingData),
+                                'trackViewItem (Custom)'
+                            );
+                        } else {
+                            console.error('[CUSTOM] ecommerce data nebo item_id nebyly nalezeny v JSON payloadu pro view_item.');
+                        }
+                    } catch (e) {
+                        console.error('[CUSTOM] Chyba při parsování JSON pro viewItem nebo volání executeTrackingWhenReady:', e);
+                    }
+                } else {
+                    console.warn('[CUSTOM] Element s JSON daty pro viewItem (#viewItemDataJson) nebyl nalezen.');
+                }
             }
-        } catch (e) {
-            console.error("[CUSTOM] Error parsing viewItemDataJson:", e, viewItemJsonString);
-        }
-    } else {
-        console.warn("[CUSTOM] viewItemDataJson was null or empty from model.");
-    }
 
+            const addToCartFormCustom = document.getElementById('custom-product-form');
+            if (addToCartFormCustom) {
+                console.log('[CUSTOM] Připojuji listener pro add_to_cart.');
+                addToCartFormCustom.addEventListener('submit', function(event) {
+                    console.log('[CUSTOM] Add to Cart form submitted.');
 
-    // Inicializace konfigurátoru daty z controlleru (zůstává)
-    const initData = {
-        formSelector: '#custom-product-form',
-        calculatePriceUrl: /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price',
-        currency: /*[[${currentGlobalCurrency}]]*/ 'CZK',
-        csrfToken: /*[[${_csrf?.token}]]*/ null,
-        csrfHeaderName: /*[[${_csrf?.headerName}]]*/ null,
-        productId: /*[[${product.id}]]*/ null,
-        configuratorData: /*[[${configuratorDto}]]*/ null
-    };
+                    const productId = addToCartFormCustom.dataset.productId;
+                    const productName = addToCartFormCustom.dataset.productName;
+                    const brand = addToCartFormCustom.dataset.productBrand || "Dřevníky Kolář";
+                    const category = addToCartFormCustom.dataset.productCategory || "Dřevníky Na Míru"; // Specifická kategorie
+                    const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK'; // Z Thymeleafu
+                    const quantityInput = addToCartFormCustom.querySelector('input[name="quantity"]');
+                    const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
 
-    // --- Tracking view_item ---
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("[CUSTOM] DOM Ready: Attempting to track view_item.");
-        // Inicializace konfigurátoru
-        if (typeof initializeConfigurator === 'function' && initData.configuratorData) {
-            initializeConfigurator(initData); // Může volat updateTrackingPrices
-        } else {
-            console.error("[CUSTOM] Configurator init failed. See previous errors.");
-            // Zde můžete případně zobrazit chybu uživateli
-        }
+                    const priceDisplayElement = document.getElementById('calculatedPrice'); // Předpokládáme, že toto ID existuje
+                    const priceString = priceDisplayElement ? priceDisplayElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.') : '0';
+                    const price = parseFloat(priceString);
 
-        // Odeslání view_item
-        if (productDataForTracking && typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
-            TrackingService.trackViewItem(productDataForTracking);
-        } else {
-            if (!productDataForTracking) console.error("[CUSTOM] productDataForTracking not available for view_item.");
-            if (typeof TrackingService === 'undefined' || typeof TrackingService.trackViewItem !== 'function') console.error("[CUSTOM] TrackingService.trackViewItem not available.");
-        }
+                    const length = document.getElementById('lengthInput')?.value;
+                    const width = document.getElementById('widthInput')?.value;
+                    const height = document.getElementById('heightInput')?.value;
+                    const designId = document.getElementById('designSelect')?.value;
+                    const glazeId = document.getElementById('glazeSelect')?.value;
+                    const roofColorId = document.getElementById('roofColorSelect')?.value;
+                    let variantId = `CUSTOM-${productId}_L${length}_W${width}_H${height}_D${designId}_G${glazeId}_RC${roofColorId}`;
+                    const selectedAddons = Array.from(document.querySelectorAll('.addon-select'))
+                        .map(s => s.value)
+                        .filter(v => v && v !== '0')
+                        .sort()
+                        .join(',');
+                    if (selectedAddons) {
+                        variantId += `_ADNS[${selectedAddons}]`;
+                    }
 
-        // Inicializace tooltipů (zůstává)
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
+                    if (productId && productName && !isNaN(price)) {
+                        const cartData = {
+                            item_id: variantId,
+                            item_name: productName + " (na míru)",
+                            price: price,
+                            currency: currency,
+                            quantity: quantity,
+                            item_brand: brand,
+                            item_category: category
+                        };
+                        console.log('[CUSTOM] Volám trackAddToCart přes executeTrackingWhenReady s daty:', cartData);
+                        executeTrackingWhenReady(
+                            () => window.trackingService.trackAddToCart(cartData),
+                            'trackAddToCart (Custom)'
+                        );
+                    } else {
+                        console.error('[CUSTOM] Nepodařilo se získat všechna data pro trackAddToCart.', { productId, productName, price });
+                    }
+                });
+            } else {
+                console.warn('[CUSTOM] Formulář pro přidání do košíku (#custom-product-form) nebyl nalezen.');
+            }
+
+            const configuratorDtoElement = document.getElementById('configuratorDtoJson');
+            if (typeof initializeConfigurator === 'function' && configuratorDtoElement) {
+                try {
+                    const configuratorData = JSON.parse(configuratorDtoElement.textContent);
+                    const csrfToken = /*[[${_csrf?.token}]]*/ null;
+                    const csrfHeader = /*[[${_csrf?.headerName}]]*/ null;
+                    const apiUrl = /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price';
+                    const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK';
+                    const productId = /*[[${product.id}]]*/ null;
+
+                    console.log("[CUSTOM] Inicializuji product-configurator.js...");
+                    initializeConfigurator({
+                        formSelector: '#custom-product-form',
+                        calculatePriceUrl: apiUrl,
+                        currency: currency,
+                        csrfToken: csrfToken,
+                        csrfHeaderName: csrfHeader,
+                        productId: productId,
+                        configuratorData: configuratorData
+                    });
+                } catch(e) {
+                    console.error("[CUSTOM] Chyba při inicializaci product-configurator.js:", e);
+                    const errorDiv = document.getElementById('customPriceErrorDisplay');
+                    if (errorDiv) {
+                        errorDiv.textContent = 'Chyba inicializace konfigurátoru. Obnovte stránku.';
+                        errorDiv.style.display = 'block';
+                    }
+                }
+            } else {
+                console.error("[CUSTOM] Funkce initializeConfigurator() nebo data konfigurátoru nebyly nalezeny!");
+            }
+
+            trackCustomViewItem();
+
         });
-    });
-
-    // --- Globální funkce pro aktualizaci ceny (volaná z product-configurator.js) ---
-    function updateTrackingPrices(newPriceNoVat, newPriceWithVat) {
-        if (newPriceNoVat != null) {
-            currentCustomPriceNoVat = parseFloat(newPriceNoVat) || 0.0; // Aktualizace globální proměnné
-            console.log('[TRACKING UPDATE] Updated currentCustomPriceNoVat:', currentCustomPriceNoVat);
-        }
-        // Můžeme ukládat i cenu s DPH, pokud ji potřebujeme
-        // if (newPriceWithVat != null) {
-        //    currentCustomPriceWithVat = parseFloat(newPriceWithVat) || 0.0;
-        //    console.log('[TRACKING UPDATE] Updated currentCustomPriceWithVat:', currentCustomPriceWithVat);
-        // }
-    }
-
-    // --- Tracking add_to_cart ---
-    const addToCartFormCustom = document.getElementById('custom-product-form');
-    const quantityInputCustom = document.getElementById('quantity');
-
-    if (addToCartFormCustom && quantityInputCustom) {
-        addToCartFormCustom.addEventListener('submit', function (event) {
-            if (typeof prepareFormDataBeforeSubmit === 'function') {
-                prepareFormDataBeforeSubmit(); // Synchronizace addonů do hidden inputů
-            } else {
-                console.warn("[CUSTOM] prepareFormDataBeforeSubmit function not found.");
-            }
-
-            if (!productDataForTracking) {
-                console.error("[CUSTOM] Cannot track add_to_cart: productDataForTracking is not available.");
-                return;
-            }
-
-            const quantity = parseInt(quantityInputCustom.value) || 1;
-            const priceNoVat = currentCustomPriceNoVat; // <-- Použijeme AKTUÁLNÍ cenu bez DPH
-            const currency = productDataForTracking.currency;
-            let variantId = productDataForTracking.item_id; // Začneme se základním ID z view_item
-
-            // Pokus o vytvoření detailnějšího variantId
-            try {
-                const length = document.getElementById('lengthInput')?.value;
-                const width = document.getElementById('widthInput')?.value;
-                const height = document.getElementById('heightInput')?.value;
-                const design = document.getElementById('designSelect')?.selectedOptions[0]?.text.split(' ')[0];
-                const glaze = document.getElementById('glazeSelect')?.selectedOptions[0]?.text.split(' ')[0];
-                const roof = document.getElementById('roofColorSelect')?.selectedOptions[0]?.text.split(' ')[0];
-                variantId = `CUSTOM-${productDataForTracking.id}-L${length}-W${width}-H${height}-D${design}-G${glaze}-R${roof}`;
-            } catch (e) {
-                console.error("Error creating detailed variantId:", e);
-            }
-
-
-            const productName = productDataForTracking.item_name;
-            const categoryName = productDataForTracking.item_category;
-            const brandName = productDataForTracking.item_brand;
-
-            if (priceNoVat == null || priceNoVat <= 0) {
-                console.warn("[CUSTOM] trackAddToCart: Price is zero, null or invalid. Check configuration/calculation. Price:", priceNoVat);
-            }
-
-            const itemDataForAddToCart = {
-                item_id: variantId, // Použijeme detailnější ID, pokud se podařilo sestavit
-                item_name: productName,
-                price: priceNoVat, // Aktuální cena BEZ DPH
-                currency: currency,
-                quantity: quantity,
-                item_brand: brandName,
-                item_category: categoryName
-                // Můžeš přidat i variant string s popisem konfigurace
-            };
-
-            console.log("[CUSTOM] Add to Cart submit. Tracking data:", itemDataForAddToCart);
-
-            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
-                TrackingService.trackAddToCart(itemDataForAddToCart);
-            } else {
-                console.error("[CUSTOM] TrackingService or trackAddToCart not available.");
-            }
-        });
-        console.log("[CUSTOM] Event listener for trackAddToCart attached to custom form.");
-    } else {
-        if (!addToCartFormCustom) console.error("[CUSTOM] Add to Cart form (#custom-product-form) not found.");
-        if (!quantityInputCustom) console.error("[CUSTOM] Quantity input (#quantity) not found.");
-    }
-
-    // Logování JSON-LD (zůstává)
-    document.addEventListener('DOMContentLoaded', () => {
-        try {
-            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
-            if (schemaDataElement && schemaDataElement.textContent) {
-                const jsonData = JSON.parse(schemaDataElement.textContent);
-                console.log("--- Schema.org Product Data (JSON-LD) ---");
-                console.dir(jsonData);
-                console.log("--- Konec Schema.org ---");
-            } else {
-                console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
-            }
-        } catch (e) {
-            console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
-            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
-            if (schemaDataElement) {
-                console.error("Původní JSON-LD string:", schemaDataElement.textContent);
-            }
-        }
-    });
-    /*]]>*/
+        /*]]>*/
     </script>
-
 </th:block>
+
 </body>
 </html>

@@ -78,7 +78,7 @@
                         <option value="PER_CM_WIDTH">Cena za cm šířky/hloubky</option>
                         <option value="PER_CM_LENGTH">Cena za cm délky</option>
                         <option value="PER_CM_HEIGHT">Cena za cm výšky</option>
-                        <option value="PER_SQUARE_METER">Cena za m² (délka * šířka/hloubka)</option>
+                        <option value="PER_SQUARE_METER">Cena za m² (šířka * hloubka)</option>
                     </select>
                     <div th:if="${#fields.hasErrors('pricingType')}" class="invalid-feedback" th:errors="*{pricingType}">Chyba typu ceny</div>
                 </div>

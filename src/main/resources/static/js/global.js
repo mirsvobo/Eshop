@@ -1,1 +1,111 @@
-document.addEventListener("DOMContentLoaded",function(){console.log("[Global JS] DOMContentLoaded.");const e=document.getElementById("page-loader");e?(console.log("[Global JS] Page loader found."),window.addEventListener("load",function(){console.log("[Global JS] Window 'load' event fired. Hiding loader."),e.classList.add("hidden")}),setTimeout(()=>{e.classList.contains("hidden")||(console.warn("[Global JS] Loader timeout reached. Forcing hide."),e.classList.add("hidden"))},5e3)):console.warn("[Global JS] Page loader element '#page-loader' not found.")});
+// Soubor: /js/global.js
+// Verze v4 - Funkce pro explicitní pokus o spuštění z cookie-config.js
+
+document.addEventListener("DOMContentLoaded",function(){
+    console.log("[Global JS V4] DOMContentLoaded.");
+    const loader = document.getElementById("page-loader");
+    if(loader){
+        loader.classList.add("hidden"); // Skryjeme hned na začátku
+        console.log("[Global JS V4] Page loader hidden immediately on DOMContentLoaded.");
+    } else {
+        console.warn("[Global JS V4] Page loader element '#page-loader' not found.");
+    }
+});
+
+window.isTrackingServiceReady = false;
+window.isConsentProcessed = false;
+window.waitingTrackingActions = window.waitingTrackingActions || [];
+
+let consentProcessedListenerAttached = false;
+
+// TUTO FUNKCI BUDE VOLAT cookie-config.js
+window.attemptToTriggerTrackingActions = function(source) {
+    const isDebug = !!(window.trackingService && typeof window.trackingService.debugMode === 'boolean' && window.trackingService.debugMode);
+    if (isDebug) {
+        console.log(`[Helper V4] attemptToTriggerTrackingActions called from: ${source}. States: TrackingReady=${window.isTrackingServiceReady}, ConsentProcessed=${window.isConsentProcessed}`);
+    }
+    triggerWaitingTrackingActions();
+}
+
+function triggerWaitingTrackingActions() {
+    const isDebug = !!(window.trackingService && typeof window.trackingService.debugMode === 'boolean' && window.trackingService.debugMode);
+    if (window.isTrackingServiceReady && window.isConsentProcessed) {
+        if (window.waitingTrackingActions.length > 0) {
+            if (isDebug) console.log(`[Helper V4] Podmínky splněny. Spouštím ${window.waitingTrackingActions.length} čekajících akcí.`);
+            while (window.waitingTrackingActions.length > 0) {
+                const item = window.waitingTrackingActions.shift();
+                if (isDebug) console.log(`[Helper V4] Spouštím z fronty: ${item.name}`);
+                try {
+                    if (window.trackingService && typeof window.trackingService === 'object') {
+                        item.action();
+                    } else {
+                        console.error(`[Helper V4] TrackingService zmizela nebo není objekt před spuštěním ${item.name} z fronty! Typ: ${typeof window.trackingService}`);
+                    }
+                } catch (error) {
+                    console.error(`[Helper V4] Chyba při provádění ${item.name} z fronty:`, error);
+                }
+            }
+            if (isDebug) console.log('[Helper V4] Fronta čekajících akcí vyprázdněna.');
+        }
+    } else {
+        if (isDebug) {
+            console.log(`[Helper V4] Podmínky pro spuštění fronty zatím nesplněny: TrackingReady=${window.isTrackingServiceReady}, ConsentProcessed=${window.isConsentProcessed}`);
+        }
+    }
+}
+
+function handleConsentProcessed(event) {
+    const detail = event.detail || {};
+    const isDebug = !!(window.trackingService && typeof window.trackingService.debugMode === 'boolean' && window.trackingService.debugMode);
+    if(isDebug) console.log('[Helper V4] Událost "consentProcessed" přijata:', detail);
+    window.isConsentProcessed = true;
+    if (detail.status !== 'success') {
+        console.warn(`[Helper V4] Proces souhlasu byl dokončen se stavem '${detail.status}'. Chyba: ${detail.error || 'Nespecifikována'}`);
+    }
+    // Po zpracování souhlasu zavoláme pokus o spuštění akcí
+    window.attemptToTriggerTrackingActions('handleConsentProcessed');
+}
+
+function executeTrackingWhenReady(trackingAction, actionName = 'Nespecifikovaná akce') {
+    const isDebug = !!(window.trackingService && typeof window.trackingService.debugMode === 'boolean' && window.trackingService.debugMode);
+    if (isDebug) {
+        console.log(`[Helper V4] Požadavek na spuštění: ${actionName}. Stav: TrackingReady=${window.isTrackingServiceReady}, ConsentProcessed=${window.isConsentProcessed}`);
+    }
+
+    if (window.isTrackingServiceReady && window.isConsentProcessed) {
+        if (isDebug) console.log(`[Helper V4] Spouštím ihned: ${actionName}`);
+        try {
+            if (window.trackingService && typeof window.trackingService === 'object') {
+                trackingAction();
+            } else {
+                console.error(`[Helper V4] TrackingService není k dispozici (nebo není objekt) pro ${actionName}! Typ: ${typeof window.trackingService}`);
+            }
+        } catch (error) {
+            console.error(`[Helper V4] Chyba při provádění ${actionName}:`, error);
+        }
+        return;
+    }
+
+    if (isDebug) console.log(`[Helper V4] Zařazuji do fronty: ${actionName}`);
+    window.waitingTrackingActions.push({ action: trackingAction, name: actionName });
+
+    if (!consentProcessedListenerAttached && !window.isConsentProcessed) {
+        if (isDebug) console.log('[Helper V4] Připojuji listener pro "consentProcessed".');
+        document.addEventListener('consentProcessed', handleConsentProcessed);
+        consentProcessedListenerAttached = true;
+    } else if (isDebug && consentProcessedListenerAttached && !window.isConsentProcessed) {
+        if (isDebug) console.log('[Helper V4] Listener pro "consentProcessed" již byl připojen, čekám na událost.');
+    }
+}
+
+// Timeout pro logování, pokud se něco zaseklo
+setTimeout(() => {
+    if (!window.isTrackingServiceReady || !window.isConsentProcessed) {
+        const isDebug = !!(window.trackingService && typeof window.trackingService.debugMode === 'boolean' && window.trackingService.debugMode);
+        if (isDebug || window.waitingTrackingActions.length > 0) {
+            console.warn(`[Helper V4 Timeout 7s] Podmínky stále nesplněny. Stav: TrackingReady=${window.isTrackingServiceReady}, ConsentProcessed=${window.isConsentProcessed}. Čekající akce: ${window.waitingTrackingActions.length}`);
+        }
+    }
+}, 7000);
+
+// --- Konec souboru global.js ---

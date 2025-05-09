@@ -46,7 +46,7 @@ public class ProductConfigurator {
     private BigDecimal stepHeight = BigDecimal.valueOf(5); // Výchozí krok 5 (0.5 cm)
 
     @Column(precision = 10, scale = 2)
-    private BigDecimal defaultLength; // Výchozí délka (může být null, použije se min)
+    private BigDecimal defaultLength; // Výchozí Šířka (může být null, použije se min)
     @Column(precision = 10, scale = 2)
     private BigDecimal defaultWidth;  // Výchozí hloubka
     @Column(precision = 10, scale = 2)

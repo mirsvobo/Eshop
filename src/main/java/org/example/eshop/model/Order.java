@@ -1,5 +1,6 @@
 package org.example.eshop.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -62,6 +63,7 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     // LAZY načítání položek
     @OrderBy("id ASC") // Řazení položek podle ID
+    @JsonManagedReference
     private List<OrderItem> orderItems;
     @ManyToOne(fetch = FetchType.LAZY) // LAZY načítání stavu
     @JoinColumn(name = "order_state_id", nullable = false)

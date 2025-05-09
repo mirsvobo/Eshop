@@ -394,7 +394,7 @@ public class CustomerService {
         Customer customer = customerRepository.findById(token.getCustomer().getId())
                 .orElseThrow(() -> new EntityNotFoundException("Zákazník asociovaný s tokenem nenalezen (ID: " + token.getCustomer().getId() + ")."));
 
-        // Validace nového hesla (např. minimální délka dle DTO nebo jiných pravidel)
+        // Validace nového hesla (např. minimální Šířka dle DTO nebo jiných pravidel)
         if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) { // Předpoklad min délky 6
             throw new IllegalArgumentException("Nové heslo nesplňuje požadavky na délku nebo je prázdné.");
         }

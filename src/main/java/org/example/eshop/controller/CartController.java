@@ -132,150 +132,123 @@ public class CartController implements PriceConstants {
         return "kosik";
     }
 
-    // ====================================================================
-    // === Add to Cart Method - UPRAVENO PRO TEST S @RequestParam ===
-    // ====================================================================
     @PostMapping("/pridat")
     public String addToCart(@ModelAttribute("cartItemDto") @Valid CartItemDto cartItemDto,
-                            // ----- ZAČÁTEK ZMĚNY -----
-                            @RequestParam(name = "isCustom", defaultValue = "false") boolean isCustomParam, // Explicitní parametr
-                            // ----- KONEC ZMĚNY -----
                             BindingResult bindingResult,
                             RedirectAttributes redirectAttributes,
-                            HttpServletRequest request) { // Přidán HttpServletRequest pro logování
+                            HttpServletRequest request) {
 
-        // Logování surových parametrů (pro budoucí debug)
-        java.util.Map<String, String[]> paramMap = request.getParameterMap();
-        log.debug("Raw request parameters: {}", paramMap.entrySet().stream()
-                .map(e -> e.getKey() + "=" + Arrays.toString(e.getValue()))
-                .collect(Collectors.joining(", ")));
+        // Logování surových parametrů pro lepší debug
+        if (log.isDebugEnabled()) {
+            Map<String, String[]> paramMap = request.getParameterMap();
+            String paramsString = paramMap.entrySet().stream()
+                    .map(e -> e.getKey() + "=" + Arrays.toString(e.getValue()))
+                    .collect(Collectors.joining(", "));
+            log.debug("addToCart - Raw request parameters: [{}]", paramsString);
+        }
 
-        // ----- ZAČÁTEK ZMĚNY -----
-        // Ručně nastavíme hodnotu 'isCustom' v DTO podle parametru
-        cartItemDto.setCustom(isCustomParam);
-        // ----- KONEC ZMĚNY -----
+        // Explicitní čtení parametru 'isCustom' z requestu pro zajištění správné hodnoty
+        String isCustomParam = request.getParameter("isCustom");
+        boolean isCustomFromRequest = "true".equalsIgnoreCase(isCustomParam);
+        cartItemDto.setCustom(isCustomFromRequest); // Nastavíme hodnotu do DTO
 
-        log.info("--- addToCart START --- Cart hash: {}", this.sessionCart.hashCode());
-        // Tento log teď ukáže hodnotu *po* manuálním nastavení
-        log.debug("Received CartItemDto (after manual 'isCustom' set): {}", cartItemDto);
+        log.info("--- addToCart START --- Cart hash: {}. CartItemDto.isCustom (z requestu): {}",
+                this.sessionCart.hashCode(), cartItemDto.isCustom());
+        log.debug("Přijaté CartItemDto: {}", cartItemDto);
 
-        // ---- KROK 1: Standardní validace pomocí @Valid ----
         if (bindingResult.hasErrors()) {
             String errors = bindingResult.getAllErrors().stream()
                     .map(e -> ((e instanceof FieldError fe) ? fe.getField() + ": " : "") + e.getDefaultMessage())
                     .collect(Collectors.joining("; "));
-            log.warn("Binding/Validation errors adding to cart (from @Valid): {}", errors);
-
+            log.warn("Chyby validace při přidávání do košíku (z @Valid): {}", errors);
             String productSlugForRedirect = getProductSlugForRedirect(cartItemDto.getProductId());
             prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Chyba validace: Zkontrolujte zadané údaje.");
             return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty";
         }
 
-        // ---- KROK 2: Načtení produktu a manuální validace ----
         String productSlugForRedirect = null;
-        Product product = null;
-        TaxRate selectedTaxRate = null;
-        Design selectedDesign = null;
-        Glaze selectedGlaze = null;
-        RoofColor selectedRoofColor = null;
+        Product product;
+        TaxRate selectedTaxRate;
+        Design selectedDesign = null; // Inicializovat na null
+        Glaze selectedGlaze = null;   // Inicializovat na null
+        RoofColor selectedRoofColor = null; // Inicializovat na null
 
         try {
-            // Načtení produktu
             product = productService.getProductById(cartItemDto.getProductId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produkt nenalezen: " + cartItemDto.getProductId()));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produkt nenalezen: ID " + cartItemDto.getProductId()));
             productSlugForRedirect = product.getSlug();
 
-            // Kontrola aktivity produktu
             if (!product.isActive()) {
-                log.warn("Attempted to add inactive product ID {} to cart.", product.getId());
+                log.warn("Pokus o přidání neaktivního produktu ID {} do košíku.", product.getId());
                 prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Produkt '" + product.getName() + "' není aktivní a nelze jej přidat do košíku.");
                 return "redirect:/produkt/" + productSlugForRedirect;
             }
 
-            // Tento log nyní ukáže správnou hodnotu díky manuálnímu nastavení výše
-            log.info("Processing Cart Item: isCustom = {}", cartItemDto.isCustom());
+            log.info("Zpracovávám položku košíku: isCustom v DTO = {}", cartItemDto.isCustom());
 
             // Načtení a validace TaxRate (povinné pro všechny)
             if (cartItemDto.getSelectedTaxRateId() == null) {
                 bindingResult.rejectValue("selectedTaxRateId", "NotNull", "Daňová sazba musí být vybrána.");
-                throw new IllegalArgumentException("Chybí ID vybrané daňové sazby."); // Vyhodíme výjimku, protože je to chyba
+                throw new IllegalArgumentException("Chybí ID vybrané daňové sazby.");
             }
             selectedTaxRate = taxRateRepository.findById(cartItemDto.getSelectedTaxRateId())
-                    .orElseThrow(() -> new EntityNotFoundException("Daňová sazba nenalezena: " + cartItemDto.getSelectedTaxRateId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Daňová sazba nenalezena: ID " + cartItemDto.getSelectedTaxRateId()));
             Set<TaxRate> availableRates = product.getAvailableTaxRates();
-            if (availableRates == null || availableRates.isEmpty() || !availableRates.contains(selectedTaxRate)) {
-                log.error("Selected TaxRate ID {} ('{}') is not available for Product ID {}", selectedTaxRate.getId(), selectedTaxRate.getName(), product.getId());
+            if (CollectionUtils.isEmpty(availableRates) || !availableRates.contains(selectedTaxRate)) {
+                log.error("Vybraná daňová sazba ID {} ('{}') není pro produkt ID {} povolena.", selectedTaxRate.getId(), selectedTaxRate.getName(), product.getId());
                 prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Vybraná daňová sazba '" + selectedTaxRate.getName() + "' není pro produkt '" + product.getName() + "' povolena.");
                 return "redirect:/produkt/" + productSlugForRedirect;
             }
 
-            // Manuální validace ID atributů a rozměrů POUZE pokud je custom
-            if (cartItemDto.isCustom()) { // Tento if teď bude fungovat správně
-                boolean manualValidationError = false;
-                // Kontrola ID Designu
-                if (cartItemDto.getSelectedDesignId() == null) {
-                    bindingResult.rejectValue("selectedDesignId", "NotNull", "Design musí být vybrán.");
-                    manualValidationError = true;
-                } else {
-                    selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId())
-                            .orElseThrow(() -> new EntityNotFoundException("Design nenalezen: ID " + cartItemDto.getSelectedDesignId()));
+            // Validace atributů a rozměrů podle typu produktu
+            if (cartItemDto.isCustom()) {
+                // Zde ověříme, zda produkt v DB je skutečně custom
+                if (!product.isCustomisable()) {
+                    log.error("NESROVNALOST TYPU: Produkt ID {} (DB: standard) byl přidán jako CUSTOM. DTO.isCustom={}", product.getId(), cartItemDto.isCustom());
+                    prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Chyba: Produkt '" + product.getName() + "' nelze konfigurovat na míru tímto způsobem.");
+                    return "redirect:/produkt/" + productSlugForRedirect;
                 }
-                // Kontrola ID Glaze
-                if (cartItemDto.getSelectedGlazeId() == null) {
-                    bindingResult.rejectValue("selectedGlazeId", "NotNull", "Lazura musí být vybrána.");
-                    manualValidationError = true;
-                } else {
-                    selectedGlaze = glazeRepository.findById(cartItemDto.getSelectedGlazeId())
-                            .orElseThrow(() -> new EntityNotFoundException("Lazura nenalezena: ID " + cartItemDto.getSelectedGlazeId()));
+                log.debug("Produkt ID {} je CUSTOM, validuji custom atributy.", product.getId());
+                // Kontrola povinných atributů pro custom produkt
+                if (cartItemDto.getSelectedDesignId() == null) bindingResult.rejectValue("selectedDesignId", "NotNull", "Design musí být vybrán.");
+                if (cartItemDto.getSelectedGlazeId() == null) bindingResult.rejectValue("selectedGlazeId", "NotNull", "Lazura musí být vybrána.");
+                if (cartItemDto.getSelectedRoofColorId() == null) bindingResult.rejectValue("selectedRoofColorId", "NotNull", "Barva střechy musí být vybrána.");
+                if (cartItemDto.getCustomDimensions() == null ||
+                        cartItemDto.getCustomDimensions().get("length") == null ||
+                        cartItemDto.getCustomDimensions().get("width") == null ||
+                        cartItemDto.getCustomDimensions().get("height") == null) {
+                    bindingResult.reject("customDimensions.required", "Rozměry (Šířka, šířka, výška) jsou pro produkt na míru povinné.");
                 }
-                // Kontrola ID RoofColor
-                if (cartItemDto.getSelectedRoofColorId() == null) {
-                    bindingResult.rejectValue("selectedRoofColorId", "NotNull", "Barva střechy musí být vybrána.");
-                    manualValidationError = true;
-                } else {
-                    selectedRoofColor = roofColorRepository.findById(cartItemDto.getSelectedRoofColorId())
-                            .orElseThrow(() -> new EntityNotFoundException("Barva střechy nenalezena: ID " + cartItemDto.getSelectedRoofColorId()));
-                }
-                // Kontrola rozměrů
-                if (cartItemDto.getCustomDimensions() == null
-                        || cartItemDto.getCustomDimensions().get("length") == null
-                        || cartItemDto.getCustomDimensions().get("width") == null
-                        || cartItemDto.getCustomDimensions().get("height") == null) {
-                    bindingResult.reject("customDimensions.required", "Rozměry (délka, šířka, výška) jsou pro produkt na míru povinné.");
-                    manualValidationError = true;
-                }
-
-                if (manualValidationError) {
-                    log.warn("Manual validation failed for custom product attributes or dimensions.");
+                if (bindingResult.hasErrors()) { // Znovu zkontrolujeme chyby po manuální validaci
+                    log.warn("Manuální validace selhala pro custom produkt ID {}", product.getId());
                     prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Prosím, vyberte všechny povinné atributy a zadejte rozměry pro produkt na míru.");
                     return "redirect:/produkt/" + productSlugForRedirect;
                 }
-            } else {
-                // Pro standardní produkt také musíme načíst atributy
-                if (cartItemDto.getSelectedDesignId() != null) {
-                    selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId())
-                            .orElseThrow(() -> new EntityNotFoundException("Design nenalezen (Standard): ID " + cartItemDto.getSelectedDesignId()));
-                } else {
-                    bindingResult.rejectValue("selectedDesignId", "NotNull", "Design musí být vybrán (Standard).");
-                    throw new IllegalArgumentException("Chybí ID designu pro standardní produkt.");
+                selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId()).orElseThrow(() -> new EntityNotFoundException("Design nenalezen"));
+                selectedGlaze = glazeRepository.findById(cartItemDto.getSelectedGlazeId()).orElseThrow(() -> new EntityNotFoundException("Lazura nenalezena"));
+                selectedRoofColor = roofColorRepository.findById(cartItemDto.getSelectedRoofColorId()).orElseThrow(() -> new EntityNotFoundException("Barva střechy nenalezena"));
+            } else { // Standardní produkt
+                // Zde ověříme, zda produkt v DB je skutečně standardní
+                if (product.isCustomisable()) {
+                    log.error("NESROVNALOST TYPU: Produkt ID {} (DB: custom) byl přidán jako STANDARD. DTO.isCustom={}", product.getId(), cartItemDto.isCustom());
+                    prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Chyba: Produkt '" + product.getName() + "' je třeba nakonfigurovat na míru.");
+                    return "redirect:/produkt/" + productSlugForRedirect; // Nebo lépe na /produkt/na-miru
                 }
-                if (cartItemDto.getSelectedGlazeId() != null) {
-                    selectedGlaze = glazeRepository.findById(cartItemDto.getSelectedGlazeId())
-                            .orElseThrow(() -> new EntityNotFoundException("Lazura nenalezena (Standard): ID " + cartItemDto.getSelectedGlazeId()));
-                } else {
-                    bindingResult.rejectValue("selectedGlazeId", "NotNull", "Lazura musí být vybrána (Standard).");
-                    throw new IllegalArgumentException("Chybí ID lazury pro standardní produkt.");
-                }
-                if (cartItemDto.getSelectedRoofColorId() != null) {
-                    selectedRoofColor = roofColorRepository.findById(cartItemDto.getSelectedRoofColorId())
-                            .orElseThrow(() -> new EntityNotFoundException("Barva střechy nenalezena (Standard): ID " + cartItemDto.getSelectedRoofColorId()));
-                } else {
-                    bindingResult.rejectValue("selectedRoofColorId", "NotNull", "Barva střechy musí být vybrána (Standard).");
-                    throw new IllegalArgumentException("Chybí ID barvy střechy pro standardní produkt.");
-                }
-            }
+                log.debug("Produkt ID {} je STANDARD, validuji standardní atributy.", product.getId());
+                // Kontrola povinných atributů pro standardní produkt
+                if (cartItemDto.getSelectedDesignId() == null) bindingResult.rejectValue("selectedDesignId", "NotNull", "Design musí být vybrán.");
+                if (cartItemDto.getSelectedGlazeId() == null) bindingResult.rejectValue("selectedGlazeId", "NotNull", "Lazura musí být vybrána.");
+                if (cartItemDto.getSelectedRoofColorId() == null) bindingResult.rejectValue("selectedRoofColorId", "NotNull", "Barva střechy musí být vybrána.");
 
-            // ---- KROK 3: Pokračování se zpracováním položky ----
+                if (bindingResult.hasErrors()) {
+                    log.warn("Manuální validace selhala pro standardní produkt ID {}", product.getId());
+                    prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Prosím, vyberte všechny varianty produktu.");
+                    return "redirect:/produkt/" + productSlugForRedirect;
+                }
+                selectedDesign = designRepository.findById(cartItemDto.getSelectedDesignId()).orElseThrow(() -> new EntityNotFoundException("Design nenalezen"));
+                selectedGlaze = glazeRepository.findById(cartItemDto.getSelectedGlazeId()).orElseThrow(() -> new EntityNotFoundException("Lazura nenalezena"));
+                selectedRoofColor = roofColorRepository.findById(cartItemDto.getSelectedRoofColorId()).orElseThrow(() -> new EntityNotFoundException("Barva střechy nenalezena"));
+            }
 
             // Vytvoření CartItem
             CartItem cartItem = new CartItem();
@@ -284,9 +257,8 @@ public class CartController implements PriceConstants {
             cartItem.setProductSlug(product.getSlug());
             cartItem.setImageUrl(!product.getImagesOrdered().isEmpty() ? product.getImagesOrdered().getFirst().getUrl() : "/images/placeholder.png");
             cartItem.setQuantity(cartItemDto.getQuantity());
-            cartItem.setCustom(cartItemDto.isCustom()); // <-- Použij hodnotu z DTO (nyní opravenou)
+            cartItem.setCustom(cartItemDto.isCustom());
 
-            // Nastavení načtených atributů
             cartItem.setSelectedDesignId(selectedDesign.getId());
             cartItem.setSelectedDesignName(selectedDesign.getName());
             cartItem.setSelectedGlazeId(selectedGlaze.getId());
@@ -295,31 +267,25 @@ public class CartController implements PriceConstants {
             cartItem.setSelectedRoofColorName(selectedRoofColor.getName());
             cartItem.setSelectedTaxRateId(selectedTaxRate.getId());
             cartItem.setSelectedTaxRateValue(selectedTaxRate.getRate());
-            cartItem.setSelectedIsReverseCharge(selectedTaxRate.isReverseCharge()); // Store original RC flag
+            cartItem.setSelectedIsReverseCharge(selectedTaxRate.isReverseCharge());
             log.debug("Applied Tax Rate {}% (RC from TaxRate entity: {})", selectedTaxRate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2), selectedTaxRate.isReverseCharge());
 
-            // Výpočet ceny a nastavení dalších atributů
             List<AddonDto> processedAddons = new ArrayList<>();
             BigDecimal unitPriceCZK;
             BigDecimal unitPriceEUR;
             String currency = currencyService.getSelectedCurrency();
 
             if (cartItem.isCustom()) {
-                // Tento blok by se měl nyní spustit pro custom produkt
-                log.info("Processing CUSTOM product path for product ID: {}", product.getId());
+                log.debug("Cesta pro CUSTOM produkt ID: {}", product.getId()); // Změněný log
                 if (product.getConfigurator() == null) {
                     throw new IllegalStateException("Produkt '" + product.getName() + "' je konfigurovatelný, ale chybí data konfigurátoru.");
                 }
                 Map<String, BigDecimal> dimensionsMap = cartItemDto.getCustomDimensions();
-                // Validace rozměrů už proběhla výše
-
                 BigDecimal lengthCm = dimensionsMap.get("length");
                 BigDecimal widthCm = dimensionsMap.get("width");
                 BigDecimal heightCm = dimensionsMap.get("height");
 
-                // Vytvoření requestu pro detailní výpočet ceny
                 CustomPriceRequestDto priceRequest = getCustomPriceRequestDto(cartItemDto, product, dimensionsMap);
-                // Zavolání servisní metody pro detailní cenu
                 CustomPriceResponseDto priceResponse = productService.calculateDetailedCustomPrice(priceRequest);
 
                 if (StringUtils.hasText(priceResponse.getErrorMessage())) {
@@ -328,15 +294,13 @@ public class CartController implements PriceConstants {
                     return "redirect:/produkt/" + product.getSlug();
                 }
 
-                // Získání celkové ceny z response
                 unitPriceCZK = Optional.ofNullable(priceResponse.getTotalPriceCZK()).orElse(BigDecimal.ZERO);
                 unitPriceEUR = Optional.ofNullable(priceResponse.getTotalPriceEUR()).orElse(BigDecimal.ZERO);
 
-                // Nastavení rozměrů a zpracování addonů
                 cartItem.setLength(lengthCm);
                 cartItem.setWidth(widthCm);
                 cartItem.setHeight(heightCm);
-                cartItem.setCustomDimensions(dimensionsMap); // Uložíme mapu pro CartItem ID a variantInfo
+                cartItem.setCustomDimensions(dimensionsMap);
                 List<Long> selectedAddonIds = cartItemDto.getSelectedAddonIds();
                 if (selectedAddonIds != null && !selectedAddonIds.isEmpty()) {
                     Set<Long> addonIdSet = new HashSet<>(selectedAddonIds);
@@ -353,28 +317,26 @@ public class CartController implements PriceConstants {
                             AddonDto addonDto = new AddonDto();
                             addonDto.setAddonId(dbAddon.getId());
                             addonDto.setAddonName(dbAddon.getName());
-                            addonDto.setQuantity(1); // Předpokládáme množství 1 pro addony přidávané zde
+                            addonDto.setQuantity(1);
                             processedAddons.add(addonDto);
                         } else {
-                            log.warn("Requested addon ID {} is invalid/inactive/not allowed for product {}. Skipping.", addonId, product.getId());
+                            log.warn("Požadovaný doplněk ID {} je neplatný/neaktivní/není povolen pro produkt {}. Přeskakuji.", addonId, product.getId());
                         }
                     }
                 } else {
-                    log.debug("[processCartItem] No addons selected for custom item.");
+                    log.debug("Pro custom položku nebyly vybrány žádné doplňky.");
                 }
                 cartItem.setSelectedAddons(processedAddons);
-                // Nastavení dalších custom příznaků z DTO
                 cartItem.setCustomRoofOverstep(cartItemDto.getCustomRoofOverstep());
                 cartItem.setCustomHasDivider(cartItemDto.isCustomHasDivider());
                 cartItem.setCustomHasGutter(cartItemDto.isCustomHasGutter());
                 cartItem.setCustomHasGardenShed(cartItemDto.isCustomHasGardenShed());
 
             } else { // Standardní produkt
-                log.error("Chyba: Produkt ID {} je custom, ale zpracovává se jako standardní!", product.getId()); // Měli bychom sem logicky dojít jen pokud selže oprava
-                // Zde by byla logika pro standardní produkt, pokud by to nebyl custom
-                // V tomto případě by ale měla metoda skončit chybou výše, nebo bude cena 0
+                log.debug("Cesta pro STANDARD produkt ID: {}", product.getId()); // Změněný log
                 BigDecimal baseUnitPriceCZK = Optional.ofNullable(product.getBasePriceCZK()).orElse(BigDecimal.ZERO);
                 BigDecimal baseUnitPriceEUR = Optional.ofNullable(product.getBasePriceEUR()).orElse(BigDecimal.ZERO);
+
                 BigDecimal attributeSurchargeCZK = BigDecimal.ZERO
                         .add(Optional.ofNullable(selectedDesign.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO))
                         .add(Optional.ofNullable(selectedGlaze.getPriceSurchargeCZK()).orElse(BigDecimal.ZERO))
@@ -398,17 +360,14 @@ public class CartController implements PriceConstants {
                 cartItem.setCustomHasGardenShed(false);
             }
 
-            // Nastavení finálních jednotkových cen (již zahrnují bázi, atributy, addony)
             cartItem.setUnitPriceCZK(unitPriceCZK.setScale(PRICE_SCALE, ROUNDING_MODE));
             cartItem.setUnitPriceEUR(unitPriceEUR.setScale(PRICE_SCALE, ROUNDING_MODE));
-            log.debug("Final unit prices set for CartItem: CZK={}, EUR={}", cartItem.getUnitPriceCZK(), cartItem.getUnitPriceEUR());
+            log.debug("Finální jednotkové ceny pro CartItem: CZK={}, EUR={}", cartItem.getUnitPriceCZK(), cartItem.getUnitPriceEUR());
 
-            // Sestavení variantInfo
             String variantInfo = buildVariantInfoString(cartItem, selectedDesign, selectedGlaze, selectedRoofColor);
             cartItem.setVariantInfo(variantInfo);
-            log.debug("Built variant info: {}", variantInfo);
+            log.debug("Sestavené variant info: {}", variantInfo);
 
-            // Generování ID položky košíku
             String generatedCartItemId = CartItem.generateCartItemId(
                     cartItem.getProductId(), cartItem.isCustom(),
                     cartItem.getSelectedDesignId(), cartItem.getSelectedDesignName(),
@@ -420,25 +379,23 @@ public class CartController implements PriceConstants {
                     cartItem.getSelectedAddons()
             );
             cartItem.setCartItemId(generatedCartItemId);
-            log.debug("Generated Cart Item ID: {}", generatedCartItemId);
+            log.debug("Vygenerované Cart Item ID: {}", generatedCartItemId);
 
-            // Přidání do košíku
             this.sessionCart.addItem(cartItem);
-            log.info("--- addToCart END --- Item added/updated. Cart hash: {}, Items count: {}", this.sessionCart.hashCode(), this.sessionCart.getItemCount());
+            log.info("--- addToCart END --- Položka přidána/aktualizována. Cart hash: {}, Počet položek: {}", this.sessionCart.hashCode(), this.sessionCart.getItemCount());
             redirectAttributes.addFlashAttribute("cartSuccess", "Produkt '" + product.getName() + "' byl přidán do košíku.");
-            return "redirect:/kosik"; // Přesměrování do košíku po úspěchu
+            return "redirect:/kosik";
 
         } catch (ResponseStatusException | EntityNotFoundException e) {
-            log.warn("Error adding item to cart (Product ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage());
+            log.warn("Chyba při přidávání položky do košíku (Produkt ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage());
             prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Chyba: " + e.getMessage());
-            // Pokud slug nebyl načten před chybou, přesměrujeme obecně
             return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty";
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Configuration or state error adding item (Product ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage());
+            log.warn("Chyba konfigurace nebo stavu při přidávání položky (Produkt ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage());
             prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Nepodařilo se přidat produkt do košíku: " + e.getMessage());
             return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty";
         } catch (Exception e) {
-            log.error("Unexpected error adding item to cart (Product ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage(), e);
+            log.error("Neočekávaná chyba při přidávání položky do košíku (Produkt ID: {}): {}", (cartItemDto != null ? cartItemDto.getProductId() : "null"), e.getMessage(), e);
             prepareRedirectWithError(redirectAttributes, cartItemDto, bindingResult, "Neočekávaná chyba při přidávání produktu do košíku.");
             return productSlugForRedirect != null ? "redirect:/produkt/" + productSlugForRedirect : "redirect:/produkty";
         }
@@ -580,7 +537,7 @@ public class CartController implements PriceConstants {
             variantSb.append("Na míru");
             Map<String, BigDecimal> dims = item.getCustomDimensions();
             if (dims != null && !dims.isEmpty() && dims.containsKey("length") && dims.containsKey("width") && dims.containsKey("height")) {
-                variantSb.append("|Rozměry (DxHxV): ").append(dims.get("length") != null ? dims.get("length").stripTrailingZeros().toPlainString() : "?").append("x").append(dims.get("width") != null ? dims.get("width").stripTrailingZeros().toPlainString() : "?").append("x").append(dims.get("height") != null ? dims.get("height").stripTrailingZeros().toPlainString() : "?").append(" cm");
+                variantSb.append("|Rozměry (ŠxHxV): ").append(dims.get("length") != null ? dims.get("length").stripTrailingZeros().toPlainString() : "?").append("x").append(dims.get("width") != null ? dims.get("width").stripTrailingZeros().toPlainString() : "?").append("x").append(dims.get("height") != null ? dims.get("height").stripTrailingZeros().toPlainString() : "?").append(" cm");
             }
         }
         // Přidání atributů (pokud jsou vybrány)

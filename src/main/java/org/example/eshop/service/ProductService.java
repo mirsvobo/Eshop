@@ -350,8 +350,8 @@ public class ProductService implements PriceConstants {
             }
 
             // --- Dimension Range Validation ---
-            validateDimension("Length (Délka)", length, config.getMinLength(), config.getMaxLength());
-            validateDimension("Width (Šířka/Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
+            validateDimension("Length (Šířka)", length, config.getMinLength(), config.getMaxLength());
+            validateDimension("Width (Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
             validateDimension("Height (Výška)", height, config.getMinHeight(), config.getMaxHeight());
 
             // --- Price Calculation from Dimensions ---
@@ -1133,8 +1133,8 @@ public class ProductService implements PriceConstants {
             BigDecimal width = dimensions.get("width");
             BigDecimal height = dimensions.get("height");
 
-            validateDimension("Length (Délka)", length, config.getMinLength(), config.getMaxLength());
-            validateDimension("Width (Šířka/Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
+            validateDimension("Length (Šířka)", length, config.getMinLength(), config.getMaxLength());
+            validateDimension("Width (Hloubka)", width, config.getMinWidth(), config.getMaxWidth());
             validateDimension("Height (Výška)", height, config.getMinHeight(), config.getMaxHeight());
 
             // Výpočet pro CZK

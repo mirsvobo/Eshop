@@ -141,16 +141,19 @@
                             <input type="text" class="form-control"
                                    th:classappend="${#fields.hasErrors('invoiceTaxId')} ? 'is-invalid'"
                                    id="invoiceTaxId" th:field="*{invoiceTaxId}">
-                            <div th:if="${#fields.hasErrors('invoiceTaxId')}" class="invalid-feedback d-block"><span
-                                    th:errors="*{invoiceTaxId}">Chyba IČO</span></div>
+                            <div th:if="${#fields.hasErrors('invoiceTaxId')}" class="invalid-feedback d-block">
+                                <span th:errors="*{invoiceTaxId}">Chyba IČO</span>
+                            </div>
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label for="invoiceVatId" class="form-label">DIČ</label>
                             <input type="text" class="form-control"
                                    th:classappend="${#fields.hasErrors('invoiceVatId')} ? 'is-invalid'"
                                    id="invoiceVatId" th:field="*{invoiceVatId}">
-                            <div th:if="${#fields.hasErrors('invoiceVatId')}" class="invalid-feedback d-block"><span
-                                    th:errors="*{invoiceVatId}">Chyba DIČ</span></div>
+                            <div th:if="${#fields.hasErrors('invoiceVatId')}" class="invalid-feedback d-block">
+                                <span th:errors="*{invoiceVatId}">Chyba DIČ</span>
+                            </div>
                         </div>
                     </div>
 
@@ -522,41 +525,43 @@
         </form>
     </div>
 </section>
-
 <th:block layout:fragment="javascript">
-    <script defer th:src="@{/js/pokladna.js}"></script>
+    <script th:src="@{/js/pokladna.js}"></script>
+    <script id="checkoutDataForTracking" type="application/json" th:utext="${checkoutDataJson}"></script>
 
-    <script>
+    <script th:inline="javascript">
         /*<![CDATA[*/
-
-        // Načtení JSON stringu z modelu a jeho parsování
-        const checkoutDataJson = /*[[${checkoutDataJson}]]*/ null;
-        let checkoutDataForTracking = null;
-        if (checkoutDataJson && checkoutDataJson !== 'null') {
-            try {
-                checkoutDataForTracking = JSON.parse(checkoutDataJson);
-                console.log("Parsed checkoutDataForTracking from JSON:", checkoutDataForTracking);
-            } catch(e) {
-                console.error("Error parsing checkoutDataJson:", e, checkoutDataJson);
-            }
-        } else {
-            console.warn("[CHECKOUT] checkoutDataJson was null or empty from model.");
-        }
-
-        // Listener, který se spustí po načtení DOMu
         document.addEventListener('DOMContentLoaded', () => {
-            // Kontrola zda máme data a služba TrackingService je dostupná
-            if (checkoutDataForTracking && typeof TrackingService !== 'undefined') {
-                console.log("[CHECKOUT] DOM Ready: Calling trackBeginCheckout with data:", checkoutDataForTracking);
-                TrackingService.trackBeginCheckout(checkoutDataForTracking);
-            } else {
-                if (typeof TrackingService === 'undefined') {
-                    console.error("[CHECKOUT] TrackingService not available on DOMContentLoaded.");
-                }
-                if (!checkoutDataForTracking) {
-                    console.warn("[CHECKOUT] checkoutDataForTracking is not available (check logs or controller), skipping begin_checkout call.");
+            console.log("[CHECKOUT] DOMContentLoaded.");
+
+            function trackCheckoutBegin() {
+                console.log("[CHECKOUT] Funkce trackCheckoutBegin spuštěna.");
+                const checkoutDataElement = document.getElementById('checkoutDataForTracking');
+                if (checkoutDataElement) {
+                    try {
+                        const checkoutEventData = JSON.parse(checkoutDataElement.textContent);
+
+                        const ecommerceDataForService = checkoutEventData?.ecommerce;
+
+                        if (ecommerceDataForService && ecommerceDataForService.items && ecommerceDataForService.items.length > 0) {
+                            console.log("[CHECKOUT] Volám trackBeginCheckout přes executeTrackingWhenReady.");
+                            executeTrackingWhenReady(
+                                () => window.trackingService.trackBeginCheckout(ecommerceDataForService),
+                                'trackBeginCheckout'
+                            );
+                        } else {
+                            console.warn('[CHECKOUT] Chybí data ecommerce nebo položky pro trackBeginCheckout.');
+                        }
+                    } catch (e) {
+                        console.error('[CHECKOUT] Chyba při parsování JSON pro checkout nebo volání executeTrackingWhenReady:', e);
+                    }
+                } else {
+                    console.warn('[CHECKOUT] Element s JSON daty pro checkout nebyl nalezen.');
                 }
             }
+
+            trackCheckoutBegin();
+
         });
         /*]]>*/
     </script>

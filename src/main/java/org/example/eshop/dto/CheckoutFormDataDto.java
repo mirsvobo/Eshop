@@ -4,11 +4,13 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.eshop.model.Customer;
+import org.example.eshop.validation.RequireIcoOrDicIfCompany;
 import org.example.eshop.validation.ValidPhoneNumber;
 import org.springframework.util.StringUtils;
 
 @Getter
 @Setter
+@RequireIcoOrDicIfCompany
 public class CheckoutFormDataDto {
 
     // --- Údaje zákazníka / Kontakt ---
@@ -50,33 +52,39 @@ public class CheckoutFormDataDto {
     @Size(max = 50, message = "DIČ je příliš dlouhé.")
     @Pattern(regexp = "^(|[A-Z]{2}.*)$", message = "DIČ by mělo začínat kódem země (např. CZ, SK).")
     private String invoiceVatId; // DIČ
-    // --- Dodací adresa (zůstává stejná) ---
     private boolean useInvoiceAddressAsDelivery = true;
-    @Size(max = 255, message = "Název firmy (dodací) je příliš dlouhý.")
+
+    @Size(max = 255, message = "Název firmy (dodací) je příliš dlouhý.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryCompanyName;
+
     @NotBlank(message = "Křestní jméno (dodací) je povinné.", groups = DeliveryAddressValidation.class)
-    @Size(max = 100, message = "Křestní jméno (dodací) je příliš dlouhé.")
+    @Size(max = 100, message = "Křestní jméno (dodací) je příliš dlouhé.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryFirstName;
+
     @NotBlank(message = "Příjmení (dodací) je povinné.", groups = DeliveryAddressValidation.class)
-    @Size(max = 100, message = "Příjmení (dodací) je příliš dlouhé.")
+    @Size(max = 100, message = "Příjmení (dodací) je příliš dlouhé.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryLastName;
+
     @NotBlank(message = "Ulice a číslo popisné (dodací) jsou povinné.", groups = DeliveryAddressValidation.class)
-    @Size(max = 255, message = "Ulice (dodací) je příliš dlouhá.")
+    @Size(max = 255, message = "Ulice (dodací) je příliš dlouhá.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryStreet;
+
     @NotBlank(message = "Město (dodací) je povinné.", groups = DeliveryAddressValidation.class)
-    @Size(max = 100, message = "Město (dodací) je příliš dlouhé.")
+    @Size(max = 100, message = "Město (dodací) je příliš dlouhé.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryCity;
+
     @NotBlank(message = "PSČ (dodací) je povinné.", groups = DeliveryAddressValidation.class)
-    @Size(max = 20, message = "PSČ (dodací) je příliš dlouhé.")
-    @Pattern(regexp = "^[A-Za-z0-9\\s-]{3,10}$", message = "Neplatný formát PSČ.")
+    @Size(max = 20, message = "PSČ (dodací) je příliš dlouhé.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
+    @Pattern(regexp = "^[A-Za-z0-9\\s-]{3,10}$", message = "Neplatný formát PSČ.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryZipCode;
+
     @NotBlank(message = "Země (dodací) je povinná.", groups = DeliveryAddressValidation.class)
-    @Size(max = 100, message = "Země (dodací) je příliš dlouhá.")
+    @Size(max = 100, message = "Země (dodací) je příliš dlouhá.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
     private String deliveryCountry;
-    @Size(max = 30, message = "Telefonní číslo (dodací) je příliš dlouhé.")
-    @ValidPhoneNumber(message = "Neplatný formát dodacího telefonního čísla (uveďte i předvolbu +420/+421).", groups = DeliveryAddressValidation.class) // <-- POUŽITÍ NOVÉ ANOTACE
+
+    @Size(max = 30, message = "Telefonní číslo (dodací) je příliš dlouhé.", groups = DeliveryAddressValidation.class) // <-- PŘIDÁNA SKUPINA
+    @ValidPhoneNumber(message = "Neplatný formát dodacího telefonního čísla (uveďte i předvolbu +420/+421).", groups = DeliveryAddressValidation.class)
     private String deliveryPhone;
-    @NotBlank(message = "Musíte vybrat způsob platby.", groups = DefaultValidationGroup.class)
     private String paymentMethod;
     @Size(max = 1000, message = "Poznámka je příliš dlouhá (max 1000 znaků).")
     private String customerNote;

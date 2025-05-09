@@ -10,10 +10,8 @@
 
     <script>
         window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
 
-        function gtag() {
-            dataLayer.push(arguments);
-        }
 
         gtag('consent', 'default', {
             'ad_storage': 'denied',
@@ -22,22 +20,14 @@
             'analytics_storage': 'denied',
             'wait_for_update': 500
         });
-        console.log("Default Google Consent Mode v2 set to 'denied'.");
+        console.log("[Layout] Default Google Consent Mode v2 set to 'denied'.");
     </script>
-    <script>(function (w, d, s, l, i) {
-        w[l] = w[l] || [];
-        w[l].push({
-            'gtm.start':
-                new Date().getTime(), event: 'gtm.js'
-        });
-        var f = d.getElementsByTagName(s)[0],
-            j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : '';
-        j.async = true;
-        j.src =
-            'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-        f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-57S76TNN');</script>
-
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-57S76TNN');
+    </script>
     <link rel="icon" type="image/x-icon" th:href="@{/images/favicon.ico}">
     <link rel="preconnect" href="https://www.googletagmanager.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">

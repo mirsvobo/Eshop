@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout/main}">
+      layout:decorate="~{layout/main}" lang="cs">
 <head>
     <title>Objednávka přijata</title>
     <meta name="robots" content="noindex, nofollow"/>
@@ -141,45 +141,52 @@
         </div>
     </div>
 </section>
-
 <th:block layout:fragment="javascript">
-    <script> // Odebráno th:inline="javascript"
-    /*<![CDATA[*/
-    // Načtení JSON stringu z modelu (bezpečně) a flagu
-    const orderDataJson = /*[[${orderDataJson}]]*/ null;
-    const orderJustCompleted = /*[[${orderJustCompleted ?: false}]]*/ false;
-    let orderDataForTracking = null; // Inicializace proměnné
+    <script id="purchaseEventDataForTracking" type="application/json" th:utext="${purchaseDataJson}"></script>
 
-    // Pokus o parsování JSON stringu
-    if (orderDataJson && orderDataJson !== 'null') {
-        try {
-            orderDataForTracking = JSON.parse(orderDataJson);
-            console.log("Parsed orderDataForTracking from JSON:", orderDataForTracking);
-        } catch (e) {
-            console.error("Error parsing orderDataJson:", e);
-            console.error("Original JSON string:", orderDataJson);
-            // orderDataForTracking zůstane null
-        }
-    } else {
-        console.warn("orderDataJson was null or empty from model.");
-    }
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("[PURCHASE] DOMContentLoaded.");
 
-    // Spuštění trackingu po načtení DOM
-    document.addEventListener('DOMContentLoaded', () => {
-        // Zkontrolujeme, zda parsování proběhlo úspěšně A zda je to první návštěva
-        if (orderJustCompleted && typeof TrackingService !== 'undefined' && orderDataForTracking && orderDataForTracking.transaction_id) {
-            console.log("[PURCHASE CLASSIC JS] DOM Ready & orderJustCompleted=true: Calling trackPurchase with data:", orderDataForTracking);
-            TrackingService.trackPurchase(orderDataForTracking);
-        } else {
-            // Detailnější logování pro ladění
-            if (!orderJustCompleted) console.log("[PURCHASE CLASSIC JS] 'orderJustCompleted' flag not found or false. Purchase tracking skipped.");
-            else if (typeof TrackingService === 'undefined') console.error("[PURCHASE CLASSIC JS] TrackingService not available.");
-            else if (!orderDataForTracking) console.error("[PURCHASE CLASSIC JS] orderDataForTracking is null after parsing.");
-            else if (!orderDataForTracking.transaction_id) console.error("[PURCHASE CLASSIC JS] orderDataForTracking is missing transaction_id.");
-            else console.log("[PURCHASE CLASSIC JS] Unknown reason for not tracking."); // Pro ostatní případy
-        }
-    });
-    /*]]>*/
+            const justCompleted = /*[[${orderJustCompleted ?: false}]]*/ false;
+            console.log("[PURCHASE] Order just completed flag:", justCompleted);
+
+            // Funkce pro sledování nákupu
+            function trackPurchaseEvent() {
+                console.log("[PURCHASE] Funkce trackPurchaseEvent spuštěna.");
+                const purchaseDataElement = document.getElementById('purchaseEventDataForTracking');
+                if (purchaseDataElement) {
+                    try {
+                        const purchaseEventData = JSON.parse(purchaseDataElement.textContent);
+                        // Očekáváme payload: { event: 'purchase', ecommerce: {...} }
+                        const ecommerceDataForService = purchaseEventData?.ecommerce; // Získáme data pro službu
+
+                        if (ecommerceDataForService && ecommerceDataForService.transaction_id) {
+                            console.log("[PURCHASE] Volám trackPurchase přes executeTrackingWhenReady.");
+                            executeTrackingWhenReady(
+                                () => window.trackingService.trackPurchase(ecommerceDataForService), // Posíláme ecommerce data
+                                'trackPurchase'
+                            );
+                        } else {
+                            console.warn('[PURCHASE] Chybí data ecommerce nebo transaction_id pro trackPurchase.');
+                        }
+                    } catch (e) {
+                        console.error('[PURCHASE] Chyba při parsování JSON pro purchase nebo volání executeTrackingWhenReady:', e);
+                    }
+                } else {
+                    console.warn('[PURCHASE] Element s JSON daty pro purchase nebyl nalezen.');
+                }
+            }
+
+            if (justCompleted) {
+                trackPurchaseEvent();
+            } else {
+                console.log("[PURCHASE] Objednávka nebyla právě dokončena, purchase event se nespouští.");
+            }
+
+        });
+        /*]]>*/
     </script>
 </th:block>
 </body>

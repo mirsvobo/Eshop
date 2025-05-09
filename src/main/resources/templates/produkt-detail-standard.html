@@ -63,13 +63,21 @@
                     <p class="price-note mb-0">Cena bez DPH.</p>
                 </div>
 
-                <div class="product-short-description" th:if="${product.shortDescription}" th:text="${product.shortDescription}">
+                <div class="product-short-description" th:if="${product.shortDescription}"
+                     th:text="${product.shortDescription}">
                     Krátký popis produktu zde...
                 </div>
 
-                <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form">
-                    <input type="hidden" name="productId" th:value="${product.id}" />
-                    <input type="hidden" name="isCustom" value="false" />
+                <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form"
+                      th:attr="data-product-id=${product.id},
+                        data-item-id=${product.customisable ? 'CUSTOM-' + product.id : 'STD-' + product.slug},
+                        data-product-name=${product.name},
+                        data-product-brand=${brandName},
+                        data-product-category='Dřevníky',
+                        data-product-currency=${currentGlobalCurrency},
+                        data-product-price=${priceInfo != null && priceInfo.get('originalPrice') != null ? (priceInfo.get('discountedPrice') ?: priceInfo.get('originalPrice')) : '0.00'}">
+                    <input type="hidden" name="productId" th:value="${product.id}"/>
+                    <input type="hidden" name="isCustom" value="false"/>
 
                     <div class="mb-3" th:if="${!product.availableDesigns.isEmpty()}">
                         <label for="design" class="form-label">Design:</label>
@@ -113,28 +121,45 @@
                         </select>
                     </div>
 
-                    <div class="mb-3 tax-selection" th:if="${product.availableTaxRates != null and !product.availableTaxRates.isEmpty()}">
-                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Více informací o sazbách DPH"></i> </label>
+                    <div class="mb-3 tax-selection"
+                         th:if="${product.availableTaxRates != null and !product.availableTaxRates.isEmpty()}">
+                        <label class="form-label d-block">Režim DPH: <i class="bi bi-info-circle tax-info-icon"
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                        title="Více informací o sazbách DPH"></i>
+                        </label>
                         <div class="form-check" th:each="taxRate, iterStat : ${product.availableTaxRates}">
-                            <input class="form-check-input" type="radio" name="selectedTaxRateId" th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}" th:checked="${iterStat.index == 0}" required>
+                            <input class="form-check-input" type="radio" name="selectedTaxRateId"
+                                   th:id="'taxRate' + ${taxRate.id}" th:value="${taxRate.id}"
+                                   th:checked="${iterStat.index == 0}" required>
                             <label class="form-check-label" th:for="'taxRate' + ${taxRate.id}">
                                 <span th:text="${taxRate.name}">Název sazby</span>
                                 <span th:if="${taxRate.note != null and not #strings.isEmpty(taxRate.note)}"
                                       th:text="' - ' + ${taxRate.note}"
                                       class="text-muted small"> - Poznámka</span>
                             </label>
-                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">Snížená sazba 12 % platí dle §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis Čestného prohlášení.</strong></div>
-                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">Základní sazba 21 % platí pro firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.</div>
-                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává odběratel.</div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.12}">Snížená sazba 12 % platí dle
+                                §48 zákona o DPH pouze pro fyzické osoby (neplátce DPH) pro stavby pro sociální bydlení
+                                (rodinné domy do 350 m², byty do 120 m² podlahové plochy). <strong>Vyžaduje podpis
+                                    Čestného prohlášení.</strong></div>
+                            <div class="tax-info-details" th:if="${taxRate.rate == 0.21}">Základní sazba 21 % platí pro
+                                firmy (právnické osoby, OSVČ plátce DPH) a pro fyzické osoby, pokud se jedná o stavbu
+                                pro rekreaci nebo nejsou splněny podmínky pro sníženou sazbu.
+                            </div>
+                            <div class="tax-info-details" th:if="${taxRate.reverseCharge}">Režim přenesené daňové
+                                povinnosti platí při poskytnutí stavebních a montážních prací plátci DPH. Daň přiznává
+                                odběratel.
+                            </div>
                         </div>
                     </div>
-                    <div class="alert alert-warning" th:if="${product.availableTaxRates == null or product.availableTaxRates.isEmpty()}">
+                    <div class="alert alert-warning"
+                         th:if="${product.availableTaxRates == null or product.availableTaxRates.isEmpty()}">
                         Pro tento produkt nejsou definovány sazby DPH. Prosím kontaktujte nás.
                     </div>
 
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Množství:</label>
-                        <input type="number" id="quantity" name="quantity" class="form-control quantity-input" value="1" min="1" required>
+                        <input type="number" id="quantity" name="quantity" class="form-control quantity-input" value="1"
+                               min="1" required>
                     </div>
 
                     <button type="submit" class="btn btn-success add-to-cart-btn w-100"
@@ -158,16 +183,20 @@
                         <h4>Dostupné designy</h4>
                         <div th:each="design : ${availableDesigns}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${design.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${design.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Designu</p> </div>
+                                 th:alt="${design.name}" th:title="${design.name}" class="img-thumbnail"
+                                 style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${design.name}"
+                               style="max-width: 200px; overflow-wrap: break-word;">Název Designu</p></div>
                     </div>
 
                     <div th:if="${availableGlazes != null and !availableGlazes.isEmpty()}" class="mb-4">
                         <h4>Dostupné lazury</h4>
                         <div th:each="glaze : ${availableGlazes}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${glaze.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${glaze.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Lazury</p>
+                                 th:alt="${glaze.name}" th:title="${glaze.name}" class="img-thumbnail"
+                                 style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${glaze.name}"
+                               style="max-width: 200px; overflow-wrap: break-word;">Název Lazury</p>
                         </div>
                     </div>
 
@@ -175,148 +204,146 @@
                         <h4>Barvy střešní krytiny</h4>
                         <div th:each="roofColor : ${availableRoofColors}" class="d-inline-block text-center me-2 mb-2">
                             <img th:src="${roofColor.imageUrl} ?: '/images/placeholder.png'"
-                                 th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail" style="width: 200px; height: 200px; object-fit: cover;">
-                            <p class="small mb-0" th:text="${roofColor.name}" style="max-width: 200px; overflow-wrap: break-word;">Název Barvy</p>
+                                 th:alt="${roofColor.name}" th:title="${roofColor.name}" class="img-thumbnail"
+                                 style="width: 200px; height: 200px; object-fit: cover;">
+                            <p class="small mb-0" th:text="${roofColor.name}"
+                               style="max-width: 200px; overflow-wrap: break-word;">Název Barvy</p>
                         </div>
                     </div>
-                </div> </div> </div> <div class="row">
-        <div class="col-12">
-            <section class="advantages-section">
-                <h3>Proč dřevník od nás?</h3>
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <ul>
-                            <li><i class="bi bi-gem"></i> Nešetříme na kvalitních materiálech.</li>
-                            <li><i class="bi bi-tools"></i> Dřevník sestrojíme a umístíme zdarma.</li>
-                            <li><i class="bi bi-pencil-square"></i> Dřevník upravíme na míru (barva, rozměry, doplňky).</li>
-                            <li><i class="bi bi-shield-check"></i> 20+ let zkušeností a poctivé řemeslo.</li>
-                            <li><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</li>
-                        </ul>
-                    </div>
                 </div>
-            </section>
+            </div>
         </div>
+        <div class="row">
+            <div class="col-12">
+                <section class="advantages-section">
+                    <h3>Proč dřevník od nás?</h3>
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <ul>
+                                <li><i class="bi bi-gem"></i> Nešetříme na kvalitních materiálech.</li>
+                                <li><i class="bi bi-tools"></i> Dřevník sestrojíme a umístíme zdarma.</li>
+                                <li><i class="bi bi-pencil-square"></i> Dřevník upravíme na míru (barva, rozměry,
+                                    doplňky).
+                                </li>
+                                <li><i class="bi bi-shield-check"></i> 20+ let zkušeností a poctivé řemeslo.</li>
+                                <li><i class="bi bi-calendar-check"></i> Dodání standardně do 5 týdnů.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
     </div>
+</section>
+<th:block layout:fragment="javascript">
+    <script id="viewItemDataJson" type="application/json" th:utext="${viewItemDataJson}"></script>
 
-    </div> </section> <th:block layout:fragment="javascript">
-
-    <script>
-        // Funkce pro změnu hlavního obrázku (zůstává)
-        function changeMainImage(newImageUrl, thumbnailElement) {
-            const mainImg = document.getElementById('mainProductImage');
-            if (mainImg) mainImg.src = newImageUrl;
-            document.querySelectorAll('.thumbnail-images img').forEach(img => img.classList.remove('active'));
-            if (thumbnailElement) thumbnailElement.classList.add('active');
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        function changeMainImage(newSrc, element) {
+            const mainImage = document.getElementById('mainProductImage');
+            if (mainImage) {
+                mainImage.src = newSrc;
+                // Aktivní třída pro náhledy
+                document.querySelectorAll('.thumbnail-images img.active').forEach(active => active.classList.remove('active'));
+                if (element) {
+                    element.classList.add('active');
+                }
+            }
         }
 
-        // Inicializace tooltipů (zůstává)
         document.addEventListener('DOMContentLoaded', () => {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            console.log("[STANDARD] DOMContentLoaded.");
+
+            function trackStandardViewItem() {
+                console.log("[STANDARD] Funkce trackStandardViewItem spuštěna.");
+                const jsonDataElement = document.getElementById('viewItemDataJson');
+                if (jsonDataElement) {
+                    try {
+                        const eventPayload = JSON.parse(jsonDataElement.textContent);
+                        const viewItemDataForService = eventPayload?.ecommerce?.items?.[0]; // Vezmeme data první položky
+
+                        if (viewItemDataForService && viewItemDataForService.item_id) {
+                            const trackingData = {
+                                item_id: viewItemDataForService.item_id,
+                                item_name: viewItemDataForService.item_name,
+                                price: viewItemDataForService.price, // Cena bez DPH
+                                currency: eventPayload.ecommerce.currency || 'CZK',
+                                item_brand: viewItemDataForService.item_brand,
+                                item_category: viewItemDataForService.item_category
+                            };
+                            console.log('[STANDARD] Volám trackViewItem přes executeTrackingWhenReady s daty:', trackingData);
+                            executeTrackingWhenReady(
+                                () => window.trackingService.trackViewItem(trackingData),
+                                'trackViewItem (Standard)'
+                            );
+                        } else {
+                            console.error('[STANDARD] ecommerce data nebo item_id nebyly nalezeny v JSON payloadu pro view_item.');
+                        }
+                    } catch (e) {
+                        console.error('[STANDARD] Chyba při parsování JSON pro viewItem nebo volání executeTrackingWhenReady:', e);
+                    }
+                } else {
+                    console.warn('[STANDARD] Element s JSON daty pro viewItem nebyl nalezen.');
+                }
+            }
+
+            const addToCartForm = document.getElementById('add-to-cart-form');
+            if (addToCartForm) {
+                console.log('[STANDARD] Připojuji listener pro add_to_cart.');
+                addToCartForm.addEventListener('submit', function(event) {
+                    console.log('[STANDARD] Add to Cart form submitted.');
+
+                    const quantityInput = addToCartForm.querySelector('input[name="quantity"]');
+                    const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
+
+                    const productId = addToCartForm.dataset.productId;
+                    const productName = addToCartForm.dataset.productName;
+                    const brand = addToCartForm.dataset.productBrand || "Dřevníky Kolář";
+                    const category = addToCartForm.dataset.productCategory || "Dřevníky";
+                    const currency = addToCartForm.dataset.productCurrency || 'CZK';
+                    const priceString = addToCartForm.dataset.productPrice || '0';
+                    const price = parseFloat(priceString);
+
+                    // Sestavení item_id (příklad, přizpůsobte dle potřeby)
+                    const designId = addToCartForm.querySelector('select[name="selectedDesignId"]')?.value;
+                    const glazeId = addToCartForm.querySelector('select[name="selectedGlazeId"]')?.value;
+                    const roofColorId = addToCartForm.querySelector('select[name="selectedRoofColorId"]')?.value;
+                    const variantId = `STD-${productId}_D${designId || 'na'}_G${glazeId || 'na'}_RC${roofColorId || 'na'}`; // Příklad ID varianty
+
+                    if (productId && productName && !isNaN(price)) {
+                        const cartData = {
+                            item_id: variantId,
+                            item_name: productName,
+                            price: price,
+                            currency: currency,
+                            quantity: quantity,
+                            item_brand: brand,
+                            item_category: category
+                        };
+                        console.log('[STANDARD] Volám trackAddToCart přes executeTrackingWhenReady s daty:', cartData);
+                        executeTrackingWhenReady(
+                            () => window.trackingService.trackAddToCart(cartData),
+                            'trackAddToCart (Standard)'
+                        );
+                    } else {
+                        console.error('[STANDARD] Nepodařilo se získat všechna data pro trackAddToCart.', { productId, productName, price });
+                    }
+                });
+            } else {
+                console.warn('[STANDARD] Formulář pro přidání do košíku nebyl nalezen.');
+            }
+
+            // Inicializace tooltipů (pokud používáte)
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+
+            trackStandardViewItem();
         });
-    </script>
-
-    <script> // Nový script tag pro tracking (bez th:inline)
-    /*<![CDATA[*/
-
-    // Načtení a parsování JSON dat pro view_item
-    const viewItemJsonString = /*[[${viewItemDataJson}]]*/ null;
-    let productDataForTracking = null; // Objekt pro data produktu
-    if (viewItemJsonString && viewItemJsonString !== 'null') {
-        try {
-            // Očekáváme JSON ve formátu { event: "view_item", ecommerce: { currency: "...", value: ..., items: [ { item_id: ..., ... } ] } }
-            const fullEventData = JSON.parse(viewItemJsonString);
-            if (fullEventData && fullEventData.ecommerce && Array.isArray(fullEventData.ecommerce.items) && fullEventData.ecommerce.items.length > 0) {
-                // Vezmeme data prvního (a jediného) produktu z pole items
-                productDataForTracking = fullEventData.ecommerce.items[0];
-                // Můžeme přidat měnu a hodnotu přímo do objektu produktu, pokud je potřebujeme jinde
-                productDataForTracking.currency = fullEventData.ecommerce.currency;
-                productDataForTracking.value = fullEventData.ecommerce.value; // Celková hodnota produktu (bez DPH)
-                console.log("[STANDARD] Parsed productDataForTracking from JSON:", productDataForTracking);
-            } else {
-                console.error("[STANDARD] Parsed JSON has incorrect structure:", fullEventData);
-            }
-
-        } catch(e) {
-            console.error("[STANDARD] Error parsing viewItemDataJson:", e, viewItemJsonString);
-        }
-    } else {
-        console.warn("[STANDARD] viewItemDataJson was null or empty from model.");
-    }
-
-    // Odeslání view_item po načtení DOM
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("[STANDARD] DOM Ready: Attempting to track view_item.");
-        // Ověříme, zda se podařilo naparsovat data a zda je TrackingService dostupný
-        if (productDataForTracking && typeof TrackingService !== 'undefined' && typeof TrackingService.trackViewItem === 'function') {
-            // trackViewItem očekává přímo objekt s daty produktu (item_id, item_name, price atd.)
-            TrackingService.trackViewItem(productDataForTracking);
-        } else {
-            if (!productDataForTracking) console.error("[STANDARD] productDataForTracking not available for view_item.");
-            if (typeof TrackingService === 'undefined' || typeof TrackingService.trackViewItem !== 'function') console.error("[STANDARD] TrackingService.trackViewItem not available.");
-        }
-    });
-
-    // Listener pro add_to_cart
-    const addToCartFormStandard = document.getElementById('add-to-cart-form');
-    const quantityInputStandard = document.getElementById('quantity');
-
-    if (addToCartFormStandard && quantityInputStandard) {
-        addToCartFormStandard.addEventListener('submit', function (event) {
-            // Zkontrolujeme, zda máme data z JSONu
-            if (!productDataForTracking) {
-                console.error("[STANDARD] Cannot track add_to_cart: productDataForTracking is not available.");
-                return; // Neodesílat event, pokud nemáme data
-            }
-
-            const quantity = parseInt(quantityInputStandard.value) || 1;
-            // Vytvoříme data pro add_to_cart z naparsovaného productDataForTracking
-            const itemDataForAddToCart = {
-                item_id: productDataForTracking.item_id, // Používáme naparsované ID
-                item_name: productDataForTracking.item_name,
-                price: productDataForTracking.price, // Cena BEZ DPH z naparsovaných dat
-                currency: productDataForTracking.currency,
-                quantity: quantity,
-                item_brand: productDataForTracking.item_brand,
-                item_category: productDataForTracking.item_category
-            };
-
-            console.log("[STANDARD] Add to Cart submit. Tracking data:", itemDataForAddToCart);
-
-            if (typeof TrackingService !== 'undefined' && typeof TrackingService.trackAddToCart === 'function') {
-                // Voláme trackAddToCart s daty KONKRÉTNÍ PŘIDANÉ POLOŽKY
-                TrackingService.trackAddToCart(itemDataForAddToCart);
-            } else {
-                console.error("[STANDARD] TrackingService or trackAddToCart not available.");
-            }
-        });
-        console.log("[STANDARD] Event listener for trackAddToCart attached.");
-    } else {
-        if (!addToCartFormStandard) console.error("[STANDARD] Add to Cart form (#add-to-cart-form) not found.");
-        if (!quantityInputStandard) console.error("[STANDARD] Quantity input (#quantity) not found.");
-    }
-
-    // Logování JSON-LD (zůstává)
-    document.addEventListener('DOMContentLoaded', () => {
-        try {
-            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
-            if (schemaDataElement && schemaDataElement.textContent) {
-                const jsonData = JSON.parse(schemaDataElement.textContent);
-                console.log("--- Schema.org Product Data (JSON-LD) ---");
-                console.dir(jsonData);
-                console.log("--- Konec Schema.org ---");
-            } else {
-                console.warn("Nepodařilo se najít JSON-LD data ve script tagu pro výpis do konzole.");
-            }
-        } catch (e) {
-            console.error("Chyba při parsování nebo logování JSON-LD dat do konzole:", e);
-            const schemaDataElement = document.querySelector('script[type="application/ld+json"]');
-            if (schemaDataElement) { console.error("Původní JSON-LD string:", schemaDataElement.textContent); }
-        }
-    });
-    /*]]>*/
+        /*]]>*/
     </script>
 </th:block>
 </body>

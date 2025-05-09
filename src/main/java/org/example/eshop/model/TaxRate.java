@@ -37,7 +37,7 @@ public class TaxRate {
     @Column(nullable = false)
     private boolean reverseCharge = false; // Příznak přenesené daňové povinnosti
 
-    @Column() // Nebo jiná vhodná délka
+    @Column() // Nebo jiná vhodná Šířka
     private String note; // Poznámka k sazbě
     // --- OPRAVENÁ RELACE ---
     @ManyToMany(mappedBy = "availableTaxRates", fetch = FetchType.LAZY) // mappedBy ukazuje na pole v Product
