@@ -393,7 +393,7 @@
                                         </div>
                                     </div>
                                     <span class="text-nowrap"
-                                          th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                          th:text="${#numbers.formatDecimal(item.getTotalLinePriceWithoutTax(currentCurrency), 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
                                 </li>
                             </ul>
                             <p th:unless="${cart != null and cart.hasItems()}">Košík je prázdný.</p>
