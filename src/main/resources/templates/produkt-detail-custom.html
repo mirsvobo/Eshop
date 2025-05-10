@@ -376,19 +376,18 @@
                     const configuratorData = JSON.parse(configuratorDataElement.textContent);
                     const csrfToken = /*[[${_csrf?.token}]]*/ null;
                     const csrfHeader = /*[[${_csrf?.headerName}]]*/ null;
-                    // API URL je nyní brána z product-configurator.js (pokud je tam pevně, jinak předat)
                     const currency = /*[[${currentGlobalCurrency}]]*/ 'CZK';
                     const productId = /*[[${product.id}]]*/ null;
 
                     if (isDebug) console.log("[CUSTOM DETAIL] Inicializuji product-configurator.js s daty:", configuratorData);
                     initializeConfigurator({
-                        formSelector: '#custom-product-form', // Ujistěte se, že toto ID odpovídá formuláři
-                        calculatePriceUrl: /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price', // Předání URL
+                        formSelector: '#custom-product-form',
+                        calculatePriceUrl: /*[[@{/api/product/calculate-price}]]*/ '/api/product/calculate-price',
                         currency: currency,
                         csrfToken: csrfToken,
                         csrfHeaderName: csrfHeader,
                         productId: productId,
-                        configuratorData: configuratorData // Předání dat z backendu (min, max, step, default, ceny za cm)
+                        configuratorData: configuratorData
                     });
                 } catch(e) {
                     console.error("[CUSTOM DETAIL] Chyba při inicializaci product-configurator.js:", e, "Data:", configuratorDataElement.textContent);
@@ -408,7 +407,7 @@
             // --- Track View Item ---
             function trackCustomViewItem() {
                 if (isDebug) console.log("[CUSTOM DETAIL] Funkce trackCustomViewItem spuštěna.");
-                const viewItemJsonElement = document.getElementById('viewItemDataJsonForCustomProduct'); // Používáme správné ID
+                const viewItemJsonElement = document.getElementById('viewItemDataJson'); // Používáme správné ID
                 if (viewItemJsonElement && viewItemJsonElement.textContent) {
                     try {
                         const eventPayload = JSON.parse(viewItemJsonElement.textContent);

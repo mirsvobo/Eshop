@@ -49,8 +49,8 @@
         O dalším průběhu vyřizování Vás budeme informovat.
     </p>
 
-    <p>
-        Stav své objednávky můžete kdykoliv sledovat online:
+    <p>Stav své objednávky můžete kdykoliv sledovat online:</p>
+    <p style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
         <a th:href="${trackingUrl}" class="button">Sledovat objednávku</a>
     </p>
 
@@ -171,7 +171,7 @@
                         th:if="${order.deliveryCompanyName}"/>
                     <span th:text="${order.deliveryFirstName + ' ' + order.deliveryLastName}"></span><br/>
                     <span th:text="${order.deliveryStreet}"></span><br/>
-                    <span th:text="${order.deliveryZipCode + ' ' + order.deliveryCity}"></span><br/>
+                    <span th:text="${order.deliveryZipCode} + ' ' + ${order.deliveryCity}"></span><br/>
                     <span th:text="${order.deliveryCountry}"></span><br/>
                     <span th:if="${order.deliveryPhone}">Tel.: <span th:text="${order.deliveryPhone}"></span></span>
                     <br/><em th:if="${order.isAddressesMatchInOrder()}" style="font-size: 0.9em; color: #666;">(Stejná
