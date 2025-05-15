@@ -208,7 +208,7 @@ public class ProductController {
 
             Map<String, Object> ecommerceData = new HashMap<>();
             Map<String, Object> itemData = new HashMap<>();
-            itemData.put("item_id", product.isCustomisable() ? "CUSTOM-" + product.getId() : "STD-" + product.getSlug());
+            itemData.put("item_id", product.isCustomisable() ? "CUSTOM-" + product.getId() : "STD-" + product.getId());
             itemData.put("item_name", product.getName());
             itemData.put("item_brand", BRAND_NAME);
             itemData.put("item_category", "Dřevníky");

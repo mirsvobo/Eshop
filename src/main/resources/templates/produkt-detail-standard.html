@@ -81,7 +81,7 @@
                             <strong>Výška:</strong> <span th:text="${#numbers.formatDecimal(product.height, 1, 'DEFAULT', 0, 'POINT')} + ' cm'"></span>
                         </li>
                         <li th:if="${product.roofOverstep != null}">
-                            <strong>Přesah:</strong> <span th:text="${product.roofOverstep}"></span>
+                            <strong>Přesah střechy:</strong> <span th:text="${product.roofOverstep}"></span>
                         </li>
                     </ul>
                 </div>
