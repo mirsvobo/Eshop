@@ -87,7 +87,7 @@
                 </div>
                 <form th:action="@{/kosik/pridat}" method="post" class="product-options-form" id="add-to-cart-form"
                       th:attr="data-product-id=${product.id},
-                        data-item-id=${product.customisable ? 'CUSTOM-' + product.id : 'STD-' + product.slug},
+                        data-item-id=${product.customisable ? 'CUSTOM-' + product.id : 'STD-' + product.id},
                         data-product-name=${product.name},
                         data-product-brand=${brandName},
                         data-product-category='Dřevníky',
