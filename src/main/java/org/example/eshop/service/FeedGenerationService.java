@@ -228,7 +228,7 @@ public class FeedGenerationService implements PriceConstants {
                     xml.append("  <SHOPITEM>\n");
                     appendXmlElement(xml, "ITEM_ID", "STD-" + product.getId(), 4);
                     // ÚPRAVA ZDE:
-                    appendXmlElement(xml, "PRODUCTNAME", BRAND_NAME + " | " + product.getName(), 4);
+                    appendXmlElement(xml, "PRODUCTNAME", BRAND_NAME + " | " + product.getName() + " | " + "STD - " + product.getId(), 4);
                     appendXmlElement(xml, "PRODUCT", BRAND_NAME + " | " + product.getName() + " - distribuce po ČR/SR", 4); // Také upraveno pro konzistenci, pokud je třeba
                     appendXmlElement(xml, "DESCRIPTION", product.getShortDescription() != null ? product.getShortDescription() : product.getDescription(), 4);
                     appendXmlElement(xml, "URL", baseUrl + "/produkt/" + product.getSlug(), 4);
@@ -271,8 +271,6 @@ public class FeedGenerationService implements PriceConstants {
                     appendXmlElement(xml, "SPECIAL_SERVICE", "Úprava rozměrů na míru", 4);
                     appendXmlElement(xml, "SPECIAL_SERVICE", "Pravidelné aktualizace o stavu objednávky", 4);
                     appendXmlElement(xml, "SPECIAL_SERVICE", "Možnost výběru vlastního barevného provedení", 4);
-
-                    appendXmlElement(xml, "ITEMGROUP_ID", "DREVNIKY-STD", 4);
 
                     xml.append("  </SHOPITEM>\n");
                 }
