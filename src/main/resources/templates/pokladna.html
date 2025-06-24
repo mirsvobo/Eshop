@@ -433,11 +433,11 @@
                                      </span>
                                 </li>
                                 <li id="summary-shipping-discount-row"
-                                    th:if="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
-                                    class="list-group-item d-flex justify-content-between px-0 text-success">
+                                    class="list-group-item d-flex justify-content-between px-0 text-success"
+                                    th:classappend="${(shippingDiscountAmount == null or shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) <= 0) ? 'd-none' : ''}">
                                     <span class="summary-label">Sleva na dopravu</span>
                                     <span class="summary-value" id="summary-shipping-discount-value"
-                                          th:text="'-' + ${#numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA')} + ' ' + ${currencySymbol}"></span>
+                                          th:text="${shippingDiscountAmount != null and shippingDiscountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? ('- ' + #numbers.formatDecimal(shippingDiscountAmount, 1, 'WHITESPACE', 2, 'COMMA') + ' ' + currencySymbol) : ''}"></span>
                                 </li>
 
                                 <li class="list-group-item px-0 pt-2 mt-1 border-top">

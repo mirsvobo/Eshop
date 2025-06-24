@@ -229,7 +229,6 @@ public class FeedGenerationService implements PriceConstants {
                     appendXmlElement(xml, "ITEM_ID", "STD-" + product.getId(), 4);
                     // ÚPRAVA ZDE:
                     appendXmlElement(xml, "PRODUCTNAME", BRAND_NAME + " | " + product.getName() + " | " + "STD - " + product.getId(), 4);
-                    appendXmlElement(xml, "PRODUCT", BRAND_NAME + " | " + product.getName() + " - distribuce po ČR/SR", 4); // Také upraveno pro konzistenci, pokud je třeba
                     appendXmlElement(xml, "DESCRIPTION", product.getShortDescription() != null ? product.getShortDescription() : product.getDescription(), 4);
                     appendXmlElement(xml, "URL", baseUrl + "/produkt/" + product.getSlug(), 4);
 
